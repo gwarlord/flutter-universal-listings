@@ -1,0 +1,107 @@
+name: instaflutter
+description: Instaflutter Project
+publish_to: 'none'
+version: 1.0.0+1
+environment:
+  sdk: '>=3.0.6 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+
+
+  cupertino_icons: ^1.0.8
+
+ 
+  firebase_core: ^4.0.0
+  firebase_auth: ^6.0.0
+  cloud_firestore: ^6.0.0
+  firebase_storage: ^13.0.0
+  firebase_messaging: ^16.0.0
+  cloud_functions: ^6.0.0
+  easy_localization: ^3.0.8
+  intl: ^0.20.2
+  smooth_page_indicator: ^1.2.0+3
+  intl_phone_number_input: ^0.7.4
+  pin_code_fields: ^8.0.1
+  flutter_facebook_auth: ^7.0.1
+  the_apple_sign_in: ^1.1.1
+  shared_preferences: ^2.3.2
+  path_provider: ^2.1.4
+  path: ^1.9.1
+  uuid: ^4.4.2
+  cached_network_image: ^3.4.0
+  geolocator: ^14.0.2
+  location: ^8.0.1
+  permission_handler: ^12.0.1
+  image_picker: ^1.1.2
+  photo_view: ^0.15.0
+  video_player: ^2.9.1
+  video_compress: ^3.1.4
+  flutter_sound: ^9.25.4
+  flutter_image_compress: ^2.4.0
+  audio_session: ^0.2.2
+  http: ^1.2.2
+  url_launcher: ^6.3.0
+  provider: ^6.1.2
+  bloc: ^9.0.0
+  flutter_bloc: ^9.1.1
+  flutter_easyloading: ^3.0.5
+  flutter_native_splash: ^2.4.1
+  logger: ^2.4.0
+  equatable: ^2.0.5
+  collection: ^1.19.1
+  in_app_purchase: ^3.2.3
+  infinite_scroll_pagination: ^5.1.0
+  flutter_native_image_v2: ^1.1.3
+  visibility_detector: ^0.4.0+2
+  google_mobile_ads: ^6.0.0
+  flutter_rating_bar: ^4.0.1
+  google_maps_flutter: ^2.13.1
+  video_thumbnail: ^0.5.6
+  flutter_google_places_hoc081098: ^2.0.0
+  flutter_staggered_grid_view: ^0.7.0
+
+
+  characters: ^1.4.0
+  dart_either: ^1.0.0
+  google_api_headers: ^4.5.8
+  lints: ^6.0.0
+
+#dependency_overrides:
+ # http: 0.13.4
+  #rxdart: 0.28.0
+ # rxdart_ext: 0.3.0
+
+ev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+flutter_native_splash:
+  image: assets/images/instaflutter.png
+  color: "#e1f5fe"
+  color_dark: "#042a49"
+  image_dark: assets/images/instaflutter.png
+  android_12:
+  fullscreen: true
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: 'assets/images/instaflutter.png'
+  adaptive_icon_background: '#ffffff'
+  adaptive_icon_foreground: 'assets/images/instaflutter.png'
+  remove_alpha_ios: true
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/translations/
+
+  fonts:
+    - family: CoreSansE
+      fonts:
+        - asset: assets/fonts/CoreSansE-55Medium.otf
+
+    - family: SF-Pro-Text
+      fonts:
+        - asset: assets/fonts/SF-Pro-Text-Regular.otf
