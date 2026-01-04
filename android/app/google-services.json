@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "17296052844",
+    "project_id": "caribtap",
+    "storage_bucket": "caribtap.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:17296052844:android:e2ade16d87ea92fc31fe49",
+        "android_client_info": {
+          "package_name": "com.instaflutter.instaflutter.android"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCHl0NG-dxRunt4ZVukmsMXX-J-aetCPbs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
