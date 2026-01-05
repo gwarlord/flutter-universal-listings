@@ -31,7 +31,7 @@ runListings() {
   filtersCollection = 'filters';
 
   // NEW: Google Maps Places API Key
-  googleMapsApiKey = 'AIzaSyCHl0NG-dxRunt4ZVukmsMXX-J-aetCPbs';
+  googleMapsApiKey = 'AIzaSyDNxE7GmSRWgrcf3oUMfbjEE0NugvDnfGc';
 
   return EasyLocalization(
     supportedLocales: const [Locale('en'), Locale('ar')],
