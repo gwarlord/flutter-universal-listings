@@ -26,13 +26,17 @@ import 'package:instaflutter/listings/listings_module/api/listings_api_manager.d
 import 'package:instaflutter/listings/listings_module/listing_details/listing_details_bloc.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ListingDetailsWrappingWidget extends StatelessWidget {
   final ListingModel listing;
   final ListingsUser currentUser;
 
-  const ListingDetailsWrappingWidget(
-      {super.key, required this.listing, required this.currentUser});
+  const ListingDetailsWrappingWidget({
+    super.key,
+    required this.listing,
+    required this.currentUser,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -62,9 +66,11 @@ class ListingDetailsScreen extends StatefulWidget {
   final ListingModel listing;
   final ListingsUser currentUser;
 
-  const ListingDetailsScreen(
-      {Key? key, required this.listing, required this.currentUser})
-      : super(key: key);
+  const ListingDetailsScreen({
+    Key? key,
+    required this.listing,
+    required this.currentUser,
+  }) : super(key: key);
 
   @override
   State<ListingDetailsScreen> createState() => _ListingDetailsScreenState();
@@ -76,7 +82,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   final PageController _pagerController = PageController(initialPage: 0);
   Timer? _autoScroll;
 
-  late GoogleMapController _mapController;
+  GoogleMapController? _mapController;
   late LatLng _placeLocation;
   final Future _mapFuture = Future.delayed(Duration.zero, () => true);
 
@@ -97,7 +103,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
     context.read<ListingDetailsBloc>().add(GetListingReviewsEvent());
 
-    if (!(listing.photos.length < 2)) {
+    if (listing.photos.length > 1) {
       _autoScroll = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
         if (_pageIndex < listing.photos.length - 1) {
           _pageIndex++;
@@ -107,7 +113,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
         _pagerController.animateToPage(
           _pageIndex,
           duration: const Duration(milliseconds: 350),
-          curve: Curves.easeIn,
+          curve: Curves.easeInOut,
         );
       });
     }
@@ -115,6 +121,8 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final dark = isDarkMode(context);
+
     return MultiBlocListener(
       listeners: [
         BlocListener<ListingDetailsBloc, ListingDetailsState>(
@@ -144,6 +152,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
       ],
       child: Scaffold(
         appBar: AppBar(
+          title: Text(listing.title),
           actions: [
             BlocConsumer<ListingDetailsBloc, ListingDetailsState>(
               listener: (context, state) {
@@ -161,7 +170,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                 return PopupMenuButton(
                   itemBuilder: (BuildContext context) {
                     return [
-                      // Favorite toggle
                       PopupMenuItem(
                         child: ListTile(
                           dense: true,
@@ -170,7 +178,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             Icons.favorite,
                             color: listing.isFav
                                 ? Color(colorPrimary)
-                                : isDarkMode(context)
+                                : dark
                                 ? Colors.white
                                 : null,
                           ),
@@ -188,8 +196,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                           },
                         ),
                       ),
-
-                      // EDIT (owner/admin)
                       if (_canEditOrDelete)
                         PopupMenuItem(
                           child: ListTile(
@@ -197,7 +203,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             contentPadding: const EdgeInsets.all(0),
                             leading: Icon(
                               Icons.edit,
-                              color: isDarkMode(context) ? Colors.white : null,
+                              color: dark ? Colors.white : null,
                             ),
                             title: Text(
                               'Edit Listing'.tr(),
@@ -212,21 +218,13 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                                   listingToEdit: listing,
                                 ),
                               );
-
-                              // If edit screen returned true, you can optionally refresh by popping and reopening
-                              // or implement a "reload listing" event in your bloc.
                               if (updated == true) {
                                 if (!mounted) return;
-                                setState(() {
-                                  // minimal: keep current instance; user can re-open to see updates
-                                  // If you add a reload feature, trigger it here.
-                                });
+                                setState(() {});
                               }
                             },
                           ),
                         ),
-
-                      // Add Review (not author)
                       if (currentUser.userID != listing.authorID)
                         PopupMenuItem(
                           child: ListTile(
@@ -234,7 +232,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             contentPadding: const EdgeInsets.all(0),
                             leading: Icon(
                               Icons.stars,
-                              color: isDarkMode(context) ? Colors.white : null,
+                              color: dark ? Colors.white : null,
                             ),
                             title: Text(
                               'Add Review'.tr(),
@@ -261,8 +259,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             },
                           ),
                         ),
-
-                      // Send Message (not author)
                       if (currentUser.userID != listing.authorID)
                         PopupMenuItem(
                           child: ListTile(
@@ -270,7 +266,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             contentPadding: const EdgeInsets.all(0),
                             leading: Icon(
                               Icons.chat,
-                              color: isDarkMode(context) ? Colors.white : null,
+                              color: dark ? Colors.white : null,
                             ),
                             title: Text(
                               'Send Message'.tr(),
@@ -286,8 +282,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             },
                           ),
                         ),
-
-                      // Delete (owner/admin)
                       if (_canEditOrDelete)
                         PopupMenuItem(
                           child: ListTile(
@@ -310,13 +304,13 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
               },
             ),
           ],
-          title: Text(listing.title),
         ),
         body: SafeArea(
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // الصور
                 if (listing.photos.isNotEmpty)
                   SizedBox(
                     height: MediaQuery.of(context).size.height / 3,
@@ -371,78 +365,125 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     ),
                   ),
 
+                // ===== Title + Price (overflow safe) =====
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Text(
                           listing.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 19,
-                            color: isDarkMode(context)
-                                ? Colors.grey.shade200
-                                : Colors.grey.shade900,
+                            fontWeight: FontWeight.w600,
+                            color: dark ? Colors.grey.shade200 : Colors.black87,
                           ),
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Text(
-                        listing.price,
-                        style: TextStyle(
-                          fontSize: 19,
-                          color: isDarkMode(context)
-                              ? Colors.grey.shade200
-                              : Colors.grey.shade800,
+                      Flexible(
+                        fit: FlexFit.loose,
+                        child: Text(
+                          listing.price,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w600,
+                            color: dark ? Colors.grey.shade200 : Colors.black87,
+                          ),
                         ),
-                      )
+                      ),
                     ],
                   ),
                 ),
 
+                // ===== Description (readable container) =====
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Text(
-                    listing.description,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: isDarkMode(context)
-                          ? Colors.grey.shade400
-                          : Colors.grey.shade500,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: dark
+                          ? Colors.black.withOpacity(0.25)
+                          : Colors.white.withOpacity(0.90),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: dark
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade200,
+                      ),
+                    ),
+                    child: Text(
+                      listing.description,
+                      style: TextStyle(
+                        height: 1.45,
+                        fontSize: 15,
+                        color: dark ? Colors.white : Colors.black87,
+                      ),
                     ),
                   ),
                 ),
 
+                // NEW: Contact & Hours
+                if (_hasContactOrHours(listing)) ...[
+                  const SizedBox(height: 14),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 16, 16, 0),
+                    child: Text(
+                      'Contact & Hours'.tr(),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: dark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _ContactHoursCard(
+                      listing: listing,
+                      colorPrimary: Color(colorPrimary),
+                      isDark: dark,
+                      onCall: () => _launchPhone(listing.phone),
+                      onEmail: () => _launchEmail(listing.email),
+                      onWebsite: () => _launchWebsite(listing.website),
+                    ),
+                  ),
+                ],
+
+                // Location
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16.0, 16, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(16.0, 20, 16, 0),
                   child: Text(
                     'Location'.tr(),
                     style: TextStyle(
                       fontSize: 19,
-                      color: isDarkMode(context)
-                          ? Colors.grey.shade200
-                          : Colors.grey.shade900,
+                      color: dark ? Colors.grey.shade200 : Colors.black87,
                     ),
                   ),
                 ),
 
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 8.0, horizontal: 16),
+                  padding:
+                  const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16),
                   child: Text(
                     listing.place,
                     style: TextStyle(
                       fontSize: 15,
-                      color: isDarkMode(context)
-                          ? Colors.grey.shade400
-                          : Colors.grey.shade500,
+                      color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
                     ),
                   ),
                 ),
 
+                // ===== Map (smaller height) =====
                 SizedBox(
-                  height: MediaQuery.of(context).size.height / 3,
+                  height: 220,
                   child: FutureBuilder(
                     future: _mapFuture,
                     builder: (context, snapshot) {
@@ -473,15 +514,14 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   ),
                 ),
 
+                // Extra info
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16.0, 16, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(16.0, 20, 16, 16),
                   child: Text(
                     'Extra info'.tr(),
                     style: TextStyle(
                       fontSize: 19,
-                      color: isDarkMode(context)
-                          ? Colors.grey.shade200
-                          : Colors.grey.shade900,
+                      color: dark ? Colors.grey.shade200 : Colors.black87,
                     ),
                   ),
                 ),
@@ -495,15 +535,14 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   ),
                 ),
 
+                // Reviews
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16.0, 16, 16, 0),
                   child: Text(
                     'Reviews'.tr(),
                     style: TextStyle(
                       fontSize: 19,
-                      color: isDarkMode(context)
-                          ? Colors.grey.shade200
-                          : Colors.grey.shade900,
+                      color: dark ? Colors.grey.shade200 : Colors.black87,
                     ),
                   ),
                 ),
@@ -535,9 +574,10 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                         padding: const EdgeInsets.all(16.0),
                         child: showEmptyState(
                           'No Reviews found.'.tr(),
-                          'You can add a review and it will show up here.'.tr(),
+                          'You can add a review and it will show up here.'
+                              .tr(),
                           buttonTitle: 'Add Review',
-                          isDarkMode: isDarkMode(context),
+                          isDarkMode: dark,
                           action: () async {
                             bool? reviewPublished = await push(
                               context,
@@ -583,15 +623,35 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   void dispose() {
     _autoScroll?.cancel();
     _pagerController.dispose();
-    _mapController.dispose();
+    _mapController?.dispose();
     super.dispose();
   }
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
     if (isDarkMode(context)) {
-      _mapController.setMapStyle('[{"featureType": "all","'
-          'elementType": "geometry","stylers": [{"color": "#242f3e"}]},{"featureType": "all","elementType": "labels.text.stroke","stylers": [{"lightness": -80}]},{"featureType": "administrative","elementType": "labels.text.fill","stylers": [{"color": "#746855"}]},{"featureType": "administrative.locality","elementType": "labels.text.fill","stylers": [{"color": "#d59563"}]},{"featureType": "poi","elementType": "labels.text.fill","stylers": [{"color": "#d59563"}]},{"featureType": "poi.park","elementType": "geometry","stylers": [{"color": "#263c3f"}]},{"featureType": "poi.park","elementType": "labels.text.fill","stylers": [{"color": "#6b9a76"}]},{"featureType": "road","elementType": "geometry.fill","stylers": [{"color": "#2b3544"}]},{"featureType": "road","elementType": "labels.text.fill","stylers": [{"color": "#9ca5b3"}]},{"featureType": "road.arterial","elementType": "geometry.fill","stylers": [{"color": "#38414e"}]},{"featureType": "road.arterial","elementType": "geometry.stroke","stylers": [{"color": "#212a37"}]},{"featureType": "road.highway","elementType": "geometry.fill","stylers": [{"color": "#746855"}]},{"featureType": "road.highway","elementType": "geometry.stroke","stylers": [{"color": "#1f2835"}]},{"featureType": "road.highway","elementType": "labels.text.fill","stylers": [{"color": "#f3d19c"}]},{"featureType": "road.local","elementType": "geometry.fill","stylers": [{"color": "#38414e"}]},{"featureType": "road.local","elementType": "geometry.stroke","stylers": [{"color": "#212a37"}]},{"featureType": "transit","elementType": "geometry","stylers": [{"color": "#2f3948"}]},{"featureType": "transit.station","elementType": "labels.text.fill","stylers": [{"color": "#d59563"}]},{"featureType": "water","elementType": "geometry","stylers": [{"color": "#17263c"}]},{"featureType": "water","elementType": "labels.text.fill","stylers": [{"color": "#515c6d"}]},{"featureType": "water","elementType": "labels.text.stroke","stylers": [{"lightness": -20}]}]');
+      _mapController?.setMapStyle(
+          '[{"featureType":"all","elementType":"geometry","stylers":[{"color":"#242f3e"}]},'
+              '{"featureType":"all","elementType":"labels.text.stroke","stylers":[{"lightness":-80}]},'
+              '{"featureType":"administrative","elementType":"labels.text.fill","stylers":[{"color":"#746855"}]},'
+              '{"featureType":"administrative.locality","elementType":"labels.text.fill","stylers":[{"color":"#d59563"}]},'
+              '{"featureType":"poi","elementType":"labels.text.fill","stylers":[{"color":"#d59563"}]},'
+              '{"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#263c3f"}]},'
+              '{"featureType":"poi.park","elementType":"labels.text.fill","stylers":[{"color":"#6b9a76"}]},'
+              '{"featureType":"road","elementType":"geometry.fill","stylers":[{"color":"#2b3544"}]},'
+              '{"featureType":"road","elementType":"labels.text.fill","stylers":[{"color":"#9ca5b3"}]},'
+              '{"featureType":"road.arterial","elementType":"geometry.fill","stylers":[{"color":"#38414e"}]},'
+              '{"featureType":"road.arterial","elementType":"geometry.stroke","stylers":[{"color":"#212a37"}]},'
+              '{"featureType":"road.highway","elementType":"geometry.fill","stylers":[{"color":"#746855"}]},'
+              '{"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"color":"#1f2835"}]},'
+              '{"featureType":"road.highway","elementType":"labels.text.fill","stylers":[{"color":"#f3d19c"}]},'
+              '{"featureType":"road.local","elementType":"geometry.fill","stylers":[{"color":"#38414e"}]},'
+              '{"featureType":"road.local","elementType":"geometry.stroke","stylers":[{"color":"#212a37"}]},'
+              '{"featureType":"transit","elementType":"geometry","stylers":[{"color":"#2f3948"}]},'
+              '{"featureType":"transit.station","elementType":"labels.text.fill","stylers":[{"color":"#d59563"}]},'
+              '{"featureType":"water","elementType":"geometry","stylers":[{"color":"#17263c"}]},'
+              '{"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#515c6d"}]},'
+              '{"featureType":"water","elementType":"labels.text.stroke","stylers":[{"lightness":-20}]}]');
     }
   }
 
@@ -666,6 +726,259 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
       );
     }
   }
+
+  static bool _hasContactOrHours(ListingModel l) {
+    final phone = (l.phone).trim();
+    final email = (l.email).trim();
+    final website = (l.website).trim();
+    final hours = (l.openingHours).trim();
+    return phone.isNotEmpty ||
+        email.isNotEmpty ||
+        website.isNotEmpty ||
+        hours.isNotEmpty;
+  }
+
+  Future<void> _launchPhone(String phone) async {
+    final p = phone.trim();
+    if (p.isEmpty) return;
+    final uri = Uri(scheme: 'tel', path: p);
+    await _safeLaunch(uri);
+  }
+
+  Future<void> _launchEmail(String email) async {
+    final e = email.trim();
+    if (e.isEmpty) return;
+    final uri = Uri(scheme: 'mailto', path: e);
+    await _safeLaunch(uri);
+  }
+
+  Future<void> _launchWebsite(String website) async {
+    final w = website.trim();
+    if (w.isEmpty) return;
+
+    Uri uri;
+    if (w.startsWith('http://') || w.startsWith('https://')) {
+      uri = Uri.parse(w);
+    } else {
+      uri = Uri.parse('https://$w');
+    }
+    await _safeLaunch(uri);
+  }
+
+  Future<void> _safeLaunch(Uri uri) async {
+    try {
+      final ok = await canLaunchUrl(uri);
+      if (!ok) {
+        debugPrint('Could not launch: $uri');
+        return;
+      }
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e, st) {
+      debugPrint('_safeLaunch error: $e');
+      debugPrint('$st');
+    }
+  }
+}
+
+class _ContactHoursCard extends StatelessWidget {
+  final ListingModel listing;
+  final Color colorPrimary;
+  final bool isDark;
+
+  final VoidCallback onCall;
+  final VoidCallback onEmail;
+  final VoidCallback onWebsite;
+
+  const _ContactHoursCard({
+    required this.listing,
+    required this.colorPrimary,
+    required this.isDark,
+    required this.onCall,
+    required this.onEmail,
+    required this.onWebsite,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final phone = listing.phone.trim();
+    final email = listing.email.trim();
+    final website = listing.website.trim();
+    final hours = listing.openingHours.trim();
+
+    final bg = isDark ? Colors.grey.shade900 : Colors.white;
+    final border = isDark ? Colors.grey.shade800 : Colors.grey.shade200;
+    final muted = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: border),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 6),
+            ),
+        ],
+      ),
+      child: Column(
+        children: [
+          if (phone.isNotEmpty)
+            _ActionRow(
+              icon: Icons.call,
+              title: 'Phone'.tr(),
+              value: phone,
+              onTap: onCall,
+              accent: colorPrimary,
+              muted: muted,
+              isDark: isDark,
+            ),
+          if (email.isNotEmpty)
+            _ActionRow(
+              icon: Icons.email,
+              title: 'Email'.tr(),
+              value: email,
+              onTap: onEmail,
+              accent: colorPrimary,
+              muted: muted,
+              isDark: isDark,
+            ),
+          if (website.isNotEmpty)
+            _ActionRow(
+              icon: Icons.language,
+              title: 'Website'.tr(),
+              value: website,
+              onTap: onWebsite,
+              accent: colorPrimary,
+              muted: muted,
+              isDark: isDark,
+            ),
+          if (hours.isNotEmpty)
+            _InfoRow(
+              icon: Icons.access_time,
+              title: 'Opening Hours'.tr(),
+              value: hours,
+              accent: colorPrimary,
+              muted: muted,
+              isDark: isDark,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final VoidCallback onTap;
+  final Color accent;
+  final Color muted;
+  final bool isDark;
+
+  const _ActionRow({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.onTap,
+    required this.accent,
+    required this.muted,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final valueStyle = TextStyle(
+      fontSize: 16,
+      color: isDark ? Colors.grey.shade200 : Colors.black87,
+    );
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        child: Row(
+          children: [
+            Icon(icon, color: accent),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: muted,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(value, style: valueStyle),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: muted),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final Color accent;
+  final Color muted;
+  final bool isDark;
+
+  const _InfoRow({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.accent,
+    required this.muted,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final valueStyle = TextStyle(
+      fontSize: 16,
+      color: isDark ? Colors.grey.shade200 : Colors.black87,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: accent),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: muted,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(value, style: valueStyle),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class ReviewWidget extends StatelessWidget {
@@ -700,7 +1013,7 @@ class ReviewWidget extends StatelessWidget {
             ),
           ),
           trailing: RatingBar.builder(
-            onRatingUpdate: (rating) {},
+            onRatingUpdate: (_) {},
             ignoreGestures: true,
             glow: false,
             itemCount: 5,
@@ -729,12 +1042,26 @@ class FilterDetailsWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 8.0, bottom: 8, left: 24, right: 100),
+      padding: const EdgeInsets.only(top: 8.0, bottom: 8, left: 24, right: 24),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(filter.key, style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(filter.value, style: const TextStyle(color: Colors.grey)),
+          Expanded(
+            child: Text(
+              filter.key,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              '${filter.value}',
+              style: const TextStyle(color: Colors.grey),
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
