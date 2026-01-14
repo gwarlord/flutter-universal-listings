@@ -248,7 +248,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                                 ? Color(colorPrimary)
                                 : dark
                                 ? Colors.white
-                                : null,
+                                : Colors.black,
                           ),
                           title: Text(
                             listing.isFav
@@ -271,7 +271,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             contentPadding: const EdgeInsets.all(0),
                             leading: Icon(
                               Icons.edit,
-                              color: dark ? Colors.white : null,
+                              color: dark ? Colors.white : Colors.black,
                             ),
                             title: Text(
                               'Edit Listing'.tr(),
@@ -286,9 +286,11 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                                   listingToEdit: listing,
                                 ),
                               );
-                              if (updated == true) {
+                              if (updated is ListingModel) {
                                 if (!mounted) return;
-                                setState(() {});
+                                setState(() {
+                                  listing = updated;
+                                });
                               }
                             },
                           ),
@@ -300,7 +302,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             contentPadding: const EdgeInsets.all(0),
                             leading: Icon(
                               Icons.stars,
-                              color: dark ? Colors.white : null,
+                              color: dark ? Colors.white : Colors.black,
                             ),
                             title: Text(
                               'Add Review'.tr(),
@@ -334,7 +336,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             contentPadding: const EdgeInsets.all(0),
                             leading: Icon(
                               Icons.chat,
-                              color: dark ? Colors.white : null,
+                              color: dark ? Colors.white : Colors.black,
                             ),
                             title: Text(
                               'Send Message'.tr(),
@@ -569,7 +571,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Color(colorPrimary).withOpacity(0.15),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: Color(colorPrimary).withOpacity(0.3),
@@ -662,6 +664,12 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                       onCall: () => _launchPhone(listing.phone),
                       onEmail: () => _launchEmail(listing.email),
                       onWebsite: () => _launchWebsite(listing.website),
+                      onInstagram: () => _launchUrl(listing.instagram),
+                      onFacebook: () => _launchUrl(listing.facebook),
+                      onTiktok: () => _launchUrl(listing.tiktok),
+                      onWhatsapp: () => _launchWhatsApp(listing.whatsapp),
+                      onYoutube: () => _launchUrl(listing.youtube),
+                      onX: () => _launchUrl(listing.x),
                     ),
                   ),
                 ],
@@ -986,10 +994,22 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     final email = (l.email).trim();
     final website = (l.website).trim();
     final hours = (l.openingHours).trim();
+    final instagram = (l.instagram).trim();
+    final facebook = (l.facebook).trim();
+    final tiktok = (l.tiktok).trim();
+    final whatsapp = (l.whatsapp).trim();
+    final youtube = (l.youtube).trim();
+    final x = (l.x).trim();
     return phone.isNotEmpty ||
         email.isNotEmpty ||
         website.isNotEmpty ||
-        hours.isNotEmpty;
+        hours.isNotEmpty ||
+        instagram.isNotEmpty ||
+        facebook.isNotEmpty ||
+        tiktok.isNotEmpty ||
+        whatsapp.isNotEmpty ||
+        youtube.isNotEmpty ||
+        x.isNotEmpty;
   }
 
   String _getCountryFlag(String countryCode) {
@@ -1098,6 +1118,29 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     await _safeLaunch(uri);
   }
 
+  Future<void> _launchUrl(String url) async {
+    final u = url.trim();
+    if (u.isEmpty) return;
+
+    Uri uri;
+    if (u.startsWith('http://') || u.startsWith('https://')) {
+      uri = Uri.parse(u);
+    } else {
+      uri = Uri.parse('https://$u');
+    }
+    await _safeLaunch(uri);
+  }
+
+  Future<void> _launchWhatsApp(String phone) async {
+    final p = phone.trim();
+    if (p.isEmpty) return;
+
+    // Remove any non-digit characters for WhatsApp
+    final cleanPhone = p.replaceAll(RegExp(r'[^\d+]'), '');
+    final uri = Uri.parse('whatsapp://send?phone=$cleanPhone');
+    await _safeLaunch(uri);
+  }
+
   Future<void> _safeLaunch(Uri uri) async {
     try {
       final ok = await canLaunchUrl(uri);
@@ -1122,6 +1165,13 @@ class _ContactHoursCard extends StatelessWidget {
   final VoidCallback onEmail;
   final VoidCallback onWebsite;
 
+  final VoidCallback onInstagram;
+  final VoidCallback onFacebook;
+  final VoidCallback onTiktok;
+  final VoidCallback onWhatsapp;
+  final VoidCallback onYoutube;
+  final VoidCallback onX;
+
   const _ContactHoursCard({
     required this.listing,
     required this.colorPrimary,
@@ -1129,6 +1179,12 @@ class _ContactHoursCard extends StatelessWidget {
     required this.onCall,
     required this.onEmail,
     required this.onWebsite,
+    required this.onInstagram,
+    required this.onFacebook,
+    required this.onTiktok,
+    required this.onWhatsapp,
+    required this.onYoutube,
+    required this.onX,
   });
 
   @override
@@ -1137,6 +1193,12 @@ class _ContactHoursCard extends StatelessWidget {
     final email = listing.email.trim();
     final website = listing.website.trim();
     final hours = listing.openingHours.trim();
+    final instagram = listing.instagram.trim();
+    final facebook = listing.facebook.trim();
+    final tiktok = listing.tiktok.trim();
+    final whatsapp = listing.whatsapp.trim();
+    final youtube = listing.youtube.trim();
+    final x = listing.x.trim();
 
     final bg = isDark ? Colors.grey.shade900 : Colors.grey.shade50;
     final border = isDark ? Colors.grey.shade800 : Colors.grey.shade200;
@@ -1159,7 +1221,7 @@ class _ContactHoursCard extends StatelessWidget {
               accent: colorPrimary,
               muted: muted,
               isDark: isDark,
-              showDivider: email.isNotEmpty || website.isNotEmpty || hours.isNotEmpty,
+              showDivider: email.isNotEmpty || website.isNotEmpty || instagram.isNotEmpty || facebook.isNotEmpty || tiktok.isNotEmpty || whatsapp.isNotEmpty || youtube.isNotEmpty || x.isNotEmpty || hours.isNotEmpty,
             ),
           if (email.isNotEmpty)
             _ActionRow(
@@ -1170,7 +1232,7 @@ class _ContactHoursCard extends StatelessWidget {
               accent: colorPrimary,
               muted: muted,
               isDark: isDark,
-              showDivider: website.isNotEmpty || hours.isNotEmpty,
+              showDivider: website.isNotEmpty || instagram.isNotEmpty || facebook.isNotEmpty || tiktok.isNotEmpty || whatsapp.isNotEmpty || youtube.isNotEmpty || x.isNotEmpty || hours.isNotEmpty,
             ),
           if (website.isNotEmpty)
             _ActionRow(
@@ -1178,6 +1240,72 @@ class _ContactHoursCard extends StatelessWidget {
               title: 'Website'.tr(),
               value: website,
               onTap: onWebsite,
+              accent: colorPrimary,
+              muted: muted,
+              isDark: isDark,
+              showDivider: instagram.isNotEmpty || facebook.isNotEmpty || tiktok.isNotEmpty || whatsapp.isNotEmpty || youtube.isNotEmpty || x.isNotEmpty || hours.isNotEmpty,
+            ),
+          if (instagram.isNotEmpty)
+            _ActionRow(
+              icon: Icons.camera_alt,
+              title: 'Instagram',
+              value: '',
+              onTap: onInstagram,
+              accent: colorPrimary,
+              muted: muted,
+              isDark: isDark,
+              showDivider: facebook.isNotEmpty || tiktok.isNotEmpty || whatsapp.isNotEmpty || youtube.isNotEmpty || x.isNotEmpty || hours.isNotEmpty,
+            ),
+          if (facebook.isNotEmpty)
+            _ActionRow(
+              icon: Icons.share,
+              title: 'Facebook',
+              value: '',
+              onTap: onFacebook,
+              accent: colorPrimary,
+              muted: muted,
+              isDark: isDark,
+              showDivider: tiktok.isNotEmpty || whatsapp.isNotEmpty || youtube.isNotEmpty || x.isNotEmpty || hours.isNotEmpty,
+            ),
+          if (tiktok.isNotEmpty)
+            _ActionRow(
+              icon: Icons.music_note,
+              title: 'TikTok',
+              value: '',
+              onTap: onTiktok,
+              accent: colorPrimary,
+              muted: muted,
+              isDark: isDark,
+              showDivider: whatsapp.isNotEmpty || youtube.isNotEmpty || x.isNotEmpty || hours.isNotEmpty,
+            ),
+          if (whatsapp.isNotEmpty)
+            _ActionRow(
+              icon: Icons.message,
+              title: 'WhatsApp',
+              value: '',
+              onTap: onWhatsapp,
+              accent: colorPrimary,
+              muted: muted,
+              isDark: isDark,
+              showDivider: youtube.isNotEmpty || x.isNotEmpty || hours.isNotEmpty,
+            ),
+          if (youtube.isNotEmpty)
+            _ActionRow(
+              icon: Icons.play_circle_filled,
+              title: 'YouTube',
+              value: '',
+              onTap: onYoutube,
+              accent: colorPrimary,
+              muted: muted,
+              isDark: isDark,
+              showDivider: x.isNotEmpty || hours.isNotEmpty,
+            ),
+          if (x.isNotEmpty)
+            _ActionRow(
+              icon: Icons.alternate_email,
+              title: 'X (Twitter)',
+              value: '',
+              onTap: onX,
               accent: colorPrimary,
               muted: muted,
               isDark: isDark,
@@ -1245,13 +1373,15 @@ class _ActionRow extends StatelessWidget {
                         title,
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: muted,
+                          color: isDark ? Colors.white : muted,
                           fontSize: 12,
                           letterSpacing: 0.3,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(value, style: valueStyle),
+                      if (value.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(value, style: valueStyle),
+                      ],
                     ],
                   ),
                 ),

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:instaflutter/listings/utils/caribbean_countries.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +20,7 @@ import 'package:instaflutter/listings/listings_module/filters/filters_screen.dar
 import 'package:instaflutter/listings/model/categories_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:instaflutter/listings/utils/opening_hours_editor.dart';
 
 class AddListingWrappingWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -87,6 +89,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _websiteController = TextEditingController();
 
+  final TextEditingController _instagramController = TextEditingController();
+  final TextEditingController _facebookController = TextEditingController();
+  final TextEditingController _tiktokController = TextEditingController();
+  final TextEditingController _whatsappController = TextEditingController();
+  final TextEditingController _youtubeController = TextEditingController();
+  final TextEditingController _xController = TextEditingController();
+
   final TextEditingController _openingHoursController = TextEditingController();
 
   Map<String, String>? _filters = {};
@@ -102,11 +111,17 @@ class _AddListingScreenState extends State<AddListingScreen> {
   // New local images picked this session (file list managed by bloc)
   List<File?> _newImages = [null];
 
+  // ✅ NEW: videos picked this session (managed by bloc)
+  List<File?> _newVideos = [null];
+
   List<CategoriesModel> _categories = [];
   late ListingsUser currentUser;
   bool isLoadingCategories = true;
 
   bool get isEdit => widget.listingToEdit != null;
+
+  // ✅ Caribbean-only country selection (store country CODE)
+  String? _countryCode;
 
   @override
   void initState() {
@@ -129,7 +144,15 @@ class _AddListingScreenState extends State<AddListingScreen> {
       _phoneController.text = (l.phone ?? '').trim();
       _emailController.text = (l.email ?? '').trim();
       _websiteController.text = (l.website ?? '').trim();
+      _instagramController.text = (l.instagram ?? '').trim();
+      _facebookController.text = (l.facebook ?? '').trim();
+      _tiktokController.text = (l.tiktok ?? '').trim();
+      _whatsappController.text = (l.whatsapp ?? '').trim();
+      _youtubeController.text = (l.youtube ?? '').trim();
+      _xController.text = (l.x ?? '').trim();
       _openingHoursController.text = (l.openingHours ?? '').trim();
+
+      _countryCode = (l.countryCode ?? '').trim().isEmpty ? null : l.countryCode;
 
       // IMPORTANT: satisfy validation without forcing user to re-pick location
       _placeDetail = _fakePlaceDetailsFromExisting(
@@ -138,6 +161,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
         l.latitude,
         l.longitude,
       );
+
+      // NOTE: Existing videos (URLs) are not handled here.
+      // Step 2B should handle editing logic if you want to keep old videos.
     }
   }
 
@@ -150,7 +176,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
           if (!mounted) return;
           showAlertDialog(listenerContext, state.errorTitle, state.errorMessage);
         } else if (state is PlaceDetailsState) {
-          // IMPORTANT: if details fail (null), keep the user's selected prediction
           setState(() {
             _isFetchingPlaceDetails = false;
             if (state.placeDetails != null) {
@@ -177,7 +202,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
         } else if (state is ListingUpdatedState) {
           context.read<LoadingCubit>().hideLoading();
           if (!mounted) return;
-          Navigator.pop(context, true);
+          Navigator.pop(context, state.updatedListing);
           showAlertDialog(
             context,
             'Listing Updated'.tr(),
@@ -186,7 +211,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
         }
       },
       listenWhen: (old, current) =>
-          old != current &&
+      old != current &&
           (current is AddListingErrorState ||
               current is ListingPublishedState ||
               current is ListingUpdatedState ||
@@ -317,6 +342,52 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       ),
                     ),
 
+                    // Country (Caribbean-only) - REQUIRED
+                    ListTile(
+                      dense: true,
+                      title: Text(
+                        'Country'.tr(),
+                        style: const TextStyle(fontSize: 20),
+                      ),
+                      trailing: SizedBox(
+                        width: MediaQuery.of(context).size.width / 2,
+                        child: DropdownButton<String>(
+                          isDense: true,
+                          isExpanded: true,
+                          underline: const SizedBox(),
+                          alignment: Alignment.centerRight,
+                          value: _countryCode,
+                          hint: Text('Select Country'.tr()),
+                          items: CaribbeanCountries.all
+                              .map(
+                                (c) => DropdownMenuItem<String>(
+                              value: c.code,
+                              alignment: Alignment.centerRight,
+                              child: Text(c.name),
+                            ),
+                          )
+                              .toList(),
+                          icon: const SizedBox(),
+                          onChanged: (value) {
+                            setState(() {
+                              _countryCode = value;
+                            });
+                          },
+                        ),
+                      ),
+                      subtitle: (_countryCode == null)
+                          ? Padding(
+                        padding: const EdgeInsets.only(top: 6.0),
+                        child: Text(
+                          'Required (Caribbean only)'.tr(),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      )
+                          : null,
+                    ),
+
                     // Category
                     ListTile(
                       dense: true,
@@ -328,7 +399,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         width: MediaQuery.of(context).size.width / 2,
                         child: BlocBuilder<AddListingBloc, AddListingState>(
                           buildWhen: (old, current) =>
-                              old != current &&
+                          old != current &&
                               (current is CategoriesFetchedState ||
                                   current is CategorySelectedState),
                           builder: (context, state) {
@@ -336,12 +407,11 @@ class _AddListingScreenState extends State<AddListingScreen> {
                               isLoadingCategories = false;
                               _categories = state.categories;
 
-                              // Preselect category in edit mode once categories load
                               if (isEdit && _categoryValue == null) {
                                 final l = widget.listingToEdit!;
                                 try {
-                                  _categoryValue = _categories
-                                      .firstWhere((c) => c.id == l.categoryID);
+                                  _categoryValue =
+                                      _categories.firstWhere((c) => c.id == l.categoryID);
                                 } catch (_) {}
                               }
                             } else if (state is CategorySelectedState) {
@@ -366,27 +436,23 @@ class _AddListingScreenState extends State<AddListingScreen> {
                               isDense: true,
                               isExpanded: true,
                               selectedItemBuilder: (BuildContext context) =>
-                                  _categories
-                                      .map<Widget>((item) => Text(item.title))
-                                      .toList(),
+                                  _categories.map<Widget>((item) => Text(item.title)).toList(),
                               hint: Text('Choose Category'.tr()),
                               value: _categoryValue,
                               underline: const SizedBox(),
                               items: _categories
                                   .map(
-                                    (category) =>
-                                        DropdownMenuItem<CategoriesModel>(
-                                      value: category,
-                                      alignment: Alignment.centerRight,
-                                      child: Text(category.title),
-                                    ),
-                                  )
+                                    (category) => DropdownMenuItem<CategoriesModel>(
+                                  value: category,
+                                  alignment: Alignment.centerRight,
+                                  child: Text(category.title),
+                                ),
+                              )
                                   .toList(),
                               icon: const SizedBox(),
                               onChanged: (CategoriesModel? model) => context
                                   .read<AddListingBloc>()
-                                  .add(CategorySelectedEvent(
-                                      categoriesModel: model)),
+                                  .add(CategorySelectedEvent(categoriesModel: model)),
                             );
                           },
                         ),
@@ -401,25 +467,22 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         style: const TextStyle(fontSize: 20),
                       ),
                       trailing: BlocBuilder<AddListingBloc, AddListingState>(
-                        buildWhen: (old, current) =>
-                            old != current && current is SetFiltersState,
+                        buildWhen: (old, current) => old != current && current is SetFiltersState,
                         builder: (context, state) {
                           if (state is SetFiltersState) {
                             _filters = state.filters ?? {};
                           }
-                          return Text(_filters?.isEmpty ?? true
-                              ? 'Optional'.tr()
-                              : 'Edit Filters'.tr());
+                          return Text(
+                            _filters?.isEmpty ?? true ? 'Optional'.tr() : 'Edit Filters'.tr(),
+                          );
                         },
                       ),
                       onTap: () async {
-                        final filters =
-                            await showModalBottomSheet<Map<String, String>>(
+                        final filters = await showModalBottomSheet<Map<String, String>>(
                           isScrollControlled: true,
                           context: context,
                           shape: const RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.vertical(top: Radius.circular(20)),
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                           ),
                           builder: (context) => FilterWrappingWidget(
                             filtersValue: _filters ?? {},
@@ -427,9 +490,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         );
                         if (filters != null) {
                           if (!mounted) return;
-                          context
-                              .read<AddListingBloc>()
-                              .add(SetFiltersEvent(filters: filters));
+                          context.read<AddListingBloc>().add(SetFiltersEvent(filters: filters));
                         }
                       },
                     ),
@@ -446,18 +507,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         child: Text(
                           _isFetchingPlaceDetails
                               ? 'Loading...'.tr()
-                              : (_placeDetail?.formattedAddress?.trim().isNotEmpty ??
-                                      false)
-                                  ? _placeDetail!.formattedAddress!
-                                  : (_selectedPrediction?.description
-                                              ?.trim()
-                                              .isNotEmpty ??
-                                          false)
-                                      ? _selectedPrediction!.description!
-                                      : (isEdit
-                                          ? (widget.listingToEdit?.place ??
-                                              'Select Place'.tr())
-                                          : 'Select Place'.tr()),
+                              : (_placeDetail?.formattedAddress?.trim().isNotEmpty ?? false)
+                              ? _placeDetail!.formattedAddress!
+                              : (_selectedPrediction?.description?.trim().isNotEmpty ?? false)
+                              ? _selectedPrediction!.description!
+                              : (isEdit
+                              ? (widget.listingToEdit?.place ?? 'Select Place'.tr())
+                              : 'Select Place'.tr()),
                           textAlign: TextAlign.end,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -472,16 +528,15 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         );
 
                         if (prediction != null) {
-                          // Show selection immediately, then fetch details
                           setState(() {
                             _selectedPrediction = prediction;
                             _isFetchingPlaceDetails = true;
                           });
 
                           if (!mounted) return;
-                          context
-                              .read<AddListingBloc>()
-                              .add(GetPlaceDetailsEvent(prediction: prediction));
+                          context.read<AddListingBloc>().add(
+                            GetPlaceDetailsEvent(prediction: prediction),
+                          );
                         }
                       },
                     ),
@@ -546,22 +601,106 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       ),
                     ),
 
-                    // Opening Hours
+                    // Social Media
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
                       child: Text(
-                        'Opening Hours (Optional)'.tr(),
+                        'Social Media (Optional)'.tr(),
                         style: const TextStyle(fontSize: 20),
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                       child: TextField(
-                        controller: _openingHoursController,
-                        keyboardType: TextInputType.multiline,
-                        maxLines: 3,
+                        controller: _instagramController,
+                        keyboardType: TextInputType.url,
                         decoration: InputDecoration(
-                          hintText: 'e.g. Mon-Fri 9am-5pm, Sat 10am-2pm'.tr(),
+                          hintText: 'Instagram URL'.tr(),
+                          isDense: true,
+                          enabledBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: TextField(
+                        controller: _facebookController,
+                        keyboardType: TextInputType.url,
+                        decoration: InputDecoration(
+                          hintText: 'Facebook URL'.tr(),
+                          isDense: true,
+                          enabledBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: TextField(
+                        controller: _tiktokController,
+                        keyboardType: TextInputType.url,
+                        decoration: InputDecoration(
+                          hintText: 'TikTok URL'.tr(),
+                          isDense: true,
+                          enabledBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: TextField(
+                        controller: _whatsappController,
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          hintText: 'WhatsApp Phone Number'.tr(),
+                          isDense: true,
+                          enabledBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: TextField(
+                        controller: _youtubeController,
+                        keyboardType: TextInputType.url,
+                        decoration: InputDecoration(
+                          hintText: 'YouTube URL'.tr(),
+                          isDense: true,
+                          enabledBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: TextField(
+                        controller: _xController,
+                        keyboardType: TextInputType.url,
+                        decoration: InputDecoration(
+                          hintText: 'X (Twitter) URL'.tr(),
                           isDense: true,
                           enabledBorder: const UnderlineInputBorder(
                             borderSide: BorderSide.none,
@@ -573,10 +712,69 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       ),
                     ),
 
+                    // Opening Hours
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+                      child: Text(
+                        'Opening Hours (Optional)'.tr(),
+                        style: const TextStyle(fontSize: 20),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () async {
+                          final result = await OpeningHoursEditorSheet.show(
+                            context,
+                            initialValue: _openingHoursController.text.trim(),
+                          );
+                          if (result != null) {
+                            setState(() {
+                              _openingHoursController.text = result.trim();
+                            });
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDarkMode(context)
+                                ? Colors.black.withOpacity(0.10)
+                                : Colors.grey.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _openingHoursController.text.trim().isEmpty
+                                      ? 'Tap to set opening hours'.tr()
+                                      : _openingHoursController.text
+                                      .trim()
+                                      .replaceAll('\n', ' • '),
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: isDarkMode(context) ? Colors.white : Colors.black87,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.edit,
+                                size: 18,
+                                color: isDarkMode(context) ? Colors.white70 : Colors.black54,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
                     // Photos header
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 16.0),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16.0),
                       child: Text(
                         'Add Photos'.tr(),
                         style: const TextStyle(fontSize: 25),
@@ -612,8 +810,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     // New photos (picked now)
                     BlocBuilder<AddListingBloc, AddListingState>(
                       buildWhen: (old, current) =>
-                          old != current &&
-                          current is ListingImagesUpdatedState,
+                      old != current && current is ListingImagesUpdatedState,
                       builder: (context, state) {
                         if (state is ListingImagesUpdatedState) {
                           _newImages = [...state.images, null];
@@ -625,11 +822,50 @@ class _AddListingScreenState extends State<AddListingScreen> {
                             child: ListView.builder(
                               shrinkWrap: true,
                               itemCount: _newImages.length,
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
                               scrollDirection: Axis.horizontal,
                               itemBuilder: (context, index) => ListingImageWidget(
                                 imageFile: _newImages[index],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                    // ✅ NEW: Videos header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16.0),
+                      child: Text(
+                        'Add Videos (max 3)'.tr(),
+                        style: const TextStyle(fontSize: 25),
+                      ),
+                    ),
+
+                    // ✅ NEW: Videos picker list
+                    BlocBuilder<AddListingBloc, AddListingState>(
+                      buildWhen: (old, current) =>
+                      old != current && current is ListingVideosUpdatedState,
+                      builder: (context, state) {
+                        if (state is ListingVideosUpdatedState) {
+                          _newVideos = [...state.videos, null];
+                        }
+
+                        // hard cap UI list at 3 + add button
+                        final visible = _newVideos.take(4).toList();
+                        if (visible.length > 4) visible.length = 4;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: SizedBox(
+                            height: 100,
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: visible.length,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              scrollDirection: Axis.horizontal,
+                              itemBuilder: (context, index) => ListingVideoWidget(
+                                videoFile: visible[index],
                               ),
                             ),
                           ),
@@ -642,12 +878,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
               // Post button
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 16, horizontal: 24),
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                     backgroundColor: Color(colorPrimary),
                     shape: RoundedRectangleBorder(
                       side: BorderSide.none,
@@ -679,14 +913,29 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _phoneController.dispose();
     _emailController.dispose();
     _websiteController.dispose();
+    _instagramController.dispose();
+    _facebookController.dispose();
+    _tiktokController.dispose();
+    _whatsappController.dispose();
+    _youtubeController.dispose();
+    _xController.dispose();
     _openingHoursController.dispose();
     super.dispose();
   }
 
   void _postListing() {
-    // Prevent posting while place details still loading
     if (_isFetchingPlaceDetails) {
       showAlertDialog(context, 'Please wait'.tr(), 'Loading location...'.tr());
+      return;
+    }
+
+    // ✅ UI only requires non-empty selection; Bloc enforces Caribbean-only codes
+    if (_countryCode == null || _countryCode!.trim().isEmpty) {
+      showAlertDialog(
+        context,
+        'Country required'.tr(),
+        'Please select a Caribbean country before posting.'.tr(),
+      );
       return;
     }
 
@@ -708,42 +957,47 @@ class _AddListingScreenState extends State<AddListingScreen> {
         email: _emailController.text.trim(),
         website: _websiteController.text.trim(),
         openingHours: _openingHoursController.text.trim(),
+        instagram: _instagramController.text.trim(),
+        facebook: _facebookController.text.trim(),
+        tiktok: _tiktokController.text.trim(),
+        whatsapp: _whatsappController.text.trim(),
+        youtube: _youtubeController.text.trim(),
+        x: _xController.text.trim(),
         category: _categoryValue ??
             (isEdit
                 ? CategoriesModel(
-                    id: listingToEdit!.categoryID,
-                    title: listingToEdit.categoryTitle,
-                    photo: listingToEdit.categoryPhoto,
-                    isActive: true,
-                    sortOrder: 0,
-                  )
+              id: listingToEdit!.categoryID,
+              title: listingToEdit.categoryTitle,
+              photo: listingToEdit.categoryPhoto,
+              isActive: true,
+              sortOrder: 0,
+            )
                 : null),
         filters: _filters,
         placeDetails: _placeDetail ??
             (isEdit
                 ? _fakePlaceDetailsFromExisting(
-                    listingToEdit!.title,
-                    listingToEdit.place,
-                    listingToEdit.latitude,
-                    listingToEdit.longitude,
-                  )
+              listingToEdit!.title,
+              listingToEdit.place,
+              listingToEdit.latitude,
+              listingToEdit.longitude,
+            )
                 : null),
         isEdit: isEdit,
         listingToEdit: listingToEdit,
         existingPhotoUrls: List<String>.from(_existingPhotoUrls),
+        countryCode: _countryCode!.trim().toUpperCase(),
       ),
     );
   }
 
-  // Helper to avoid forcing user to re-pick a location in Edit mode
   PlaceDetails _fakePlaceDetailsFromExisting(
-    String name,
-    String address,
-    double lat,
-    double lng,
-  ) {
-    final safeAddress =
-        address.trim().isEmpty ? 'Unknown location' : address.trim();
+      String name,
+      String address,
+      double lat,
+      double lng,
+      ) {
+    final safeAddress = address.trim().isEmpty ? 'Unknown location' : address.trim();
 
     return PlaceDetails(
       placeId: 'manual_${lat.toStringAsFixed(6)}_${lng.toStringAsFixed(6)}',
@@ -816,8 +1070,7 @@ class ExistingListingImageWidget extends StatelessWidget {
             child: Image.network(
               imageUrl,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) =>
-                  const Center(child: Icon(Icons.broken_image)),
+              errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image)),
             ),
           ),
         ),
@@ -840,9 +1093,7 @@ class _ListingImageWidgetState extends State<ListingImageWidget> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        widget.imageFile == null
-            ? _pickImage(context)
-            : _viewOrDeleteImage(widget.imageFile!, context);
+        widget.imageFile == null ? _pickImage(context) : _viewOrDeleteImage(widget.imageFile!, context);
       },
       child: SizedBox(
         width: 100,
@@ -854,90 +1105,178 @@ class _ListingImageWidgetState extends State<ListingImageWidget> {
           color: Color(colorPrimary),
           child: widget.imageFile == null
               ? Icon(
-                  Icons.camera_alt,
-                  size: 40,
-                  color: isDarkMode(context) ? Colors.black : Colors.white,
-                )
+            Icons.camera_alt,
+            size: 40,
+            color: isDarkMode(context) ? Colors.black : Colors.white,
+          )
               : ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.file(
-                    widget.imageFile!,
-                    fit: BoxFit.cover,
-                  ),
-                ),
+            borderRadius: BorderRadius.circular(12),
+            child: Image.file(
+              widget.imageFile!,
+              fit: BoxFit.cover,
+            ),
+          ),
         ),
       ),
     );
   }
 
-  void _viewOrDeleteImage(File imageFile, BuildContext blocContext) =>
-      showCupertinoModalPopup(
-        context: context,
-        builder: (context) => CupertinoActionSheet(
-          actions: [
-            CupertinoActionSheetAction(
-              onPressed: () async {
-                Navigator.pop(context);
-                blocContext
-                    .read<AddListingBloc>()
-                    .add(RemoveListingImageEvent(image: imageFile));
-              },
-              isDestructiveAction: true,
-              child: Text('Remove Picture'.tr()),
-            ),
-            CupertinoActionSheetAction(
-              onPressed: () {
-                Navigator.pop(context);
-                push(
-                  context,
-                  FullScreenImageViewer(
-                      imageUrl: 'preview', imageFile: imageFile),
-                );
-              },
-              isDefaultAction: true,
-              child: Text('View Picture'.tr()),
-            ),
-          ],
-          cancelButton: CupertinoActionSheetAction(
-            child: Text('Cancel'.tr()),
-            onPressed: () => Navigator.pop(context),
-          ),
+  void _viewOrDeleteImage(File imageFile, BuildContext blocContext) => showCupertinoModalPopup(
+    context: context,
+    builder: (context) => CupertinoActionSheet(
+      actions: [
+        CupertinoActionSheetAction(
+          onPressed: () async {
+            Navigator.pop(context);
+            blocContext.read<AddListingBloc>().add(RemoveListingImageEvent(image: imageFile));
+          },
+          isDestructiveAction: true,
+          child: Text('Remove Picture'.tr()),
         ),
-      );
+        CupertinoActionSheetAction(
+          onPressed: () {
+            Navigator.pop(context);
+            push(
+              context,
+              FullScreenImageViewer(
+                imageUrl: 'preview',
+                imageFile: imageFile,
+              ),
+            );
+          },
+          isDefaultAction: true,
+          child: Text('View Picture'.tr()),
+        ),
+      ],
+      cancelButton: CupertinoActionSheetAction(
+        child: Text('Cancel'.tr()),
+        onPressed: () => Navigator.pop(context),
+      ),
+    ),
+  );
 
   void _pickImage(BuildContext blocContext) => showCupertinoModalPopup(
-        context: context,
-        builder: (context) => CupertinoActionSheet(
-          message: Text(
-            'Add picture'.tr(),
-            style: const TextStyle(fontSize: 15.0),
+    context: context,
+    builder: (context) => CupertinoActionSheet(
+      message: Text(
+        'Add picture'.tr(),
+        style: const TextStyle(fontSize: 15.0),
+      ),
+      actions: [
+        CupertinoActionSheetAction(
+          isDefaultAction: false,
+          onPressed: () {
+            Navigator.pop(context);
+            blocContext.read<AddListingBloc>().add(AddImageToListingEvent(fromGallery: true));
+          },
+          child: Text('Choose from gallery'.tr()),
+        ),
+        CupertinoActionSheetAction(
+          isDestructiveAction: false,
+          onPressed: () {
+            Navigator.pop(context);
+            blocContext.read<AddListingBloc>().add(AddImageToListingEvent(fromGallery: false));
+          },
+          child: Text('Take a picture'.tr()),
+        )
+      ],
+      cancelButton: CupertinoActionSheetAction(
+        child: Text('Cancel'.tr()),
+        onPressed: () => Navigator.pop(context),
+      ),
+    ),
+  );
+}
+
+/// ✅ NEW: Video picker tile (max 3) - simple UI
+class ListingVideoWidget extends StatefulWidget {
+  final File? videoFile;
+
+  const ListingVideoWidget({super.key, required this.videoFile});
+
+  @override
+  State<ListingVideoWidget> createState() => _ListingVideoWidgetState();
+}
+
+class _ListingVideoWidgetState extends State<ListingVideoWidget> {
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        widget.videoFile == null ? _pickVideo(context) : _viewOrDeleteVideo(widget.videoFile!, context);
+      },
+      child: SizedBox(
+        width: 100,
+        child: Card(
+          shape: RoundedRectangleBorder(
+            side: BorderSide.none,
+            borderRadius: BorderRadius.circular(12),
           ),
-          actions: [
-            CupertinoActionSheetAction(
-              isDefaultAction: false,
-              onPressed: () {
-                Navigator.pop(context);
-                blocContext
-                    .read<AddListingBloc>()
-                    .add(AddImageToListingEvent(fromGallery: true));
-              },
-              child: Text('Choose from gallery'.tr()),
-            ),
-            CupertinoActionSheetAction(
-              isDestructiveAction: false,
-              onPressed: () {
-                Navigator.pop(context);
-                blocContext
-                    .read<AddListingBloc>()
-                    .add(AddImageToListingEvent(fromGallery: false));
-              },
-              child: Text('Take a picture'.tr()),
-            )
-          ],
-          cancelButton: CupertinoActionSheetAction(
-            child: Text('Cancel'.tr()),
-            onPressed: () => Navigator.pop(context),
+          color: Color(colorPrimary),
+          child: widget.videoFile == null
+              ? Icon(
+            Icons.videocam,
+            size: 40,
+            color: isDarkMode(context) ? Colors.black : Colors.white,
+          )
+              : Stack(
+            fit: StackFit.expand,
+            children: [
+              Container(
+                color: Colors.black.withOpacity(0.25),
+              ),
+              const Center(
+                child: Icon(Icons.play_circle_fill, size: 44, color: Colors.white),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    );
+  }
+
+  void _viewOrDeleteVideo(File videoFile, BuildContext blocContext) => showCupertinoModalPopup(
+    context: context,
+    builder: (context) => CupertinoActionSheet(
+      actions: [
+        CupertinoActionSheetAction(
+          onPressed: () async {
+            Navigator.pop(context);
+            blocContext.read<AddListingBloc>().add(RemoveListingVideoEvent(video: videoFile));
+          },
+          isDestructiveAction: true,
+          child: Text('Remove Video'.tr()),
+        ),
+      ],
+      cancelButton: CupertinoActionSheetAction(
+        child: Text('Cancel'.tr()),
+        onPressed: () => Navigator.pop(context),
+      ),
+    ),
+  );
+
+  void _pickVideo(BuildContext blocContext) => showCupertinoModalPopup(
+    context: context,
+    builder: (context) => CupertinoActionSheet(
+      message: Text(
+        'Add video'.tr(),
+        style: const TextStyle(fontSize: 15.0),
+      ),
+      actions: [
+        CupertinoActionSheetAction(
+          isDefaultAction: true,
+          onPressed: () {
+            Navigator.pop(context);
+            // Step 2B should enforce: MP4 only, <=60s, compress to 720p.
+            blocContext.read<AddListingBloc>().add(AddVideoToListingEvent(fromGallery: true));
+          },
+          child: Text('Choose from gallery'.tr()),
+        ),
+      ],
+      cancelButton: CupertinoActionSheetAction(
+        child: Text('Cancel'.tr()),
+        onPressed: () => Navigator.pop(context),
+      ),
+    ),
+  );
 }
