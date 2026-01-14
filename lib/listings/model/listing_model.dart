@@ -1,110 +1,138 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ListingModel {
+  /// REQUIRED
+  String id;
+
+  /// Author
   String authorID;
   String authorName;
   String authorProfilePic;
 
+  /// Category
   String categoryID;
   String categoryPhoto;
   String categoryTitle;
 
+  /// Core
   int createdAt;
+  String title;
   String description;
-
-  /// Optional. Can be empty.
-  Map<String, dynamic> filters;
-
-  String id;
-  bool isApproved;
-
+  String place;
   double latitude;
   double longitude;
 
-  String photo;
+  /// Media
+  String photo; // PRIMARY image (used everywhere)
   List<String> photos;
+  List<String> videos;
 
-  String place;
-
-  /// Optional. For services/venues this may be empty.
+  /// Optional
   String price;
-
-  /// Optional contact info.
   String phone;
   String email;
   String website;
-
-  /// Optional opening hours (free-form text).
   String openingHours;
 
+  /// Social Media
+  String instagram;
+  String facebook;
+  String tiktok;
+  String whatsapp;
+  String youtube;
+  String x; // Twitter
+
+  /// Filters / meta
+  Map<String, dynamic> filters;
+  bool isApproved;
+
+  /// Reviews
   num reviewsCount;
   num reviewsSum;
 
-  String title;
+  /// Region
+  String countryCode;
 
-  // internal use only, don't save to db
+  /// UI-only
   bool isFav = false;
 
   ListingModel({
+    this.id = '',
     this.authorID = '',
     this.authorName = '',
     this.authorProfilePic = '',
     this.categoryID = '',
     this.categoryPhoto = '',
     this.categoryTitle = '',
-    createdAt,
+    int? createdAt,
+    this.title = '',
     this.description = '',
-    this.filters = const {},
-    this.id = '',
-    this.isApproved = false,
-    this.latitude = 0.1,
-    this.longitude = 0.1,
+    this.place = '',
+    this.latitude = 0,
+    this.longitude = 0,
     this.photo = '',
     this.photos = const [],
-    this.place = '',
+    this.videos = const [],
     this.price = '',
     this.phone = '',
     this.email = '',
     this.website = '',
     this.openingHours = '',
+    this.instagram = '',
+    this.facebook = '',
+    this.tiktok = '',
+    this.whatsapp = '',
+    this.youtube = '',
+    this.x = '',
+    this.filters = const {},
+    this.isApproved = false,
     this.reviewsCount = 0,
     this.reviewsSum = 0,
-    this.title = '',
-  }) : createdAt = createdAt is int ? createdAt : Timestamp.now().seconds;
+    this.countryCode = '',
+  }) : createdAt = createdAt ?? Timestamp.now().seconds;
 
-  factory ListingModel.fromJson(Map<String, dynamic> parsedJson) {
+  factory ListingModel.fromJson(Map<String, dynamic> json) {
     return ListingModel(
-      authorID: parsedJson['authorID'] ?? '',
-      authorName: parsedJson['authorName'] ?? '',
-      authorProfilePic: parsedJson['authorProfilePic'] ?? '',
-      categoryID: parsedJson['categoryID'] ?? '',
-      categoryPhoto: parsedJson['categoryPhoto'] ?? '',
-      categoryTitle: parsedJson['categoryTitle'] ?? '',
-      createdAt: parsedJson['createdAt'] is Timestamp
-          ? (parsedJson['createdAt'] as Timestamp).seconds
-          : parsedJson['createdAt'],
-      description: parsedJson['description'] ?? '',
-      filters: parsedJson['filters'] ?? {},
-      id: parsedJson['id'] ?? '',
-      isApproved: parsedJson['isApproved'] ?? false,
-      latitude: (parsedJson['latitude'] ?? 0.1).toDouble(),
-      longitude: (parsedJson['longitude'] ?? 0.1).toDouble(),
-      photo: parsedJson['photo'] ?? '',
-      photos: List<String>.from(parsedJson['photos'] ?? []),
-      place: parsedJson['place'] ?? '',
-      price: parsedJson['price'] ?? '',
-      phone: parsedJson['phone'] ?? '',
-      email: parsedJson['email'] ?? '',
-      website: parsedJson['website'] ?? '',
-      openingHours: parsedJson['openingHours'] ?? '',
-      reviewsCount: parsedJson['reviewsCount'] ?? 0,
-      reviewsSum: parsedJson['reviewsSum'] ?? 0,
-      title: parsedJson['title'] ?? '',
+      id: json['id'] ?? '',
+      authorID: json['authorID'] ?? '',
+      authorName: json['authorName'] ?? '',
+      authorProfilePic: json['authorProfilePic'] ?? '',
+      categoryID: json['categoryID'] ?? '',
+      categoryPhoto: json['categoryPhoto'] ?? '',
+      categoryTitle: json['categoryTitle'] ?? '',
+      createdAt: json['createdAt'] is Timestamp
+          ? (json['createdAt'] as Timestamp).seconds
+          : (json['createdAt'] ?? Timestamp.now().seconds),
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      place: json['place'] ?? '',
+      latitude: (json['latitude'] ?? 0).toDouble(),
+      longitude: (json['longitude'] ?? 0).toDouble(),
+      photo: json['photo'] ?? '',
+      photos: List<String>.from(json['photos'] ?? []),
+      videos: List<String>.from(json['videos'] ?? []),
+      price: json['price'] ?? '',
+      phone: json['phone'] ?? '',
+      email: json['email'] ?? '',
+      website: json['website'] ?? '',
+      openingHours: json['openingHours'] ?? '',
+      instagram: json['instagram'] ?? '',
+      facebook: json['facebook'] ?? '',
+      tiktok: json['tiktok'] ?? '',
+      whatsapp: json['whatsapp'] ?? '',
+      youtube: json['youtube'] ?? '',
+      x: json['x'] ?? '',
+      filters: Map<String, dynamic>.from(json['filters'] ?? {}),
+      isApproved: json['isApproved'] ?? false,
+      reviewsCount: json['reviewsCount'] ?? 0,
+      reviewsSum: json['reviewsSum'] ?? 0,
+      countryCode: json['countryCode'] ?? '',
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'authorID': authorID,
       'authorName': authorName,
       'authorProfilePic': authorProfilePic,
@@ -112,23 +140,30 @@ class ListingModel {
       'categoryPhoto': categoryPhoto,
       'categoryTitle': categoryTitle,
       'createdAt': createdAt,
+      'title': title,
       'description': description,
-      'filters': filters,
-      'id': id,
-      'isApproved': isApproved,
+      'place': place,
       'latitude': latitude,
       'longitude': longitude,
       'photo': photo,
       'photos': photos,
-      'place': place,
+      'videos': videos,
       'price': price,
       'phone': phone,
       'email': email,
       'website': website,
       'openingHours': openingHours,
+      'instagram': instagram,
+      'facebook': facebook,
+      'tiktok': tiktok,
+      'whatsapp': whatsapp,
+      'youtube': youtube,
+      'x': x,
+      'filters': filters,
+      'isApproved': isApproved,
       'reviewsCount': reviewsCount,
       'reviewsSum': reviewsSum,
-      'title': title,
+      'countryCode': countryCode,
     };
   }
 }

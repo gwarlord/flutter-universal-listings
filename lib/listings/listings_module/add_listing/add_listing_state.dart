@@ -2,10 +2,22 @@ import 'dart:io';
 
 import 'package:flutter_google_places_hoc081098/google_maps_webservice_places.dart';
 import 'package:instaflutter/listings/model/categories_model.dart';
+import 'package:instaflutter/listings/model/listing_model.dart';
 
 abstract class AddListingState {}
 
 class AddListingInitial extends AddListingState {}
+
+class AddListingProgressState extends AddListingState {
+  final String progressMessage;
+  AddListingProgressState({required this.progressMessage});
+}
+
+class AddListingErrorState extends AddListingState {
+  final String errorTitle;
+  final String errorMessage;
+  AddListingErrorState({required this.errorTitle, required this.errorMessage});
+}
 
 class CategoriesFetchedState extends AddListingState {
   final List<CategoriesModel> categories;
@@ -28,21 +40,18 @@ class PlaceDetailsState extends AddListingState {
 }
 
 class ListingImagesUpdatedState extends AddListingState {
-  final List<File> images; // NEW images only (picked from phone)
+  final List<File> images;
   ListingImagesUpdatedState({required this.images});
 }
 
-class AddListingProgressState extends AddListingState {
-  final String progressMessage;
-  AddListingProgressState({required this.progressMessage});
-}
-
-class AddListingErrorState extends AddListingState {
-  final String errorTitle;
-  final String errorMessage;
-  AddListingErrorState({required this.errorTitle, required this.errorMessage});
+class ListingVideosUpdatedState extends AddListingState {
+  final List<File> videos;
+  ListingVideosUpdatedState({required this.videos});
 }
 
 class ListingPublishedState extends AddListingState {}
 
-class ListingUpdatedState extends AddListingState {}
+class ListingUpdatedState extends AddListingState {
+  final ListingModel updatedListing;
+  ListingUpdatedState({required this.updatedListing});
+}
