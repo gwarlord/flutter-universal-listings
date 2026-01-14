@@ -19,6 +19,7 @@ import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
+import 'package:instaflutter/listings/utils/caribbean_countries.dart';
 
 class HomeWrapperWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -65,13 +66,124 @@ class HomeScreenState extends State<HomeScreen> {
   bool loadingListings = true;
 
   late ListingsUser currentUser;
+  
+  // Search and filter variables
+  String _searchQuery = '';
+  List<String> _selectedCountryCodes = [];
+  late TextEditingController _searchController;
 
   @override
   void initState() {
     super.initState();
     currentUser = widget.currentUser;
+    _searchController = TextEditingController();
     context.read<HomeBloc>().add(GetCategoriesEvent());
     context.read<HomeBloc>().add(GetListingsEvent());
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<ListingModel> _getFilteredListings() {
+    return listings.where((listing) {
+      // Filter by search query
+      final matchesSearch = _searchQuery.isEmpty ||
+          listing.title.toLowerCase().contains(_searchQuery) ||
+          listing.description.toLowerCase().contains(_searchQuery) ||
+          listing.place.toLowerCase().contains(_searchQuery);
+
+      // Filter by country (if countries are selected, listing must be in that list)
+      final matchesCountry = _selectedCountryCodes.isEmpty ||
+          _selectedCountryCodes.contains(listing.countryCode);
+
+      return matchesSearch && matchesCountry;
+    }).toList();
+  }
+
+  List<ListingModel?> _getFilteredListingsWithAds() {
+    final filtered = _getFilteredListings();
+    final result = <ListingModel?>[];
+    
+    for (int i = 0; i < filtered.length; i++) {
+      if ((result.length + 1) % 5 == 0) {
+        result.add(null);
+        result.add(filtered[i]);
+      } else {
+        result.add(filtered[i]);
+      }
+    }
+    
+    return result;
+  }
+
+  void _showCountrySelectionDialog(BuildContext context) {
+    List<String> tempSelectedCountries = [..._selectedCountryCodes];
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(
+                'Select Countries (Max 5)'.tr(),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: CaribbeanCountries.all.length,
+                  itemBuilder: (context, index) {
+                    final country = CaribbeanCountries.all[index];
+                    final isSelected = tempSelectedCountries.contains(country.code);
+
+                    return CheckboxListTile(
+                      title: Text(country.name),
+                      value: isSelected,
+                      onChanged: (bool? newValue) {
+                        setDialogState(() {
+                          if (newValue == true && tempSelectedCountries.length < 5) {
+                            tempSelectedCountries.add(country.code);
+                          } else if (newValue == false) {
+                            tempSelectedCountries.remove(country.code);
+                          }
+                        });
+                      },
+                      enabled: !isSelected || tempSelectedCountries.length < 5,
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('Cancel'.tr()),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(colorPrimary),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _selectedCountryCodes = tempSelectedCountries;
+                    });
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(
+                    'Save'.tr(),
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -183,6 +295,125 @@ class HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+                  // Search Bar
+                  SliverToBoxAdapter(
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value.toLowerCase();
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search listings...'.tr(),
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? GestureDetector(
+                                onTap: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchQuery = '';
+                                  });
+                                },
+                                child: const Icon(Icons.clear),
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Color(colorPrimary).withOpacity(0.5)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Color(colorPrimary), width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+                  // Country Filter Dropdown (Multi-select)
+                  SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_selectedCountryCodes.isNotEmpty) ...[
+                          Text(
+                            'Selected Countries (${_selectedCountryCodes.length}/5)'.tr(),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            children: _selectedCountryCodes.map((code) {
+                              final country = CaribbeanCountries.all.firstWhere(
+                                (c) => c.code == code,
+                                orElse: () => CaribbeanCountry(code: code, name: code),
+                              );
+                              return Chip(
+                                label: Text(country.name),
+                                onDeleted: () {
+                                  setState(() {
+                                    _selectedCountryCodes.remove(code);
+                                  });
+                                },
+                                backgroundColor: Color(colorPrimary).withOpacity(0.2),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        GestureDetector(
+                          onTap: () => _showCountrySelectionDialog(context),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Color(colorPrimary).withOpacity(0.5)),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _selectedCountryCodes.isEmpty
+                                      ? 'Filter Countries'.tr()
+                                      : '${_selectedCountryCodes.length} Selected'.tr(),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: _selectedCountryCodes.isEmpty
+                                        ? Color(colorPrimary)
+                                        : Colors.black,
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.arrow_drop_down,
+                                  color: Color(colorPrimary),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (_selectedCountryCodes.length >= 5)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              'Maximum 5 countries selected'.tr(),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                   const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
                   if (loadingListings)
@@ -190,70 +421,85 @@ class HomeScreenState extends State<HomeScreen> {
                       child: Center(child: CircularProgressIndicator.adaptive()),
                     ),
 
-                  if (listingsWithAds.isEmpty && !loadingListings)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Center(
-                          child: showEmptyState(
-                            'No Listings'.tr(),
-                            'Add a new listing to show up here once the admin approves it.'.tr(),
-                            buttonTitle: 'Add Listing'.tr(),
-                            isDarkMode: isDarkMode(context),
-                            action: () => push(
-                              context,
-                              AddListingWrappingWidget(currentUser: currentUser),
+                  if (!loadingListings)
+                    Builder(
+                      builder: (context) {
+                        final filteredListingsWithAds = _getFilteredListingsWithAds();
+                        if (filteredListingsWithAds.isEmpty && !loadingListings) {
+                          return SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Center(
+                                child: showEmptyState(
+                                  'No Listings'.tr(),
+                                  'No listings match your search or filter criteria.'.tr(),
+                                  buttonTitle: 'Clear Filters'.tr(),
+                                  isDarkMode: isDarkMode(context),
+                                  action: () {
+                                    setState(() {
+                                      _searchQuery = '';
+                                      _selectedCountryCodes = [];
+                                      _searchController.clear();
+                                    });
+                                  },
+                                  colorPrimary: Color(colorPrimary),
+                                ),
+                              ),
                             ),
-                            colorPrimary: Color(colorPrimary),
+                          );
+                        }
+                        
+                        return SliverGrid(
+                          delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                              final item = filteredListingsWithAds[index];
+                              return item == null
+                                  ? AdsUtils.adsContainer()
+                                  : ListingHomeCardWidget(
+                                currentUser: currentUser,
+                                listing: item,
+                              );
+                            },
+                            childCount: filteredListingsWithAds.length > 4
+                                ? (_showAll ? filteredListingsWithAds.length : 4)
+                                : filteredListingsWithAds.length,
                           ),
-                        ),
-                      ),
-                    ),
-
-                  SliverGrid(
-                    delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                        final item = listingsWithAds[index];
-                        return item == null
-                            ? AdsUtils.adsContainer()
-                            : ListingHomeCardWidget(
-                          currentUser: currentUser,
-                          listing: item,
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 20,
+                            crossAxisSpacing: 16,
+                            childAspectRatio: 0.72,
+                          ),
                         );
                       },
-                      childCount: listingsWithAds.length > 4
-                          ? (_showAll ? listingsWithAds.length : 4)
-                          : listingsWithAds.length,
                     ),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 20,
-                      crossAxisSpacing: 16,
-                      childAspectRatio: 0.72,
-                    ),
-                  ),
 
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 32),
-                      child: Visibility(
-                        visible: !_showAll && listingsWithAds.length > 4,
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
-                              side: BorderSide(color: Color(colorPrimary)),
+                  Builder(
+                    builder: (context) {
+                      final filteredListingsWithAds = _getFilteredListingsWithAds();
+                      return SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 32),
+                          child: Visibility(
+                            visible: !_showAll && filteredListingsWithAds.length > 4,
+                            child: TextButton(
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                  side: BorderSide(color: Color(colorPrimary)),
+                                ),
+                              ),
+                              child: Text(
+                                'Show All (${(filteredListingsWithAds.length - 4) < 0 ? 0 : filteredListingsWithAds.length - 4})'.tr(),
+                                style: TextStyle(color: Color(colorPrimary)),
+                              ),
+                              onPressed: () => context.read<HomeBloc>().add(ToggleShowAllEvent()),
                             ),
                           ),
-                          child: Text(
-                            'Show All (${(listings.length - 4) < 0 ? 0 : listings.length - 4})'.tr(),
-                            style: TextStyle(color: Color(colorPrimary)),
-                          ),
-                          onPressed: () => context.read<HomeBloc>().add(ToggleShowAllEvent()),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ],
               ),
