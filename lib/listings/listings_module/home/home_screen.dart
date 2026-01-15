@@ -119,6 +119,30 @@ class HomeScreenState extends State<HomeScreen> {
     return result;
   }
 
+  String _getCurrencySymbol(String code) {
+    switch (code) {
+      case 'USD':
+      case 'XCD':
+      case 'JMD':
+      case 'TTD':
+      case 'BSD':
+      case 'BBD':
+      case 'GYD':
+      case 'DOP':
+      case 'KYD':
+      case 'SRD':
+        return '\$';
+      case 'ANG':
+        return 'ƒ';
+      case 'XOF':
+        return 'CFA';
+      case 'HTG':
+        return 'G';
+      default:
+        return '\$';
+    }
+  }
+
   void _showCountrySelectionDialog(BuildContext context) {
     List<String> tempSelectedCountries = [..._selectedCountryCodes];
 
@@ -619,6 +643,30 @@ class ListingHomeCardWidget extends StatefulWidget {
 }
 
 class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
+  String _getCurrencySymbol(String code) {
+    switch (code) {
+      case 'USD':
+      case 'XCD':
+      case 'JMD':
+      case 'TTD':
+      case 'BSD':
+      case 'BBD':
+      case 'GYD':
+      case 'DOP':
+      case 'KYD':
+      case 'SRD':
+        return '\$';
+      case 'ANG':
+        return 'ƒ';
+      case 'XOF':
+        return 'CFA';
+      case 'HTG':
+        return 'G';
+      default:
+        return '\$';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final listing = widget.listing;
@@ -782,7 +830,7 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
                         minRating: 0,
                         initialRating: safeRating,
                         allowHalfRating: true,
-                        itemSize: 18,
+                        itemSize: 12,
                         glow: false,
                         unratedColor: Color(colorPrimary).withOpacity(0.18),
                         itemBuilder: (context, index) => Icon(
@@ -810,7 +858,7 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
                       if (listing.price.trim().isNotEmpty) ...[
                         const SizedBox(width: 8),
                         ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 90, maxHeight: 28),
+                          constraints: const BoxConstraints(maxWidth: 70, maxHeight: 28),
                           child: Container(
                             alignment: Alignment.center,
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -822,13 +870,13 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
                               ),
                             ),
                             child: Text(
-                              listing.price,
+                              '${_getCurrencySymbol(listing.currencyCode)} ${listing.price} ${listing.currencyCode}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: Color(colorPrimary),
                                 fontWeight: FontWeight.w700,
-                                fontSize: 12,
+                                fontSize: 10,
                               ),
                             ),
                           ),
