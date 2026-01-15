@@ -412,6 +412,31 @@ class _SignUpState extends State<SignUpScreen> {
                                 ),
                               ),
                             ),
+                            const SizedBox(height: 12),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                context.read<LoadingCubit>().showLoading(
+                                      context,
+                                      'Signing up with Google, Please wait...'.tr(),
+                                      false,
+                                      Color(colorPrimary),
+                                    );
+                                context
+                                    .read<AuthenticationBloc>()
+                                    .add(LoginWithGoogleEvent());
+                              },
+                              icon: const Icon(Icons.g_mobiledata, size: 28),
+                              label: const Text('Sign up with Google').tr(),
+                              style: ElevatedButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                backgroundColor: const Color(0xFF4285F4),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14.0),
+                                ),
+                              ),
+                            ),
                             const SizedBox(height: 20),
                             ListTile(
                               tileColor: Colors.transparent,

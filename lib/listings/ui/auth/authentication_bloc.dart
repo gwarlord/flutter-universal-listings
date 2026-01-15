@@ -79,6 +79,18 @@ class AuthenticationBloc
             message: 'Apple login failed, Please try again.'.tr()));
       }
     });
+    on<LoginWithGoogleEvent>((event, emit) async {
+      dynamic result = await authenticationRepository.loginWithGoogle();
+      if (result != null && result is ListingsUser) {
+        user = result;
+        emit(AuthenticationState.authenticated(user!));
+      } else if (result != null && result is String) {
+        emit(AuthenticationState.unauthenticated(message: result));
+      } else {
+        emit(AuthenticationState.unauthenticated(
+            message: 'Google login failed, Please try again.'.tr()));
+      }
+    });
 
     on<LoginWithPhoneNumberEvent>((event, emit) async {
       dynamic result = await authenticationRepository

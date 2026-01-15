@@ -18,8 +18,9 @@ import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
 import 'package:instaflutter/listings/ui/profile/account_details/account_details_screen.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:instaflutter/listings/ui/profile/contact_us/contact_us_screen.dart';
-import 'package:instaflutter/listings/ui/profile/profile/profile_bloc.dart';
 import 'package:instaflutter/listings/ui/profile/settings/settings_screen.dart';
+import 'package:instaflutter/listings/ui/profile/profile/profile_bloc.dart';
+import 'package:instaflutter/core/ui/theme/theme_cubit.dart';
 
 class ProfileScreen extends StatefulWidget {
   final ListingsUser currentUser;
@@ -226,10 +227,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
-                          'Plan: ${currentUser.subscriptionTier.toUpperCase()}',
+                          currentUser.isAdmin
+                              ? 'Plan: ADMIN'
+                              : 'Plan: ${currentUser.subscriptionTier.toUpperCase()}',
                           style: TextStyle(
-                            color:
-                                isDarkMode(context) ? Colors.grey.shade400 : Colors.grey.shade700,
+                            color: currentUser.isAdmin
+                                ? Colors.green.shade600
+                                : (isDarkMode(context) ? Colors.grey.shade400 : Colors.grey.shade700),
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -306,6 +310,92 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               color: isDarkMode(context)
                                   ? Colors.white54
                                   : Colors.black45,
+                            ),
+                          ),
+                          ListTile(
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => BlocBuilder<ThemeCubit, ThemeState>(
+                                  builder: (context, themeState) {
+                                    return AlertDialog(
+                                      title: Text('Theme'.tr()),
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          RadioListTile<ThemeMode>(
+                                            title: Text(
+                                              'Light'.tr(),
+                                              style: const TextStyle(
+                                                color: Colors.black,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            value: ThemeMode.light,
+                                            groupValue: themeState.themeMode,
+                                            onChanged: (ThemeMode? value) {
+                                              if (value != null) {
+                                                context.read<ThemeCubit>().setThemeMode(value);
+                                                Navigator.pop(context);
+                                              }
+                                            },
+                                          ),
+                                          RadioListTile<ThemeMode>(
+                                            title: Text(
+                                              'Dark'.tr(),
+                                              style: const TextStyle(
+                                                color: Colors.black,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            value: ThemeMode.dark,
+                                            groupValue: themeState.themeMode,
+                                            onChanged: (ThemeMode? value) {
+                                              if (value != null) {
+                                                context.read<ThemeCubit>().setThemeMode(value);
+                                                Navigator.pop(context);
+                                              }
+                                            },
+                                          ),
+                                          RadioListTile<ThemeMode>(
+                                            title: Text(
+                                              'System Default'.tr(),
+                                              style: const TextStyle(
+                                                color: Colors.black,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            value: ThemeMode.system,
+                                            groupValue: themeState.themeMode,
+                                            onChanged: (ThemeMode? value) {
+                                              if (value != null) {
+                                                context.read<ThemeCubit>().setThemeMode(value);
+                                                Navigator.pop(context);
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context),
+                                          child: Text('Close'.tr()),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                            title: const Text(
+                              'Theme',
+                              style: TextStyle(fontSize: 16),
+                            ).tr(),
+                            leading: Icon(
+                              isDarkMode(context) ? Icons.dark_mode : Icons.light_mode,
+                              color: isDarkMode(context)
+                                  ? Colors.yellow.shade600
+                                  : Colors.orange,
                             ),
                           ),
                           ListTile(
