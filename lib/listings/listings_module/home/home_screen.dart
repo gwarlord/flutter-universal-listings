@@ -131,7 +131,7 @@ class HomeScreenState extends State<HomeScreen> {
           builder: (context, setDialogState) {
             final isDark = isDarkMode(context);
             return AlertDialog(
-              backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+              backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               title: Text(
                 'Select Countries (Max 5)'.tr(),
                 style: TextStyle(
@@ -149,24 +149,29 @@ class HomeScreenState extends State<HomeScreen> {
                     final country = sortedCountries[index];
                     final isSelected = tempSelectedCountries.contains(country.code);
 
-                    return CheckboxListTile(
-                      title: Text(
-                        country.name,
-                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                    return Theme(
+                      data: ThemeData(
+                        unselectedWidgetColor: isDark ? Colors.white70 : Colors.black54,
                       ),
-                      activeColor: Color(colorPrimary),
-                      checkColor: Colors.white,
-                      value: isSelected,
-                      onChanged: (bool? newValue) {
-                        setDialogState(() {
-                          if (newValue == true && tempSelectedCountries.length < 5) {
-                            tempSelectedCountries.add(country.code);
-                          } else if (newValue == false) {
-                            tempSelectedCountries.remove(country.code);
-                          }
-                        });
-                      },
-                      enabled: !isSelected || tempSelectedCountries.length < 5,
+                      child: CheckboxListTile(
+                        title: Text(
+                          country.name,
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                        ),
+                        activeColor: Color(colorPrimary),
+                        checkColor: Colors.white,
+                        value: isSelected,
+                        onChanged: (bool? newValue) {
+                          setDialogState(() {
+                            if (newValue == true && tempSelectedCountries.length < 5) {
+                              tempSelectedCountries.add(country.code);
+                            } else if (newValue == false) {
+                              tempSelectedCountries.remove(country.code);
+                            }
+                          });
+                        },
+                        enabled: isSelected || tempSelectedCountries.length < 5,
+                      ),
                     );
                   },
                 ),
