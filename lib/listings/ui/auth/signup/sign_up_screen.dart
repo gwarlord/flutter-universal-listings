@@ -25,10 +25,41 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpState extends State<SignUpScreen> {
   File? _image;
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
   final GlobalKey<FormState> _key = GlobalKey();
   String? firstName, lastName, email, password, confirmPassword;
   AutovalidateMode _validate = AutovalidateMode.disabled;
   bool acceptEULA = true;
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
+
+  InputDecoration _inputDecoration(BuildContext context, String hint,
+      {IconData? icon, bool required = false}) {
+    final dark = isDarkMode(context);
+    return InputDecoration(
+      hintText: hint,
+      prefixIcon: icon != null ? Icon(icon, color: Color(colorPrimary)) : null,
+      filled: true,
+      fillColor: dark ? Colors.grey[900] : Colors.white,
+      hintStyle: TextStyle(color: dark ? Colors.grey[500] : Colors.grey[600]),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide:
+            BorderSide(color: dark ? Colors.grey.shade800 : Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide:
+            BorderSide(color: dark ? Colors.grey.shade800 : Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: Color(colorPrimary), width: 2),
+      ),
+      labelStyle: TextStyle(color: dark ? Colors.grey[400] : Colors.grey[700]),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,15 +115,20 @@ class _SignUpState extends State<SignUpScreen> {
               ),
             ],
             child: Scaffold(
-              appBar: AppBar(
-                elevation: 0.0,
-                backgroundColor: Colors.transparent,
-                iconTheme: IconThemeData(
-                    color: isDarkMode(context) ? Colors.white : Colors.black),
-              ),
-              body: SingleChildScrollView(
+              body: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isDarkMode(context)
+                        ? [Colors.black, Colors.grey.shade900]
+                        : [Colors.white, Colors.grey.shade100],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+                child: SafeArea(
+              child: SingleChildScrollView(
                 padding:
-                    const EdgeInsets.only(left: 16.0, right: 16, bottom: 16),
+                    const EdgeInsets.symmetric(horizontal: 18.0, vertical: 16),
                 child: BlocBuilder<SignUpBloc, SignUpState>(
                   buildWhen: (old, current) =>
                       current is SignUpFailureState && old != current,
@@ -111,15 +147,25 @@ class _SignUpState extends State<SignUpScreen> {
                             Text(
                               'Create new account',
                               style: TextStyle(
-                                  color: Color(colorPrimary),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 25.0),
+                                  color: isDarkMode(context)
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 26.0),
                             ).tr(),
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  left: 8.0, top: 32, right: 8, bottom: 8),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Join the community and start listing'.tr(),
+                              style: TextStyle(
+                                color: isDarkMode(context)
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade700,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Center(
                               child: Stack(
-                                alignment: Alignment.bottomCenter,
                                 children: [
                                   BlocBuilder<SignUpBloc, SignUpState>(
                                     buildWhen: (old, current) =>
@@ -129,224 +175,247 @@ class _SignUpState extends State<SignUpScreen> {
                                       if (state is PictureSelectedState) {
                                         _image = state.imageFile;
                                       }
-                                      return state is PictureSelectedState
-                                          ? SizedBox(
-                                              height: 130,
-                                              width: 130,
-                                              child: ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(65),
-                                                child: state.imageFile == null
-                                                    ? Image.asset(
-                                                        'assets/images/placeholder.jpg',
-                                                        fit: BoxFit.cover,
-                                                      )
-                                                    : Image.file(
-                                                        state.imageFile!,
-                                                        fit: BoxFit.cover,
-                                                      ),
-                                              ),
-                                            )
-                                          : SizedBox(
-                                              height: 130,
-                                              width: 130,
-                                              child: ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(65),
-                                                child: Image.asset(
-                                                  'assets/images/placeholder.jpg',
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              ),
-                                            );
+                                      final img = state is PictureSelectedState
+                                          ? state.imageFile
+                                          : _image;
+                                      return CircleAvatar(
+                                        radius: 64,
+                                        backgroundColor: Colors.grey.shade300,
+                                        backgroundImage: img != null
+                                            ? FileImage(img)
+                                            : const AssetImage(
+                                                    'assets/images/placeholder.jpg')
+                                                as ImageProvider,
+                                      );
                                     },
                                   ),
                                   Positioned(
-                                    right: 110,
-                                    child: FloatingActionButton(
-                                      backgroundColor: Color(colorAccent),
-                                      mini: true,
+                                    bottom: 0,
+                                    right: -4,
+                                    child: IconButton(
+                                      icon: Icon(Icons.camera_alt,
+                                          color: isDarkMode(context)
+                                              ? Colors.white
+                                              : Colors.black),
                                       onPressed: () => _onCameraClick(context),
-                                      child: Icon(
-                                        Icons.camera_alt,
-                                        color: isDarkMode(context)
-                                            ? Colors.black
-                                            : Colors.white,
-                                      ),
                                     ),
-                                  )
+                                  ),
                                 ],
                               ),
                             ),
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  top: 16.0, right: 8.0, left: 8.0),
-                              child: TextFormField(
-                                textCapitalization: TextCapitalization.words,
-                                validator: validateName,
-                                onSaved: (String? val) {
-                                  firstName = val;
-                                },
-                                textInputAction: TextInputAction.next,
-                                decoration: getInputDecoration(
-                                  hint: 'First Name'.tr(),
-                                  darkMode: isDarkMode(context),
-                                  errorColor:
-                                      Theme.of(context).colorScheme.error,
-                                  colorPrimary: Color(colorPrimary),
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  top: 16.0, right: 8.0, left: 8.0),
-                              child: TextFormField(
-                                textCapitalization: TextCapitalization.words,
-                                validator: validateName,
-                                onSaved: (String? val) {
-                                  lastName = val;
-                                },
-                                textInputAction: TextInputAction.next,
-                                decoration: getInputDecoration(
-                                  hint: 'Last Name'.tr(),
-                                  darkMode: isDarkMode(context),
-                                  errorColor:
-                                      Theme.of(context).colorScheme.error,
-                                  colorPrimary: Color(colorPrimary),
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  top: 16.0, right: 8.0, left: 8.0),
-                              child: TextFormField(
-                                keyboardType: TextInputType.emailAddress,
-                                textInputAction: TextInputAction.next,
-                                validator: validateEmail,
-                                onSaved: (String? val) {
-                                  email = val;
-                                },
-                                decoration: getInputDecoration(
-                                  hint: 'Email'.tr(),
-                                  darkMode: isDarkMode(context),
-                                  errorColor:
-                                      Theme.of(context).colorScheme.error,
-                                  colorPrimary: Color(colorPrimary),
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  top: 16.0, right: 8.0, left: 8.0),
-                              child: TextFormField(
-                                obscureText: true,
-                                textInputAction: TextInputAction.next,
-                                controller: _passwordController,
-                                validator: validatePassword,
-                                onSaved: (String? val) {
-                                  password = val;
-                                },
-                                style: const TextStyle(
-                                    height: 0.8, fontSize: 18.0),
-                                cursorColor: Color(colorPrimary),
-                                decoration: getInputDecoration(
-                                  hint: 'Password'.tr(),
-                                  darkMode: isDarkMode(context),
-                                  errorColor:
-                                      Theme.of(context).colorScheme.error,
-                                  colorPrimary: Color(colorPrimary),
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  top: 16.0, right: 8.0, left: 8.0),
-                              child: TextFormField(
-                                textInputAction: TextInputAction.done,
-                                onFieldSubmitted: (_) =>
-                                    context.read<SignUpBloc>().add(
-                                          ValidateFieldsEvent(_key,
-                                              acceptEula: acceptEULA),
+                            const SizedBox(height: 20),
+                            Card(
+                              elevation: 4,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
+                              color: isDarkMode(context)
+                                  ? Colors.black
+                                  : Colors.white,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  children: [
+                                    TextFormField(
+                                      textCapitalization: TextCapitalization.words,
+                                      validator: validateName,
+                                      onSaved: (String? val) {
+                                        firstName = val;
+                                      },
+                                      textInputAction: TextInputAction.next,
+                                      style: TextStyle(
+                                          color: isDarkMode(context)
+                                              ? Colors.white
+                                              : Colors.grey.shade900),
+                                      decoration: _inputDecoration(
+                                          context, 'First Name'.tr(),
+                                          icon: Icons.person_outline),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    TextFormField(
+                                      textCapitalization: TextCapitalization.words,
+                                      validator: validateName,
+                                      onSaved: (String? val) {
+                                        lastName = val;
+                                      },
+                                      textInputAction: TextInputAction.next,
+                                      style: TextStyle(
+                                          color: isDarkMode(context)
+                                              ? Colors.white
+                                              : Colors.grey.shade900),
+                                      decoration: _inputDecoration(
+                                          context, 'Last Name'.tr(),
+                                          icon: Icons.person_outline),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    TextFormField(
+                                      keyboardType: TextInputType.emailAddress,
+                                      textInputAction: TextInputAction.next,
+                                      validator: validateEmail,
+                                      onSaved: (String? val) {
+                                        email = val;
+                                      },
+                                      style: TextStyle(
+                                          color: isDarkMode(context)
+                                              ? Colors.white
+                                              : Colors.grey.shade900),
+                                      decoration: _inputDecoration(context, 'Email'.tr(),
+                                          icon: Icons.email_outlined),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    TextFormField(
+                                      obscureText: _obscurePassword,
+                                      textInputAction: TextInputAction.next,
+                                      controller: _passwordController,
+                                      validator: validatePassword,
+                                      onSaved: (String? val) {
+                                        password = val;
+                                      },
+                                      style: TextStyle(
+                                          color: isDarkMode(context)
+                                              ? Colors.white
+                                              : Colors.grey.shade900),
+                                      cursorColor: Color(colorPrimary),
+                                      decoration: _inputDecoration(context, 'Password'.tr(),
+                                          icon: Icons.lock_outline)
+                                          .copyWith(
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _obscurePassword
+                                                ? Icons.visibility_off
+                                                : Icons.visibility,
+                                            color: isDarkMode(context)
+                                                ? Colors.grey.shade400
+                                                : Colors.grey.shade600,
+                                          ),
+                                          onPressed: () => setState(
+                                              () => _obscurePassword = !_obscurePassword),
                                         ),
-                                obscureText: true,
-                                validator: (val) => validateConfirmPassword(
-                                    _passwordController.text, val),
-                                onSaved: (String? val) {
-                                  confirmPassword = val;
-                                },
-                                style: const TextStyle(
-                                    height: 0.8, fontSize: 18.0),
-                                cursorColor: Color(colorPrimary),
-                                decoration: getInputDecoration(
-                                  hint: 'Confirm Password'.tr(),
-                                  darkMode: isDarkMode(context),
-                                  errorColor:
-                                      Theme.of(context).colorScheme.error,
-                                  colorPrimary: Color(colorPrimary),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    TextFormField(
+                                      textInputAction: TextInputAction.done,
+                                      onFieldSubmitted: (_) => context
+                                          .read<SignUpBloc>()
+                                          .add(ValidateFieldsEvent(_key,
+                                              acceptEula: acceptEULA)),
+                                      obscureText: _obscureConfirm,
+                                      controller: _confirmPasswordController,
+                                      validator: (val) => validateConfirmPassword(
+                                          _passwordController.text, val),
+                                      onSaved: (String? val) {
+                                        confirmPassword = val;
+                                      },
+                                      style: TextStyle(
+                                          color: isDarkMode(context)
+                                              ? Colors.white
+                                              : Colors.grey.shade900),
+                                      cursorColor: Color(colorPrimary),
+                                      decoration: _inputDecoration(
+                                              context, 'Confirm Password'.tr(),
+                                              icon: Icons.lock_outline)
+                                          .copyWith(
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _obscureConfirm
+                                                ? Icons.visibility_off
+                                                : Icons.visibility,
+                                            color: isDarkMode(context)
+                                                ? Colors.grey.shade400
+                                                : Colors.grey.shade600,
+                                          ),
+                                          onPressed: () => setState(
+                                              () => _obscureConfirm = !_obscureConfirm),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          padding:
+                                              const EdgeInsets.symmetric(vertical: 14),
+                                          backgroundColor: Color(colorPrimary),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(14.0),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Sign Up'.tr(),
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        onPressed: () => context
+                                            .read<SignUpBloc>()
+                                            .add(ValidateFieldsEvent(_key,
+                                                acceptEula: acceptEULA)),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  right: 40.0, left: 40.0, top: 40.0),
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(colorPrimary),
-                                  padding: const EdgeInsets.only(
-                                      top: 12, bottom: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25.0),
-                                    side: BorderSide(
-                                      color: Color(colorPrimary),
-                                    ),
+                            const SizedBox(height: 20),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Divider(
+                                    color: isDarkMode(context)
+                                        ? Colors.grey.shade700
+                                        : Colors.grey.shade400,
                                   ),
                                 ),
-                                child: Text(
-                                  'Sign Up'.tr(),
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                onPressed: () => context.read<SignUpBloc>().add(
-                                      ValidateFieldsEvent(_key,
-                                          acceptEula: acceptEULA),
-                                    ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(32.0),
-                              child: Center(
-                                child: Text(
-                                  'OR',
-                                  style: TextStyle(
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 12.0),
+                                  child: Text(
+                                    'OR'.tr(),
+                                    style: TextStyle(
                                       color: isDarkMode(context)
-                                          ? Colors.white
-                                          : Colors.black),
-                                ).tr(),
-                              ),
+                                          ? Colors.grey.shade300
+                                          : Colors.grey.shade700,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Divider(
+                                    color: isDarkMode(context)
+                                        ? Colors.grey.shade700
+                                        : Colors.grey.shade400,
+                                  ),
+                                ),
+                              ],
                             ),
-                            InkWell(
-                              onTap: () {
+                            const SizedBox(height: 14),
+                            ElevatedButton.icon(
+                              onPressed: () {
                                 pushReplacement(
                                     context,
                                     const PhoneNumberInputScreen(
                                         isLogin: false));
                               },
-                              child: Center(
-                                child: Text(
-                                  'Sign up with phone number'.tr(),
-                                  style: const TextStyle(
-                                      color: Colors.lightBlue,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                      letterSpacing: 1),
-                                ).tr(),
+                              icon: const Icon(Icons.phone_iphone),
+                              label: const Text('Sign up with phone number').tr(),
+                              style: ElevatedButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                backgroundColor:
+                                    isDarkMode(context) ? Colors.grey.shade800 : Colors.black,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14.0),
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 20),
                             ListTile(
+                              tileColor: Colors.transparent,
+                              contentPadding: EdgeInsets.zero,
                               trailing: BlocBuilder<SignUpBloc, SignUpState>(
                                 buildWhen: (old, current) =>
                                     current is EulaToggleState &&
@@ -375,8 +444,10 @@ class _SignUpState extends State<SignUpScreen> {
                                       text:
                                           'By creating an account you agree to our\n'
                                               .tr(),
-                                      style:
-                                          const TextStyle(color: Colors.grey),
+                                      style: TextStyle(
+                                          color: isDarkMode(context)
+                                              ? Colors.grey.shade400
+                                              : Colors.grey.shade700),
                                     ),
                                     TextSpan(
                                       style: const TextStyle(
@@ -395,6 +466,32 @@ class _SignUpState extends State<SignUpScreen> {
                                 ),
                               ),
                             ),
+                            const SizedBox(height: 12),
+                            Center(
+                              child: TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: RichText(
+                                  text: TextSpan(
+                                    text: 'Already have an account? '.tr(),
+                                    style: TextStyle(
+                                      color: isDarkMode(context)
+                                          ? Colors.grey.shade300
+                                          : Colors.grey.shade700,
+                                      fontSize: 15,
+                                    ),
+                                    children: [
+                                      TextSpan(
+                                        text: 'Sign In'.tr(),
+                                        style: TextStyle(
+                                          color: Color(colorPrimary),
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -402,7 +499,8 @@ class _SignUpState extends State<SignUpScreen> {
                   },
                 ),
               ),
-            ),
+            )),
+          ),
           );
         },
       ),
@@ -445,6 +543,7 @@ class _SignUpState extends State<SignUpScreen> {
   @override
   void dispose() {
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _image = null;
     super.dispose();
   }
