@@ -191,7 +191,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, {bool isSocial = false}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 24, 4, 12),
       child: Text(
@@ -199,7 +199,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
         style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w800,
-          color: Color(colorPrimary),
+          color: isSocial ? const Color(0xFFff5a66) : Color(colorPrimary),
           letterSpacing: 0.5,
         ),
       ),
@@ -473,6 +473,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 decoration: _getInputDecoration(label: 'Website'.tr(), icon: Icons.language),
               ),
               const SizedBox(height: 16),
+              _buildSectionHeader('Social Media'.tr(), isSocial: true),
               TextField(
                 controller: _instagramController,
                 decoration: _getInputDecoration(label: 'Instagram URL', icon: Icons.camera_alt),
@@ -486,6 +487,21 @@ class _AddListingScreenState extends State<AddListingScreen> {
               TextField(
                 controller: _whatsappController,
                 decoration: _getInputDecoration(label: 'WhatsApp Phone', icon: Icons.message),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _tiktokController,
+                decoration: _getInputDecoration(label: 'TikTok URL', icon: Icons.music_note),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _youtubeController,
+                decoration: _getInputDecoration(label: 'YouTube URL', icon: Icons.ondemand_video),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _xController,
+                decoration: _getInputDecoration(label: 'X (Twitter) URL', icon: Icons.alternate_email),
               ),
 
               _buildSectionHeader('Photos'.tr()),

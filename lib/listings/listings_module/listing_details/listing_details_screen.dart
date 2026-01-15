@@ -142,7 +142,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     
     _videoController = VideoPlayerController.network(videoUrl)
       ..setLooping(true)
-      ..setVolume(0) // Start muted
+      // Do not set volume to 0 to avoid stopping other device audio
       ..initialize().then((_) {
         if (mounted) {
           setState(() {
@@ -1276,7 +1276,7 @@ class _ContactHoursCard extends StatelessWidget {
                     'Social Media',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : muted,
+                      color: isDark ? Colors.white : colorPrimary,
                       fontSize: 13,
                       letterSpacing: 0.3,
                     ),

@@ -48,6 +48,7 @@ class ContainerScreen extends StatefulWidget {
 }
 
 class _ContainerState extends State<ContainerScreen> {
+  DateTime? _lastBackPressed;
   late ListingsUser currentUser;
   DrawerSelection _drawerSelection = DrawerSelection.home;
   String _appBarTitle = 'Home'.tr();
@@ -77,70 +78,88 @@ class _ContainerState extends State<ContainerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<ListingsUser>.value(
-      value: currentUser,
-      child: BlocConsumer<ContainerBloc, ContainerState>(
-        listener: (context, state) {
-          if (state is TabSelectedState) {
-            _currentWidget = state.currentWidget;
-            _selectedTapIndex = state.currentTabIndex;
-            _appBarTitle = state.appBarTitle;
-            _drawerSelection = state.drawerSelection;
-          }
-        },
-        builder: (context, state) {
-          final isDark = isDarkMode(context);
-          return Scaffold(
-            bottomNavigationBar: Platform.isIOS
-                ? BottomNavigationBar(
-                    currentIndex: _selectedTapIndex,
-                    onTap: (index) {
-                      switch (index) {
-                        case 0:
-                          context.read<ContainerBloc>().add(TabSelectedEvent(
-                                appBarTitle: 'Home'.tr(),
-                                currentTabIndex: 0,
-                                drawerSelection: DrawerSelection.home,
-                                currentWidget: HomeWrapperWidget(
-                                  currentUser: currentUser,
-                                  homeKey: homeKey,
-                                ),
-                              ));
-                          break;
-                        case 1:
-                          context.read<ContainerBloc>().add(TabSelectedEvent(
-                                appBarTitle: 'Categories'.tr(),
-                                currentTabIndex: 1,
-                                drawerSelection: DrawerSelection.categories,
-                                currentWidget: CategoriesWrapperWidget(
-                                  currentUser: currentUser,
-                                ),
-                              ));
-                          break;
-                        case 2:
-                          context.read<ContainerBloc>().add(TabSelectedEvent(
-                                appBarTitle: 'Conversations'.tr(),
-                                currentTabIndex: 2,
-                                drawerSelection: DrawerSelection.conversations,
-                                currentWidget: ConversationsWrapperWidget(
-                                  user: currentUser,
-                                ),
-                              ));
-                          break;
-                        case 3:
-                          context.read<ContainerBloc>().add(TabSelectedEvent(
-                                appBarTitle: 'Search'.tr(),
-                                currentTabIndex: 3,
-                                drawerSelection: DrawerSelection.search,
-                                currentWidget: SearchWrapperWidget(
-                                    currentUser: currentUser),
-                              ));
-                          break;
-                      }
-                    },
-                    unselectedItemColor: Colors.grey,
-                    selectedItemColor: Color(colorPrimary),
-                    items: [
+    return WillPopScope(
+      onWillPop: () async {
+        final now = DateTime.now();
+        if (_lastBackPressed == null ||
+            now.difference(_lastBackPressed!) > const Duration(seconds: 2)) {
+          _lastBackPressed = now;
+          ScaffoldMessenger.of(context).removeCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Press back again to exit'.tr()),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          return false;
+        }
+        return true;
+      },
+      child: ChangeNotifierProvider<ListingsUser>.value(
+        value: currentUser,
+        child: BlocConsumer<ContainerBloc, ContainerState>(
+          listener: (context, state) {
+            if (state is TabSelectedState) {
+              _currentWidget = state.currentWidget;
+              _selectedTapIndex = state.currentTabIndex;
+              _appBarTitle = state.appBarTitle;
+              _drawerSelection = state.drawerSelection;
+            }
+          },
+          builder: (context, state) {
+            final isDark = isDarkMode(context);
+            return Scaffold(
+              bottomNavigationBar: Platform.isIOS
+                  ? BottomNavigationBar(
+                      currentIndex: _selectedTapIndex,
+                      onTap: (index) {
+                        switch (index) {
+                          case 0:
+                            context.read<ContainerBloc>().add(TabSelectedEvent(
+                                  appBarTitle: 'Home'.tr(),
+                                  currentTabIndex: 0,
+                                  drawerSelection: DrawerSelection.home,
+                                  currentWidget: HomeWrapperWidget(
+                                    currentUser: currentUser,
+                                    homeKey: homeKey,
+                                  ),
+                                ));
+                            break;
+                          case 1:
+                            context.read<ContainerBloc>().add(TabSelectedEvent(
+                                  appBarTitle: 'Categories'.tr(),
+                                  currentTabIndex: 1,
+                                  drawerSelection: DrawerSelection.categories,
+                                  currentWidget: CategoriesWrapperWidget(
+                                    currentUser: currentUser,
+                                  ),
+                                ));
+                            break;
+                          case 2:
+                            context.read<ContainerBloc>().add(TabSelectedEvent(
+                                  appBarTitle: 'Conversations'.tr(),
+                                  currentTabIndex: 2,
+                                  drawerSelection:
+                                      DrawerSelection.conversations,
+                                  currentWidget: ConversationsWrapperWidget(
+                                    user: currentUser,
+                                  ),
+                                ));
+                            break;
+                          case 3:
+                            context.read<ContainerBloc>().add(TabSelectedEvent(
+                                  appBarTitle: 'Search'.tr(),
+                                  currentTabIndex: 3,
+                                  drawerSelection: DrawerSelection.search,
+                                  currentWidget: SearchWrapperWidget(
+                                      currentUser: currentUser),
+                                ));
+                            break;
+                        }
+                      },
+                      unselectedItemColor: Colors.grey,
+                      selectedItemColor: Color(colorPrimary),
+                      items: [
                         BottomNavigationBarItem(
                             icon: const Icon(Icons.home), label: 'Home'.tr()),
                         BottomNavigationBarItem(
@@ -152,194 +171,202 @@ class _ContainerState extends State<ContainerScreen> {
                         BottomNavigationBarItem(
                             icon: const Icon(Icons.search),
                             label: 'Search'.tr()),
-                      ])
-                : null,
-            drawer: Platform.isAndroid
-                ? Drawer(
-                    child: ListTileTheme(
-                      data: ListTileThemeData(
-                        style: ListTileStyle.drawer,
-                        selectedColor: Color(colorPrimary),
-                        iconColor: isDark ? Colors.white : Colors.black87,
-                        textColor: isDark ? Colors.white : Colors.black87,
-                      ),
-                      child: ListView(
-                        padding: EdgeInsets.zero,
-                        children: [
-                          Consumer<ListingsUser>(
-                            builder: (context, user, _) {
-                              return DrawerHeader(
-                                decoration: BoxDecoration(
-                                  color: Color(colorPrimary),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    displayCircleImage(
-                                        user.profilePictureURL, 65, false),
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 8.0),
-                                      child: Text(
-                                        user.fullName(),
-                                        style: const TextStyle(
-                                            color: Colors.white),
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 8.0),
-                                      child: Text(
-                                        user.email,
-                                        style: const TextStyle(
-                                            color: Colors.white),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                          ListTile(
-                            selected: _drawerSelection == DrawerSelection.home,
-                            title: Text('Home'.tr()),
-                            onTap: () {
-                              Navigator.pop(context);
-                              context.read<ContainerBloc>().add(
-                                    TabSelectedEvent(
-                                      appBarTitle: 'Home'.tr(),
-                                      currentTabIndex: 0,
-                                      drawerSelection: DrawerSelection.home,
-                                      currentWidget: HomeWrapperWidget(
-                                        homeKey: homeKey,
-                                        currentUser: currentUser,
-                                      ),
-                                    ),
-                                  );
-                            },
-                            leading: const Icon(Icons.home),
-                          ),
-                          ListTile(
-                            selected:
-                                _drawerSelection == DrawerSelection.categories,
-                            leading: const Icon(Icons.category),
-                            title: Text('Categories'.tr()),
-                            onTap: () {
-                              Navigator.pop(context);
-                              context.read<ContainerBloc>().add(
-                                    TabSelectedEvent(
-                                      appBarTitle: 'Categories'.tr(),
-                                      currentTabIndex: 1,
-                                      drawerSelection:
-                                          DrawerSelection.categories,
-                                      currentWidget: CategoriesWrapperWidget(
-                                          currentUser: currentUser),
-                                    ),
-                                  );
-                            },
-                          ),
-                          ListTile(
-                            selected: _drawerSelection ==
-                                DrawerSelection.conversations,
-                            leading: const Icon(Icons.message),
-                            title: Text('Conversations'.tr()),
-                            onTap: () {
-                              Navigator.pop(context);
-                              context.read<ContainerBloc>().add(
-                                    TabSelectedEvent(
-                                      appBarTitle: 'Conversations'.tr(),
-                                      currentTabIndex: 2,
-                                      drawerSelection:
-                                          DrawerSelection.conversations,
-                                      currentWidget: ConversationsWrapperWidget(
-                                          user: currentUser),
-                                    ),
-                                  );
-                            },
-                          ),
-                          ListTile(
-                            selected:
-                                _drawerSelection == DrawerSelection.search,
-                            title: Text('Search'.tr()),
-                            leading: const Icon(Icons.search),
-                            onTap: () {
-                              Navigator.pop(context);
-                              context.read<ContainerBloc>().add(
-                                    TabSelectedEvent(
-                                      appBarTitle: 'Search'.tr(),
-                                      currentTabIndex: 3,
-                                      drawerSelection: DrawerSelection.search,
-                                      currentWidget: SearchWrapperWidget(
-                                          currentUser: currentUser),
-                                    ),
-                                  );
-                            },
-                          ),
-                          ListTile(
-                            selected:
-                                _drawerSelection == DrawerSelection.profile,
-                            title: Text('Profile'.tr()),
-                            leading: const Icon(Icons.account_circle),
-                            onTap: () {
-                              Navigator.pop(context);
-                              context.read<ContainerBloc>().add(
-                                    TabSelectedEvent(
-                                      appBarTitle: 'Profile'.tr(),
-                                      currentTabIndex: 3,
-                                      drawerSelection: DrawerSelection.profile,
-                                      currentWidget: ProfileScreen(
-                                          currentUser: currentUser),
-                                    ),
-                                  );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : null,
-            appBar: AppBar(
-              leading: Platform.isIOS
-                  ? Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: GestureDetector(
-                          onTap: () => push(
-                              context, ProfileScreen(currentUser: currentUser)),
-                          child: displayCircleImage(
-                              currentUser.profilePictureURL, 2, false)),
+                      ],
                     )
                   : null,
-              actions: [
-                if (_currentWidget is HomeWrapperWidget)
-                  IconButton(
-                    tooltip: 'Add Listing'.tr(),
-                    icon: const Icon(
-                      Icons.add,
+              drawer: Platform.isAndroid
+                  ? Drawer(
+                      child: ListTileTheme(
+                        data: ListTileThemeData(
+                          style: ListTileStyle.drawer,
+                          selectedColor: Color(colorPrimary),
+                          iconColor: isDark ? Colors.white : Colors.black87,
+                          textColor: isDark ? Colors.white : Colors.black87,
+                        ),
+                        child: ListView(
+                          padding: EdgeInsets.zero,
+                          children: [
+                            Consumer<ListingsUser>(
+                              builder: (context, user, _) {
+                                return DrawerHeader(
+                                  decoration: BoxDecoration(
+                                    color: Color(colorPrimary),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      displayCircleImage(
+                                          user.profilePictureURL, 65, false),
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(top: 8.0),
+                                        child: Text(
+                                          user.fullName(),
+                                          style: const TextStyle(
+                                              color: Colors.white),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(top: 8.0),
+                                        child: Text(
+                                          user.email,
+                                          style: const TextStyle(
+                                              color: Colors.white),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                            ListTile(
+                              selected:
+                                  _drawerSelection == DrawerSelection.home,
+                              title: Text('Home'.tr()),
+                              onTap: () {
+                                Navigator.pop(context);
+                                context.read<ContainerBloc>().add(
+                                      TabSelectedEvent(
+                                        appBarTitle: 'Home'.tr(),
+                                        currentTabIndex: 0,
+                                        drawerSelection: DrawerSelection.home,
+                                        currentWidget: HomeWrapperWidget(
+                                          homeKey: homeKey,
+                                          currentUser: currentUser,
+                                        ),
+                                      ),
+                                    );
+                              },
+                              leading: const Icon(Icons.home),
+                            ),
+                            ListTile(
+                              selected: _drawerSelection ==
+                                  DrawerSelection.categories,
+                              leading: const Icon(Icons.category),
+                              title: Text('Categories'.tr()),
+                              onTap: () {
+                                Navigator.pop(context);
+                                context.read<ContainerBloc>().add(
+                                      TabSelectedEvent(
+                                        appBarTitle: 'Categories'.tr(),
+                                        currentTabIndex: 1,
+                                        drawerSelection:
+                                            DrawerSelection.categories,
+                                        currentWidget: CategoriesWrapperWidget(
+                                            currentUser: currentUser),
+                                      ),
+                                    );
+                              },
+                            ),
+                            ListTile(
+                              selected: _drawerSelection ==
+                                  DrawerSelection.conversations,
+                              leading: const Icon(Icons.message),
+                              title: Text('Conversations'.tr()),
+                              onTap: () {
+                                Navigator.pop(context);
+                                context.read<ContainerBloc>().add(
+                                      TabSelectedEvent(
+                                        appBarTitle: 'Conversations'.tr(),
+                                        currentTabIndex: 2,
+                                        drawerSelection:
+                                            DrawerSelection.conversations,
+                                        currentWidget:
+                                            ConversationsWrapperWidget(
+                                                user: currentUser),
+                                      ),
+                                    );
+                              },
+                            ),
+                            ListTile(
+                              selected:
+                                  _drawerSelection == DrawerSelection.search,
+                              title: Text('Search'.tr()),
+                              leading: const Icon(Icons.search),
+                              onTap: () {
+                                Navigator.pop(context);
+                                context.read<ContainerBloc>().add(
+                                      TabSelectedEvent(
+                                        appBarTitle: 'Search'.tr(),
+                                        currentTabIndex: 3,
+                                        drawerSelection: DrawerSelection.search,
+                                        currentWidget: SearchWrapperWidget(
+                                            currentUser: currentUser),
+                                      ),
+                                    );
+                              },
+                            ),
+                            ListTile(
+                              selected:
+                                  _drawerSelection == DrawerSelection.profile,
+                              title: Text('Profile'.tr()),
+                              leading: const Icon(Icons.account_circle),
+                              onTap: () {
+                                Navigator.pop(context);
+                                context.read<ContainerBloc>().add(
+                                      TabSelectedEvent(
+                                        appBarTitle: 'Profile'.tr(),
+                                        currentTabIndex: 3,
+                                        drawerSelection: DrawerSelection.profile,
+                                        currentWidget: ProfileScreen(
+                                            currentUser: currentUser),
+                                      ),
+                                    );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : null,
+              appBar: AppBar(
+                leading: Platform.isIOS
+                    ? Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: GestureDetector(
+                            onTap: () => push(context,
+                                ProfileScreen(currentUser: currentUser)),
+                            child: displayCircleImage(
+                                currentUser.profilePictureURL, 2, false)),
+                      )
+                    : null,
+                actions: [
+                  if (_currentWidget is HomeWrapperWidget)
+                    IconButton(
+                      tooltip: 'Add Listing'.tr(),
+                      icon: const Icon(
+                        Icons.add,
+                      ),
+                      onPressed: () => push(
+                          context,
+                          AddListingWrappingWidget(currentUser: currentUser)),
                     ),
-                    onPressed: () => push(context,
-                        AddListingWrappingWidget(currentUser: currentUser)),
-                  ),
-                if (_currentWidget is HomeWrapperWidget)
-                  IconButton(
-                    tooltip: 'Map'.tr(),
-                    icon: const Icon(
-                      Icons.map,
-                    ),
-                    onPressed: () => push(
-                      context,
-                      MapViewScreen(
-                        listings: homeKey.currentState?.listings ?? [],
-                        fromHome: true,
-                        currentUser: currentUser,
+                  if (_currentWidget is HomeWrapperWidget)
+                    IconButton(
+                      tooltip: 'Map'.tr(),
+                      icon: const Icon(
+                        Icons.map,
+                      ),
+                      onPressed: () => push(
+                        context,
+                        MapViewScreen(
+                          listings: homeKey.currentState?.listings ?? [],
+                          fromHome: true,
+                          currentUser: currentUser,
+                        ),
                       ),
                     ),
-                  ),
-              ],
-              title: Text(
-                _appBarTitle,
+                ],
+                title: Text(
+                  _appBarTitle,
+                ),
               ),
-            ),
-            body: _currentWidget,
-          );
-        },
+              body: _currentWidget,
+            );
+          },
+        ),
       ),
     );
   }
