@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:instaflutter/listings/utils/caribbean_countries.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -21,6 +22,7 @@ import 'package:instaflutter/listings/model/categories_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/utils/opening_hours_editor.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 
 class AddListingWrappingWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -105,8 +107,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
   bool _isFetchingPlaceDetails = false;
 
   final List<String> _existingPhotoUrls = [];
-  List<File?> _newImages = [null];
-  List<File?> _newVideos = [null];
+  final List<String> _existingVideoUrls = [];
+  List<File> _newImages = [];
+  List<File> _newVideos = [];
 
   List<CategoriesModel> _categories = [];
   late ListingsUser currentUser;
@@ -130,6 +133,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
       _filters = Map<String, String>.from(l.filters ?? {});
       _existingPhotoUrls.addAll(
         List<String>.from(l.photos ?? []).where((e) => e.trim().isNotEmpty),
+      );
+      _existingVideoUrls.addAll(
+        List<String>.from(l.videos ?? []).where((e) => e.trim().isNotEmpty),
       );
 
       _phoneController.text = (l.phone ?? '').trim();
@@ -324,12 +330,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     dropdownColor: dark ? Colors.grey[900] : Colors.white,
                     hint: Text('Choose Category'.tr()),
                     value: _categoryValue,
-                    items: _categories
-                        .map((category) => DropdownMenuItem<CategoriesModel>(
-                              value: category,
-                              child: Text(category.title, overflow: TextOverflow.ellipsis),
-                            ))
-                        .toList(),
+                    items: (_categories.toList()..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase())))
+                      .map((category) => DropdownMenuItem<CategoriesModel>(
+                          value: category,
+                          child: Text(category.title, overflow: TextOverflow.ellipsis),
+                        ))
+                      .toList(),
                     onChanged: isLoadingCategories
                         ? null
                         : (CategoriesModel? model) => context
@@ -378,12 +384,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 ),
               ),
 
-              _buildSectionHeader('Description'.tr()),
+              _buildSectionHeader('About'.tr()),
               TextField(
                 controller: _descController,
                 maxLines: 5,
                 decoration: _getInputDecoration(
-                  label: 'About'.tr(),
+                  label: 'Description'.tr(),
                   hint: 'Describe your listing...'.tr(),
                 ),
               ),
@@ -488,7 +494,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 child: BlocBuilder<AddListingBloc, AddListingState>(
                   buildWhen: (old, current) => old != current && current is ListingImagesUpdatedState,
                   builder: (context, state) {
-                    if (state is ListingImagesUpdatedState) _newImages = [...state.images, null];
+                    if (state is ListingImagesUpdatedState) _newImages = state.images;
                     return ListView(
                       scrollDirection: Axis.horizontal,
                       children: [
@@ -497,7 +503,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                                 imageUrl: e.value,
                                 onRemove: () => setState(() => _existingPhotoUrls.removeAt(e.key)),
                               )),
-                        ..._newImages.map((f) => ListingImageWidget(imageFile: f)),
+                        ..._newImages.map((f) => ListingImageWidget(imageFile: f, isAddButton: false)),
+                        ListingImageWidget(imageFile: null, isAddButton: true),
                       ],
                     );
                   },
@@ -510,11 +517,20 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 child: BlocBuilder<AddListingBloc, AddListingState>(
                   buildWhen: (old, current) => old != current && current is ListingVideosUpdatedState,
                   builder: (context, state) {
-                    if (state is ListingVideosUpdatedState) _newVideos = [...state.videos, null];
-                    final visible = _newVideos.take(4).toList();
+                    if (state is ListingVideosUpdatedState) _newVideos = state.videos;
+                    final totalVideosCount = _existingVideoUrls.length + _newVideos.length;
                     return ListView(
                       scrollDirection: Axis.horizontal,
-                      children: visible.map((v) => ListingVideoWidget(videoFile: v)).toList(),
+                      children: [
+                        if (isEdit)
+                          ..._existingVideoUrls.asMap().entries.map((e) => ExistingListingVideoWidget(
+                                videoUrl: e.value,
+                                onRemove: () => setState(() => _existingVideoUrls.removeAt(e.key)),
+                              )),
+                        ..._newVideos.map((v) => ListingVideoWidget(videoFile: v, isAddButton: false)),
+                        if (totalVideosCount < 3)
+                          ListingVideoWidget(videoFile: null, isAddButton: true),
+                      ],
                     );
                   },
                 ),
@@ -612,6 +628,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
             isEdit: isEdit,
             listingToEdit: listingToEdit,
             existingPhotoUrls: List<String>.from(_existingPhotoUrls),
+            existingVideoUrls: List<String>.from(_existingVideoUrls),
             countryCode: _countryCode!.trim().toUpperCase(),
           ),
         );
@@ -666,9 +683,50 @@ class ExistingListingImageWidget extends StatelessWidget {
   }
 }
 
+class ExistingListingVideoWidget extends StatelessWidget {
+  final String videoUrl;
+  final VoidCallback onRemove;
+
+  const ExistingListingVideoWidget({super.key, required this.videoUrl, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 100,
+      margin: const EdgeInsets.only(right: 12),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              color: Colors.black87,
+              child: const Center(
+                child: Icon(Icons.play_circle_fill, size: 44, color: Colors.white70),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                child: const Icon(Icons.close, size: 16, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class ListingImageWidget extends StatefulWidget {
   final File? imageFile;
-  const ListingImageWidget({super.key, required this.imageFile});
+  final bool isAddButton;
+  const ListingImageWidget({super.key, required this.imageFile, required this.isAddButton});
 
   @override
   State<ListingImageWidget> createState() => _ListingImageWidgetState();
@@ -679,16 +737,16 @@ class _ListingImageWidgetState extends State<ListingImageWidget> {
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
     return GestureDetector(
-      onTap: () => widget.imageFile == null ? _pickImage(context) : _viewOrDeleteImage(widget.imageFile!, context),
+      onTap: () => widget.isAddButton ? _pickImage(context) : _viewOrDeleteImage(widget.imageFile!, context),
       child: Container(
         width: 100,
         margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
           color: dark ? Colors.grey[900] : Colors.grey[200],
           borderRadius: BorderRadius.circular(12),
-          border: widget.imageFile == null ? Border.all(color: Color(colorPrimary).withOpacity(0.5)) : null,
+          border: widget.isAddButton ? Border.all(color: Color(colorPrimary).withOpacity(0.5)) : null,
         ),
-        child: widget.imageFile == null
+        child: widget.isAddButton
             ? Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -756,27 +814,60 @@ class _ListingImageWidgetState extends State<ListingImageWidget> {
 
 class ListingVideoWidget extends StatefulWidget {
   final File? videoFile;
-  const ListingVideoWidget({super.key, required this.videoFile});
+  final bool isAddButton;
+  const ListingVideoWidget({super.key, required this.videoFile, required this.isAddButton});
 
   @override
   State<ListingVideoWidget> createState() => _ListingVideoWidgetState();
 }
 
 class _ListingVideoWidgetState extends State<ListingVideoWidget> {
+  Uint8List? _thumbnailData;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.videoFile != null) {
+      _generateThumbnail();
+    }
+  }
+
+  @override
+  void didUpdateWidget(ListingVideoWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.videoFile != oldWidget.videoFile && widget.videoFile != null) {
+      _generateThumbnail();
+    }
+  }
+
+  Future<void> _generateThumbnail() async {
+    final uint8list = await VideoThumbnail.thumbnailData(
+      video: widget.videoFile!.path,
+      imageFormat: ImageFormat.JPEG,
+      maxWidth: 128,
+      quality: 25,
+    );
+    if (mounted) {
+      setState(() {
+        _thumbnailData = uint8list;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
     return GestureDetector(
-      onTap: () => widget.videoFile == null ? _pickVideo(context) : _viewOrDeleteVideo(widget.videoFile!, context),
+      onTap: () => widget.isAddButton ? _pickVideo(context) : _viewOrDeleteVideo(widget.videoFile!, context),
       child: Container(
         width: 100,
         margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
           color: dark ? Colors.grey[900] : Colors.grey[200],
           borderRadius: BorderRadius.circular(12),
-          border: widget.videoFile == null ? Border.all(color: Color(colorPrimary).withOpacity(0.5)) : null,
+          border: widget.isAddButton ? Border.all(color: Color(colorPrimary).withOpacity(0.5)) : null,
         ),
-        child: widget.videoFile == null
+        child: widget.isAddButton
             ? Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -788,7 +879,12 @@ class _ListingVideoWidgetState extends State<ListingVideoWidget> {
             : Stack(
                 fit: StackFit.expand,
                 children: [
-                  ClipRRect(borderRadius: BorderRadius.circular(12), child: Container(color: Colors.black87)),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: _thumbnailData != null
+                        ? Image.memory(_thumbnailData!, fit: BoxFit.cover)
+                        : Container(color: Colors.black87),
+                  ),
                   const Center(child: Icon(Icons.play_circle_fill, size: 44, color: Colors.white)),
                 ],
               ),
