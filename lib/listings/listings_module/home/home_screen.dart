@@ -129,10 +129,16 @@ class HomeScreenState extends State<HomeScreen> {
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            final isDark = isDarkMode(context);
             return AlertDialog(
+              backgroundColor: isDark ? Colors.grey[900] : Colors.white,
               title: Text(
                 'Select Countries (Max 5)'.tr(),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 16, 
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
               ),
               content: SizedBox(
                 width: double.maxFinite,
@@ -144,7 +150,12 @@ class HomeScreenState extends State<HomeScreen> {
                     final isSelected = tempSelectedCountries.contains(country.code);
 
                     return CheckboxListTile(
-                      title: Text(country.name),
+                      title: Text(
+                        country.name,
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                      ),
+                      activeColor: Color(colorPrimary),
+                      checkColor: Colors.white,
                       value: isSelected,
                       onChanged: (bool? newValue) {
                         setDialogState(() {
@@ -163,7 +174,7 @@ class HomeScreenState extends State<HomeScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: Text('Cancel'.tr()),
+                  child: Text('Cancel'.tr(), style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -305,6 +316,7 @@ class HomeScreenState extends State<HomeScreen> {
                   SliverToBoxAdapter(
                     child: TextField(
                       controller: _searchController,
+                      style: TextStyle(color: dark ? Colors.white : Colors.black),
                       onChanged: (value) {
                         setState(() {
                           _searchQuery = value.toLowerCase();
@@ -312,7 +324,8 @@ class HomeScreenState extends State<HomeScreen> {
                       },
                       decoration: InputDecoration(
                         hintText: 'Search listings...'.tr(),
-                        prefixIcon: const Icon(Icons.search),
+                        hintStyle: TextStyle(color: dark ? Colors.grey[400] : Colors.grey[600]),
+                        prefixIcon: Icon(Icons.search, color: dark ? Colors.grey[400] : Colors.grey[600]),
                         suffixIcon: _searchQuery.isNotEmpty
                             ? GestureDetector(
                                 onTap: () {
@@ -321,7 +334,7 @@ class HomeScreenState extends State<HomeScreen> {
                                     _searchQuery = '';
                                   });
                                 },
-                                child: const Icon(Icons.clear),
+                                child: Icon(Icons.clear, color: dark ? Colors.grey[400] : Colors.grey[600]),
                               )
                             : null,
                         border: OutlineInputBorder(
