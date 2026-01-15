@@ -627,6 +627,23 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             ),
                           ),
                         ),
+                      if (listing.bookingEnabled && listing.bookingUrl.trim().isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10.0),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _launchWebsite(listing.bookingUrl),
+                              icon: const Icon(Icons.event_available),
+                              label: const Text('Book Now'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(colorPrimary),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
