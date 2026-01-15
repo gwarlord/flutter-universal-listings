@@ -50,6 +50,7 @@ class ListingModel {
   /// Filters / meta
   Map<String, dynamic> filters;
   bool isApproved;
+  bool suspended;
   bool verified;
 
   /// Reviews
@@ -95,6 +96,7 @@ class ListingModel {
     this.x = '',
     this.filters = const {},
     this.isApproved = false,
+    this.suspended = false,
     this.verified = false,
     this.reviewsCount = 0,
     this.reviewsSum = 0,
@@ -137,6 +139,7 @@ class ListingModel {
       x: json['x'] ?? '',
       filters: Map<String, dynamic>.from(json['filters'] ?? {}),
       isApproved: json['isApproved'] ?? false,
+      suspended: json['suspended'] ?? false,
       verified: json['verified'] ?? false,
       reviewsCount: json['reviewsCount'] ?? 0,
       reviewsSum: json['reviewsSum'] ?? 0,
@@ -178,6 +181,7 @@ class ListingModel {
       'x': x,
       'filters': filters,
       'isApproved': isApproved,
+      'suspended': suspended,
       'verified': verified,
       'reviewsCount': reviewsCount,
       'reviewsSum': reviewsSum,

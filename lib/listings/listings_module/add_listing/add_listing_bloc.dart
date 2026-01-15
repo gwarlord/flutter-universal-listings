@@ -238,7 +238,7 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
 
         reviewsCount: event.isEdit ? (event.listingToEdit?.reviewsCount ?? 0) : 0,
         reviewsSum: event.isEdit ? (event.listingToEdit?.reviewsSum ?? 0) : 0,
-        isApproved: event.isEdit ? (event.listingToEdit?.isApproved ?? false) : false,
+        isApproved: true, // Auto-approve all listings
         verified: event.verified,
 
         // Country

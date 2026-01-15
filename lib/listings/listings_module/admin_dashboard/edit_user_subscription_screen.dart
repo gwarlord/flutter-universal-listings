@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:instaflutter/constants.dart';
+import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 
 class EditUserSubscriptionScreen extends StatefulWidget {
@@ -121,6 +122,9 @@ class _EditUserSubscriptionScreenState extends State<EditUserSubscriptionScreen>
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
                 labelText: 'User email',
+                labelStyle: TextStyle(
+                  color: isDarkMode(context) ? Colors.white70 : null,
+                ),
                 suffixIcon: IconButton(
                   icon: _isLoading
                       ? const SizedBox(
@@ -143,6 +147,7 @@ class _EditUserSubscriptionScreenState extends State<EditUserSubscriptionScreen>
             if (_loadedUser != null) ...[
               Card(
                 margin: const EdgeInsets.only(top: 12),
+                color: isDarkMode(context) ? Colors.grey.shade900 : null,
                 child: Padding(
                   padding: const EdgeInsets.all(12.0),
                   child: Column(
@@ -150,22 +155,42 @@ class _EditUserSubscriptionScreenState extends State<EditUserSubscriptionScreen>
                     children: [
                       Text(
                         _loadedUser!.fullName(),
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: isDarkMode(context) ? Colors.white : Colors.black,
+                        ),
                       ),
                       const SizedBox(height: 4),
-                      Text(_loadedUser!.email),
+                      Text(
+                        _loadedUser!.email,
+                        style: TextStyle(
+                          color: isDarkMode(context) ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Text('Subscription tier:'),
+                          Text(
+                            'Subscription tier:',
+                            style: TextStyle(
+                              color: isDarkMode(context) ? Colors.white : Colors.black,
+                            ),
+                          ),
                           const SizedBox(width: 8),
                           DropdownButton<String>(
                             value: _selectedTier,
+                            dropdownColor: isDarkMode(context) ? Colors.grey.shade800 : null,
                             items: _tiers
                                 .map(
                                   (t) => DropdownMenuItem<String>(
                                     value: t,
-                                    child: Text(t.toUpperCase()),
+                                    child: Text(
+                                      t.toUpperCase(),
+                                      style: TextStyle(
+                                        color: isDarkMode(context) ? Colors.white : Colors.black,
+                                      ),
+                                    ),
                                   ),
                                 )
                                 .toList(),

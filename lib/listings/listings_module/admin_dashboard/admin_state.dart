@@ -4,17 +4,28 @@ abstract class AdminState {}
 
 class AdminInitial extends AdminState {}
 
-class PendingListingsState extends AdminState {
-  List<ListingModel> pendingListings;
+class SuspendedUsersState extends AdminState {
+  List<ListingsUser> suspendedUsers;
 
-  PendingListingsState({required this.pendingListings});
+  SuspendedUsersState({required this.suspendedUsers});
+}
+
+class AllUsersState extends AdminState {
+  List<ListingsUser> users;
+
+  AllUsersState({required this.users});
+}
+
+class SuspendedListingsState extends AdminState {
+  List<ListingModel> suspendedListings;
+
+  SuspendedListingsState({required this.suspendedListings});
+}
+
+class AllListingsState extends AdminState {
+  List<ListingModel> listings;
+
+  AllListingsState({required this.listings});
 }
 
 class LoadingState extends AdminState {}
-
-class ListingFavToggleState extends AdminState {
-  ListingModel listing;
-  ListingsUser updatedUser;
-
-  ListingFavToggleState({required this.listing, required this.updatedUser});
-}

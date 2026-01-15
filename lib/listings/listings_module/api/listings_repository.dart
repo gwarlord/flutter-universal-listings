@@ -45,6 +45,11 @@ abstract class ListingsRepository {
   Future<void> approveListing({required ListingModel listingModel});
   Future<void> deleteListing({required ListingModel listingModel});
 
+  // Listing suspension
+  Future<List<ListingModel>> getSuspendedListings();
+  Future<void> suspendListing({required ListingModel listing});
+  Future<void> unsuspendListing({required ListingModel listing});
+
   // Legacy
   Future<void> postListing({required ListingModel newListing});
 }

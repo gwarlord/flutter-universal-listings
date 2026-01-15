@@ -28,4 +28,28 @@ class ProfileLocalData extends ProfileRepository {
     // TODO: implement deleteUser
     throw UnimplementedError();
   }
+
+  @override
+  Future<List<ListingsUser>> getSuspendedUsers() {
+    // TODO: implement getSuspendedUsers
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> suspendUser({required ListingsUser user}) {
+    // TODO: implement suspendUser
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> unsuspendUser({required ListingsUser user}) {
+    // TODO: implement unsuspendUser
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<ListingsUser>> getAllUsers({String? searchQuery}) {
+    // TODO: implement getAllUsers
+    throw UnimplementedError();
+  }
 }

@@ -78,4 +78,13 @@ class ListingsLocalData extends ListingsRepository {
 
   @override
   Future<PlaceDetails?> getPlaceDetails(Prediction prediction) async => null;
+
+  @override
+  Future<List<ListingModel>> getSuspendedListings() async => [];
+
+  @override
+  Future<void> suspendListing({required ListingModel listing}) async {}
+
+  @override
+  Future<void> unsuspendListing({required ListingModel listing}) async {}
 }

@@ -2,42 +2,40 @@ part of 'admin_bloc.dart';
 
 abstract class AdminEvent {}
 
-class GetPendingListingsEvent extends AdminEvent {}
+class GetSuspendedUsersEvent extends AdminEvent {}
+
+class GetAllUsersEvent extends AdminEvent {
+  String? searchQuery;
+  
+  GetAllUsersEvent({this.searchQuery});
+}
+
+class GetSuspendedListingsEvent extends AdminEvent {}
+
+class GetAllListingsEvent extends AdminEvent {}
 
 class LoadingEvent extends AdminEvent {}
 
-class ApprovePendingListing extends AdminEvent {
-  ListingModel approvedListing;
+class SuspendUserEvent extends AdminEvent {
+  ListingsUser user;
 
-  ApprovePendingListing({required this.approvedListing});
+  SuspendUserEvent({required this.user});
 }
 
-class RemovePendingListing extends AdminEvent {
-  ListingModel removedListing;
+class UnsuspendUserEvent extends AdminEvent {
+  ListingsUser user;
 
-  RemovePendingListing({required this.removedListing});
+  UnsuspendUserEvent({required this.user});
 }
 
-class ListingDeletedByUserEvent extends AdminEvent {
+class SuspendListingEvent extends AdminEvent {
   ListingModel listing;
 
-  ListingDeletedByUserEvent({required this.listing});
+  SuspendListingEvent({required this.listing});
 }
 
-class ListingFavUpdated extends AdminEvent {
+class UnsuspendListingEvent extends AdminEvent {
   ListingModel listing;
 
-  ListingFavUpdated({required this.listing});
-}
-
-class ListingDeleteByAdminEvent extends AdminEvent {
-  ListingModel listing;
-
-  ListingDeleteByAdminEvent({required this.listing});
-}
-
-class ListingApprovalByAdminEvent extends AdminEvent {
-  ListingModel listing;
-
-  ListingApprovalByAdminEvent({required this.listing});
+  UnsuspendListingEvent({required this.listing});
 }
