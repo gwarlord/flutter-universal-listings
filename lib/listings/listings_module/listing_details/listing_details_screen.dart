@@ -611,8 +611,12 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                           decoration: BoxDecoration(
-                            color: Color(colorPrimary).withOpacity(0.12),
+                            color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
                             borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+                              width: 0.5,
+                            ),
                           ),
                           child: Text(
                             '${_getCurrencySymbol(listing.currencyCode)} ${listing.price} ${listing.currencyCode}',
