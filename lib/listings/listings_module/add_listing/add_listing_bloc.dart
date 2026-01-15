@@ -178,7 +178,8 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
       final model = ListingModel(
         title: event.title.trim(),
         description: event.description.trim(),
-        price: event.price.trim().isEmpty ? '' : '${event.price.trim()}\$',
+        price: event.price.toString(),
+        currencyCode: event.currencyCode,
         latitude: event.placeDetails!.geometry!.location.lat,
         longitude: event.placeDetails!.geometry!.location.lng,
         place: event.placeDetails!.formattedAddress ?? '',
