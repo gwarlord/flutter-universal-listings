@@ -176,7 +176,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
           // Toggle button to show/hide search block
           Positioned(
             left: 24,
-            bottom: 32,
+            bottom: 64,
             child: FloatingActionButton(
               heroTag: 'toggle_search_block',
               mini: true,
