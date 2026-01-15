@@ -1578,6 +1578,19 @@ class FilterDetailsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Support both comma-separated string and List for multi-select
+    final value = filter.value;
+    List<String> valuesList = [];
+    if (value is List) {
+      valuesList = value.map((e) => e.toString()).toList();
+    } else if (value is String && value.contains(',')) {
+      valuesList = value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    } else if (value != null && value.toString().isNotEmpty) {
+      valuesList = [value.toString()];
+    }
+
+    final displayValue = valuesList.join(', ');
+
     return Column(
       children: [
         Padding(
@@ -1600,7 +1613,7 @@ class FilterDetailsWidget extends StatelessWidget {
               const SizedBox(width: 16),
               Flexible(
                 child: Text(
-                  '${filter.value}',
+                  displayValue,
                   style: TextStyle(
                     color: colorPrimary,
                     fontWeight: FontWeight.w700,

@@ -56,6 +56,7 @@ dependencies:
   visibility_detector: ^0.4.0+2
   google_mobile_ads: ^6.0.0
   flutter_rating_bar: ^4.0.1
+  flutter_svg: ^2.0.0
   google_maps_flutter: ^2.13.1
   video_thumbnail: ^0.5.6
   flutter_google_places_hoc081098: ^2.0.0

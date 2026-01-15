@@ -133,45 +133,41 @@ class _FilterTileWidgetState extends State<FilterTileWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(filter.name),
-      trailing: DropdownButton<String>(
-        selectedItemBuilder: (BuildContext context) => filter.options
-            .cast<String>()
-            .map<Widget>(
-              (String item) => SizedBox(
-                width: MediaQuery.of(context).size.width / 2,
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(item),
-                ),
-              ),
-            )
-            .toList(),
-        hint: SizedBox(
-          width: MediaQuery.of(context).size.width / 2,
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Text(filter.name, textAlign: TextAlign.end),
+    // Get current selected values as a Set
+    final selected = (widget.filtersValue?[filter.name]?.split(',') ?? []).where((e) => e.trim().isNotEmpty).toSet();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            filter.name,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
           ),
         ),
-        value: widget.filtersValue?[filter.name],
-        underline: const SizedBox(),
-        items: filter.options
-            .map<DropdownMenuItem<String>>(
-              (value) => DropdownMenuItem<String>(
-                value: value,
-                child: Text(value, textAlign: TextAlign.end),
-              ),
-            )
-            .toList(),
-        icon: const SizedBox(),
-        onChanged: (String? value) {
-          setState(() {
-            widget.filtersValue?[filter.name] = value ?? '';
-          });
-        },
-      ),
+        ...filter.options.map<Widget>((option) {
+          final optionStr = option.toString();
+          return CheckboxListTile(
+            title: Text(optionStr),
+            value: selected.contains(optionStr),
+            controlAffinity: ListTileControlAffinity.leading,
+            dense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+            onChanged: (checked) {
+              setState(() {
+                final newSelected = Set<String>.from(selected);
+                if (checked == true) {
+                  newSelected.add(optionStr);
+                } else {
+                  newSelected.remove(optionStr);
+                }
+                widget.filtersValue?[filter.name] = newSelected.join(',');
+              });
+            },
+          );
+        }).toList(),
+        const Divider(height: 1),
+      ],
     );
   }
 }

@@ -236,6 +236,8 @@ class HomeScreenState extends State<HomeScreen> {
               return const Center(child: CircularProgressIndicator.adaptive());
             }
 
+            final bool dark = isDarkMode(context);
+
             return Padding(
               padding: const EdgeInsets.all(16.0),
               child: CustomScrollView(
@@ -388,7 +390,7 @@ class HomeScreenState extends State<HomeScreen> {
                                     fontWeight: FontWeight.w500,
                                     color: _selectedCountryCodes.isEmpty
                                         ? Color(colorPrimary)
-                                        : Colors.black,
+                                        : (dark ? Colors.white : Colors.black),
                                   ),
                                 ),
                                 Icon(
@@ -434,7 +436,7 @@ class HomeScreenState extends State<HomeScreen> {
                                   'No Listings'.tr(),
                                   'No listings match your search or filter criteria.'.tr(),
                                   buttonTitle: 'Clear Filters'.tr(),
-                                  isDarkMode: isDarkMode(context),
+                                  isDarkMode: dark,
                                   action: () {
                                     setState(() {
                                       _searchQuery = '';
@@ -523,6 +525,7 @@ class CategoryHomeCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool dark = isDarkMode(context);
     return Padding(
       padding: const EdgeInsets.only(left: 2.0, right: 2),
       child: GestureDetector(
@@ -538,6 +541,7 @@ class CategoryHomeCardWidget extends StatelessWidget {
           width: 120,
           height: 120,
           child: Card(
+            color: dark ? Colors.grey.shade900 : Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
               side: BorderSide.none,
@@ -565,6 +569,9 @@ class CategoryHomeCardWidget extends StatelessWidget {
                       category.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: dark ? Colors.white : Colors.black,
+                      ),
                     ),
                   ),
                 ),

@@ -1,104 +1,81 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_google_places_hoc081098/google_maps_webservice_places.dart';
+import 'package:instaflutter/listings/listings_module/api/listings_repository.dart';
 import 'package:instaflutter/listings/model/categories_model.dart';
 import 'package:instaflutter/listings/model/filter_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listing_review_model.dart';
-import 'package:instaflutter/listings/listings_module/api/listings_repository.dart';
 
 class ListingsLocalData extends ListingsRepository {
   @override
-  Future<void> approveListing({required ListingModel listingModel}) async {
-    throw UnimplementedError();
-  }
+  Future<List<String>> uploadListingImages({required List<File> images}) async => [];
 
   @override
-  Future<void> deleteListing({required ListingModel listingModel}) async {
-    throw UnimplementedError();
-  }
+  Future<List<String>> uploadListingVideos({required List<File> videos}) async => [];
 
   @override
-  Future<List<CategoriesModel>> getCategories() async {
-    throw UnimplementedError();
-  }
+  Future<File?> getListingImage({required bool fromGallery}) async => null;
 
   @override
-  Future<List<FilterModel>> getFilters() async {
-    throw UnimplementedError();
-  }
+  Future<File?> getListingVideo({required bool fromGallery}) async => null;
 
   @override
-  Future<ListingModel?> getListing({required String listingID}) async {
-    throw UnimplementedError();
-  }
+  Future<bool> publishListing(ListingModel listingModel) async => true;
 
   @override
-  Future<List<ListingModel>> getListings({required List<String> favListingsIDs}) async {
-    throw UnimplementedError();
-  }
+  Future<void> postListing({required ListingModel newListing}) async {}
 
   @override
-  Future<List<ListingModel>> getListingsByCategoryID({
-    required String categoryID,
-    required List<String> favListingsIDs,
-  }) async {
-    throw UnimplementedError();
-  }
+  Future<List<CategoriesModel>> getCategories() async => [];
+
+  @override
+  Future<List<FilterModel>> getFilters() async => [];
+
+  @override
+  Future<List<ListingModel>> getListings({required List<String> favListingsIDs}) async => [];
 
   @override
   Future<List<ListingModel>> getMyListings({
     required String currentUserID,
     required List<String> favListingsIDs,
-  }) async {
-    throw UnimplementedError();
-  }
+  }) async =>
+      [];
 
   @override
-  Future<List<ListingModel>> getPendingListings({required List<String> favListingsIDs}) async {
-    throw UnimplementedError();
-  }
+  Future<ListingModel?> getListing({required String listingID}) async => null;
 
   @override
-  Future<List<ListingModel>> getFavoriteListings({required List<String> favListingsIDs}) async {
-    throw UnimplementedError();
-  }
+  Future<List<ListingModel>> getFavoriteListings({
+    required List<String> favListingsIDs,
+  }) async =>
+      [];
 
   @override
-  Future<List<String>> uploadListingImages({required List<File> images}) async {
-    throw UnimplementedError();
-  }
+  Future<List<ListingModel>> getListingsByCategoryID({
+    required String categoryID,
+    required List<String> favListingsIDs,
+  }) async =>
+      [];
 
   @override
-  Future<bool> publishListing(ListingModel listingModel) async {
-    throw UnimplementedError();
-  }
+  Future<List<ListingModel>> getPendingListings({
+    required List<String> favListingsIDs,
+  }) async =>
+      [];
 
   @override
-  Future<File?> getListingImage({required bool fromGallery}) async {
-    debugPrint('ListingsLocalData.getListingImage not implemented');
-    return null;
-  }
+  Future<void> approveListing({required ListingModel listingModel}) async {}
 
   @override
-  Future<PlaceDetails?> getPlaceDetails(Prediction prediction) async {
-    debugPrint('ListingsLocalData.getPlaceDetails not implemented');
-    return null;
-  }
+  Future<void> deleteListing({required ListingModel listingModel}) async {}
 
   @override
-  Future<void> postListing({required ListingModel newListing}) async {
-    throw UnimplementedError();
-  }
+  Future<void> postReview({required ListingReviewModel reviewModel}) async {}
 
   @override
-  Future<void> postReview({required ListingReviewModel reviewModel}) async {
-    throw UnimplementedError();
-  }
+  Future<List<ListingReviewModel>> getReviews({required String listingID}) async => [];
 
   @override
-  Future<List<ListingReviewModel>> getReviews({required String listingID}) async {
-    throw UnimplementedError();
-  }
+  Future<PlaceDetails?> getPlaceDetails(Prediction prediction) async => null;
 }

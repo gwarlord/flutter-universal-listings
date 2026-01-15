@@ -31,7 +31,7 @@ runListings() {
   filtersCollection = 'filters';
 
   // NEW: Google Maps Places API Key
-  googleMapsApiKey = 'AIzaSyDNxE7GmSRWgrcf3oUMfbjEE0NugvDnfGc';
+  googleMapsApiKey = 'AIzaSyAmBTqCgeWA_-F9Dz5eHoYdGURT_YiAwWI';
 
   return EasyLocalization(
     supportedLocales: const [Locale('en'), Locale('ar')],
@@ -41,16 +41,12 @@ runListings() {
     useOnlyLangCode: true,
     child: MultiRepositoryProvider(
       providers: [
-        RepositoryProvider(
+        BlocProvider(
             create: (_) =>
                 AuthenticationBloc(authenticationRepository: authApiManager)),
-        RepositoryProvider(create: (_) => LoadingCubit()),
+        BlocProvider(create: (_) => LoadingCubit()),
       ],
-      child: MaterialApp(
-        builder: EasyLoading.init(),
-        debugShowCheckedModeBanner: false,
-        home: const MyApp(),
-      ),
+      child: const MyApp(),
     ),
   );
 }
@@ -159,7 +155,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         localizationsDelegates: context.localizationDelegates,
         supportedLocales: context.supportedLocales,
         locale: context.locale,
-
+        themeMode: ThemeMode.system,
+        builder: EasyLoading.init(),
         title: appName.tr(),
         theme: ThemeData(
           snackBarTheme: const SnackBarThemeData(
@@ -172,9 +169,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               TextSelectionThemeData(cursorColor: Color(colorPrimaryDark)),
           primaryColor: Color(colorPrimary),
           colorScheme: ColorScheme.fromSwatch().copyWith(
-              // primary: Color(colorPrimary),
-              // secondary: Color(colorAccent),
-              // brightness: Brightness.light
+              primary: Color(colorPrimary),
+              secondary: Color(colorAccent),
+              surface: Colors.white,
+              onSurface: Colors.black,
+              brightness: Brightness.light
           ),
           appBarTheme: AppBarTheme(
             centerTitle: true,
@@ -195,9 +194,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 ? SystemUiOverlayStyle.light
                 : SystemUiOverlayStyle.dark,
           ),
-          // Platform.isAndroid ? _lightAndroidBar : _lightIOSBar,
+          popupMenuTheme: const PopupMenuThemeData(
+            color: Colors.white,
+            textStyle: TextStyle(color: Colors.black),
+          ),
+          drawerTheme: const DrawerThemeData(
+            backgroundColor: Colors.white,
+          ),
           bottomSheetTheme:
-              BottomSheetThemeData(backgroundColor: Colors.grey.shade50),
+              const BottomSheetThemeData(backgroundColor: Colors.white),
         ),
         darkTheme: ThemeData(
           snackBarTheme: const SnackBarThemeData(
@@ -206,9 +211,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           textSelectionTheme:
               TextSelectionThemeData(cursorColor: Color(colorPrimaryDark)),
           brightness: Brightness.dark,
+          scaffoldBackgroundColor: const Color(0xFF121212),
           colorScheme: ColorScheme.fromSwatch().copyWith(
             primary: Color(colorPrimary),
             secondary: Color(colorAccent),
+            surface: const Color(0xFF1E1E1E),
+            onSurface: Colors.white,
             brightness: Brightness.dark,
           ),
           sliderTheme: SliderThemeData(
@@ -218,24 +226,24 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             centerTitle: true,
             color: Platform.isIOS ? Colors.transparent : Color(colorPrimary),
             elevation: Platform.isIOS ? 0 : null,
-            actionsIconTheme: Platform.isIOS
-                ? IconThemeData(color: Color(colorPrimary))
-                : null,
-            iconTheme: Platform.isIOS
-                ? IconThemeData(color: Color(colorPrimary))
-                : const IconThemeData(color: Colors.black),
-            titleTextStyle: TextStyle(
-                color: Platform.isIOS ? Color(colorPrimary) : Colors.black,
+            actionsIconTheme: const IconThemeData(color: Colors.white),
+            iconTheme: const IconThemeData(color: Colors.white),
+            titleTextStyle: const TextStyle(
+                color: Colors.white,
                 fontSize: 20.0,
                 letterSpacing: 0,
                 fontWeight: FontWeight.w500),
-            systemOverlayStyle: Platform.isAndroid
-                ? SystemUiOverlayStyle.dark
-                : SystemUiOverlayStyle.light,
+            systemOverlayStyle: SystemUiOverlayStyle.light,
           ),
-          // Platform.isAndroid ? _darkAndroidBar : _darkIOSBar,
+          popupMenuTheme: const PopupMenuThemeData(
+            color: Color(0xFF1E1E1E),
+            textStyle: TextStyle(color: Colors.white),
+          ),
+          drawerTheme: const DrawerThemeData(
+            backgroundColor: Color(0xFF1E1E1E),
+          ),
           bottomSheetTheme:
-              BottomSheetThemeData(backgroundColor: Colors.grey[850]),
+              BottomSheetThemeData(backgroundColor: Colors.grey[900]),
         ),
         debugShowCheckedModeBanner: false,
         color: Color(colorPrimary),

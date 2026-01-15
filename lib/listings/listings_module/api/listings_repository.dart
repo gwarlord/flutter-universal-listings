@@ -27,12 +27,14 @@ abstract class ListingsRepository {
 
   // Publishing
   Future<List<String>> uploadListingImages({required List<File> images});
+  Future<List<String>> uploadListingVideos({required List<File> videos});
+
+  Future<File?> getListingImage({required bool fromGallery});
+  Future<File?> getListingVideo({required bool fromGallery});
+
   Future<bool> publishListing(ListingModel listingModel);
 
-  // Image picking (used by AddListingBloc)
-  Future<File?> getListingImage({required bool fromGallery});
-
-  // Places (used by AddListingBloc)
+  // Places
   Future<PlaceDetails?> getPlaceDetails(Prediction prediction);
 
   // Reviews
@@ -43,6 +45,6 @@ abstract class ListingsRepository {
   Future<void> approveListing({required ListingModel listingModel});
   Future<void> deleteListing({required ListingModel listingModel});
 
-  // Legacy (keep for compatibility if other screens still call it)
+  // Legacy
   Future<void> postListing({required ListingModel newListing});
 }

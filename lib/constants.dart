@@ -10,4 +10,4 @@ const serverKey =
     'AAAAZz4RcfQ:APA91bEljtQ-DRJv3ZIXNR__lrY3m9puCSx9GeHs619bqhVDSwzo1tnXSZEYU0eMN1WNOvoeTx6Mkc_vSEaoJ65HCf_1BKXnGHQA9dwF3II4rH9I3YvUkWYCW2ocyGWqLS-pUYIr_ux-';
 const eula = 'https://www.instamobile.io/eula-instachatty/';
 const privacyPolicyURL = 'https://instamobile.io/privacy-policy/';
-const googleApiKey = 'AIzaSyBI8oXdc-lbtvRxuVstY6eXG5G9FNCT4fU';
+const googleApiKey = 'AIzaSyAmBTqCgeWA_-F9Dz5eHoYdGURT_YiAwWI';
