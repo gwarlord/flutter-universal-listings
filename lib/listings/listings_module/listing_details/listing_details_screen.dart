@@ -1,3 +1,4 @@
+import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -190,6 +191,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
+    final adaptiveTextColor = dark ? Colors.white : Colors.black;
 
     return MultiBlocListener(
       listeners: [
@@ -220,7 +222,10 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
       ],
       child: Scaffold(
         appBar: AppBar(
-          title: Text(listing.title),
+          title: Text(
+            listing.title,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
           actions: [
             BlocConsumer<ListingDetailsBloc, ListingDetailsState>(
               listener: (context, state) {
@@ -246,15 +251,13 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             Icons.favorite,
                             color: listing.isFav
                                 ? Color(colorPrimary)
-                                : dark
-                                ? Colors.white
-                                : Colors.black,
+                                : adaptiveTextColor,
                           ),
                           title: Text(
                             listing.isFav
                                 ? 'Remove From Favorites'.tr()
                                 : 'Add To Favorites'.tr(),
-                            style: const TextStyle(fontSize: 18),
+                            style: TextStyle(fontSize: 18, color: adaptiveTextColor),
                           ),
                           onTap: () {
                             Navigator.pop(context);
@@ -271,11 +274,11 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             contentPadding: const EdgeInsets.all(0),
                             leading: Icon(
                               Icons.edit,
-                              color: dark ? Colors.white : Colors.black,
+                              color: dark ? Color(colorPrimary) : Colors.black,
                             ),
                             title: Text(
                               'Edit Listing'.tr(),
-                              style: const TextStyle(fontSize: 18),
+                              style: TextStyle(fontSize: 18, color: adaptiveTextColor),
                             ),
                             onTap: () async {
                               Navigator.pop(context);
@@ -302,11 +305,11 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             contentPadding: const EdgeInsets.all(0),
                             leading: Icon(
                               Icons.stars,
-                              color: dark ? Colors.white : Colors.black,
+                              color: adaptiveTextColor,
                             ),
                             title: Text(
                               'Add Review'.tr(),
-                              style: const TextStyle(fontSize: 18),
+                              style: TextStyle(fontSize: 18, color: adaptiveTextColor),
                             ),
                             onTap: () async {
                               Navigator.pop(context);
@@ -336,11 +339,11 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             contentPadding: const EdgeInsets.all(0),
                             leading: Icon(
                               Icons.chat,
-                              color: dark ? Colors.white : Colors.black,
+                              color: adaptiveTextColor,
                             ),
                             title: Text(
                               'Send Message'.tr(),
-                              style: const TextStyle(fontSize: 18),
+                              style: TextStyle(fontSize: 18, color: adaptiveTextColor),
                             ),
                             onTap: () {
                               Navigator.pop(context);
@@ -364,7 +367,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             ),
                             title: Text(
                               'Delete Listing'.tr(),
-                              style: const TextStyle(fontSize: 18),
+                              style: TextStyle(fontSize: 18, color: adaptiveTextColor),
                             ),
                           ),
                         ),
@@ -539,7 +542,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w800,
-                          color: dark ? Colors.white : const Color(0xFF1B1B1B),
+                          color: Theme.of(context).colorScheme.onSurface,
                           letterSpacing: -0.5,
                         ),
                       ),
@@ -571,7 +574,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: dark ? Colors.grey.shade900 : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: Color(colorPrimary).withOpacity(0.3),
@@ -730,6 +733,8 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             );
                           }
                           return GoogleMap(
+                            myLocationEnabled: true,
+                            myLocationButtonEnabled: true,
                             gestureRecognizers: {}..add(
                                 Factory<OneSequenceGestureRecognizer>(
                                         () => EagerGestureRecognizer())),
@@ -1245,71 +1250,111 @@ class _ContactHoursCard extends StatelessWidget {
               isDark: isDark,
               showDivider: instagram.isNotEmpty || facebook.isNotEmpty || tiktok.isNotEmpty || whatsapp.isNotEmpty || youtube.isNotEmpty || x.isNotEmpty || hours.isNotEmpty,
             ),
-          if (instagram.isNotEmpty)
-            _ActionRow(
-              icon: Icons.camera_alt,
-              title: 'Instagram',
-              value: '',
-              onTap: onInstagram,
-              accent: colorPrimary,
-              muted: muted,
-              isDark: isDark,
-              showDivider: facebook.isNotEmpty || tiktok.isNotEmpty || whatsapp.isNotEmpty || youtube.isNotEmpty || x.isNotEmpty || hours.isNotEmpty,
-            ),
-          if (facebook.isNotEmpty)
-            _ActionRow(
-              icon: Icons.share,
-              title: 'Facebook',
-              value: '',
-              onTap: onFacebook,
-              accent: colorPrimary,
-              muted: muted,
-              isDark: isDark,
-              showDivider: tiktok.isNotEmpty || whatsapp.isNotEmpty || youtube.isNotEmpty || x.isNotEmpty || hours.isNotEmpty,
-            ),
-          if (tiktok.isNotEmpty)
-            _ActionRow(
-              icon: Icons.music_note,
-              title: 'TikTok',
-              value: '',
-              onTap: onTiktok,
-              accent: colorPrimary,
-              muted: muted,
-              isDark: isDark,
-              showDivider: whatsapp.isNotEmpty || youtube.isNotEmpty || x.isNotEmpty || hours.isNotEmpty,
-            ),
-          if (whatsapp.isNotEmpty)
-            _ActionRow(
-              icon: Icons.message,
-              title: 'WhatsApp',
-              value: '',
-              onTap: onWhatsapp,
-              accent: colorPrimary,
-              muted: muted,
-              isDark: isDark,
-              showDivider: youtube.isNotEmpty || x.isNotEmpty || hours.isNotEmpty,
-            ),
-          if (youtube.isNotEmpty)
-            _ActionRow(
-              icon: Icons.play_circle_filled,
-              title: 'YouTube',
-              value: '',
-              onTap: onYoutube,
-              accent: colorPrimary,
-              muted: muted,
-              isDark: isDark,
-              showDivider: x.isNotEmpty || hours.isNotEmpty,
-            ),
-          if (x.isNotEmpty)
-            _ActionRow(
-              icon: Icons.alternate_email,
-              title: 'X (Twitter)',
-              value: '',
-              onTap: onX,
-              accent: colorPrimary,
-              muted: muted,
-              isDark: isDark,
-              showDivider: hours.isNotEmpty,
+          if (instagram.isNotEmpty || facebook.isNotEmpty || tiktok.isNotEmpty || whatsapp.isNotEmpty || youtube.isNotEmpty || x.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+              child: Theme(
+                data: Theme.of(context).copyWith(
+                  dividerColor: Colors.transparent,
+                  iconTheme: IconThemeData(
+                    color: isDark ? Colors.white : colorPrimary,
+                  ),
+                  unselectedWidgetColor: isDark ? Colors.white : colorPrimary,
+                  expansionTileTheme: ExpansionTileThemeData(
+                    iconColor: isDark ? Colors.white : colorPrimary,
+                    collapsedIconColor: isDark ? Colors.white : colorPrimary,
+                  ),
+                ),
+                child: ExpansionTile(
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  leading: SvgPicture.asset(
+                    'assets/images/social.svg',
+                    width: 22,
+                    height: 22,
+                    colorFilter: ColorFilter.mode(
+                      isDark ? Colors.white : colorPrimary,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                  title: Text(
+                    'Social Media',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : muted,
+                      fontSize: 13,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  children: [
+                    if (instagram.isNotEmpty)
+                      _ActionRow(
+                        icon: 'assets/images/instagram.svg',
+                        title: 'Instagram',
+                        value: '',
+                        onTap: onInstagram,
+                        accent: colorPrimary,
+                        muted: muted,
+                        isDark: isDark,
+                        showDivider: facebook.isNotEmpty || tiktok.isNotEmpty || whatsapp.isNotEmpty || youtube.isNotEmpty || x.isNotEmpty,
+                      ),
+                    if (facebook.isNotEmpty)
+                      _ActionRow(
+                        icon: 'assets/images/facebook.svg',
+                        title: 'Facebook',
+                        value: '',
+                        onTap: onFacebook,
+                        accent: colorPrimary,
+                        muted: muted,
+                        isDark: isDark,
+                        showDivider: tiktok.isNotEmpty || whatsapp.isNotEmpty || youtube.isNotEmpty || x.isNotEmpty,
+                      ),
+                    if (tiktok.isNotEmpty)
+                      _ActionRow(
+                        icon: 'assets/images/tiktok.svg',
+                        title: 'TikTok',
+                        value: '',
+                        onTap: onTiktok,
+                        accent: colorPrimary,
+                        muted: muted,
+                        isDark: isDark,
+                        showDivider: whatsapp.isNotEmpty || youtube.isNotEmpty || x.isNotEmpty,
+                      ),
+                    if (whatsapp.isNotEmpty)
+                      _ActionRow(
+                        icon: 'assets/images/whatsapp.svg',
+                        title: 'WhatsApp',
+                        value: '',
+                        onTap: onWhatsapp,
+                        accent: colorPrimary,
+                        muted: muted,
+                        isDark: isDark,
+                        showDivider: youtube.isNotEmpty || x.isNotEmpty,
+                      ),
+                    if (youtube.isNotEmpty)
+                      _ActionRow(
+                        icon: 'assets/images/youtube.svg',
+                        title: 'YouTube',
+                        value: '',
+                        onTap: onYoutube,
+                        accent: colorPrimary,
+                        muted: muted,
+                        isDark: isDark,
+                        showDivider: x.isNotEmpty,
+                      ),
+                    if (x.isNotEmpty)
+                      _ActionRow(
+                        icon: 'assets/images/x.svg',
+                        title: 'X (Twitter)',
+                        value: '',
+                        onTap: onX,
+                        accent: colorPrimary,
+                        muted: muted,
+                        isDark: isDark,
+                        showDivider: false,
+                      ),
+                  ],
+                ),
+              ),
             ),
           if (hours.isNotEmpty)
             _InfoRow(
@@ -1327,7 +1372,7 @@ class _ContactHoursCard extends StatelessWidget {
 }
 
 class _ActionRow extends StatelessWidget {
-  final IconData icon;
+  final dynamic icon; // IconData or String (asset path)
   final String title;
   final String value;
   final VoidCallback onTap;
@@ -1363,7 +1408,14 @@ class _ActionRow extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Row(
               children: [
-                Icon(icon, color: accent, size: 22),
+                icon is IconData
+                    ? Icon(icon, color: accent, size: 22)
+                    : SvgPicture.asset(
+                        icon,
+                        width: 22,
+                        height: 22,
+                        colorFilter: ColorFilter.mode(accent, BlendMode.srcIn),
+                      ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -1463,6 +1515,7 @@ class ReviewWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1473,7 +1526,7 @@ class ReviewWidget extends StatelessWidget {
             review.fullName(),
             style: TextStyle(
               fontSize: 17,
-              color: isDarkMode(context)
+              color: isDark
                   ? Colors.grey.shade200
                   : Colors.grey.shade900,
             ),
@@ -1482,27 +1535,31 @@ class ReviewWidget extends StatelessWidget {
             formatReviewTimestamp(review.createdAt),
             style: TextStyle(
               fontSize: 13,
-              color: isDarkMode(context)
+              color: isDark
                   ? Colors.grey.shade400
                   : Colors.grey.shade500,
             ),
           ),
-          trailing: RatingBar.builder(
-            onRatingUpdate: (_) {},
-            ignoreGestures: true,
-            glow: false,
+          trailing: RatingBarIndicator(
+            rating: review.starCount,
+            itemBuilder: (context, index) => Icon(
+              Icons.star,
+              color: Color(colorPrimary),
+            ),
             itemCount: 5,
-            allowHalfRating: true,
-            itemSize: 20,
-            unratedColor: Color(colorPrimary).withOpacity(.5),
-            initialRating: review.starCount,
-            itemBuilder: (context, index) =>
-                Icon(Icons.star, color: Color(colorPrimary)),
+            itemSize: 20.0,
+            unratedColor: Color(colorPrimary).withOpacity(.3),
+            direction: Axis.horizontal,
           ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16.0, 0, 16, 8),
-          child: Text(review.content),
+          child: Text(
+            review.content,
+            style: TextStyle(
+              color: isDark ? Colors.grey.shade300 : Colors.black87,
+            ),
+          ),
         )
       ],
     );
