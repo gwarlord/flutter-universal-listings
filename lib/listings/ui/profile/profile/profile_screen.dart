@@ -11,6 +11,7 @@ import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 import 'package:instaflutter/listings/ui/auth/reauth_user/reauth_user_screen.dart';
 import 'package:instaflutter/listings/ui/auth/welcome/welcome_screen.dart';
 import 'package:instaflutter/listings/listings_module/admin_dashboard/admin_dashboard_screen.dart';
+import 'package:instaflutter/listings/listings_module/admin_dashboard/edit_user_subscription_screen.dart';
 import 'package:instaflutter/listings/listings_module/favorite_listings/favorite_listings_screen.dart';
 import 'package:instaflutter/listings/listings_module/my_listings/my_listings_screen.dart';
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
@@ -222,6 +223,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             );
                           }),
                     ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Plan: ${currentUser.subscriptionTier.toUpperCase()}',
+                          style: TextStyle(
+                            color:
+                                isDarkMode(context) ? Colors.grey.shade400 : Colors.grey.shade700,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Column(
@@ -334,6 +347,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               leading: const Icon(
                                 Icons.dashboard,
                                 color: Colors.blueGrey,
+                              ),
+                            ),
+                          if (currentUser.isAdmin)
+                            ListTile(
+                              dense: true,
+                              onTap: () => push(
+                                  context,
+                                  EditUserSubscriptionScreen(
+                                      currentUser: currentUser)),
+                              title: const Text(
+                                'Edit User Subscription',
+                                style: TextStyle(fontSize: 16),
+                              ),
+                              leading: const Icon(
+                                Icons.manage_accounts,
+                                color: Colors.indigo,
                               ),
                             ),
                         ],
