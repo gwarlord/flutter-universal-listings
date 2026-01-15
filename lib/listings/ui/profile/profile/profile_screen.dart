@@ -14,6 +14,7 @@ import 'package:instaflutter/listings/listings_module/admin_dashboard/admin_dash
 import 'package:instaflutter/listings/listings_module/admin_dashboard/edit_user_subscription_screen.dart';
 import 'package:instaflutter/listings/listings_module/favorite_listings/favorite_listings_screen.dart';
 import 'package:instaflutter/listings/listings_module/my_listings/my_listings_screen.dart';
+import 'package:instaflutter/listings/listings_module/home/home_screen.dart';
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
 import 'package:instaflutter/listings/ui/profile/account_details/account_details_screen.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
@@ -42,13 +43,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: Platform.isIOS
-          ? AppBar(
-              title: Text('Profile'.tr()),
-            )
-          : null,
-      body: BlocProvider(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        if (Platform.isAndroid) {
+          pushAndRemoveUntil(
+            context,
+            HomeScreen(currentUser: currentUser),
+            false,
+          );
+        } else {
+          Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
+        appBar: Platform.isIOS
+            ? AppBar(
+                title: Text('Profile'.tr()),
+              )
+            : null,
+        body: BlocProvider(
         create: (context) => ProfileBloc(
           currentUser: currentUser,
           profileRepository: profileApiManager,
@@ -505,6 +520,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
         ),
       ),
+    ),
     );
   }
 

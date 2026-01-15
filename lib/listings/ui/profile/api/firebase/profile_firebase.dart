@@ -76,4 +76,54 @@ class ProfileFirebaseUtils extends ProfileRepository {
   deleteUser({required ListingsUser user}) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<List<ListingsUser>> getSuspendedUsers() async {
+    QuerySnapshot querySnapshot = await firestore
+        .collection(usersCollection)
+        .where('suspended', isEqualTo: true)
+        .get();
+    
+    return querySnapshot.docs
+        .map((doc) => ListingsUser.fromJson(doc.data() as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<void> suspendUser({required ListingsUser user}) async {
+    await firestore
+        .collection(usersCollection)
+        .doc(user.userID)
+        .update({'suspended': true});
+  }
+
+  @override
+  Future<void> unsuspendUser({required ListingsUser user}) async {
+    await firestore
+        .collection(usersCollection)
+        .doc(user.userID)
+        .update({'suspended': false});
+  }
+
+  @override
+  Future<List<ListingsUser>> getAllUsers({String? searchQuery}) async {
+    Query query = firestore.collection(usersCollection);
+    
+    QuerySnapshot querySnapshot = await query.get();
+    List<ListingsUser> users = querySnapshot.docs
+        .map((doc) => ListingsUser.fromJson(doc.data() as Map<String, dynamic>))
+        .toList();
+    
+    // Filter by search query if provided
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      users = users
+          .where((user) =>
+              user.firstName.toLowerCase().contains(searchQuery.toLowerCase()) ||
+              user.lastName.toLowerCase().contains(searchQuery.toLowerCase()) ||
+              user.email.toLowerCase().contains(searchQuery.toLowerCase()))
+          .toList();
+    }
+    
+    return users;
+  }
 }

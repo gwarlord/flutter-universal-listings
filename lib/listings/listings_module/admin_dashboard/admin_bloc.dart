@@ -12,49 +12,69 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
   final ListingsRepository listingsRepository;
   final ProfileRepository profileRepository;
   final ListingsUser currentUser;
-  List<ListingModel> pendingListings = [];
+  List<ListingsUser> suspendedUsers = [];
+  List<ListingsUser> allUsers = [];
+  List<ListingModel> suspendedListings = [];
+  List<ListingModel> allListings = [];
 
   AdminBloc({
     required this.listingsRepository,
     required this.currentUser,
     required this.profileRepository,
   }) : super(AdminInitial()) {
-    on<GetPendingListingsEvent>((event, emit) async {
-      pendingListings = await listingsRepository.getPendingListings(
-          favListingsIDs: currentUser.likedListingsIDs);
-      emit(PendingListingsState(pendingListings: pendingListings));
+    on<GetSuspendedUsersEvent>((event, emit) async {
+      suspendedUsers = await profileRepository.getSuspendedUsers();
+      emit(SuspendedUsersState(suspendedUsers: suspendedUsers));
     });
 
-    on<ListingDeletedByUserEvent>((event, emit) {
-      pendingListings.remove(event.listing);
-      emit(PendingListingsState(pendingListings: pendingListings));
+    on<GetAllUsersEvent>((event, emit) async {
+      allUsers = await profileRepository.getAllUsers(searchQuery: event.searchQuery);
+      emit(AllUsersState(users: allUsers));
     });
-    on<ListingFavUpdated>((event, emit) async {
-      event.listing.isFav = !event.listing.isFav;
-      pendingListings
-          .firstWhere((element) => element.id == event.listing.id)
-          .isFav = event.listing.isFav;
-      if (event.listing.isFav) {
-        currentUser.likedListingsIDs.add(event.listing.id);
-      } else {
-        currentUser.likedListingsIDs.remove(event.listing.id);
+
+    on<GetSuspendedListingsEvent>((event, emit) async {
+      suspendedListings = await listingsRepository.getSuspendedListings();
+      emit(SuspendedListingsState(suspendedListings: suspendedListings));
+    });
+
+    on<GetAllListingsEvent>((event, emit) async {
+      allListings = await listingsRepository.getListings(favListingsIDs: currentUser.likedListingsIDs);
+      emit(AllListingsState(listings: allListings));
+    });
+
+    on<SuspendUserEvent>((event, emit) async {
+      await profileRepository.suspendUser(user: event.user);
+      if (!suspendedUsers.any((u) => u.userID == event.user.userID)) {
+        suspendedUsers.add(event.user);
       }
-      await profileRepository.updateCurrentUser(currentUser);
-      emit(ListingFavToggleState(
-        listing: event.listing,
-        updatedUser: currentUser,
-      ));
+      allUsers.removeWhere((u) => u.userID == event.user.userID);
+      emit(AllUsersState(users: allUsers));
     });
-    on<ListingDeleteByAdminEvent>((event, emit) async {
-      await listingsRepository.deleteListing(listingModel: event.listing);
-      pendingListings.remove(event.listing);
-      emit(PendingListingsState(pendingListings: pendingListings));
+
+    on<UnsuspendUserEvent>((event, emit) async {
+      await profileRepository.unsuspendUser(user: event.user);
+      suspendedUsers.removeWhere((u) => u.userID == event.user.userID);
+      if (!allUsers.any((u) => u.userID == event.user.userID)) {
+        allUsers.add(event.user);
+      }
+      emit(SuspendedUsersState(suspendedUsers: suspendedUsers));
     });
-    on<ListingApprovalByAdminEvent>((event, emit) async {
-      await listingsRepository.approveListing(listingModel: event.listing);
-      pendingListings.remove(event.listing);
-      emit(PendingListingsState(pendingListings: pendingListings));
+
+    on<SuspendListingEvent>((event, emit) async {
+      await listingsRepository.suspendListing(listing: event.listing);
+      if (!suspendedListings.any((l) => l.id == event.listing.id)) {
+        suspendedListings.add(event.listing);
+      }
+      allListings.removeWhere((l) => l.id == event.listing.id);
+      emit(AllListingsState(listings: allListings));
     });
+
+    on<UnsuspendListingEvent>((event, emit) async {
+      await listingsRepository.unsuspendListing(listing: event.listing);
+      suspendedListings.removeWhere((l) => l.id == event.listing.id);
+      emit(SuspendedListingsState(suspendedListings: suspendedListings));
+    });
+
     on<LoadingEvent>((event, emit) => emit(LoadingState()));
   }
 }

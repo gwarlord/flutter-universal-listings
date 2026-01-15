@@ -81,6 +81,15 @@ class ListingsCustomBackendUtils extends ListingsRepository {
   Future<void> deleteListing({required ListingModel listingModel}) async {}
 
   @override
+  Future<List<ListingModel>> getSuspendedListings() async => [];
+
+  @override
+  Future<void> suspendListing({required ListingModel listing}) async {}
+
+  @override
+  Future<void> unsuspendListing({required ListingModel listing}) async {}
+
+  @override
   Future<ListingReviewModel?> postReview({required ListingReviewModel reviewModel}) async {
     return null;
   }

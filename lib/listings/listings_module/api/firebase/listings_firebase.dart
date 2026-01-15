@@ -80,6 +80,34 @@ class ListingsFirebaseUtils extends ListingsRepository {
     }
   }
 
+  @override
+  Future<List<ListingModel>> getSuspendedListings() async {
+    QuerySnapshot querySnapshot = await firestore
+        .collection(cfg.listingsCollection)
+        .where('suspended', isEqualTo: true)
+        .get();
+    
+    return querySnapshot.docs
+        .map((doc) => ListingModel.fromJson(doc.data() as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<void> suspendListing({required ListingModel listing}) async {
+    await firestore
+        .collection(cfg.listingsCollection)
+        .doc(listing.id)
+        .update({'suspended': true});
+  }
+
+  @override
+  Future<void> unsuspendListing({required ListingModel listing}) async {
+    await firestore
+        .collection(cfg.listingsCollection)
+        .doc(listing.id)
+        .update({'suspended': false});
+  }
+
   // ---------------------------
   // Categories / filters
   // ---------------------------
@@ -146,6 +174,8 @@ class ListingsFirebaseUtils extends ListingsRepository {
     for (final doc in result.docs) {
       try {
         final model = _listingFromDoc(doc);
+        // Filter out suspended listings
+        if (model.suspended) continue;
         model.isFav = favListingsIDs.contains(doc.id);
         listings.add(model);
       } catch (e, s) {
@@ -169,6 +199,8 @@ class ListingsFirebaseUtils extends ListingsRepository {
     for (final doc in result.docs) {
       try {
         final model = _listingFromDoc(doc);
+        // Filter out suspended listings
+        if (model.suspended) continue;
         model.isFav = favListingsIDs.contains(doc.id);
         listings.add(model);
       } catch (e) {
@@ -192,6 +224,8 @@ class ListingsFirebaseUtils extends ListingsRepository {
     for (final doc in result.docs) {
       try {
         final model = _listingFromDoc(doc);
+        // Filter out suspended listings
+        if (model.suspended) continue;
         model.isFav = favListingsIDs.contains(doc.id);
         listings.add(model);
       } catch (e, s) {
@@ -228,7 +262,7 @@ class ListingsFirebaseUtils extends ListingsRepository {
     final List<ListingModel> listings = [];
     for (final listingID in favListingsIDs) {
       final ListingModel? listingModel = await getListing(listingID: listingID);
-      if (listingModel != null) {
+      if (listingModel != null && !listingModel.suspended) {
         listingModel.isFav = true;
         listings.add(listingModel);
       }

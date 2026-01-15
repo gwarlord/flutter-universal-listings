@@ -17,4 +17,16 @@ abstract class ProfileRepository {
   deleteImageFromStorage(String imageURL);
 
   deleteUser({required ListingsUser user});
+
+  /// get all suspended users
+  Future<List<ListingsUser>> getSuspendedUsers();
+
+  /// suspend a user account
+  Future<void> suspendUser({required ListingsUser user});
+
+  /// unsuspend a user account
+  Future<void> unsuspendUser({required ListingsUser user});
+
+  /// get all users, optionally filtered by search query
+  Future<List<ListingsUser>> getAllUsers({String? searchQuery});
 }
