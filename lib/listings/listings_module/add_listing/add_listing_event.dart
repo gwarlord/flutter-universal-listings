@@ -88,6 +88,7 @@ class ValidateListingInputEvent extends AddListingEvent {
   final List<String> existingVideoUrls;
 
   final String countryCode;
+  final bool verified;
 
   ValidateListingInputEvent({
     required this.title,
@@ -112,6 +113,7 @@ class ValidateListingInputEvent extends AddListingEvent {
     required this.existingPhotoUrls,
     this.existingVideoUrls = const <String>[],
     required this.countryCode,
+    required this.verified,
   });
 }
 
