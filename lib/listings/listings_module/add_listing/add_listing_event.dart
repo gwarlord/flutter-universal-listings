@@ -59,7 +59,8 @@ class RemoveListingVideoEvent extends AddListingEvent {
 class ValidateListingInputEvent extends AddListingEvent {
   final String title;
   final String description;
-  final String price;
+  final double price;
+  final String currencyCode;
 
   final String phone;
   final String email;
@@ -92,6 +93,7 @@ class ValidateListingInputEvent extends AddListingEvent {
     required this.title,
     required this.description,
     required this.price,
+    required this.currencyCode,
     required this.phone,
     required this.email,
     required this.website,

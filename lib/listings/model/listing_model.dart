@@ -28,7 +28,8 @@ class ListingModel {
   List<String> videos;
 
   /// Optional
-  String price;
+  String price; // Changed back to String to match your existing Firestore data and UI logic
+  String currencyCode;
   String phone;
   String email;
   String website;
@@ -74,6 +75,7 @@ class ListingModel {
     this.photos = const [],
     this.videos = const [],
     this.price = '',
+    this.currencyCode = 'USD',
     this.phone = '',
     this.email = '',
     this.website = '',
@@ -111,7 +113,8 @@ class ListingModel {
       photo: json['photo'] ?? '',
       photos: List<String>.from(json['photos'] ?? []),
       videos: List<String>.from(json['videos'] ?? []),
-      price: json['price'] ?? '',
+      price: json['price']?.toString() ?? '',
+      currencyCode: json['currencyCode']?.toString() ?? 'USD',
       phone: json['phone'] ?? '',
       email: json['email'] ?? '',
       website: json['website'] ?? '',
@@ -149,6 +152,7 @@ class ListingModel {
       'photos': photos,
       'videos': videos,
       'price': price,
+      'currencyCode': currencyCode,
       'phone': phone,
       'email': email,
       'website': website,
