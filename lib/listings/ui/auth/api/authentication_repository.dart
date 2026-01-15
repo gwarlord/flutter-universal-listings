@@ -21,6 +21,10 @@ abstract class AuthenticationRepository {
   /// Returns [ListingsUser] if user if logged in, or [String] error message if failed
   loginWithApple();
 
+  /// Try to login with Google
+  /// Returns [ListingsUser] if user if logged in, or [String] error message if failed
+  loginWithGoogle();
+
   /// Logs the user in or create a new user if no user already registered with [credential] before.
   /// Returns [ListingsUser] if success, otherwise returns a [String] holding the error message
   Future<dynamic> loginOrCreateUserWithPhoneNumberCredential({

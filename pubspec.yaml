@@ -24,6 +24,7 @@ dependencies:
   intl_phone_number_input: ^0.7.4
   pin_code_fields: ^8.0.1
   flutter_facebook_auth: ^7.0.1
+  google_sign_in: ^6.2.1
   the_apple_sign_in: ^1.1.1
   shared_preferences: ^2.3.2
   path_provider: ^2.1.4

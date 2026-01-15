@@ -14,6 +14,7 @@ import 'package:instaflutter/core/model/channel_data_model.dart';
 import 'package:instaflutter/core/ui/chat/chat/chat_screen.dart';
 import 'package:instaflutter/core/ui/chat/player_widget.dart';
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
+import 'package:instaflutter/core/ui/theme/theme_cubit.dart';
 import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/listings/ui/auth/api/auth_api_manager.dart';
 import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
@@ -45,6 +46,7 @@ runListings() {
             create: (_) =>
                 AuthenticationBloc(authenticationRepository: authApiManager)),
         BlocProvider(create: (_) => LoadingCubit()),
+        BlocProvider(create: (_) => ThemeCubit()),
       ],
       child: const MyApp(),
     ),
@@ -150,12 +152,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       );
     }
 
-    return MaterialApp(
-        navigatorKey: navigatorKey,
-        localizationsDelegates: context.localizationDelegates,
-        supportedLocales: context.supportedLocales,
-        locale: context.locale,
-        themeMode: ThemeMode.system,
+    return BlocBuilder<ThemeCubit, ThemeState>(
+      builder: (context, themeState) {
+        return MaterialApp(
+            navigatorKey: navigatorKey,
+            localizationsDelegates: context.localizationDelegates,
+            supportedLocales: context.supportedLocales,
+            locale: context.locale,
+            themeMode: themeState.themeMode,
         builder: EasyLoading.init(),
         title: appName.tr(),
         theme: ThemeData(
@@ -246,8 +250,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               BottomSheetThemeData(backgroundColor: Colors.grey[900]),
         ),
         debugShowCheckedModeBanner: false,
-        color: Color(colorPrimary),
-        home: const LauncherScreen());
+            color: Color(colorPrimary),
+            home: const LauncherScreen());
+      },
+    );
   }
 
   @override

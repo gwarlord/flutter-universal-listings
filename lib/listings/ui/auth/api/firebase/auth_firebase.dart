@@ -10,6 +10,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:flutter_native_image_v2/flutter_native_image_v2.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/core/model/user.dart';
@@ -141,6 +142,29 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       return await _handleAppleLogin(credential, appleCredential.credential!);
     } else {
       return 'Couldn\'t login with apple.';
+    }
+  }
+
+  @override
+  loginWithGoogle() async {
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) {
+        return 'Google sign in cancelled.';
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final auth.AuthCredential credential = auth.GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      return await _handleGoogleLogin(credential, googleUser);
+    } catch (e, s) {
+      debugPrint('loginWithGoogle error: $e $s');
+      return 'Google login failed, Please try again.'.tr();
     }
   }
 
@@ -511,6 +535,45 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           userID: authResult.user?.uid ?? '',
           lastOnlineTimestamp: Timestamp.now(),
           lastName: appleIdCredential.fullName?.familyName ?? '',
+          active: true,
+             pushToken: (Platform.isIOS)
+              ? await firebaseMessaging.getAPNSToken() ?? ''
+              : await firebaseMessaging.getToken() ?? '',
+          phoneNumber: '',
+          settings: UserSettings());
+      String? errorMessage = await _createNewUser(user);
+      if (errorMessage == null) {
+        return user;
+      } else {
+        return errorMessage;
+      }
+    }
+  }
+
+  _handleGoogleLogin(
+    auth.AuthCredential credential,
+    GoogleSignInAccount googleUser,
+  ) async {
+    auth.UserCredential authResult =
+        await auth.FirebaseAuth.instance.signInWithCredential(credential);
+    ListingsUser? user = await _getCurrentUser(authResult.user?.uid ?? '');
+    if (user != null) {
+      user.active = true;
+       if (Platform.isIOS) {
+        user.pushToken = await firebaseMessaging.getAPNSToken() ?? '';
+      } else if (Platform.isAndroid) {
+        user.pushToken = await firebaseMessaging.getToken() ?? '';
+      }
+      dynamic result = await _updateCurrentUser(user);
+      return result;
+    } else {
+      user = ListingsUser(
+          email: googleUser.email,
+          firstName: googleUser.displayName?.split(' ').first ?? '',
+          profilePictureURL: googleUser.photoUrl ?? '',
+          userID: authResult.user?.uid ?? '',
+          lastOnlineTimestamp: Timestamp.now(),
+          lastName: googleUser.displayName?.split(' ').skip(1).join(' ') ?? '',
           active: true,
              pushToken: (Platform.isIOS)
               ? await firebaseMessaging.getAPNSToken() ?? ''

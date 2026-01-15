@@ -98,357 +98,496 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
               ),
             ],
             child: Scaffold(
-              appBar: AppBar(
-                elevation: 0.0,
-                backgroundColor: Colors.transparent,
-                iconTheme: IconThemeData(
-                    color: isDarkMode(context) ? Colors.white : Colors.black),
-              ),
-              body: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.only(left: 16.0, right: 16, bottom: 16),
-                child: BlocBuilder<PhoneNumberInputBloc, PhoneNumberInputState>(
-                  buildWhen: (old, current) =>
-                      current is PhoneInputFailureState && old != current,
-                  builder: (context, state) {
-                    if (state is PhoneInputFailureState) {
-                      _validate = AutovalidateMode.onUserInteraction;
-                    }
+              body: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isDarkMode(context)
+                        ? [Colors.black, Colors.grey.shade900]
+                        : [Colors.white, Colors.grey.shade100],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+                child: SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                    child: BlocBuilder<PhoneNumberInputBloc, PhoneNumberInputState>(
+                      buildWhen: (old, current) =>
+                          current is PhoneInputFailureState && old != current,
+                      builder: (context, state) {
+                        if (state is PhoneInputFailureState) {
+                          _validate = AutovalidateMode.onUserInteraction;
+                        }
 
-                    return Form(
-                      key: _key,
-                      autovalidateMode: _validate,
-                      child: GestureDetector(
-                        onTap: () => FocusScope.of(context).unfocus(),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              widget.isLogin
-                                  ? 'Sign In'.tr()
-                                  : 'Create new account'.tr(),
-                              style: TextStyle(
-                                  color: Color(colorPrimary),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 25.0),
-                            ),
-
-                            /// user profile picture,  this is visible until we verify the
-                            /// code in case of sign up with phone number
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  left: 8.0, top: 32, right: 8, bottom: 8),
-                              child: Visibility(
-                                visible: !widget.isLogin,
-                                child: Stack(
-                                  alignment: Alignment.bottomCenter,
+                        return Form(
+                          key: _key,
+                          autovalidateMode: _validate,
+                          child: GestureDetector(
+                            onTap: () => FocusScope.of(context).unfocus(),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    BlocBuilder<PhoneNumberInputBloc,
-                                        PhoneNumberInputState>(
-                                      buildWhen: (old, current) =>
-                                          current is PictureSelectedState &&
-                                          old != current,
-                                      builder: (context, state) {
-                                        if (state is PictureSelectedState) {
-                                          _image = state.imageFile;
-                                        }
-                                        return state is PictureSelectedState
-                                            ? SizedBox(
-                                                width: 130,
-                                                height: 130,
-                                                child: ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(65),
-                                                  child: state.imageFile == null
-                                                      ? Image.asset(
-                                                          'assets/images/placeholder.jpg',
-                                                          fit: BoxFit.cover,
-                                                        )
-                                                      : Image.file(
-                                                          state.imageFile!,
-                                                          fit: BoxFit.cover,
-                                                        ),
+                                    IconButton(
+                                      icon: Icon(Icons.arrow_back,
+                                          color: isDarkMode(context)
+                                              ? Colors.white
+                                              : Colors.black),
+                                      onPressed: () => Navigator.pop(context),
+                                    ),
+                                    Text(
+                                      widget.isLogin ? 'Sign In'.tr() : 'Create Account'.tr(),
+                                      style: TextStyle(
+                                        color: isDarkMode(context)
+                                            ? Colors.white
+                                            : Colors.black,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 24,
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 48,
+                                    ),
+                                  ],
+                                ),
+
+                                /// user profile picture,  this is visible until we verify the
+                                /// code in case of sign up with phone number
+                                Visibility(
+                                  visible: !widget.isLogin,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 24, bottom: 24),
+                                    child: Center(
+                                      child: Stack(
+                                        alignment: Alignment.bottomRight,
+                                        children: [
+                                          BlocBuilder<PhoneNumberInputBloc,
+                                              PhoneNumberInputState>(
+                                            buildWhen: (old, current) =>
+                                                current is PictureSelectedState &&
+                                                old != current,
+                                            builder: (context, state) {
+                                              if (state is PictureSelectedState) {
+                                                _image = state.imageFile;
+                                              }
+                                              return Container(
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: Color(colorPrimary),
+                                                    width: 2,
+                                                  ),
                                                 ),
-                                              )
-                                            : SizedBox(
-                                                height: 130,
-                                                width: 130,
-                                                child: ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(65),
-                                                  child: Image.asset(
-                                                    'assets/images/placeholder.jpg',
-                                                    fit: BoxFit.cover,
+                                                child: SizedBox(
+                                                  width: 120,
+                                                  height: 120,
+                                                  child: ClipRRect(
+                                                    borderRadius:
+                                                        BorderRadius.circular(60),
+                                                    child: state is PictureSelectedState
+                                                        ? (state.imageFile == null
+                                                            ? Image.asset(
+                                                                'assets/images/placeholder.jpg',
+                                                                fit: BoxFit.cover,
+                                                              )
+                                                            : Image.file(
+                                                                state.imageFile!,
+                                                                fit: BoxFit.cover,
+                                                              ))
+                                                        : Image.asset(
+                                                            'assets/images/placeholder.jpg',
+                                                            fit: BoxFit.cover,
+                                                          ),
                                                   ),
                                                 ),
                                               );
-                                      },
-                                    ),
-                                    Positioned(
-                                      right: 110,
-                                      child: FloatingActionButton(
-                                        backgroundColor: Color(colorAccent),
-                                        mini: true,
-                                        onPressed: () =>
-                                            _onCameraClick(context),
-                                        child: Icon(
-                                          Icons.camera_alt,
-                                          color: isDarkMode(context)
-                                              ? Colors.black
-                                              : Colors.white,
-                                        ),
-                                      ),
-                                    )
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            /// user first name text field , this is visible until we verify the
-                            /// code in case of sign up with phone number
-                            Visibility(
-                              visible: !widget.isLogin,
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 16.0, right: 8.0, left: 8.0),
-                                child: TextFormField(
-                                  cursorColor: Color(colorPrimary),
-                                  textAlignVertical: TextAlignVertical.center,
-                                  validator: validateName,
-                                  textCapitalization: TextCapitalization.words,
-                                  onSaved: (String? val) {
-                                    firstName = val ?? 'Anonymous';
-                                  },
-                                  textInputAction: TextInputAction.next,
-                                  decoration: getInputDecoration(
-                                    hint: 'First Name'.tr(),
-                                    darkMode: isDarkMode(context),
-                                    errorColor:
-                                        Theme.of(context).colorScheme.error,
-                                    colorPrimary: Color(colorPrimary),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            /// last name of the user , this is visible until we verify the
-                            /// code in case of sign up with phone number
-                            Visibility(
-                              visible: !widget.isLogin,
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 16.0, right: 8.0, left: 8.0),
-                                child: TextFormField(
-                                  validator: validateName,
-                                  textAlignVertical: TextAlignVertical.center,
-                                  textCapitalization: TextCapitalization.words,
-                                  cursorColor: Color(colorPrimary),
-                                  onSaved: (String? val) {
-                                    lastName = val ?? 'User';
-                                  },
-                                  onFieldSubmitted: (_) =>
-                                      FocusScope.of(context).nextFocus(),
-                                  textInputAction: TextInputAction.next,
-                                  decoration: getInputDecoration(
-                                    hint: 'Last Name'.tr(),
-                                    darkMode: isDarkMode(context),
-                                    errorColor:
-                                        Theme.of(context).colorScheme.error,
-                                    colorPrimary: Color(colorPrimary),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            /// user phone number,  this is visible until we verify the code
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  top: 16.0, right: 8.0, left: 8.0),
-                              child: Container(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(25),
-                                    shape: BoxShape.rectangle,
-                                    border: Border.all(
-                                        color: Colors.grey.shade200)),
-                                child: InternationalPhoneNumberInput(
-                                  autoFocus: widget.isLogin,
-                                  autoFocusSearch: true,
-                                  onInputChanged: (PhoneNumber number) =>
-                                      _phoneNumber = number.phoneNumber,
-                                  onInputValidated: (bool value) =>
-                                      _isPhoneValid = value,
-                                  ignoreBlank: true,
-                                  autoValidateMode:
-                                      AutovalidateMode.onUserInteraction,
-                                  inputDecoration: InputDecoration(
-                                    hintText: 'Phone Number'.tr(),
-                                    border: const OutlineInputBorder(
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    isDense: true,
-                                    errorBorder: const OutlineInputBorder(
-                                      borderSide: BorderSide.none,
-                                    ),
-                                  ),
-                                  inputBorder: const OutlineInputBorder(
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  selectorConfig: const SelectorConfig(
-                                      selectorType:
-                                          PhoneInputSelectorType.DIALOG),
-                                ),
-                              ),
-                            ),
-
-                            /// the main action button of the screen, this is hidden if we
-                            /// received the code from firebase
-                            /// the action and the title is base on the state,
-                            /// * Sign up with email and password: send email and password to
-                            /// firebase
-                            /// * Sign up with phone number: submits the phone number to
-                            /// firebase and await for code verification
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  right: 40.0, left: 40.0, top: 40.0),
-                              child: BlocListener<PhoneNumberInputBloc,
-                                  PhoneNumberInputState>(
-                                listener: (context, state) {
-                                  if (state is PhoneInputFailureState) {
-                                    showSnackBar(context, state.errorMessage);
-                                  } else if (state is ValidFieldsState) {
-                                    context.read<LoadingCubit>().showLoading(
-                                          context,
-                                          'Sending code...'.tr(),
-                                          false,
-                                          Color(colorPrimary),
-                                        );
-                                    context.read<PhoneNumberInputBloc>().add(
-                                        VerifyPhoneNumberEvent(
-                                            phoneNumber: _phoneNumber!));
-                                  }
-                                },
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Color(colorPrimary),
-                                    padding: const EdgeInsets.only(
-                                        top: 12, bottom: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(25.0),
-                                      side: BorderSide(
-                                        color: Color(colorPrimary),
-                                      ),
-                                    ),
-                                  ),
-                                  onPressed: () =>
-                                      context.read<PhoneNumberInputBloc>().add(
-                                            ValidateFieldsEvent(
-                                              _key,
-                                              acceptEula: acceptEULA,
-                                              isLogin: widget.isLogin,
-                                              isPhoneValid: _isPhoneValid,
-                                            ),
+                                            },
                                           ),
-                                  child: Text(
-                                    'Send Code'.tr(),
-                                    style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white),
+                                          FloatingActionButton(
+                                            backgroundColor: Color(colorPrimary),
+                                            mini: true,
+                                            onPressed: () =>
+                                                _onCameraClick(context),
+                                            child: Icon(
+                                              Icons.camera_alt,
+                                              color: Colors.white,
+                                              size: 18,
+                                            ),
+                                          )
+                                        ],
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(32.0),
-                              child: Center(
-                                child: Text(
-                                  'OR'.tr(),
-                                  style: TextStyle(
+
+                                /// user first name text field , this is visible until we verify the
+                                /// code in case of sign up with phone number
+                                Visibility(
+                                  visible: !widget.isLogin,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(bottom: 16),
+                                    child: Card(
+                                      elevation: 0,
                                       color: isDarkMode(context)
-                                          ? Colors.white
-                                          : Colors.black),
-                                ),
-                              ),
-                            ),
-
-                            /// switch between sign up with phone number and email sign up states
-                            Center(
-                              child: InkWell(
-                                onTap: () => Navigator.pop(context),
-                                child: Text(
-                                  widget.isLogin
-                                      ? 'Login with E-mail and password'.tr()
-                                      : 'Sign up with E-mail and password'.tr(),
-                                  style: const TextStyle(
-                                      color: Colors.lightBlue,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                      letterSpacing: 1),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            Visibility(
-                              visible: !widget.isLogin,
-                              child: ListTile(
-                                trailing: BlocBuilder<PhoneNumberInputBloc,
-                                    PhoneNumberInputState>(
-                                  buildWhen: (old, current) =>
-                                      current is EulaToggleState &&
-                                      old != current,
-                                  builder: (context, state) {
-                                    if (state is EulaToggleState) {
-                                      acceptEULA = state.eulaAccepted;
-                                    }
-                                    return Checkbox(
-                                      onChanged: (value) => context
-                                          .read<PhoneNumberInputBloc>()
-                                          .add(
-                                            ToggleEulaCheckboxEvent(
-                                              eulaAccepted: value!,
-                                            ),
-                                          ),
-                                      activeColor: Color(colorPrimary),
-                                      value: acceptEULA,
-                                    );
-                                  },
-                                ),
-                                title: RichText(
-                                  textAlign: TextAlign.left,
-                                  text: TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text:
-                                            'By creating an account you agree to our\n'
-                                                .tr(),
-                                        style:
-                                            const TextStyle(color: Colors.grey),
+                                          ? Colors.grey.shade800
+                                          : Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                      TextSpan(
-                                        style: const TextStyle(
-                                          color: Colors.blueAccent,
-                                        ),
-                                        text: 'Terms of Use'.tr(),
-                                        recognizer: TapGestureRecognizer()
-                                          ..onTap = () async {
-                                            if (await canLaunchUrl(
-                                                Uri.parse(eula))) {
-                                              await launchUrl(Uri.parse(eula));
-                                            }
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 4),
+                                        child: TextFormField(
+                                          cursorColor: Color(colorPrimary),
+                                          textAlignVertical: TextAlignVertical.center,
+                                          validator: validateName,
+                                          textCapitalization:
+                                              TextCapitalization.words,
+                                          onSaved: (String? val) {
+                                            firstName = val ?? 'Anonymous';
                                           },
+                                          textInputAction: TextInputAction.next,
+                                          decoration: InputDecoration(
+                                            hintText: 'First Name'.tr(),
+                                            hintStyle: TextStyle(
+                                              color: isDarkMode(context)
+                                                  ? Colors.grey.shade500
+                                                  : Colors.grey.shade600,
+                                            ),
+                                            border: InputBorder.none,
+                                            prefixIcon: Icon(
+                                              Icons.person,
+                                              color: Color(colorPrimary),
+                                              size: 20,
+                                            ),
+                                            isDense: true,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                /// last name of the user , this is visible until we verify the
+                                /// code in case of sign up with phone number
+                                Visibility(
+                                  visible: !widget.isLogin,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(bottom: 16),
+                                    child: Card(
+                                      elevation: 0,
+                                      color: isDarkMode(context)
+                                          ? Colors.grey.shade800
+                                          : Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 4),
+                                        child: TextFormField(
+                                          validator: validateName,
+                                          textAlignVertical: TextAlignVertical.center,
+                                          textCapitalization:
+                                              TextCapitalization.words,
+                                          cursorColor: Color(colorPrimary),
+                                          onSaved: (String? val) {
+                                            lastName = val ?? 'User';
+                                          },
+                                          onFieldSubmitted: (_) =>
+                                              FocusScope.of(context).nextFocus(),
+                                          textInputAction: TextInputAction.next,
+                                          decoration: InputDecoration(
+                                            hintText: 'Last Name'.tr(),
+                                            hintStyle: TextStyle(
+                                              color: isDarkMode(context)
+                                                  ? Colors.grey.shade500
+                                                  : Colors.grey.shade600,
+                                            ),
+                                            border: InputBorder.none,
+                                            prefixIcon: Icon(
+                                              Icons.person,
+                                              color: Color(colorPrimary),
+                                              size: 20,
+                                            ),
+                                            isDense: true,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                /// user phone number,  this is visible until we verify the code
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 16),
+                                  child: Card(
+                                    elevation: 0,
+                                    color: isDarkMode(context)
+                                        ? Colors.grey.shade800
+                                        : Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 4),
+                                      child: InternationalPhoneNumberInput(
+                                        autoFocus: widget.isLogin,
+                                        autoFocusSearch: true,
+                                        onInputChanged: (PhoneNumber number) =>
+                                            _phoneNumber = number.phoneNumber,
+                                        onInputValidated: (bool value) =>
+                                            _isPhoneValid = value,
+                                        ignoreBlank: true,
+                                        autoValidateMode:
+                                            AutovalidateMode.onUserInteraction,
+                                        inputDecoration: InputDecoration(
+                                          hintText: 'Phone Number'.tr(),
+                                          hintStyle: TextStyle(
+                                            color: isDarkMode(context)
+                                                ? Colors.grey.shade500
+                                                : Colors.grey.shade600,
+                                          ),
+                                          border: InputBorder.none,
+                                          prefixIcon: Icon(
+                                            Icons.phone,
+                                            color: Color(colorPrimary),
+                                            size: 20,
+                                          ),
+                                          isDense: true,
+                                        ),
+                                        inputBorder: const OutlineInputBorder(
+                                          borderSide: BorderSide.none,
+                                        ),
+                                        selectorConfig: const SelectorConfig(
+                                            selectorType:
+                                                PhoneInputSelectorType.DIALOG),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                /// the main action button of the screen, this is hidden if we
+                                /// received the code from firebase
+                                /// the action and the title is base on the state,
+                                /// * Sign up with email and password: send email and password to
+                                /// firebase
+                                /// * Sign up with phone number: submits the phone number to
+                                /// firebase and await for code verification
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 24),
+                                  child: BlocListener<PhoneNumberInputBloc,
+                                      PhoneNumberInputState>(
+                                    listener: (context, state) {
+                                      if (state is PhoneInputFailureState) {
+                                        showSnackBar(context, state.errorMessage);
+                                      } else if (state is ValidFieldsState) {
+                                        context.read<LoadingCubit>().showLoading(
+                                              context,
+                                              'Sending code...'.tr(),
+                                              false,
+                                              Color(colorPrimary),
+                                            );
+                                        context.read<PhoneNumberInputBloc>().add(
+                                            VerifyPhoneNumberEvent(
+                                                phoneNumber: _phoneNumber!));
+                                      }
+                                    },
+                                    child: SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Color(colorPrimary),
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 14),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12.0),
+                                          ),
+                                          elevation: 0,
+                                        ),
+                                        onPressed: () =>
+                                            context.read<PhoneNumberInputBloc>().add(
+                                                  ValidateFieldsEvent(
+                                                    _key,
+                                                    acceptEula: acceptEULA,
+                                                    isLogin: widget.isLogin,
+                                                    isPhoneValid: _isPhoneValid,
+                                                  ),
+                                                ),
+                                        child: Text(
+                                          'Send Code'.tr(),
+                                          style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.white),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                /// Divider
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Container(
+                                          height: 1,
+                                          color: isDarkMode(context)
+                                              ? Colors.grey.shade700
+                                              : Colors.grey.shade300,
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.symmetric(horizontal: 12),
+                                        child: Text(
+                                          'OR'.tr(),
+                                          style: TextStyle(
+                                              color: isDarkMode(context)
+                                                  ? Colors.grey.shade400
+                                                  : Colors.grey.shade600,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Container(
+                                          height: 1,
+                                          color: isDarkMode(context)
+                                              ? Colors.grey.shade700
+                                              : Colors.grey.shade300,
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
-                              ),
+
+                                /// switch between sign up with phone number and email sign up states
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  child: Center(
+                                    child: InkWell(
+                                      onTap: () => Navigator.pop(context),
+                                      child: Text(
+                                        widget.isLogin
+                                            ? 'Login with E-mail and password'.tr()
+                                            : 'Sign up with E-mail and password'.tr(),
+                                        style: TextStyle(
+                                            color: Color(colorPrimary),
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                            decoration: TextDecoration.underline),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                Visibility(
+                                  visible: !widget.isLogin,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Card(
+                                      elevation: 0,
+                                      color: isDarkMode(context)
+                                          ? Colors.grey.shade800
+                                          : Colors.grey.shade50,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        side: BorderSide(
+                                          color: isDarkMode(context)
+                                              ? Colors.grey.shade700
+                                              : Colors.grey.shade200,
+                                        ),
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 12),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            BlocBuilder<PhoneNumberInputBloc,
+                                                PhoneNumberInputState>(
+                                              buildWhen: (old, current) =>
+                                                  current is EulaToggleState &&
+                                                  old != current,
+                                              builder: (context, state) {
+                                                if (state is EulaToggleState) {
+                                                  acceptEULA = state.eulaAccepted;
+                                                }
+                                                return SizedBox(
+                                                  width: 24,
+                                                  height: 24,
+                                                  child: Checkbox(
+                                                    onChanged: (value) => context
+                                                        .read<PhoneNumberInputBloc>()
+                                                        .add(
+                                                          ToggleEulaCheckboxEvent(
+                                                            eulaAccepted: value!,
+                                                          ),
+                                                        ),
+                                                    activeColor:
+                                                        Color(colorPrimary),
+                                                    value: acceptEULA,
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: RichText(
+                                                textAlign: TextAlign.left,
+                                                text: TextSpan(
+                                                  children: [
+                                                    TextSpan(
+                                                      text:
+                                                          'By creating an account you agree to our\n'
+                                                              .tr(),
+                                                      style: TextStyle(
+                                                          color: isDarkMode(context)
+                                                              ? Colors.grey.shade300
+                                                              : Colors.grey.shade600,
+                                                          fontSize: 12),
+                                                    ),
+                                                    TextSpan(
+                                                      style: TextStyle(
+                                                        color: Color(colorPrimary),
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                      text: 'Terms of Use'.tr(),
+                                                      recognizer:
+                                                          TapGestureRecognizer()
+                                                            ..onTap = () async {
+                                                              if (await canLaunchUrl(
+                                                                  Uri.parse(eula))) {
+                                                                await launchUrl(
+                                                                    Uri.parse(eula));
+                                                              }
+                                                            },
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ),
             ),

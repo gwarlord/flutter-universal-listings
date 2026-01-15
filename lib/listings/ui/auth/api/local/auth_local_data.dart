@@ -49,6 +49,12 @@ class AuthLocalData extends AuthenticationRepository {
   }
 
   @override
+  loginWithGoogle() {
+    // TODO: implement loginWithGoogle
+    throw UnimplementedError();
+  }
+
+  @override
   Future loginWithEmailAndPassword(String email, String password) {
     // TODO: implement loginWithEmailAndPassword
     throw UnimplementedError();
