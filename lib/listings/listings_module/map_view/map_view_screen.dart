@@ -96,6 +96,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
                 return GoogleMap(
                   myLocationEnabled: true,
                   myLocationButtonEnabled: false,
+                  zoomControlsEnabled: false,
                   markers: List.generate(
                       _filteredFavorites.length,
                       (index) => Marker(
