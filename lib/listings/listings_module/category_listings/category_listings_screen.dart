@@ -91,9 +91,9 @@ class _CategoryListingsScreenState extends State<CategoryListingsScreen> {
 
           _filters ??= {};
         },
-        child: Icon(
+        child: const Icon(
           Icons.filter_list,
-          color: isDarkMode(context) ? Colors.black : Colors.white,
+          color: Colors.white,
         ),
       ),
       appBar: AppBar(
@@ -204,6 +204,7 @@ class ListingRowWidget extends StatefulWidget {
 class _ListingRowWidgetState extends State<ListingRowWidget> {
   @override
   Widget build(BuildContext context) {
+    final bool dark = isDarkMode(context);
     return SizedBox(
       height: MediaQuery.of(context).size.height / 8,
       child: Padding(
@@ -231,58 +232,47 @@ class _ListingRowWidgetState extends State<ListingRowWidget> {
             children: [
               SizedBox(
                 width: MediaQuery.of(context).size.width / 5,
-                child: displayImage(widget.listing.photo),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: displayImage(widget.listing.photo),
+                ),
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         widget.listing.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 15,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: isDarkMode(context)
-                              ? Colors.grey[300]
-                              : const Color(0xFF464646),
+                          color: dark ? Colors.white : const Color(0xFF1B1B1B),
                         ),
                       ),
+                      const SizedBox(height: 4),
                       Text(
-                        'Added on ${formatReviewTimestamp(widget.listing.createdAt)}'
-                            .tr(),
-                        style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                      ),
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                widget.listing.place,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              widget.listing.price,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: isDarkMode(context)
-                                    ? Colors.grey[300]
-                                    : const Color(0xFF464646),
-                              ),
-                            ),
-                          ],
+                        widget.listing.place,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: dark ? Colors.grey[400] : Colors.grey[600],
                         ),
-                      )
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.listing.price,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(colorPrimary),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -293,20 +283,4 @@ class _ListingRowWidgetState extends State<ListingRowWidget> {
       ),
     );
   }
-}
-Widget _sectionCard(BuildContext context, {required String title, required Widget child}) {
-  return Card(
-    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
-    ),
-  );
 }

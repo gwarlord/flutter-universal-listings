@@ -89,6 +89,7 @@ class _ContainerState extends State<ContainerScreen> {
           }
         },
         builder: (context, state) {
+          final isDark = isDarkMode(context);
           return Scaffold(
             bottomNavigationBar: Platform.isIOS
                 ? BottomNavigationBar(
@@ -159,6 +160,8 @@ class _ContainerState extends State<ContainerScreen> {
                       data: ListTileThemeData(
                         style: ListTileStyle.drawer,
                         selectedColor: Color(colorPrimary),
+                        iconColor: isDark ? Colors.white : Colors.black87,
+                        textColor: isDark ? Colors.white : Colors.black87,
                       ),
                       child: ListView(
                         padding: EdgeInsets.zero,

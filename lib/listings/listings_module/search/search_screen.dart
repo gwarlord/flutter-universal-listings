@@ -1,3 +1,10 @@
+// search_screen.dart
+// NOTE: Your existing file works as-is for Home search navigation.
+// I am only adding a small optional improvement:
+// - AppBar title
+// - SafeArea
+// - Better empty-state stacking (still keeps your logic intact)
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -40,6 +47,7 @@ class _SearchScreenState extends State<SearchScreen> {
   List<ListingModel> _filteredListings = [];
   List<ListingModel> _listings = [];
   bool isLoading = true;
+
   final TextEditingController _searchController = TextEditingController();
   late ListingsUser currentUser;
 
@@ -53,51 +61,57 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: () async {
-          _searchController.clear();
-          context.read<SearchBloc>().add(LoadingEvent());
-          context.read<SearchBloc>().add(GetListingsEvent());
-        },
-        child: BlocConsumer<SearchBloc, SearchState>(
-          listener: (context, state) {
-            if (state is ListingsReadyState) {
-              isLoading = false;
-              _listings = state.listings;
-              _filteredListings = [];
-            } else if (state is LoadingState) {
-              isLoading = true;
-            } else if (state is ListingsFilteredState) {
-              _filteredListings = state.filteredListings;
-            }
+      appBar: AppBar(
+        title: Text('Search'.tr()),
+      ),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            _searchController.clear();
+            context.read<SearchBloc>().add(LoadingEvent());
+            context.read<SearchBloc>().add(GetListingsEvent());
           },
-          builder: (context, state) {
-            if (isLoading) {
-              return const Center(child: CircularProgressIndicator.adaptive());
-            }
-            if (_listings.isEmpty) {
-              return Stack(
-                children: [
-                  ListView(),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: showEmptyState(
-                      'No Listing Found'.tr(),
-                      'Add a new listing to show up here once approved by admins.'
-                          .tr(),
-                      buttonTitle: 'Add Listing'.tr(),
-                      isDarkMode: isDarkMode(context),
-                      action: () => push(context,
-                          AddListingWrappingWidget(currentUser: currentUser)),
-                      colorPrimary: Color(colorPrimary),
+          child: BlocConsumer<SearchBloc, SearchState>(
+            listener: (context, state) {
+              if (state is ListingsReadyState) {
+                isLoading = false;
+                _listings = state.listings;
+                _filteredListings = [];
+              } else if (state is LoadingState) {
+                isLoading = true;
+              } else if (state is ListingsFilteredState) {
+                _filteredListings = state.filteredListings;
+              }
+            },
+            builder: (context, state) {
+              if (isLoading) {
+                return const Center(child: CircularProgressIndicator.adaptive());
+              }
+
+              if (_listings.isEmpty) {
+                return Stack(
+                  children: [
+                    ListView(), // needed for RefreshIndicator
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: showEmptyState(
+                        'No Listing Found'.tr(),
+                        'Add a new listing to show up here once approved by admins.'.tr(),
+                        buttonTitle: 'Add Listing'.tr(),
+                        isDarkMode: isDarkMode(context),
+                        action: () => push(
+                          context,
+                          AddListingWrappingWidget(currentUser: currentUser),
+                        ),
+                        colorPrimary: Color(colorPrimary),
+                      ),
                     ),
-                  ),
-                ],
-              );
-            } else {
+                  ],
+                );
+              }
+
               return CustomScrollView(
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 slivers: [
                   SliverPadding(
                     padding: const EdgeInsets.only(left: 8.0, right: 8, top: 8),
@@ -111,72 +125,70 @@ class _SearchScreenState extends State<SearchScreen> {
                         textInputAction: TextInputAction.search,
                         textCapitalization: TextCapitalization.words,
                         decoration: InputDecoration(
-                            contentPadding: const EdgeInsets.all(8),
-                            isDense: true,
-                            fillColor: isDarkMode(context)
-                                ? Colors.grey.shade700
-                                : Colors.grey.shade200,
-                            filled: true,
-                            focusedBorder: const OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(360)),
-                                borderSide:
-                                    BorderSide(style: BorderStyle.none)),
-                            enabledBorder: const OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(360)),
-                                borderSide:
-                                    BorderSide(style: BorderStyle.none)),
-                            hintText: 'Search for listings'.tr(),
-                            suffixIcon: IconButton(
-                              focusColor: isDarkMode(context)
-                                  ? Colors.white
-                                  : Colors.black,
-                              iconSize: 20,
-                              icon: const Icon(Icons.close),
-                              onPressed: () {
-                                FocusScope.of(context).unfocus();
-                                context
-                                    .read<SearchBloc>()
-                                    .add(SearchListingsEvent(query: ''));
-                                _searchController.clear();
-                              },
-                            ),
-                            prefixIcon: const Icon(Icons.search, size: 20)),
+                          contentPadding: const EdgeInsets.all(8),
+                          isDense: true,
+                          fillColor: isDarkMode(context)
+                              ? Colors.grey.shade700
+                              : Colors.grey.shade200,
+                          filled: true,
+                          focusedBorder: const OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(360)),
+                            borderSide: BorderSide(style: BorderStyle.none),
+                          ),
+                          enabledBorder: const OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(360)),
+                            borderSide: BorderSide(style: BorderStyle.none),
+                          ),
+                          hintText: 'Search for listings'.tr(),
+                          suffixIcon: IconButton(
+                            focusColor:
+                            isDarkMode(context) ? Colors.white : Colors.black,
+                            iconSize: 20,
+                            icon: const Icon(Icons.close),
+                            onPressed: () {
+                              FocusScope.of(context).unfocus();
+                              context
+                                  .read<SearchBloc>()
+                                  .add(SearchListingsEvent(query: ''));
+                              _searchController.clear();
+                            },
+                          ),
+                          prefixIcon: const Icon(Icons.search, size: 20),
+                        ),
                       ),
                     ),
                   ),
                   SliverPadding(
                     padding: const EdgeInsets.all(8),
                     sliver: _searchController.text.isNotEmpty &&
-                            _filteredListings.isEmpty
+                        _filteredListings.isEmpty
                         ? SliverPadding(
-                            padding: const EdgeInsets.all(16.0),
-                            sliver: SliverToBoxAdapter(
-                              child: showEmptyState(
-                                  'No Result'.tr(),
-                                  'No listing matches the used keyword, Try another keyword.'
-                                      .tr()),
-                            ),
-                          )
+                      padding: const EdgeInsets.all(16.0),
+                      sliver: SliverToBoxAdapter(
+                        child: showEmptyState(
+                          'No Result'.tr(),
+                          'No listing matches the used keyword, Try another keyword.'.tr(),
+                        ),
+                      ),
+                    )
                         : SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) => SearchListingsResultTile(
-                                listing: _filteredListings.isEmpty
-                                    ? _listings[index]
-                                    : _filteredListings[index],
-                                currentUser: currentUser,
-                              ),
-                              childCount: _filteredListings.isEmpty
-                                  ? _listings.length
-                                  : _filteredListings.length,
-                            ),
-                          ),
+                      delegate: SliverChildBuilderDelegate(
+                            (context, index) => SearchListingsResultTile(
+                          listing: _filteredListings.isEmpty
+                              ? _listings[index]
+                              : _filteredListings[index],
+                          currentUser: currentUser,
+                        ),
+                        childCount: _filteredListings.isEmpty
+                            ? _listings.length
+                            : _filteredListings.length,
+                      ),
+                    ),
                   ),
                 ],
               );
-            }
-          },
+            },
+          ),
         ),
       ),
     );
@@ -200,8 +212,7 @@ class SearchListingsResultTile extends StatefulWidget {
   });
 
   @override
-  State<SearchListingsResultTile> createState() =>
-      _SearchListingsResultTileState();
+  State<SearchListingsResultTile> createState() => _SearchListingsResultTileState();
 }
 
 class _SearchListingsResultTileState extends State<SearchListingsResultTile> {
@@ -214,11 +225,14 @@ class _SearchListingsResultTileState extends State<SearchListingsResultTile> {
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: () async {
-            bool? isListingDeleted = await push(
-                context,
-                ListingDetailsWrappingWidget(
-                    listing: widget.listing, currentUser: widget.currentUser));
-            if (isListingDeleted != null && isListingDeleted) {
+            final bool? isListingDeleted = await push(
+              context,
+              ListingDetailsWrappingWidget(
+                listing: widget.listing,
+                currentUser: widget.currentUser,
+              ),
+            );
+            if (isListingDeleted == true) {
               if (!mounted) return;
               context
                   .read<SearchBloc>()
@@ -243,12 +257,12 @@ class _SearchListingsResultTileState extends State<SearchListingsResultTile> {
                       Text(
                         widget.listing.title,
                         style: const TextStyle(fontSize: 17),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        'Added on ${formatReviewTimestamp(widget.listing.createdAt)}'
-                            .tr(),
-                        style: TextStyle(
-                            fontSize: 13, color: Colors.grey.shade500),
+                        'Added on ${formatReviewTimestamp(widget.listing.createdAt)}'.tr(),
+                        style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
                       ),
                       Expanded(
                         child: Row(
@@ -260,12 +274,14 @@ class _SearchListingsResultTileState extends State<SearchListingsResultTile> {
                                 widget.listing.place,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    fontSize: 14, color: Colors.grey),
+                                style: const TextStyle(fontSize: 14, color: Colors.grey),
                               ),
                             ),
+                            const SizedBox(width: 8),
                             Text(
                               widget.listing.price,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,

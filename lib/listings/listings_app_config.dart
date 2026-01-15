@@ -14,4 +14,4 @@ var reviewCollection = '';
 var filtersCollection = '';
 
 // NEW: Google Maps Places API Key (required for Place Details lookup)
-var googleMapsApiKey = 'AIzaSyDNxE7GmSRWgrcf3oUMfbjEE0NugvDnfGc';
+var googleMapsApiKey = 'AIzaSyAmBTqCgeWA_-F9Dz5eHoYdGURT_YiAwW';

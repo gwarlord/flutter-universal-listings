@@ -92,7 +92,8 @@ class _FavoriteListingScreenState extends State<FavoriteListingScreen> {
                     child: showEmptyState(
                         'No Favorites'.tr(),
                         'All your favorite listings will show up here once you click the ❤ button.'
-                            .tr()),
+                            .tr(),
+                        isDarkMode: isDarkMode(context)),
                   ),
                 ],
               );
@@ -131,6 +132,7 @@ class FavoriteListingCard extends StatefulWidget {
 class _FavoriteListingCardState extends State<FavoriteListingCard> {
   @override
   Widget build(BuildContext context) {
+    final bool dark = isDarkMode(context);
     return GestureDetector(
       onTap: () async {
         bool? isListingDeleted = await push(
@@ -157,7 +159,10 @@ class _FavoriteListingCardState extends State<FavoriteListingCard> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                displayImage(widget.listing.photo),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: displayImage(widget.listing.photo),
+                ),
                 Positioned(
                   top: 0,
                   right: 0,
@@ -179,15 +184,23 @@ class _FavoriteListingCardState extends State<FavoriteListingCard> {
           Text(
             widget.listing.title,
             maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
                 fontSize: 16,
-                color:
-                    isDarkMode(context) ? Colors.grey[400] : Colors.grey[800],
+                color: dark ? Colors.white : Colors.grey[800],
                 fontWeight: FontWeight.bold),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Text(widget.listing.place, maxLines: 1),
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Text(
+              widget.listing.place, 
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                color: dark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
           ),
           RatingBar.builder(
             ignoreGestures: true,
@@ -196,9 +209,9 @@ class _FavoriteListingCardState extends State<FavoriteListingCard> {
                 ? widget.listing.reviewsSum / widget.listing.reviewsCount
                 : 0,
             allowHalfRating: true,
-            itemSize: 22,
+            itemSize: 18,
             glow: false,
-            unratedColor: Color(colorPrimary).withOpacity(0.5),
+            unratedColor: Color(colorPrimary).withOpacity(0.3),
             itemBuilder: (context, index) =>
                 Icon(Icons.star, color: Color(colorPrimary)),
             itemCount: 5,
