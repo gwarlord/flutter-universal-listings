@@ -349,8 +349,10 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           'youtube': event.listingModel.youtube,
           'x': event.listingModel.x,
           'photo': event.listingModel.photo,
-          'photos': event.listingModel.photos,
-          'countryCode': (event.listingModel.countryCode).toUpperCase(),
+          'photos': event.listingModel.photos,          'videos': allVideos,
+          'price': event.listingModel.price,
+          'currencyCode': event.listingModel.currencyCode,          'countryCode': (event.listingModel.countryCode).toUpperCase(),
+          'verified': event.listingModel.verified,
         };
 
         // Include videos only if present in your model/schema
