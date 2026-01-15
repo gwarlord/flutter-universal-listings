@@ -6,6 +6,7 @@ import 'package:instaflutter/listings/listings_app_config.dart';
 
 class ListingsUser extends User {
   bool isAdmin;
+  String subscriptionTier;
 
   List<String> likedListingsIDs;
 
@@ -21,6 +22,7 @@ class ListingsUser extends User {
     settings,
     pushToken = '',
     this.isAdmin = false,
+    this.subscriptionTier = 'free',
     this.likedListingsIDs = const [],
   }) : super(
           firstName: firstName,
@@ -55,6 +57,7 @@ class ListingsUser extends User {
       profilePictureURL: parsedJson['profilePictureURL'] ?? '',
       pushToken: parsedJson['pushToken'] ?? '',
       isAdmin: parsedJson['isAdmin'] ?? false,
+        subscriptionTier: parsedJson['subscriptionTier']?.toString() ?? 'free',
       likedListingsIDs:
           List<String>.from(parsedJson['likedListingsIDs'] ?? const []),
     );
@@ -75,6 +78,7 @@ class ListingsUser extends User {
       'appIdentifier': appIdentifier,
       'pushToken': pushToken,
       'isAdmin': isAdmin,
+      'subscriptionTier': subscriptionTier,
       'likedListingsIDs': likedListingsIDs,
     };
   }

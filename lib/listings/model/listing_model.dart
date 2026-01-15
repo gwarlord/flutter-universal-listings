@@ -35,6 +35,10 @@ class ListingModel {
   String website;
   String openingHours;
 
+  /// Booking
+  bool bookingEnabled;
+  String bookingUrl;
+
   /// Social Media
   String instagram;
   String facebook;
@@ -81,6 +85,8 @@ class ListingModel {
     this.email = '',
     this.website = '',
     this.openingHours = '',
+    this.bookingEnabled = false,
+    this.bookingUrl = '',
     this.instagram = '',
     this.facebook = '',
     this.tiktok = '',
@@ -121,6 +127,8 @@ class ListingModel {
       email: json['email'] ?? '',
       website: json['website'] ?? '',
       openingHours: json['openingHours'] ?? '',
+      bookingEnabled: json['bookingEnabled'] ?? false,
+      bookingUrl: json['bookingUrl'] ?? '',
       instagram: json['instagram'] ?? '',
       facebook: json['facebook'] ?? '',
       tiktok: json['tiktok'] ?? '',
@@ -160,6 +168,8 @@ class ListingModel {
       'email': email,
       'website': website,
       'openingHours': openingHours,
+      'bookingEnabled': bookingEnabled,
+      'bookingUrl': bookingUrl,
       'instagram': instagram,
       'facebook': facebook,
       'tiktok': tiktok,

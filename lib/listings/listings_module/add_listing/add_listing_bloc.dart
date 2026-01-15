@@ -17,6 +17,8 @@ const Set<String> kCaribbeanCountryCodes = {
   'VC', 'SX', 'SR', 'TT', 'TC', 'VI',
 };
 
+const Set<String> kBookingEligibleTiers = {'pro', 'premium', 'business'};
+
 class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
   final ListingsUser currentUser;
   final ListingsRepository listingsRepository;
@@ -164,6 +166,25 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
         return;
       }
 
+      // Subscription gating for bookings
+      final String tier = currentUser.subscriptionTier.toLowerCase();
+      final bool canUseBooking = kBookingEligibleTiers.contains(tier);
+      if (event.bookingEnabled && !canUseBooking) {
+        emit(AddListingErrorState(
+          errorTitle: 'Upgrade required'.tr(),
+          errorMessage: 'Bookings are available on paid plans. Upgrade to enable bookings.'.tr(),
+        ));
+        return;
+      }
+
+      if (event.bookingEnabled && event.bookingUrl.trim().isEmpty) {
+        emit(AddListingErrorState(
+          errorTitle: 'Missing booking link'.tr(),
+          errorMessage: 'Add a booking URL to enable bookings.'.tr(),
+        ));
+        return;
+      }
+
       // Require at least one photo overall (existing + new)
       final int totalPhotos = event.existingPhotoUrls.length + listingImages.length;
       if (totalPhotos == 0) {
@@ -187,6 +208,8 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
         email: event.email.trim(),
         website: event.website.trim(),
         openingHours: event.openingHours.trim(),
+        bookingEnabled: event.bookingEnabled,
+        bookingUrl: event.bookingUrl.trim(),
         instagram: event.instagram.trim(),
         facebook: event.facebook.trim(),
         tiktok: event.tiktok.trim(),
@@ -342,6 +365,8 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           'email': event.listingModel.email,
           'website': event.listingModel.website,
           'openingHours': event.listingModel.openingHours,
+          'bookingEnabled': event.listingModel.bookingEnabled,
+          'bookingUrl': event.listingModel.bookingUrl,
           'instagram': event.listingModel.instagram,
           'facebook': event.listingModel.facebook,
           'tiktok': event.listingModel.tiktok,

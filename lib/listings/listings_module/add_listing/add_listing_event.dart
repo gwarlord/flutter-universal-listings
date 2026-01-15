@@ -67,6 +67,9 @@ class ValidateListingInputEvent extends AddListingEvent {
   final String website;
   final String openingHours;
 
+  final bool bookingEnabled;
+  final String bookingUrl;
+
   final String instagram;
   final String facebook;
   final String tiktok;
@@ -99,6 +102,8 @@ class ValidateListingInputEvent extends AddListingEvent {
     required this.email,
     required this.website,
     required this.openingHours,
+    required this.bookingEnabled,
+    required this.bookingUrl,
     required this.instagram,
     required this.facebook,
     required this.tiktok,
