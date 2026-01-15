@@ -1271,10 +1271,6 @@ class _ContactHoursCard extends StatelessWidget {
                     'assets/images/social.svg',
                     width: 22,
                     height: 22,
-                    colorFilter: ColorFilter.mode(
-                      isDark ? Colors.white : colorPrimary,
-                      BlendMode.srcIn,
-                    ),
                   ),
                   title: Text(
                     'Social Media',
@@ -1591,7 +1587,7 @@ class FilterDetailsWidget extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  filter.key,
+                  filter.key.toLowerCase() == 'condition' ? 'Condition' : filter.key,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
