@@ -122,6 +122,8 @@ class HomeScreenState extends State<HomeScreen> {
   void _showCountrySelectionDialog(BuildContext context) {
     List<String> tempSelectedCountries = [..._selectedCountryCodes];
 
+    final sortedCountries = CaribbeanCountries.all.toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -136,9 +138,9 @@ class HomeScreenState extends State<HomeScreen> {
                 width: double.maxFinite,
                 child: ListView.builder(
                   shrinkWrap: true,
-                  itemCount: CaribbeanCountries.all.length,
+                  itemCount: sortedCountries.length,
                   itemBuilder: (context, index) {
-                    final country = CaribbeanCountries.all[index];
+                    final country = sortedCountries[index];
                     final isSelected = tempSelectedCountries.contains(country.code);
 
                     return CheckboxListTile(

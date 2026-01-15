@@ -723,7 +723,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
                     child: SizedBox(
-                      height: 240,
+                      height: 160,
                       child: FutureBuilder(
                         future: _mapFuture,
                         builder: (context, snapshot) {

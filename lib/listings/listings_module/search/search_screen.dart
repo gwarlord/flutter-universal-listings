@@ -140,6 +140,11 @@ class _SearchScreenState extends State<SearchScreen> {
                             borderSide: BorderSide(style: BorderStyle.none),
                           ),
                           hintText: 'Search for listings'.tr(),
+                          hintStyle: TextStyle(
+                            color: isDarkMode(context)
+                                ? Colors.grey.shade300
+                                : Colors.grey.shade600,
+                          ),
                           suffixIcon: IconButton(
                             focusColor:
                             isDarkMode(context) ? Colors.white : Colors.black,
