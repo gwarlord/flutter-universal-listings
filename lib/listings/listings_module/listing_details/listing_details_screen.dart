@@ -25,6 +25,10 @@ import 'package:instaflutter/listings/listings_module/add_listing/add_listing_sc
 import 'package:instaflutter/listings/listings_module/add_review/add_review_screen.dart';
 import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
 import 'package:instaflutter/listings/listings_module/listing_details/listing_details_bloc.dart';
+import 'package:instaflutter/listings/listings_module/booking/booking_bloc.dart';
+import 'package:instaflutter/listings/listings_module/booking/booking_event.dart';
+import 'package:instaflutter/listings/listings_module/booking/booking_request_dialog.dart';
+import 'package:instaflutter/listings/listings_module/api/booking_api_manager.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -627,13 +631,26 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             ),
                           ),
                         ),
-                      if (listing.bookingEnabled && listing.bookingUrl.trim().isNotEmpty)
+                      if (listing.bookingEnabled)
                         Padding(
                           padding: const EdgeInsets.only(top: 10.0),
                           child: SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
-                              onPressed: () => _launchWebsite(listing.bookingUrl),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => BlocProvider(
+                                    create: (context) => BookingBloc(
+                                      bookingRepository: bookingApiManager,
+                                    )..add(GetBookedDatesEvent(listingId: listing.id)),
+                                    child: BookingRequestDialog(
+                                      listing: listing,
+                                      currentUser: currentUser,
+                                    ),
+                                  ),
+                                );
+                              },
                               icon: const Icon(Icons.event_available),
                               label: const Text('Book Now'),
                               style: ElevatedButton.styleFrom(

@@ -177,14 +177,6 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
         return;
       }
 
-      if (event.bookingEnabled && event.bookingUrl.trim().isEmpty) {
-        emit(AddListingErrorState(
-          errorTitle: 'Missing booking link'.tr(),
-          errorMessage: 'Add a booking URL to enable bookings.'.tr(),
-        ));
-        return;
-      }
-
       // Require at least one photo overall (existing + new)
       final int totalPhotos = event.existingPhotoUrls.length + listingImages.length;
       if (totalPhotos == 0) {

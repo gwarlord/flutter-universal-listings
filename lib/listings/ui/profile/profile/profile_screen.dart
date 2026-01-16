@@ -15,6 +15,8 @@ import 'package:instaflutter/listings/listings_module/admin_dashboard/edit_user_
 import 'package:instaflutter/listings/listings_module/favorite_listings/favorite_listings_screen.dart';
 import 'package:instaflutter/listings/listings_module/my_listings/my_listings_screen.dart';
 import 'package:instaflutter/listings/listings_module/home/home_screen.dart';
+import 'package:instaflutter/listings/listings_module/booking/my_bookings_screen.dart';
+import 'package:instaflutter/listings/listings_module/booking/booking_management_screen.dart';
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
 import 'package:instaflutter/listings/ui/profile/account_details/account_details_screen.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
@@ -291,6 +293,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               color: Colors.red,
                             ),
                           ),
+                          ListTile(
+                            dense: true,
+                            onTap: () => push(
+                                context,
+                                MyBookingsWrapperWidget(
+                                  currentUser: currentUser,
+                                )),
+                            title: Text(
+                              'My Bookings'.tr(),
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                            leading: Icon(
+                              Icons.calendar_month,
+                              color: Color(colorPrimary),
+                            ),
+                          ),
+                          if (currentUser.isAdmin || const ['pro', 'premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase()))
+                            ListTile(
+                              dense: true,
+                              onTap: () => push(
+                                  context,
+                                  BookingManagementWrapperWidget(
+                                    currentUser: currentUser,
+                                  )),
+                              title: Text(
+                                'Booking Requests'.tr(),
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                              leading: Icon(
+                                Icons.event_note,
+                                color: Color(colorPrimary),
+                              ),
+                            ),
                           ListTile(
                             onTap: () async {
                               await push(
