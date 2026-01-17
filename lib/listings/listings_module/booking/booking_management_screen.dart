@@ -333,6 +333,20 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
   }
 
   void _rejectBooking(dynamic booking) {
+    // Validate booking data
+    if (booking.listingId == null || booking.listingId.isEmpty) {
+      print('❌ DEBUG: Invalid listingId: ${booking.listingId}');
+      showAlertDialog(context, 'Error'.tr(), 'Invalid booking data: missing listing ID'.tr());
+      return;
+    }
+    if (booking.id == null || booking.id.isEmpty) {
+      print('❌ DEBUG: Invalid bookingId: ${booking.id}');
+      showAlertDialog(context, 'Error'.tr(), 'Invalid booking data: missing booking ID'.tr());
+      return;
+    }
+    
+    print('✅ DEBUG: Booking data valid - listingId: ${booking.listingId}, bookingId: ${booking.id}');
+    
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
