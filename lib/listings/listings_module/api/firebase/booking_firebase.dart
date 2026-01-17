@@ -111,55 +111,82 @@ class BookingFirebase extends BookingRepository {
       print('🔵 Firebase: Updating booking status - listingId=$listingId, bookingId=$bookingId, status=$status');
       
       // Update in listing's bookings
-      await _firestore
-          .collection('listings')
-          .doc(listingId)
-          .collection('bookings')
-          .doc(bookingId)
-          .update({
-        'status': status,
-        'updatedAt': now.toIso8601String(),
-      });
-      print('✅ Firebase: Updated listing bookings collection');
+      try {
+        await _firestore
+            .collection('listings')
+            .doc(listingId)
+            .collection('bookings')
+            .doc(bookingId)
+            .update({
+          'status': status,
+          'updatedAt': now.toIso8601String(),
+        });
+        print('✅ Firebase: Updated listing bookings collection');
+      } catch (e) {
+        print('❌ Firebase Error updating listing bookings: $e');
+        rethrow;
+      }
 
       // Get the booking to update user's collections
-      final bookingDoc = await _firestore
-          .collection('listings')
-          .doc(listingId)
-          .collection('bookings')
-          .doc(bookingId)
-          .get();
+      DocumentSnapshot? bookingDoc;
+      try {
+        bookingDoc = await _firestore
+            .collection('listings')
+            .doc(listingId)
+            .collection('bookings')
+            .doc(bookingId)
+            .get();
+      } catch (e) {
+        print('❌ Firebase Error fetching booking document: $e');
+        rethrow;
+      }
 
-      if (bookingDoc.exists) {
-        final booking = BookingModel.fromJson(bookingDoc.data()!);
+      if (bookingDoc != null && bookingDoc.exists) {
+        final booking = BookingModel.fromJson(bookingDoc.data() as Map<String, dynamic>);
         print('📖 Firebase: Found booking - customerId=${booking.customerId}, listersUserId=${booking.listersUserId}');
 
         // Update in customer's myBookings
-        await _firestore
-            .collection('users')
-            .doc(booking.customerId)
-            .collection('myBookings')
-            .doc(bookingId)
-            .update({
-          'status': status,
-          'updatedAt': now.toIso8601String(),
-        });
-        print('✅ Firebase: Updated customer myBookings collection');
+        try {
+          await _firestore
+              .collection('users')
+              .doc(booking.customerId)
+              .collection('myBookings')
+              .doc(bookingId)
+              .update({
+            'status': status,
+            'updatedAt': now.toIso8601String(),
+          });
+          print('✅ Firebase: Updated customer myBookings collection');
+        } catch (e) {
+          print('❌ Firebase Error updating customer myBookings: $e');
+          // Don't rethrow - try to continue
+        }
 
         // Update in lister's receivedBookings
-        await _firestore
-            .collection('users')
-            .doc(booking.listersUserId)
-            .collection('receivedBookings')
-            .doc(bookingId)
-            .update({
-          'status': status,
-          'updatedAt': now.toIso8601String(),
-        });
-        print('✅ Firebase: Updated lister receivedBookings collection');
+        try {
+          await _firestore
+              .collection('users')
+              .doc(booking.listersUserId)
+              .collection('receivedBookings')
+              .doc(bookingId)
+              .update({
+            'status': status,
+            'updatedAt': now.toIso8601String(),
+          });
+          print('✅ Firebase: Updated lister receivedBookings collection');
+        } catch (e) {
+          print('❌ Firebase Error updating lister receivedBookings: $e');
+          // Don't rethrow - try to continue
+        }
 
         // ✅ Trigger Status Change Email
-        await _triggerBookingEmail(booking, status);
+        try {
+          await _triggerBookingEmail(booking, status);
+          print('✅ Firebase: Email notification triggered');
+        } catch (e) {
+          print('⚠️ Firebase Warning - Email trigger error: $e');
+          // Don't rethrow - email is not critical
+        }
       } else {
         throw Exception('Booking not found in listing collection');
       }
