@@ -35,6 +35,11 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
     _displayedMonth = DateTime.now();
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
   bool _isDateBooked(DateTime date) {
     return widget.bookedDates.any(
       (bookedDate) =>
@@ -50,7 +55,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
   }
 
   void _selectDate(DateTime date) {
-    if (_isDateBooked(date)) return;
+    if (_isDateBooked(date) || !mounted) return;
 
     setState(() {
       if (_checkInDate == null) {
@@ -61,9 +66,11 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
           _checkInDate = date;
         } else {
           _checkOutDate = date;
-          widget.onDateRangeSelected(
-            DateRange(checkIn: _checkInDate!, checkOut: _checkOutDate!),
-          );
+          if (mounted) {
+            widget.onDateRangeSelected(
+              DateRange(checkIn: _checkInDate!, checkOut: _checkOutDate!),
+            );
+          }
         }
       } else {
         _checkInDate = date;
@@ -84,12 +91,14 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
               IconButton(
                 icon: const Icon(Icons.chevron_left),
                 onPressed: () {
-                  setState(() {
-                    _displayedMonth = DateTime(
-                      _displayedMonth.year,
-                      _displayedMonth.month - 1,
-                    );
-                  });
+                  if (mounted) {
+                    setState(() {
+                      _displayedMonth = DateTime(
+                        _displayedMonth.year,
+                        _displayedMonth.month - 1,
+                      );
+                    });
+                  }
                 },
               ),
               Text(
@@ -102,12 +111,14 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
               IconButton(
                 icon: const Icon(Icons.chevron_right),
                 onPressed: () {
-                  setState(() {
-                    _displayedMonth = DateTime(
-                      _displayedMonth.year,
-                      _displayedMonth.month + 1,
-                    );
-                  });
+                  if (mounted) {
+                    setState(() {
+                      _displayedMonth = DateTime(
+                        _displayedMonth.year,
+                        _displayedMonth.month + 1,
+                      );
+                    });
+                  }
                 },
               ),
             ],
@@ -121,13 +132,13 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Check-in: ${DateFormat('MMM dd, yyyy').format(_checkInDate!)}',
+                  'Start Date: ${DateFormat('MMM dd, yyyy').format(_checkInDate!)}',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 if (_checkOutDate != null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    'Check-out: ${DateFormat('MMM dd, yyyy').format(_checkOutDate!)}',
+                    'End Date: ${DateFormat('MMM dd, yyyy').format(_checkOutDate!)}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
@@ -149,31 +160,40 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
     final lastDay = DateTime(_displayedMonth.year, _displayedMonth.month + 1, 0);
     final daysInMonth = lastDay.day;
     final startingDayOfWeek = firstDay.weekday;
+    final totalCells = startingDayOfWeek - 1 + daysInMonth;
 
-    final days = <Widget>[];
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 7,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+      ),
+      itemCount: totalCells,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      itemBuilder: (context, index) {
+        // Empty cells before first day of month
+        if (index < startingDayOfWeek - 1) {
+          return const SizedBox.shrink();
+        }
 
-    // Add empty cells for days before the first day of the month
-    for (int i = 0; i < startingDayOfWeek - 1; i++) {
-      days.add(Container());
-    }
+        final day = index - (startingDayOfWeek - 1) + 1;
+        final date = DateTime(_displayedMonth.year, _displayedMonth.month, day);
+        
+        final isBooked = _isDateBooked(date);
+        final isSelected = _checkInDate != null &&
+            _checkInDate!.year == date.year &&
+            _checkInDate!.month == date.month &&
+            _checkInDate!.day == date.day;
+        final isCheckOut = _checkOutDate != null &&
+            _checkOutDate!.year == date.year &&
+            _checkOutDate!.month == date.month &&
+            _checkOutDate!.day == date.day;
+        final isInRange = _isDateInRange(date);
+        final isPast = date.isBefore(DateTime.now());
 
-    // Add cells for each day of the month
-    for (int day = 1; day <= daysInMonth; day++) {
-      final date = DateTime(_displayedMonth.year, _displayedMonth.month, day);
-      final isBooked = _isDateBooked(date);
-      final isSelected = _checkInDate != null &&
-          _checkInDate!.year == date.year &&
-          _checkInDate!.month == date.month &&
-          _checkInDate!.day == date.day;
-      final isCheckOut = _checkOutDate != null &&
-          _checkOutDate!.year == date.year &&
-          _checkOutDate!.month == date.month &&
-          _checkOutDate!.day == date.day;
-      final isInRange = _isDateInRange(date);
-      final isPast = date.isBefore(DateTime.now());
-
-      days.add(
-        GestureDetector(
+        return GestureDetector(
           onTap: isPast || isBooked ? null : () => _selectDate(date),
           child: Container(
             decoration: BoxDecoration(
@@ -200,18 +220,8 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
               ),
             ),
           ),
-        ),
-      );
-    }
-
-    return GridView.count(
-      crossAxisCount: 7,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
-      mainAxisSpacing: 8,
-      crossAxisSpacing: 8,
-      children: days,
+        );
+      },
     );
   }
 }

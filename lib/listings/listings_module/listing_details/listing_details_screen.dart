@@ -113,12 +113,10 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     listing = widget.listing;
     _placeLocation = LatLng(listing.latitude, listing.longitude);
 
-    // ✅ Build combined media list (photos + videos)
     _buildMediaList();
 
     context.read<ListingDetailsBloc>().add(GetListingReviewsEvent());
 
-    // Auto-scroll based on combined media count
     if (_mediaList.length > 1) {
       _startAutoScroll();
     }
@@ -126,13 +124,9 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
   void _buildMediaList() {
     _mediaList = [];
-    
-    // Add photos
     for (final photo in listing.photos) {
       _mediaList.add(MediaItem.photo(photo));
     }
-    
-    // Add videos
     final videos = listing.videos ?? [];
     for (final videoUrl in videos) {
       _mediaList.add(MediaItem.video(videoUrl));
@@ -151,11 +145,11 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
       case 'DOP':
       case 'KYD':
       case 'SRD':
-        return '\$'; // Dollar sign
+        return '\$';
       case 'ANG':
-        return 'ƒ'; // Netherlands Antillean Guilder
+        return 'ƒ';
       case 'XOF':
-        return 'CFA'; // West African CFA franc
+        return 'CFA';
       case 'HTG':
         return 'G';
       default:
@@ -168,16 +162,18 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     _videoReady = false;
     _videoMuted = true;
     
-    _videoController = VideoPlayerController.network(videoUrl)
+    _videoController = VideoPlayerController.network(
+      videoUrl,
+      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+    )
       ..setLooping(true)
       ..initialize().then((_) {
         if (mounted) {
           setState(() {
             _videoReady = true;
           });
-          // Auto-play in muted mode
+          _videoController!.setVolume(0); 
           _videoController!.play();
-          _videoController!.setVolume(0); // Mute to avoid audio
         }
       }).catchError((e) {
         debugPrint('Video loading error: $e');
@@ -208,11 +204,13 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
       } else {
         _pageIndex = 0;
       }
-      _pagerController.animateToPage(
-        _pageIndex,
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
-      );
+      if (_pagerController.hasClients) {
+        _pagerController.animateToPage(
+          _pageIndex,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+        );
+      }
     });
   }
 
@@ -411,7 +409,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ✅ Photos + Videos Carousel
                 if (_mediaList.isNotEmpty)
                   SizedBox(
                     height: MediaQuery.of(context).size.height / 3,
@@ -424,7 +421,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                           onPageChanged: (index) {
                             _pauseAutoScroll();
                             setState(() => _pageIndex = index);
-                            // Load video if this item is a video
                             final media = _mediaList[index];
                             if (media.isVideo) {
                               _loadVideoController(media.url);
@@ -435,7 +431,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                           },
                           itemBuilder: (context, index) {
                             final media = _mediaList[index];
-                            
                             if (media.isVideo) {
                               return GestureDetector(
                                 onTap: () {
@@ -465,7 +460,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                                                 ),
                                               ),
                                             ),
-                                          // ✅ Unmute button (top-right)
                                           Positioned(
                                             top: 12,
                                             right: 12,
@@ -557,7 +551,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     ),
                   ),
 
-                // ===== Title + Price (modern layout) =====
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16.0, 12, 16, 8),
                   child: Column(
@@ -590,15 +583,15 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
+                                  const Icon(
                                     Icons.verified,
                                     size: 16,
                                     color: Colors.green,
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    'Verified',
-                                    style: TextStyle(
+                                    'Verified'.tr(),
+                                    style: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.green,
@@ -637,19 +630,31 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                           child: SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
-                              onPressed: () {
+                              onPressed: () async {
                                 showDialog(
                                   context: context,
-                                  builder: (context) => BlocProvider(
-                                    create: (context) => BookingBloc(
-                                      bookingRepository: bookingApiManager,
-                                    )..add(GetBookedDatesEvent(listingId: listing.id)),
-                                    child: BookingRequestDialog(
-                                      listing: listing,
-                                      currentUser: currentUser,
-                                    ),
+                                  barrierDismissible: false,
+                                  builder: (loadingContext) => const Center(
+                                    child: CircularProgressIndicator(),
                                   ),
                                 );
+                                await Future.delayed(const Duration(milliseconds: 100));
+                                if (context.mounted) {
+                                  Navigator.of(context).pop();
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (dialogContext) => BlocProvider(
+                                      create: (context) => BookingBloc(
+                                        bookingRepository: bookingApiManager,
+                                      )..add(GetBookedDatesEvent(listingId: listing.id)),
+                                      child: BookingRequestDialog(
+                                        listing: listing,
+                                        currentUser: currentUser,
+                                      ),
+                                    ),
+                                  );
+                                }
                               },
                               icon: const Icon(Icons.event_available),
                               label: const Text('Book Now'),
@@ -665,7 +670,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   ),
                 ),
 
-                // ===== Country Tag =====
                 if (listing.countryCode.trim().isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16.0, 8, 16, 16),
@@ -700,7 +704,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     ),
                   ),
 
-                // ===== Description (modern card) =====
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16.0, 24, 16, 12),
                   child: Column(
@@ -742,7 +745,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   ),
                 ),
 
-// Contact & Hours
                 if (_hasContactOrHours(listing)) ...[                  
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16.0, 24, 16, 12),
@@ -775,7 +777,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   ),
                 ],
 
-                // Location Section
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16.0, 24, 16, 12),
                   child: Text(
@@ -815,7 +816,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   ),
                 ),
 
-                // ===== Map (smaller height) =====
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16.0, 16, 16, 24),
                   child: ClipRRect(
@@ -856,7 +856,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   ),
                 ),
 
-                // Extra info
                 if (listing.filters.isNotEmpty) ...[                  
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16.0, 24, 16, 12),
@@ -896,7 +895,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   ),
                 ],
 
-                // Reviews
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16.0, 24, 16, 12),
                   child: Text(
@@ -1116,79 +1114,27 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   }
 
   String _getCountryFlag(String countryCode) {
-    // Convert country code to flag emoji
     const flags = {
-      'AG': '🇦🇬', // Antigua and Barbuda
-      'BS': '🇧🇸', // Bahamas
-      'BB': '🇧🇧', // Barbados
-      'BZ': '🇧🇿', // Belize
-      'CU': '🇨🇺', // Cuba
-      'DM': '🇩🇲', // Dominica
-      'DO': '🇩🇴', // Dominican Republic
-      'GD': '🇬🇩', // Grenada
-      'GY': '🇬🇾', // Guyana
-      'HT': '🇭🇹', // Haiti
-      'JM': '🇯🇲', // Jamaica
-      'KN': '🇰🇳', // Saint Kitts and Nevis
-      'LC': '🇱🇨', // Saint Lucia
-      'VC': '🇻🇨', // Saint Vincent and the Grenadines
-      'SR': '🇸🇷', // Suriname
-      'TT': '🇹🇹', // Trinidad and Tobago
-      'AI': '🇦🇮', // Anguilla
-      'AW': '🇦🇼', // Aruba
-      'BM': '🇧🇲', // Bermuda
-      'BQ': '🇧🇶', // Caribbean Netherlands
-      'VG': '🇻🇬', // British Virgin Islands
-      'KY': '🇰🇾', // Cayman Islands
-      'CW': '🇨🇼', // Curaçao
-      'GF': '🇬🇫', // French Guiana
-      'GP': '🇬🇵', // Guadeloupe
-      'MQ': '🇲🇶', // Martinique
-      'MS': '🇲🇸', // Montserrat
-      'PR': '🇵🇷', // Puerto Rico
-      'BL': '🇧🇱', // Saint Barthélemy
-      'MF': '🇲🇫', // Saint Martin
-      'SX': '🇸🇽', // Sint Maarten
-      'TC': '🇹🇨', // Turks and Caicos Islands
-      'VI': '🇻🇮', // U.S. Virgin Islands
+      'AG': '🇦🇬', 'BS': '🇧🇸', 'BB': '🇧🇧', 'BZ': '🇧🇿', 'CU': '🇨🇺',
+      'DM': '🇩🇲', 'DO': '🇩🇴', 'GD': '🇬🇩', 'GY': '🇬🇾', 'HT': '🇭🇹',
+      'JM': '🇯🇲', 'KN': '🇰🇳', 'LC': '🇱🇨', 'VC': '🇻🇨', 'SR': '🇸🇷',
+      'TT': '🇹🇹', 'AI': '🇦🇮', 'AW': '🇦🇼', 'BM': '🇧🇲', 'BQ': '🇧🇶',
+      'VG': '🇻🇬', 'KY': '🇰🇾', 'CW': '🇨🇼', 'GF': '🇬🇫', 'GP': '🇬🇵',
+      'MQ': '🇲🇶', 'MS': '🇲🇸', 'PR': '🇵🇷', 'BL': '🇧🇱', 'MF': '🇲🇫',
+      'SX': '🇸🇽', 'TC': '🇹🇨', 'VI': '🇻🇮',
     };
     return flags[countryCode] ?? '🌍';
   }
 
   String _getCountryName(String countryCode) {
     const names = {
-      'AG': 'Antigua and Barbuda',
-      'BS': 'Bahamas',
-      'BB': 'Barbados',
-      'BZ': 'Belize',
-      'CU': 'Cuba',
-      'DM': 'Dominica',
-      'DO': 'Dominican Republic',
-      'GD': 'Grenada',
-      'GY': 'Guyana',
-      'HT': 'Haiti',
-      'JM': 'Jamaica',
-      'KN': 'Saint Kitts and Nevis',
-      'LC': 'Saint Lucia',
-      'VC': 'Saint Vincent and the Grenadines',
-      'SR': 'Suriname',
-      'TT': 'Trinidad and Tobago',
-      'AI': 'Anguilla',
-      'AW': 'Aruba',
-      'BM': 'Bermuda',
-      'BQ': 'Caribbean Netherlands',
-      'VG': 'British Virgin Islands',
-      'KY': 'Cayman Islands',
-      'CW': 'Curaçao',
-      'GF': 'French Guiana',
-      'GP': 'Guadeloupe',
-      'MQ': 'Martinique',
-      'MS': 'Montserrat',
-      'PR': 'Puerto Rico',
-      'BL': 'Saint Barthélemy',
-      'MF': 'Saint Martin',
-      'SX': 'Sint Maarten',
-      'TC': 'Turks and Caicos Islands',
+      'AG': 'Antigua and Barbuda', 'BS': 'Bahamas', 'BB': 'Barbados', 'BZ': 'Belize', 'CU': 'Cuba',
+      'DM': 'Dominica', 'DO': 'Dominican Republic', 'GD': 'Grenada', 'GY': 'Guyana', 'HT': 'Haiti',
+      'JM': 'Jamaica', 'KN': 'Saint Kitts and Nevis', 'LC': 'Saint Lucia', 'VC': 'Saint Vincent and the Grenadines',
+      'SR': 'Suriname', 'TT': 'Trinidad and Tobago', 'AI': 'Anguilla', 'AW': 'Aruba', 'BM': 'Bermuda',
+      'BQ': 'Caribbean Netherlands', 'VG': 'British Virgin Islands', 'KY': 'Cayman Islands', 'CW': 'Curaçao',
+      'GF': 'French Guiana', 'GP': 'Guadeloupe', 'MQ': 'Martinique', 'MS': 'Montserrat', 'PR': 'Puerto Rico',
+      'BL': 'Saint Barthélemy', 'MF': 'Saint Martin', 'SX': 'Sint Maarten', 'TC': 'Turks and Caicos Islands',
       'VI': 'U.S. Virgin Islands',
     };
     return names[countryCode] ?? 'Caribbean';
@@ -1211,34 +1157,20 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   Future<void> _launchWebsite(String website) async {
     final w = website.trim();
     if (w.isEmpty) return;
-
-    Uri uri;
-    if (w.startsWith('http://') || w.startsWith('https://')) {
-      uri = Uri.parse(w);
-    } else {
-      uri = Uri.parse('https://$w');
-    }
+    Uri uri = w.startsWith('http') ? Uri.parse(w) : Uri.parse('https://$w');
     await _safeLaunch(uri);
   }
 
   Future<void> _launchUrl(String url) async {
     final u = url.trim();
     if (u.isEmpty) return;
-
-    Uri uri;
-    if (u.startsWith('http://') || u.startsWith('https://')) {
-      uri = Uri.parse(u);
-    } else {
-      uri = Uri.parse('https://$u');
-    }
+    Uri uri = u.startsWith('http') ? Uri.parse(u) : Uri.parse('https://$u');
     await _safeLaunch(uri);
   }
 
   Future<void> _launchWhatsApp(String phone) async {
     final p = phone.trim();
     if (p.isEmpty) return;
-
-    // Remove any non-digit characters for WhatsApp
     final cleanPhone = p.replaceAll(RegExp(r'[^\d+]'), '');
     final uri = Uri.parse('whatsapp://send?phone=$cleanPhone');
     await _safeLaunch(uri);
@@ -1247,14 +1179,10 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   Future<void> _safeLaunch(Uri uri) async {
     try {
       final ok = await canLaunchUrl(uri);
-      if (!ok) {
-        debugPrint('Could not launch: $uri');
-        return;
-      }
+      if (!ok) return;
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (e, st) {
+    } catch (e) {
       debugPrint('_safeLaunch error: $e');
-      debugPrint('$st');
     }
   }
 }
@@ -1371,7 +1299,7 @@ class _ContactHoursCard extends StatelessWidget {
                     height: 22,
                   ),
                   title: Text(
-                    'Social Media',
+                    'Social Media'.tr(),
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       color: isDark ? Colors.white : colorPrimary,
@@ -1466,7 +1394,7 @@ class _ContactHoursCard extends StatelessWidget {
 }
 
 class _ActionRow extends StatelessWidget {
-  final dynamic icon; // IconData or String (asset path)
+  final dynamic icon; 
   final String title;
   final String value;
   final VoidCallback onTap;
@@ -1676,7 +1604,6 @@ class FilterDetailsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Support both comma-separated string and List for multi-select
     final value = filter.value;
     List<String> valuesList = [];
     if (value is List) {
@@ -1737,7 +1664,6 @@ class FilterDetailsWidget extends StatelessWidget {
   }
 }
 
-// ✅ NEW: Media item for carousel (photo or video)
 class MediaItem {
   final String url;
   final bool isVideo;
