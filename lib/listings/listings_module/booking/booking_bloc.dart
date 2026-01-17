@@ -80,23 +80,31 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
   ) async {
     emit(const BookingLoading());
     try {
+      print('🔄 BLoC: Updating booking status to ${event.status}');
       await bookingRepository.updateBookingStatus(
         listingId: event.listingId,
         bookingId: event.bookingId,
         status: event.status,
       );
+      print('✅ BLoC: Booking status updated successfully');
+      
       // Fetch updated booking (to obtain lister id), then refresh received bookings list
       final bookings = await bookingRepository.getListingBookings(
         listingId: event.listingId,
       );
+      print('📋 BLoC: Found ${bookings.length} total bookings for listing');
+      
       final booking = bookings.firstWhere((b) => b.id == event.bookingId);
+      print('📌 BLoC: Found target booking, listersUserId: ${booking.listersUserId}');
 
       final receivedBookings = await bookingRepository.getReceivedBookings(
         listersUserId: booking.listersUserId,
       );
+      print('📊 BLoC: Fetched ${receivedBookings.length} received bookings');
 
       emit(ReceivedBookingsLoadedState(bookings: receivedBookings));
     } catch (e) {
+      print('❌ BLoC Error: $e');
       emit(BookingErrorState(errorMessage: e.toString()));
     }
   }

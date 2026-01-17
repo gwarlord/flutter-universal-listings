@@ -31,8 +31,10 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
   DateRange? _selectedDateRange;
   int _numberOfGuests = 1;
   final TextEditingController _notesController = TextEditingController();
-  bool _isLoading = false;
   List<DateTime> _bookedDates = [];
+  
+  // ✅ Track selected services
+  final List<ServiceItem> _selectedServices = [];
 
   @override
   void dispose() {
@@ -40,10 +42,25 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
     super.dispose();
   }
 
+  double get _calculatedTotal {
+    double total = 0;
+    for (var service in _selectedServices) {
+      total += service.price;
+    }
+    return total;
+  }
+
   void _submitBooking() {
     if (_selectedDateRange == null) {
       showAlertDialog(context, 'Select dates'.tr(), 'Please select check-in and check-out dates.'.tr());
       return;
+    }
+
+    // Build description of selected services
+    String servicesNotes = '';
+    if (_selectedServices.isNotEmpty) {
+      servicesNotes = '\n\nSelected Services:\n' + 
+          _selectedServices.map((s) => '- ${s.name} (${s.price} ${widget.listing.currencyCode})').join('\n');
     }
 
     final booking = BookingModel(
@@ -60,8 +77,8 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
       checkInDate: _selectedDateRange!.checkIn,
       checkOutDate: _selectedDateRange!.checkOut,
       numberOfGuests: _numberOfGuests,
-      guestNotes: _notesController.text.trim(),
-      totalPrice: 0, // To be calculated by lister or admin
+      guestNotes: _notesController.text.trim() + servicesNotes,
+      totalPrice: _calculatedTotal, 
       currency: widget.listing.currencyCode,
     );
 
@@ -106,7 +123,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Confirm'.tr(),
+                  'Book Appointment'.tr(),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -122,6 +139,58 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+                
+                // ✅ Service Menu Section
+                if (widget.listing.services.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    'Select Services'.tr(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: dark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: dark ? Colors.black26 : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: widget.listing.services.length,
+                      separatorBuilder: (context, index) => Divider(height: 1, color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
+                      itemBuilder: (context, index) {
+                        final service = widget.listing.services[index];
+                        final isSelected = _selectedServices.contains(service);
+                        return CheckboxListTile(
+                          dense: true,
+                          activeColor: Color(colorPrimary),
+                          title: Text(service.name, style: TextStyle(color: dark ? Colors.white : Colors.black87, fontWeight: FontWeight.w500)),
+                          subtitle: service.duration.isNotEmpty ? Text(service.duration, style: const TextStyle(fontSize: 12)) : null,
+                          secondary: Text(
+                            '${service.price} ${widget.listing.currencyCode}',
+                            style: TextStyle(color: Color(colorPrimary), fontWeight: FontWeight.bold),
+                          ),
+                          value: isSelected,
+                          onChanged: (bool? value) {
+                            setState(() {
+                              if (value == true) {
+                                _selectedServices.add(service);
+                              } else {
+                                _selectedServices.remove(service);
+                              }
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+
                 const SizedBox(height: 20),
                 Text(
                   'Select dates'.tr(),
@@ -141,7 +210,6 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                   ),
                   child: BlocBuilder<BookingBloc, BookingState>(
                     builder: (context, state) {
-                      // Show loading indicator while fetching dates
                       if (state is BookingLoading && _bookedDates.isEmpty) {
                         return const SizedBox(
                           height: 300,
@@ -221,6 +289,29 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                     fillColor: dark ? Colors.grey.shade800 : Colors.grey.shade50,
                   ),
                 ),
+                
+                // ✅ Total Price Summary
+                if (_calculatedTotal > 0) ...[
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Color(colorPrimary).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Total Amount:'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                          '${_calculatedTotal.toStringAsFixed(2)} ${widget.listing.currencyCode}',
+                          style: TextStyle(fontWeight: FontWeight.bold, color: Color(colorPrimary), fontSize: 18),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
                 const SizedBox(height: 24),
                 BlocBuilder<BookingBloc, BookingState>(
                   builder: (context, state) {

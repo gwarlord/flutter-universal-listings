@@ -22,6 +22,7 @@ class BookingManagementScreen extends StatefulWidget {
 class _BookingManagementScreenState extends State<BookingManagementScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _statusUpdated = false;
 
   @override
   void initState() {
@@ -67,47 +68,70 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
           ],
         ),
       ),
-      body: BlocBuilder<BookingBloc, BookingState>(
-        builder: (context, state) {
-          if (state is BookingLoading) {
-            return const Center(child: CircularProgressIndicator.adaptive());
-          } else if (state is ReceivedBookingsLoadedState) {
-            final allBookings = state.bookings;
-            final pendingBookings = allBookings.where((b) => b.isPending).toList();
-            final confirmedBookings = allBookings.where((b) => b.isConfirmed).toList();
-
-            return TabBarView(
-              controller: _tabController,
-              children: [
-                _buildBookingsList(pendingBookings),
-                _buildBookingsList(confirmedBookings),
-                _buildBookingsList(allBookings),
-              ],
+      body: BlocListener<BookingBloc, BookingState>(
+        listener: (context, state) {
+          if (state is BookingErrorState) {
+            _statusUpdated = false;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.errorMessage),
+                backgroundColor: Colors.red,
+              ),
             );
-          } else if (state is BookingErrorState) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(state.errorMessage),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.read<BookingBloc>().add(
-                            GetReceivedBookingsEvent(
-                              listersUserId: widget.currentUser.userID,
-                            ),
-                          );
-                    },
-                    child: Text('Retry'.tr()),
-                  ),
-                ],
+          } else if (state is ReceivedBookingsLoadedState && _statusUpdated) {
+            // Show success only after a status update
+            _statusUpdated = false;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Booking status updated successfully'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
               ),
             );
           }
-
-          return Center(child: Text('No bookings'.tr()));
         },
+        child: BlocBuilder<BookingBloc, BookingState>(
+          builder: (context, state) {
+            if (state is BookingLoading) {
+              return const Center(child: CircularProgressIndicator.adaptive());
+            } else if (state is ReceivedBookingsLoadedState) {
+              final allBookings = state.bookings;
+              final pendingBookings = allBookings.where((b) => b.isPending).toList();
+              final confirmedBookings = allBookings.where((b) => b.isConfirmed).toList();
+
+              return TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildBookingsList(pendingBookings),
+                  _buildBookingsList(confirmedBookings),
+                  _buildBookingsList(allBookings),
+                ],
+              );
+            } else if (state is BookingErrorState) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(state.errorMessage),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.read<BookingBloc>().add(
+                              GetReceivedBookingsEvent(
+                                listersUserId: widget.currentUser.userID,
+                              ),
+                            );
+                      },
+                      child: Text('Retry'.tr()),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return Center(child: Text('No bookings'.tr()));
+          },
+        ),
       ),
     );
   }
@@ -298,6 +322,7 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
   }
 
   void _approveBooking(dynamic booking) {
+    _statusUpdated = true;
     context.read<BookingBloc>().add(
           UpdateBookingStatusEvent(
             listingId: booking.listingId,
@@ -310,17 +335,19 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
   void _rejectBooking(dynamic booking) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text('Reject booking?'.tr()),
         content: Text('Are you sure you want to reject this booking?'.tr()),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text('Cancel'.tr()),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
+              _statusUpdated = true;
+              print('DEBUG: Rejecting booking - listingId: ${booking.listingId}, bookingId: ${booking.id}');
               context.read<BookingBloc>().add(
                     UpdateBookingStatusEvent(
                       listingId: booking.listingId,
@@ -342,17 +369,18 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
   void _cancelBooking(dynamic booking) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text('Cancel booking?'.tr()),
         content: Text('Are you sure you want to cancel this confirmed booking?'.tr()),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text('No'.tr()),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
+              _statusUpdated = true;
               context.read<BookingBloc>().add(
                     CancelBookingEvent(
                       listingId: booking.listingId,

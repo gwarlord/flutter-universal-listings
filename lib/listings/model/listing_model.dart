@@ -39,6 +39,9 @@ class ListingModel {
   bool bookingEnabled;
   String bookingUrl;
 
+  /// ✅ Digital Service Menu
+  List<ServiceItem> services;
+
   /// Social Media
   String instagram;
   String facebook;
@@ -88,6 +91,7 @@ class ListingModel {
     this.openingHours = '',
     this.bookingEnabled = false,
     this.bookingUrl = '',
+    this.services = const [],
     this.instagram = '',
     this.facebook = '',
     this.tiktok = '',
@@ -131,6 +135,9 @@ class ListingModel {
       openingHours: json['openingHours'] ?? '',
       bookingEnabled: json['bookingEnabled'] ?? false,
       bookingUrl: json['bookingUrl'] ?? '',
+      services: (json['services'] as List? ?? [])
+          .map((e) => ServiceItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
       instagram: json['instagram'] ?? '',
       facebook: json['facebook'] ?? '',
       tiktok: json['tiktok'] ?? '',
@@ -173,6 +180,7 @@ class ListingModel {
       'openingHours': openingHours,
       'bookingEnabled': bookingEnabled,
       'bookingUrl': bookingUrl,
+      'services': services.map((e) => e.toJson()).toList(),
       'instagram': instagram,
       'facebook': facebook,
       'tiktok': tiktok,
@@ -186,6 +194,34 @@ class ListingModel {
       'reviewsCount': reviewsCount,
       'reviewsSum': reviewsSum,
       'countryCode': countryCode,
+    };
+  }
+}
+
+class ServiceItem {
+  String name;
+  double price;
+  String duration; // e.g. "30 mins", "1 hour"
+
+  ServiceItem({
+    required this.name,
+    required this.price,
+    this.duration = '',
+  });
+
+  factory ServiceItem.fromJson(Map<String, dynamic> json) {
+    return ServiceItem(
+      name: json['name'] ?? '',
+      price: (json['price'] ?? 0.0).toDouble(),
+      duration: json['duration'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'price': price,
+      'duration': duration,
     };
   }
 }

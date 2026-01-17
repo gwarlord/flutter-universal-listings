@@ -108,6 +108,7 @@ class BookingFirebase extends BookingRepository {
   }) async {
     try {
       final now = DateTime.now();
+      print('🔵 Firebase: Updating booking status - listingId=$listingId, bookingId=$bookingId, status=$status');
       
       // Update in listing's bookings
       await _firestore
@@ -119,6 +120,7 @@ class BookingFirebase extends BookingRepository {
         'status': status,
         'updatedAt': now.toIso8601String(),
       });
+      print('✅ Firebase: Updated listing bookings collection');
 
       // Get the booking to update user's collections
       final bookingDoc = await _firestore
@@ -130,6 +132,7 @@ class BookingFirebase extends BookingRepository {
 
       if (bookingDoc.exists) {
         final booking = BookingModel.fromJson(bookingDoc.data()!);
+        print('📖 Firebase: Found booking - customerId=${booking.customerId}, listersUserId=${booking.listersUserId}');
 
         // Update in customer's myBookings
         await _firestore
@@ -141,6 +144,7 @@ class BookingFirebase extends BookingRepository {
           'status': status,
           'updatedAt': now.toIso8601String(),
         });
+        print('✅ Firebase: Updated customer myBookings collection');
 
         // Update in lister's receivedBookings
         await _firestore
@@ -152,11 +156,15 @@ class BookingFirebase extends BookingRepository {
           'status': status,
           'updatedAt': now.toIso8601String(),
         });
+        print('✅ Firebase: Updated lister receivedBookings collection');
 
         // ✅ Trigger Status Change Email
         await _triggerBookingEmail(booking, status);
+      } else {
+        throw Exception('Booking not found in listing collection');
       }
     } catch (e) {
+      print('❌ Firebase Error: $e');
       throw Exception('Failed to update booking status: $e');
     }
   }
