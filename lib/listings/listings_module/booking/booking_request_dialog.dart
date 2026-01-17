@@ -16,13 +16,11 @@ import 'package:instaflutter/listings/model/listings_user.dart';
 class BookingRequestDialog extends StatefulWidget {
   final ListingModel listing;
   final ListingsUser currentUser;
-  final List<DateTime> bookedDates;
 
   const BookingRequestDialog({
     super.key,
     required this.listing,
     required this.currentUser,
-    this.bookedDates = const [],
   });
 
   @override
@@ -34,6 +32,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
   int _numberOfGuests = 1;
   final TextEditingController _notesController = TextEditingController();
   bool _isLoading = false;
+  List<DateTime> _bookedDates = [];
 
   @override
   void dispose() {
@@ -75,15 +74,25 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
 
     return BlocListener<BookingBloc, BookingState>(
       listener: (context, state) {
-        if (state is BookingCreatedState) {
-          Navigator.pop(context, true);
-          showAlertDialog(
-            context,
-            'Booking sent'.tr(),
-            'Your booking request has been sent to the lister. You will be notified once they respond.'.tr(),
-          );
+        if (state is BookedDatesLoadedState) {
+          if (mounted) {
+            setState(() {
+              _bookedDates = state.bookedDates;
+            });
+          }
+        } else if (state is BookingCreatedState) {
+          if (mounted) {
+            Navigator.pop(context, true);
+            showAlertDialog(
+              context,
+              'Booking sent'.tr(),
+              'Your booking request has been sent to the lister. You will be notified once they respond.'.tr(),
+            );
+          }
         } else if (state is BookingErrorState) {
-          showAlertDialog(context, 'Error'.tr(), state.errorMessage);
+          if (mounted) {
+            showAlertDialog(context, 'Error'.tr(), state.errorMessage);
+          }
         }
       },
       child: Dialog(
@@ -97,7 +106,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Request booking'.tr(),
+                  'Confirm'.tr(),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -130,10 +139,26 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                     ),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: DateRangePickerWidget(
-                    bookedDates: widget.bookedDates,
-                    onDateRangeSelected: (dateRange) {
-                      setState(() => _selectedDateRange = dateRange);
+                  child: BlocBuilder<BookingBloc, BookingState>(
+                    builder: (context, state) {
+                      // Show loading indicator while fetching dates
+                      if (state is BookingLoading && _bookedDates.isEmpty) {
+                        return const SizedBox(
+                          height: 300,
+                          child: Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+                      
+                      return DateRangePickerWidget(
+                        bookedDates: _bookedDates,
+                        onDateRangeSelected: (dateRange) {
+                          if (mounted) {
+                            setState(() => _selectedDateRange = dateRange);
+                          }
+                        },
+                      );
                     },
                   ),
                 ),
@@ -227,7 +252,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                       valueColor: AlwaysStoppedAnimation(Colors.white),
                                     ),
                                   )
-                                : Text('Request booking'.tr()),
+                                : Text('Confirm'.tr()),
                           ),
                         ),
                       ],

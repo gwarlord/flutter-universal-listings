@@ -202,15 +202,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             ),
             const SizedBox(height: 12),
             Text(
-              'Check-in: ${DateFormat('MMM dd, yyyy').format(booking.checkInDate)}',
+              'Start Date: ${DateFormat('MMM dd, yyyy').format(booking.checkInDate)}',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 color: dark ? Colors.white70 : Colors.black87,
               ),
             ),
             const SizedBox(height: 4),
             Text(
-              'Check-out: ${DateFormat('MMM dd, yyyy').format(booking.checkOutDate)}',
+              'End Date: ${DateFormat('MMM dd, yyyy').format(booking.checkOutDate)}',
               style: TextStyle(
                 fontSize: 11,
                 color: dark ? Colors.white70 : Colors.black87,

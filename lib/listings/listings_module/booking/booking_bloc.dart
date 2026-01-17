@@ -23,9 +23,13 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
     emit(const BookingLoading());
     try {
       final bookingId = await bookingRepository.createBooking(booking: event.booking);
-      emit(BookingCreatedState(bookingId: bookingId));
+      if (!emit.isDone) {
+        emit(BookingCreatedState(bookingId: bookingId));
+      }
     } catch (e) {
-      emit(BookingErrorState(errorMessage: e.toString()));
+      if (!emit.isDone) {
+        emit(BookingErrorState(errorMessage: e.toString()));
+      }
     }
   }
 
@@ -81,12 +85,17 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
         bookingId: event.bookingId,
         status: event.status,
       );
-      // Fetch updated booking
+      // Fetch updated booking (to obtain lister id), then refresh received bookings list
       final bookings = await bookingRepository.getListingBookings(
         listingId: event.listingId,
       );
       final booking = bookings.firstWhere((b) => b.id == event.bookingId);
-      emit(BookingStatusUpdatedState(booking: booking));
+
+      final receivedBookings = await bookingRepository.getReceivedBookings(
+        listersUserId: booking.listersUserId,
+      );
+
+      emit(ReceivedBookingsLoadedState(bookings: receivedBookings));
     } catch (e) {
       emit(BookingErrorState(errorMessage: e.toString()));
     }
@@ -102,12 +111,17 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
         listingId: event.listingId,
         bookingId: event.bookingId,
       );
-      // Fetch updated booking
+      // Fetch updated booking (to obtain lister id), then refresh received bookings list
       final bookings = await bookingRepository.getListingBookings(
         listingId: event.listingId,
       );
       final booking = bookings.firstWhere((b) => b.id == event.bookingId);
-      emit(BookingStatusUpdatedState(booking: booking));
+
+      final receivedBookings = await bookingRepository.getReceivedBookings(
+        listersUserId: booking.listersUserId,
+      );
+
+      emit(ReceivedBookingsLoadedState(bookings: receivedBookings));
     } catch (e) {
       emit(BookingErrorState(errorMessage: e.toString()));
     }
@@ -121,10 +135,21 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
     try {
       final bookedDates = await bookingRepository.getBookedDates(
         listingId: event.listingId,
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          // Return empty list on timeout instead of crashing
+          return <DateTime>[];
+        },
       );
-      emit(BookedDatesLoadedState(bookedDates: bookedDates));
+      if (!emit.isDone) {
+        emit(BookedDatesLoadedState(bookedDates: bookedDates));
+      }
     } catch (e) {
-      emit(BookingErrorState(errorMessage: e.toString()));
+      if (!emit.isDone) {
+        // On error, still allow booking with empty dates
+        emit(BookedDatesLoadedState(bookedDates: const []));
+      }
     }
   }
 }

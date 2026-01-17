@@ -38,11 +38,24 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
     super.dispose();
   }
 
+  void _refreshBookings() {
+    context.read<BookingBloc>().add(
+          GetReceivedBookingsEvent(listersUserId: widget.currentUser.userID),
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Booking Requests'.tr()),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshBookings,
+            tooltip: 'Refresh'.tr(),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,

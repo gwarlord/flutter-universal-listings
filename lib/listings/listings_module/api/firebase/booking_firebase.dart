@@ -11,13 +11,15 @@ class BookingFirebase extends BookingRepository {
       final bookingId = _firestore.collection('listings').doc().id;
       booking.id = bookingId;
       
+      final bookingData = booking.toJson();
+
       // Save to listing's bookings subcollection
       await _firestore
           .collection('listings')
           .doc(booking.listingId)
           .collection('bookings')
           .doc(bookingId)
-          .set(booking.toJson());
+          .set(bookingData);
 
       // Also save to user's bookings for easy retrieval
       await _firestore
@@ -25,7 +27,7 @@ class BookingFirebase extends BookingRepository {
           .doc(booking.customerId)
           .collection('myBookings')
           .doc(bookingId)
-          .set(booking.toJson());
+          .set(bookingData);
 
       // Save to lister's received bookings
       await _firestore
@@ -33,7 +35,10 @@ class BookingFirebase extends BookingRepository {
           .doc(booking.listersUserId)
           .collection('receivedBookings')
           .doc(bookingId)
-          .set(booking.toJson());
+          .set(bookingData);
+
+      // ✅ Trigger Email Notification
+      await _triggerBookingEmail(booking, 'pending');
 
       return bookingId;
     } catch (e) {
@@ -147,6 +152,9 @@ class BookingFirebase extends BookingRepository {
           'status': status,
           'updatedAt': now.toIso8601String(),
         });
+
+        // ✅ Trigger Status Change Email
+        await _triggerBookingEmail(booking, status);
       }
     } catch (e) {
       throw Exception('Failed to update booking status: $e');
@@ -173,23 +181,128 @@ class BookingFirebase extends BookingRepository {
           .doc(listingId)
           .collection('bookings')
           .where('status', whereIn: ['confirmed', 'pending'])
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 10));
 
       final bookedDates = <DateTime>[];
       
       for (final doc in snapshot.docs) {
         final booking = BookingModel.fromJson(doc.data());
-        final currentDate = booking.checkInDate;
+        var currentDate = booking.checkInDate;
         
-        while (currentDate.isBefore(booking.checkOutDate)) {
-          bookedDates.add(currentDate);
-          currentDate.add(const Duration(days: 1));
+        // Safety check to prevent infinite loops
+        int daysCount = 0;
+        const maxDays = 365; // Maximum 1 year booking
+        
+        while (currentDate.isBefore(booking.checkOutDate) && daysCount < maxDays) {
+          bookedDates.add(DateTime(currentDate.year, currentDate.month, currentDate.day));
+          currentDate = currentDate.add(const Duration(days: 1));
+          daysCount++;
         }
       }
 
       return bookedDates;
     } catch (e) {
       throw Exception('Failed to fetch booked dates: $e');
+    }
+  }
+
+  /// ✅ Internal helper to create email trigger documents in the 'mail' collection
+  Future<void> _triggerBookingEmail(BookingModel booking, String status) async {
+    try {
+      print('DEBUG: Triggering email for booking: ${booking.id} with status: $status');
+      
+      String subject = '';
+      String customerHtml = '';
+      String listerHtml = '';
+
+      final checkInStr = booking.checkInDate.toLocal().toString().split(' ')[0];
+      final checkOutStr = booking.checkOutDate.toLocal().toString().split(' ')[0];
+
+      switch (status) {
+        case 'pending':
+          subject = 'Booking Request: ${booking.listingTitle}';
+          customerHtml = '''
+            <h3>Hello ${booking.customerName},</h3>
+            <p>We've received your booking request for <b>${booking.listingTitle}</b>.</p>
+            <p><b>Start Date:</b> $checkInStr</p>
+            <p><b>End Date:</b> $checkOutStr</p>
+            <p>The lister will review your request and you will receive another email once it's confirmed or rejected.</p>
+            <br><p>Best regards,<br>CaribTap Team</p>
+          ''';
+          listerHtml = '''
+            <h3>Hello ${booking.listersName},</h3>
+            <p>You have a new booking request for your listing: <b>${booking.listingTitle}</b>.</p>
+            <p><b>Customer:</b> ${booking.customerName}</p>
+            <p><b>Start Date:</b> $checkInStr</p>
+            <p><b>End Date:</b> $checkOutStr</p>
+            <p>Please log in to the app to confirm or reject this request.</p>
+            <br><p>Best regards,<br>CaribTap Team</p>
+          ''';
+          break;
+
+        case 'confirmed':
+          subject = 'Booking CONFIRMED: ${booking.listingTitle}';
+          customerHtml = '''
+            <h3>Congratulations ${booking.customerName}!</h3>
+            <p>Your booking for <b>${booking.listingTitle}</b> has been <b>CONFIRMED</b>.</p>
+            <p><b>Start Date:</b> $checkInStr</p>
+            <p><b>End Date:</b> $checkOutStr</p>
+            <p>Enjoy your stay!</p>
+            <br><p>Best regards,<br>CaribTap Team</p>
+          ''';
+          break;
+
+        case 'rejected':
+          subject = 'Booking Update: ${booking.listingTitle}';
+          customerHtml = '''
+            <h3>Hello ${booking.customerName},</h3>
+            <p>We're sorry, but your booking request for <b>${booking.listingTitle}</b> was not accepted at this time.</p>
+            <p>Please feel free to browse other listings on CaribTap.</p>
+            <br><p>Best regards,<br>CaribTap Team</p>
+          ''';
+          break;
+
+        case 'cancelled':
+          subject = 'Booking CANCELLED: ${booking.listingTitle}';
+          customerHtml = '''
+            <h3>Hello ${booking.customerName},</h3>
+            <p>Your booking for <b>${booking.listingTitle}</b> has been successfully cancelled.</p>
+            <br><p>Best regards,<br>CaribTap Team</p>
+          ''';
+          listerHtml = '''
+            <h3>Hello ${booking.listersName},</h3>
+            <p>The booking request from ${booking.customerName} for <b>${booking.listingTitle}</b> has been cancelled by the customer.</p>
+            <br><p>Best regards,<br>CaribTap Team</p>
+          ''';
+          break;
+      }
+
+      // Send to Customer
+      if (customerHtml.isNotEmpty && booking.customerEmail.isNotEmpty) {
+        print('DEBUG: Writing customer email to Firestore for: ${booking.customerEmail}');
+        await _firestore.collection('mail').add({
+          'to': booking.customerEmail,
+          'message': {
+            'subject': subject,
+            'html': customerHtml,
+          },
+        });
+      }
+
+      // Send to Lister
+      if (listerHtml.isNotEmpty && booking.listersEmail.isNotEmpty) {
+        print('DEBUG: Writing lister email to Firestore for: ${booking.listersEmail}');
+        await _firestore.collection('mail').add({
+          'to': booking.listersEmail,
+          'message': {
+            'subject': subject,
+            'html': listerHtml,
+          },
+        });
+      }
+    } catch (e) {
+      print('Error triggering booking email: $e');
     }
   }
 }
