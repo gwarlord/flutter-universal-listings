@@ -480,9 +480,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
           ),
         ElevatedButton.icon(
           onPressed: () async {
-            final picked = await showDatePicker(
+            final pickedRange = await showDateRangePicker(
               context: context,
-              initialDate: DateTime.now(),
               firstDate: DateTime.now(),
               lastDate: DateTime.now().add(const Duration(days: 365)),
               builder: (context, child) {
@@ -494,15 +493,22 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 );
               },
             );
-            if (picked != null && !_blockedDates.any((d) => d.year == picked.year && d.month == picked.month && d.day == picked.day)) {
+            if (pickedRange != null) {
               setState(() {
-                _blockedDates.add(picked);
+                // Add all dates in the range
+                var currentDate = pickedRange.start;
+                while (currentDate.isBefore(pickedRange.end.add(const Duration(days: 1)))) {
+                  if (!_blockedDates.any((d) => d.year == currentDate.year && d.month == currentDate.month && d.day == currentDate.day)) {
+                    _blockedDates.add(DateTime(currentDate.year, currentDate.month, currentDate.day));
+                  }
+                  currentDate = currentDate.add(const Duration(days: 1));
+                }
                 _blockedDates.sort();
               });
             }
           },
           icon: const Icon(Icons.calendar_today),
-          label: Text('Add Blocked Date'.tr()),
+          label: Text('Add Blocked Dates'.tr()),
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(colorPrimary),
             foregroundColor: Colors.white,
