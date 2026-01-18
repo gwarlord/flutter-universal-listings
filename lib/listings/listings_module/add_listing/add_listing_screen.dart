@@ -353,7 +353,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 final s = _services[index];
                 return ListTile(
                   title: Text(s.name, style: TextStyle(fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black)),
-                  subtitle: Text('${s.duration} • ${s.price} $_selectedCurrencyCode', style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade700)),
+                  subtitle: Text('${s.duration} • ${s.price} $_selectedCurrencyCode • Qty: ${s.quantity}', style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade700)),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete_outline, color: Colors.red),
                     onPressed: () => setState(() => _services.removeAt(index)),
