@@ -49,20 +49,10 @@ class _BookingServicesScreenState extends State<BookingServicesScreen> {
         favListingsIDs: currentUser.likedListingsIDs,
       );
       
-      print('DEBUG: Total listings fetched: ${listings.length}');
-      
       // Remove duplicates by id
       final Map<String, ListingModel> uniqueListings = {};
       for (final listing in listings) {
-        if (uniqueListings.containsKey(listing.id)) {
-          print('DEBUG: Duplicate found - ID: ${listing.id}, Title: ${listing.title}');
-        }
         uniqueListings[listing.id] = listing;
-      }
-      
-      print('DEBUG: Unique listings: ${uniqueListings.length}');
-      for (final listing in uniqueListings.values) {
-        print('DEBUG: Listing - ID: ${listing.id}, Title: ${listing.title}');
       }
       
       setState(() {
@@ -147,14 +137,6 @@ class _BookingServicesScreenState extends State<BookingServicesScreen> {
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: dark ? Colors.white : Colors.black,
-              ),
-            ),
-            // Debug: Show listing ID
-            Text(
-              'ID: ${listing.id}',
-              style: TextStyle(
-                fontSize: 10,
-                color: dark ? Colors.grey.shade500 : Colors.grey.shade600,
               ),
             ),
             const SizedBox(height: 16),
