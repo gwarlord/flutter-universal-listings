@@ -38,6 +38,7 @@ class ListingModel {
   /// Booking
   bool bookingEnabled;
   String bookingUrl;
+  bool allowQuantitySelection; // ✅ Allow customers to select quantity
 
   /// ✅ Digital Service Menu
   List<ServiceItem> services;
@@ -94,6 +95,7 @@ class ListingModel {
     this.openingHours = '',
     this.bookingEnabled = false,
     this.bookingUrl = '',
+    this.allowQuantitySelection = false,
     this.services = const [],
     this.blockedDates = const [],
     this.instagram = '',
@@ -139,6 +141,7 @@ class ListingModel {
       openingHours: json['openingHours'] ?? '',
       bookingEnabled: json['bookingEnabled'] ?? false,
       bookingUrl: json['bookingUrl'] ?? '',
+      allowQuantitySelection: json['allowQuantitySelection'] ?? false,
       services: (json['services'] as List? ?? [])
           .map((e) => ServiceItem.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -185,6 +188,7 @@ class ListingModel {
       'openingHours': openingHours,
       'bookingEnabled': bookingEnabled,
       'bookingUrl': bookingUrl,
+      'allowQuantitySelection': allowQuantitySelection,
       'services': services.map((e) => e.toJson()).toList(),
       'blockedDates': blockedDates,
       'instagram': instagram,
