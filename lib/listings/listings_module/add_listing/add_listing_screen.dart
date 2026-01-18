@@ -1020,12 +1020,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 decoration: _getInputDecoration(label: 'X (Twitter) URL', icon: Icons.alternate_email),
               ),
 
-              // Note: Booking toggles are now managed in the Booking Services section
+              // Services section (always available)
+              _buildSectionHeader('Services'.tr()),
+              const SizedBox(height: 16),
+              _buildServiceMenuEditor(isDarkMode(context)),
+              const SizedBox(height: 20),
+
+              // Blocked dates (only if booking enabled)
               if (_bookingEnabled) ...[
-                _buildSectionHeader('Services'.tr()),
-                const SizedBox(height: 16),
-                _buildServiceMenuEditor(isDarkMode(context)),
-                const SizedBox(height: 20),
                 _buildBlockedDatesEditor(isDarkMode(context)),
               ],
 

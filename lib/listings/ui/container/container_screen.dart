@@ -15,6 +15,8 @@ import 'package:instaflutter/listings/listings_module/map_view/map_view_screen.d
 import 'package:instaflutter/listings/listings_module/search/search_screen.dart';
 import 'package:instaflutter/listings/listings_module/my_listings/my_listings_screen.dart';
 import 'package:instaflutter/listings/listings_module/booking_services/booking_services_screen.dart';
+import 'package:instaflutter/listings/listings_module/booking/my_bookings_screen.dart';
+import 'package:instaflutter/listings/listings_module/booking/booking_management_screen.dart';
 import 'package:instaflutter/listings/ui/profile/profile/profile_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -84,6 +86,43 @@ class _ContainerState extends State<ContainerScreen> {
   void _navigateToListingServices(BuildContext context) {
     Navigator.pop(context); // Close drawer
     push(context, BookingServicesWrapperWidget(currentUser: currentUser));
+  }
+
+  void _showUpgradeDialog(BuildContext context, String featureName, String requiredTier) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.lock, color: Color(colorPrimary)),
+            const SizedBox(width: 8),
+            Text('Upgrade Required'.tr()),
+          ],
+        ),
+        content: Text(
+          'This feature requires a $requiredTier subscription. Upgrade now to unlock $featureName and other exclusive features!'.tr(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Maybe Later'.tr()),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(colorPrimary),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: Navigate to subscription/upgrade screen
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Upgrade feature coming soon!'.tr())),
+              );
+            },
+            child: Text('Upgrade Now'.tr()),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -328,6 +367,52 @@ class _ContainerState extends State<ContainerScreen> {
                             ),
                             const Divider(height: 16),
                             
+                            // My Listings & Bookings Section
+                            ListTile(
+                              title: Text('My Listings'.tr()),
+                              leading: Image.asset(
+                                'assets/images/listings_welcome_image.png',
+                                height: 24,
+                                width: 24,
+                                color: Color(colorPrimary),
+                              ),
+                              onTap: () {
+                                Navigator.pop(context);
+                                push(
+                                  context,
+                                  MyListingsWrapperWidget(currentUser: currentUser),
+                                );
+                              },
+                            ),
+                            ListTile(
+                              title: Text('My Bookings'.tr()),
+                              leading: Icon(
+                                Icons.calendar_month,
+                                color: Color(colorPrimary),
+                              ),
+                              onTap: () {
+                                Navigator.pop(context);
+                                push(
+                                  context,
+                                  MyBookingsWrapperWidget(currentUser: currentUser),
+                                );
+                              },
+                            ),
+                            if (currentUser.isAdmin || 
+                                const ['professional', 'premium'].contains(currentUser.subscriptionTier.toLowerCase()))
+                              ListTile(
+                                title: Text('Booking Requests'.tr()),
+                                leading: const Icon(Icons.event_note),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  push(
+                                    context,
+                                    BookingManagementWrapperWidget(currentUser: currentUser),
+                                  );
+                                },
+                              ),
+                            const Divider(height: 16),
+                            
                             // Professional Features Section
                             ExpansionTile(
                               title: Row(
@@ -352,16 +437,47 @@ class _ContainerState extends State<ContainerScreen> {
                                     children: [
                                       ListTile(
                                         dense: true,
-                                        title: Text('Booking Services'.tr()),
+                                        title: Row(
+                                          children: [
+                                            Text('Booking Services'.tr()),
+                                            if (!(currentUser.subscriptionTier == 'professional' || 
+                                                  currentUser.subscriptionTier == 'premium' ||
+                                                  currentUser.isAdmin)) ...[
+                                              const SizedBox(width: 8),
+                                              Icon(Icons.lock, size: 16, color: Colors.grey[600]),
+                                            ],
+                                          ],
+                                        ),
                                         leading: const Icon(Icons.room_service, size: 20),
-                                        enabled: currentUser.subscriptionTier == 'professional' || 
-                                                currentUser.subscriptionTier == 'premium' ||
-                                                currentUser.isAdmin,
-                                        onTap: currentUser.subscriptionTier == 'professional' || 
-                                               currentUser.subscriptionTier == 'premium' ||
-                                               currentUser.isAdmin
-                                            ? () => _navigateToListingServices(context)
+                                        trailing: !(currentUser.subscriptionTier == 'professional' || 
+                                                    currentUser.subscriptionTier == 'premium' ||
+                                                    currentUser.isAdmin)
+                                            ? Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.amber,
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                child: Text(
+                                                  'PRO'.tr(),
+                                                  style: const TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              )
                                             : null,
+                                        onTap: () {
+                                          if (currentUser.subscriptionTier == 'professional' || 
+                                              currentUser.subscriptionTier == 'premium' ||
+                                              currentUser.isAdmin) {
+                                            _navigateToListingServices(context);
+                                          } else {
+                                            Navigator.pop(context);
+                                            _showUpgradeDialog(context, 'Booking Services', 'Professional');
+                                          }
+                                        },
                                       ),
                                     ],
                                   ),
@@ -391,12 +507,75 @@ class _ContainerState extends State<ContainerScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        'Coming soon...'.tr(),
-                                        style: TextStyle(
-                                          color: isDark ? Colors.grey[400] : Colors.grey[600],
-                                          fontSize: 12,
-                                          fontStyle: FontStyle.italic,
+                                      ListTile(
+                                        dense: true,
+                                        title: Row(
+                                          children: [
+                                            Text('Advanced Analytics'.tr()),
+                                            const SizedBox(width: 8),
+                                            Icon(Icons.lock, size: 16, color: Colors.grey[600]),
+                                          ],
+                                        ),
+                                        leading: const Icon(Icons.analytics, size: 20),
+                                        trailing: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.purple,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            'PREMIUM'.tr(),
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                        onTap: () {
+                                          Navigator.pop(context);
+                                          _showUpgradeDialog(context, 'Advanced Analytics', 'Premium');
+                                        },
+                                      ),
+                                      ListTile(
+                                        dense: true,
+                                        title: Row(
+                                          children: [
+                                            Text('Priority Support'.tr()),
+                                            const SizedBox(width: 8),
+                                            Icon(Icons.lock, size: 16, color: Colors.grey[600]),
+                                          ],
+                                        ),
+                                        leading: const Icon(Icons.support_agent, size: 20),
+                                        trailing: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.purple,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            'PREMIUM'.tr(),
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                        onTap: () {
+                                          Navigator.pop(context);
+                                          _showUpgradeDialog(context, 'Priority Support', 'Premium');
+                                        },
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Text(
+                                          '...and more premium features!'.tr(),
+                                          style: TextStyle(
+                                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                            fontSize: 11,
+                                            fontStyle: FontStyle.italic,
+                                          ),
                                         ),
                                       ),
                                     ],
