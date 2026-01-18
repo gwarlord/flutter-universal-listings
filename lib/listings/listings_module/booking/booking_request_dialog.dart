@@ -179,7 +179,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                 children: [
                                   // Checkbox
                                   SizedBox(
-                                    width: 50,
+                                    width: 48,
                                     child: Checkbox(
                                       value: isSelected,
                                       onChanged: (bool? value) {
@@ -227,10 +227,10 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(width: 4),
+                                  const SizedBox(width: 2),
                                   // Price
                                   SizedBox(
-                                    width: 60,
+                                    width: 55,
                                     child: Text(
                                       '${service.price}',
                                       style: TextStyle(
@@ -246,7 +246,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                   // Quantity Controls (only if enabled)
                                   if (isSelected && widget.listing.allowQuantitySelection)
                                     SizedBox(
-                                      width: 90,
+                                      width: 85,
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -271,7 +271,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                             ),
                                           ),
                                           Container(
-                                            width: 30,
+                                            width: 28,
                                             alignment: Alignment.center,
                                             decoration: BoxDecoration(
                                               color: dark ? Colors.grey.shade800 : Colors.grey.shade100,
@@ -310,13 +310,13 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                       ),
                                     )
                                   else if (isSelected)
-                                    const SizedBox(width: 90)
+                                    const SizedBox(width: 85)
                                   else
-                                    const SizedBox(width: 90),
+                                    const SizedBox(width: 85),
                                   // Subtotal (only show when selected and quantity enabled)
                                   if (isSelected && widget.listing.allowQuantitySelection)
                                     SizedBox(
-                                      width: 50,
+                                      width: 45,
                                       child: Text(
                                         '${(service.price * quantity).toStringAsFixed(0)}',
                                         style: TextStyle(
@@ -330,7 +330,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                       ),
                                     )
                                   else
-                                    const SizedBox(width: 50),
+                                    const SizedBox(width: 45),
                                 ],
                               ),
                             ],
