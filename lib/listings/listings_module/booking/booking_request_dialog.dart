@@ -169,6 +169,11 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                         return CheckboxListTile(
                           dense: true,
                           activeColor: Color(colorPrimary),
+                          checkColor: Colors.white,
+                          side: BorderSide(
+                            color: dark ? Colors.grey.shade600 : Colors.grey.shade400,
+                            width: 2,
+                          ),
                           title: Text(service.name, style: TextStyle(color: dark ? Colors.white : Colors.black87, fontWeight: FontWeight.w500)),
                           subtitle: service.duration.isNotEmpty ? Text(service.duration, style: TextStyle(fontSize: 12, color: dark ? Colors.grey.shade400 : Colors.grey.shade700)) : null,
                           secondary: Text(
