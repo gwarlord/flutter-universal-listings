@@ -275,6 +275,20 @@ class BookingFirebase extends BookingRepository {
       final checkInStr = booking.checkInDate.toLocal().toString().split(' ')[0];
       final checkOutStr = booking.checkOutDate.toLocal().toString().split(' ')[0];
 
+      // Extract services from guestNotes if present
+      String servicesHtml = '';
+      if (booking.guestNotes.contains('Selected Services:')) {
+        final servicesPart = booking.guestNotes.split('Selected Services:')[1];
+        final services = servicesPart.split('\n').where((s) => s.trim().startsWith('-')).toList();
+        if (services.isNotEmpty) {
+          servicesHtml = '<p><b>Selected Services:</b></p><ul>';
+          for (var service in services) {
+            servicesHtml += '<li>${service.trim().substring(2)}</li>';
+          }
+          servicesHtml += '</ul>';
+        }
+      }
+
       switch (status) {
         case 'pending':
           subject = 'Booking Request: ${booking.listingTitle}';
@@ -283,6 +297,7 @@ class BookingFirebase extends BookingRepository {
             <p>We've received your booking request for <b>${booking.listingTitle}</b>.</p>
             <p><b>Start Date:</b> $checkInStr</p>
             <p><b>End Date:</b> $checkOutStr</p>
+            $servicesHtml
             <p>The lister will review your request and you will receive another email once it's confirmed or rejected.</p>
             <br><p>Best regards,<br>CaribTap Team</p>
           ''';
@@ -292,6 +307,7 @@ class BookingFirebase extends BookingRepository {
             <p><b>Customer:</b> ${booking.customerName}</p>
             <p><b>Start Date:</b> $checkInStr</p>
             <p><b>End Date:</b> $checkOutStr</p>
+            $servicesHtml
             <p>Please log in to the app to confirm or reject this request.</p>
             <br><p>Best regards,<br>CaribTap Team</p>
           ''';
@@ -304,6 +320,7 @@ class BookingFirebase extends BookingRepository {
             <p>Your booking for <b>${booking.listingTitle}</b> has been <b>CONFIRMED</b>.</p>
             <p><b>Start Date:</b> $checkInStr</p>
             <p><b>End Date:</b> $checkOutStr</p>
+            $servicesHtml
             <p>Enjoy your stay!</p>
             <br><p>Best regards,<br>CaribTap Team</p>
           ''';
