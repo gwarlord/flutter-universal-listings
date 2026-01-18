@@ -1359,13 +1359,16 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
 
   void _toggleDate(DateTime date) {
     setState(() {
+      // Normalize date to remove time component
+      final normalizedDate = DateTime(date.year, date.month, date.day);
+      
       final existingIndex = _selectedDates.indexWhere((d) =>
-          d.year == date.year && d.month == date.month && d.day == date.day);
+          d.year == normalizedDate.year && d.month == normalizedDate.month && d.day == normalizedDate.day);
       
       if (existingIndex != -1) {
         _selectedDates.removeAt(existingIndex);
       } else {
-        _selectedDates.add(date);
+        _selectedDates.add(normalizedDate);
       }
     });
   }
@@ -1373,6 +1376,7 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      backgroundColor: widget.dark ? Colors.grey.shade900 : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -1440,6 +1444,10 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: widget.dark ? Colors.white : Colors.black,
+                      side: BorderSide(color: widget.dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                    ),
                     child: Text('Cancel'.tr()),
                   ),
                 ),
@@ -1487,16 +1495,17 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
 
         final day = index - (startingDayOfWeek - 1) + 1;
         final date = DateTime(_displayedMonth.year, _displayedMonth.month, day);
-        final isPast = date.isBefore(DateTime.now());
+        final today = DateTime.now();
+        final isPast = date.isBefore(DateTime(today.year, today.month, today.day));
         final isSelected = _isDateSelected(date);
 
-        return GestureDetector(
+        return InkWell(
           onTap: isPast ? null : () => _toggleDate(date),
           child: Container(
             decoration: BoxDecoration(
               color: isSelected
                   ? Color(colorPrimary)
-                  : Colors.transparent,
+                  : (widget.dark ? Colors.grey.shade800 : Colors.transparent),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: widget.dark ? Colors.grey.shade700 : Colors.grey.shade300,
