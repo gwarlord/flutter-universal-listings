@@ -170,15 +170,16 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                         
                         return Container(
                           color: isSelected ? (dark ? Colors.grey.shade800.withOpacity(0.5) : Colors.blue.shade50) : Colors.transparent,
-                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                           child: Column(
                             children: [
                               // First row: Checkbox, Service Name, Duration, Price
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   // Checkbox
                                   SizedBox(
-                                    width: 56,
+                                    width: 50,
                                     child: Checkbox(
                                       value: isSelected,
                                       onChanged: (bool? value) {
@@ -200,7 +201,6 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                   ),
                                   // Service Name and Duration
                                   Expanded(
-                                    flex: 2,
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
@@ -209,37 +209,44 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                           style: TextStyle(
                                             color: dark ? Colors.white : Colors.black87,
                                             fontWeight: FontWeight.w500,
-                                            fontSize: 14,
+                                            fontSize: 13,
                                           ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                         if (service.duration.isNotEmpty)
                                           Text(
                                             service.duration,
                                             style: TextStyle(
-                                              fontSize: 11,
+                                              fontSize: 10,
                                               color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
                                             ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                       ],
                                     ),
                                   ),
+                                  const SizedBox(width: 4),
                                   // Price
                                   SizedBox(
-                                    width: 80,
+                                    width: 60,
                                     child: Text(
-                                      '${service.price} ${widget.listing.currencyCode}',
+                                      '${service.price}',
                                       style: TextStyle(
                                         color: Color(colorPrimary),
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 13,
+                                        fontSize: 12,
                                       ),
                                       textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   // Quantity Controls (only if enabled)
                                   if (isSelected && widget.listing.allowQuantitySelection)
                                     SizedBox(
-                                      width: 120,
+                                      width: 90,
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -252,10 +259,10 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                                 });
                                               } : null,
                                               child: Padding(
-                                                padding: const EdgeInsets.all(6),
+                                                padding: const EdgeInsets.all(4),
                                                 child: Icon(
                                                   Icons.remove,
-                                                  size: 16,
+                                                  size: 14,
                                                   color: quantity > 1
                                                       ? Color(colorPrimary)
                                                       : Colors.grey,
@@ -264,7 +271,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                             ),
                                           ),
                                           Container(
-                                            width: 40,
+                                            width: 30,
                                             alignment: Alignment.center,
                                             decoration: BoxDecoration(
                                               color: dark ? Colors.grey.shade800 : Colors.grey.shade100,
@@ -273,7 +280,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                             child: Text(
                                               '$quantity',
                                               style: TextStyle(
-                                                fontSize: 14,
+                                                fontSize: 12,
                                                 fontWeight: FontWeight.bold,
                                                 color: dark ? Colors.white : Colors.black,
                                               ),
@@ -288,10 +295,10 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                                 });
                                               } : null,
                                               child: Padding(
-                                                padding: const EdgeInsets.all(6),
+                                                padding: const EdgeInsets.all(4),
                                                 child: Icon(
                                                   Icons.add,
-                                                  size: 16,
+                                                  size: 14,
                                                   color: quantity < 99
                                                       ? Color(colorPrimary)
                                                       : Colors.grey,
@@ -303,25 +310,27 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                       ),
                                     )
                                   else if (isSelected)
-                                    const SizedBox(width: 120)
+                                    const SizedBox(width: 90)
                                   else
-                                    const SizedBox(width: 120),
+                                    const SizedBox(width: 90),
                                   // Subtotal (only show when selected and quantity enabled)
                                   if (isSelected && widget.listing.allowQuantitySelection)
                                     SizedBox(
-                                      width: 90,
+                                      width: 50,
                                       child: Text(
-                                        '${(service.price * quantity).toStringAsFixed(2)}',
+                                        '${(service.price * quantity).toStringAsFixed(0)}',
                                         style: TextStyle(
-                                          fontSize: 12,
+                                          fontSize: 11,
                                           fontWeight: FontWeight.w600,
                                           color: Color(colorPrimary),
                                         ),
                                         textAlign: TextAlign.right,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     )
                                   else
-                                    const SizedBox(width: 90),
+                                    const SizedBox(width: 50),
                                 ],
                               ),
                             ],
