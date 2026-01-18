@@ -315,9 +315,15 @@ class ListingsFirebaseUtils extends ListingsRepository {
 
   @override
   Future<void> postListing({required ListingModel newListing}) async {
-    final DocumentReference docRef =
-    firestore.collection(cfg.listingsCollection).doc();
-    newListing.id = docRef.id;
+    // If listing has an ID, update existing document. Otherwise create new one.
+    final DocumentReference docRef = newListing.id.isEmpty
+        ? firestore.collection(cfg.listingsCollection).doc()
+        : firestore.collection(cfg.listingsCollection).doc(newListing.id);
+    
+    if (newListing.id.isEmpty) {
+      newListing.id = docRef.id;
+    }
+    
     await docRef.set(newListing.toJson());
   }
 

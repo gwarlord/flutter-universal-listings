@@ -32,6 +32,8 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
   int _numberOfGuests = 1;
   final TextEditingController _notesController = TextEditingController();
   List<DateTime> _bookedDates = [];
+  String? _selectedTimeBlock; // ✅ Selected time block
+  List<String> _availableTimeBlocks = []; // ✅ Available time blocks for selected date
   
   // ✅ Track selected services with quantities
   final Map<ServiceItem, int> _selectedServicesQuantity = {};
@@ -53,6 +55,12 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
   void _submitBooking() {
     if (_selectedDateRange == null) {
       showAlertDialog(context, 'Select dates'.tr(), 'Please select check-in and check-out dates.'.tr());
+      return;
+    }
+
+    // Check if time block is required but not selected
+    if (widget.listing.useTimeBlocks && _selectedTimeBlock == null) {
+      showAlertDialog(context, 'Select time block'.tr(), 'Please select a time slot for your booking.'.tr());
       return;
     }
 
@@ -78,11 +86,26 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
       checkOutDate: _selectedDateRange!.checkOut,
       numberOfGuests: _numberOfGuests,
       guestNotes: _notesController.text.trim() + servicesNotes,
+      timeBlock: _selectedTimeBlock ?? '', // ✅ Include selected time block
       totalPrice: _calculatedTotal, 
       currency: widget.listing.currencyCode,
     );
 
     context.read<BookingBloc>().add(CreateBookingEvent(booking: booking));
+  }
+
+  void _loadAvailableTimeBlocks(DateTime date) async {
+    // Start with all configured time blocks
+    List<String> available = List.from(widget.listing.timeBlocks);
+
+    // TODO: Fetch bookings for this date and remove booked time blocks
+    // This would require a backend query to get bookings for the specific date
+    // For now, we'll show all time blocks
+    // In a real implementation, you'd query bookings for this date and filter out booked slots
+
+    setState(() {
+      _availableTimeBlocks = available;
+    });
   }
 
   @override
@@ -357,13 +380,72 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                         bookedDates: _bookedDates,
                         onDateRangeSelected: (dateRange) {
                           if (mounted) {
-                            setState(() => _selectedDateRange = dateRange);
+                            setState(() {
+                              _selectedDateRange = dateRange;
+                              // Reset time block when date changes
+                              _selectedTimeBlock = null;
+                              // Load available time blocks for this date if using time blocks
+                              if (widget.listing.useTimeBlocks) {
+                                _loadAvailableTimeBlocks(dateRange.checkIn);
+                              }
+                            });
                           }
                         },
                       );
                     },
                   ),
                 ),
+                if (widget.listing.useTimeBlocks && _selectedDateRange != null) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    'Select time slot'.tr(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: dark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (_availableTimeBlocks.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: dark ? Colors.grey.shade800 : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'No time slots available for this date'.tr(),
+                        style: TextStyle(
+                          color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                      ),
+                    )
+                  else
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _availableTimeBlocks.map((block) {
+                        final isSelected = _selectedTimeBlock == block;
+                        return ChoiceChip(
+                          label: Text(block),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            setState(() {
+                              _selectedTimeBlock = selected ? block : null;
+                            });
+                          },
+                          selectedColor: Color(colorPrimary).withOpacity(0.3),
+                          backgroundColor: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+                          labelStyle: TextStyle(
+                            color: isSelected
+                                ? Color(colorPrimary)
+                                : (dark ? Colors.white : Colors.black87),
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                ],
                 const SizedBox(height: 20),
                 Text(
                   'Number of guests'.tr(),

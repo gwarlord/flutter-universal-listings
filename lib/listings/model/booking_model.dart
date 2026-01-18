@@ -14,6 +14,7 @@ class BookingModel {
   DateTime checkOutDate;
   int numberOfGuests;
   String guestNotes;
+  String timeBlock; // ✅ e.g., "09:00-10:00" if time blocks enabled
   num totalPrice;
   String currency;
   String status; // pending, confirmed, rejected, cancelled
@@ -36,6 +37,7 @@ class BookingModel {
     required this.checkOutDate,
     this.numberOfGuests = 1,
     this.guestNotes = '',
+    this.timeBlock = '',
     this.totalPrice = 0,
     this.currency = 'USD',
     this.status = 'pending',
@@ -65,6 +67,7 @@ class BookingModel {
           : DateTime.now(),
       numberOfGuests: json['numberOfGuests'] ?? 1,
       guestNotes: json['guestNotes'] ?? '',
+      timeBlock: json['timeBlock'] ?? '',
       totalPrice: json['totalPrice'] ?? 0,
       currency: json['currency'] ?? 'USD',
       status: json['status'] ?? 'pending',
@@ -94,6 +97,7 @@ class BookingModel {
       'checkOutDate': checkOutDate.toIso8601String(),
       'numberOfGuests': numberOfGuests,
       'guestNotes': guestNotes,
+      'timeBlock': timeBlock,
       'totalPrice': totalPrice,
       'currency': currency,
       'status': status,

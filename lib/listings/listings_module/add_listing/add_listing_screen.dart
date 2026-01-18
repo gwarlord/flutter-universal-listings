@@ -147,6 +147,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
   bool _verified = false;
   bool _bookingEnabled = false;
   bool _allowQuantitySelection = false;
+  bool _useTimeBlocks = false;
+  bool _allowMultipleBookingsPerDay = false;
+  final List<String> _timeBlocks = [];
   final List<DateTime> _blockedDates = [];
 
   @override
@@ -189,9 +192,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
       _verified = l.verified;
       _bookingEnabled = l.bookingEnabled;
       _allowQuantitySelection = l.allowQuantitySelection;
+      _useTimeBlocks = l.useTimeBlocks;
+      _allowMultipleBookingsPerDay = l.allowMultipleBookingsPerDay;
       
       // ✅ Load existing services
       _services.addAll(l.services);
+      
+      // ✅ Load existing time blocks
+      _timeBlocks.addAll(l.timeBlocks);
       
       // ✅ Load existing blocked dates
       _blockedDates.addAll(l.blockedDates.map((ms) => DateTime.fromMillisecondsSinceEpoch(ms)));
@@ -353,12 +361,135 @@ class _AddListingScreenState extends State<AddListingScreen> {
             inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
             inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
           ),
+        if (_bookingEnabled)
+          SwitchListTile(
+            value: _useTimeBlocks,
+            onChanged: (value) => setState(() => _useTimeBlocks = value),
+            title: Text(
+              'Use time blocks',
+              style: TextStyle(
+                color: dark ? Colors.white : Colors.black,
+              ),
+            ),
+            subtitle: Text(
+              'Enable hourly time slot bookings instead of full day bookings.',
+              style: TextStyle(
+                color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+              ),
+            ),
+            activeColor: Color(colorPrimary),
+            activeTrackColor: Color(colorPrimary).withOpacity(0.5),
+            inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
+            inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
+          ),
+        if (_bookingEnabled && _useTimeBlocks)
+          SwitchListTile(
+            value: _allowMultipleBookingsPerDay,
+            onChanged: (value) => setState(() => _allowMultipleBookingsPerDay = value),
+            title: Text(
+              'Allow multiple bookings per day',
+              style: TextStyle(
+                color: dark ? Colors.white : Colors.black,
+              ),
+            ),
+            subtitle: Text(
+              'Multiple customers can book different time slots on the same day.',
+              style: TextStyle(
+                color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+              ),
+            ),
+            activeColor: Color(colorPrimary),
+            activeTrackColor: Color(colorPrimary).withOpacity(0.5),
+            inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
+            inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
+          ),
+        if (_bookingEnabled && _useTimeBlocks)
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Available Time Blocks',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: dark ? Colors.white : Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Define hourly time slots (e.g., 09:00-10:00, 10:00-11:00)',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ..._timeBlocks.map((block) => Chip(
+                      label: Text(block),
+                      deleteIcon: Icon(Icons.close, size: 18),
+                      onDeleted: () => setState(() => _timeBlocks.remove(block)),
+                      backgroundColor: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+                      labelStyle: TextStyle(color: dark ? Colors.white : Colors.black87),
+                    )),
+                    ActionChip(
+                      label: Text('+ Add Time Block'),
+                      onPressed: () => _showAddTimeBlockDialog(dark),
+                      backgroundColor: Color(colorPrimary).withOpacity(0.1),
+                      labelStyle: TextStyle(color: Color(colorPrimary)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
 
   // ✅ New Service Menu Widget
   Widget _buildServiceMenuEditor(bool dark) {
+    // Check if user has professional or premium subscription
+    final canUseServices = widget.currentUser.subscriptionTier == 'professional' || 
+                           widget.currentUser.subscriptionTier == 'premium' ||
+                           widget.currentUser.isAdmin;
+    
+    if (!canUseServices) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Booking Services are available on Professional plans.'.tr(),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: dark ? Colors.white : Colors.black,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Upgrade your subscription to enable services for this listing.'.tr(),
+              style: TextStyle(
+                color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -889,9 +1020,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 decoration: _getInputDecoration(label: 'X (Twitter) URL', icon: Icons.alternate_email),
               ),
 
-              _buildSectionHeader('Booking & Services'.tr()),
-              _buildBookingSection(isDarkMode(context), canUseBooking),
+              // Note: Booking toggles are now managed in the Booking Services section
               if (_bookingEnabled) ...[
+                _buildSectionHeader('Services'.tr()),
                 const SizedBox(height: 16),
                 _buildServiceMenuEditor(isDarkMode(context)),
                 const SizedBox(height: 20),
@@ -1024,6 +1155,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
             bookingEnabled: _bookingEnabled,
             bookingUrl: _bookingUrlController.text.trim(),
             allowQuantitySelection: _allowQuantitySelection,
+            useTimeBlocks: _useTimeBlocks,
+            allowMultipleBookingsPerDay: _allowMultipleBookingsPerDay,
+            timeBlocks: _timeBlocks,
             services: _services, // ✅ Send added services
             blockedDates: _blockedDates.map((d) => d.millisecondsSinceEpoch).toList(), // ✅ Send blocked dates
             instagram: _instagramController.text.trim(),
@@ -1070,6 +1204,120 @@ class _AddListingScreenState extends State<AddListingScreen> {
       formattedAddress: safeAddress,
       geometry: Geometry(location: Location(lat: lat, lng: lng)),
     );
+  }
+
+  void _showAddTimeBlockDialog(bool dark) async {
+    int startHour = 9;
+    int endHour = 10;
+
+    final result = await showDialog<Map<String, int>>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
+              title: Text(
+                'Add Time Block',
+                style: TextStyle(color: dark ? Colors.white : Colors.black),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          value: startHour,
+                          decoration: InputDecoration(
+                            labelText: 'Start Hour',
+                            labelStyle: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade700),
+                            border: OutlineInputBorder(),
+                          ),
+                          dropdownColor: dark ? Colors.grey.shade800 : Colors.white,
+                          style: TextStyle(color: dark ? Colors.white : Colors.black),
+                          items: List.generate(24, (i) => i).map((hour) {
+                            return DropdownMenuItem(
+                              value: hour,
+                              child: Text('${hour.toString().padLeft(2, '0')}:00'),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setDialogState(() {
+                                startHour = value;
+                                if (endHour <= startHour) {
+                                  endHour = (startHour + 1) % 24;
+                                }
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          value: endHour,
+                          decoration: InputDecoration(
+                            labelText: 'End Hour',
+                            labelStyle: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade700),
+                            border: OutlineInputBorder(),
+                          ),
+                          dropdownColor: dark ? Colors.grey.shade800 : Colors.white,
+                          style: TextStyle(color: dark ? Colors.white : Colors.black),
+                          items: List.generate(24, (i) => i).map((hour) {
+                            return DropdownMenuItem(
+                              value: hour,
+                              child: Text('${hour.toString().padLeft(2, '0')}:00'),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null && value > startHour) {
+                              setDialogState(() => endHour = value);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Time block: ${startHour.toString().padLeft(2, '0')}:00 - ${endHour.toString().padLeft(2, '0')}:00',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, {'start': startHour, 'end': endHour}),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(colorPrimary),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text('Add'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != null) {
+      final start = result['start']!;
+      final end = result['end']!;
+      final timeBlock = '${start.toString().padLeft(2, '0')}:00-${end.toString().padLeft(2, '0')}:00';
+      if (!_timeBlocks.contains(timeBlock)) {
+        setState(() => _timeBlocks.add(timeBlock));
+      }
+    }
   }
 }
 
