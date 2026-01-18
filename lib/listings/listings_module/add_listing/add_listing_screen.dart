@@ -480,28 +480,19 @@ class _AddListingScreenState extends State<AddListingScreen> {
           ),
         ElevatedButton.icon(
           onPressed: () async {
-            final pickedRange = await showDateRangePicker(
+            final selectedDates = await showDialog<List<DateTime>>(
               context: context,
-              firstDate: DateTime.now(),
-              lastDate: DateTime.now().add(const Duration(days: 365)),
-              builder: (context, child) {
-                return Theme(
-                  data: dark
-                      ? ThemeData.dark(useMaterial3: true)
-                      : ThemeData.light(useMaterial3: true),
-                  child: child ?? const SizedBox(),
-                );
-              },
+              builder: (context) => _MultiDatePickerDialog(
+                initialSelectedDates: _blockedDates,
+                dark: dark,
+              ),
             );
-            if (pickedRange != null) {
+            if (selectedDates != null) {
               setState(() {
-                // Add all dates in the range
-                var currentDate = pickedRange.start;
-                while (currentDate.isBefore(pickedRange.end.add(const Duration(days: 1)))) {
-                  if (!_blockedDates.any((d) => d.year == currentDate.year && d.month == currentDate.month && d.day == currentDate.day)) {
-                    _blockedDates.add(DateTime(currentDate.year, currentDate.month, currentDate.day));
+                for (var date in selectedDates) {
+                  if (!_blockedDates.any((d) => d.year == date.year && d.month == date.month && d.day == date.day)) {
+                    _blockedDates.add(DateTime(date.year, date.month, date.day));
                   }
-                  currentDate = currentDate.add(const Duration(days: 1));
                 }
                 _blockedDates.sort();
               });
@@ -1335,4 +1326,198 @@ class _ListingVideoWidgetState extends State<ListingVideoWidget> {
           cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(context), child: Text('Cancel'.tr())),
         ),
       );
+}
+
+// Multi-Date Picker Dialog
+class _MultiDatePickerDialog extends StatefulWidget {
+  final List<DateTime> initialSelectedDates;
+  final bool dark;
+
+  const _MultiDatePickerDialog({
+    required this.initialSelectedDates,
+    required this.dark,
+  });
+
+  @override
+  State<_MultiDatePickerDialog> createState() => _MultiDatePickerDialogState();
+}
+
+class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
+  final List<DateTime> _selectedDates = [];
+  late DateTime _displayedMonth;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayedMonth = DateTime.now();
+  }
+
+  bool _isDateSelected(DateTime date) {
+    return _selectedDates.any((d) =>
+        d.year == date.year && d.month == date.month && d.day == date.day);
+  }
+
+  void _toggleDate(DateTime date) {
+    setState(() {
+      final existingIndex = _selectedDates.indexWhere((d) =>
+          d.year == date.year && d.month == date.month && d.day == date.day);
+      
+      if (existingIndex != -1) {
+        _selectedDates.removeAt(existingIndex);
+      } else {
+        _selectedDates.add(date);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Select Dates to Block'.tr(),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: widget.dark ? Colors.white : Colors.black,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.chevron_left, color: widget.dark ? Colors.white : Colors.black),
+                  onPressed: () {
+                    setState(() {
+                      _displayedMonth = DateTime(
+                        _displayedMonth.year,
+                        _displayedMonth.month - 1,
+                      );
+                    });
+                  },
+                ),
+                Text(
+                  DateFormat('MMMM yyyy').format(_displayedMonth),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: widget.dark ? Colors.white : Colors.black,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.chevron_right, color: widget.dark ? Colors.white : Colors.black),
+                  onPressed: () {
+                    setState(() {
+                      _displayedMonth = DateTime(
+                        _displayedMonth.year,
+                        _displayedMonth.month + 1,
+                      );
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildCalendar(),
+            const SizedBox(height: 16),
+            Text(
+              '${_selectedDates.length} ${_selectedDates.length == 1 ? 'date' : 'dates'} selected'.tr(),
+              style: TextStyle(
+                fontSize: 14,
+                color: widget.dark ? Colors.grey.shade400 : Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('Cancel'.tr()),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _selectedDates.isEmpty
+                        ? null
+                        : () => Navigator.pop(context, _selectedDates),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(colorPrimary),
+                      foregroundColor: Colors.white,
+                    ),
+                    child: Text('Confirm'.tr()),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCalendar() {
+    final firstDay = DateTime(_displayedMonth.year, _displayedMonth.month, 1);
+    final lastDay = DateTime(_displayedMonth.year, _displayedMonth.month + 1, 0);
+    final daysInMonth = lastDay.day;
+    final startingDayOfWeek = firstDay.weekday;
+    final totalCells = startingDayOfWeek - 1 + daysInMonth;
+
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 7,
+        mainAxisSpacing: 4,
+        crossAxisSpacing: 4,
+      ),
+      itemCount: totalCells,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemBuilder: (context, index) {
+        if (index < startingDayOfWeek - 1) {
+          return const SizedBox.shrink();
+        }
+
+        final day = index - (startingDayOfWeek - 1) + 1;
+        final date = DateTime(_displayedMonth.year, _displayedMonth.month, day);
+        final isPast = date.isBefore(DateTime.now());
+        final isSelected = _isDateSelected(date);
+
+        return GestureDetector(
+          onTap: isPast ? null : () => _toggleDate(date),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? Color(colorPrimary)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: widget.dark ? Colors.grey.shade700 : Colors.grey.shade300,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                day.toString(),
+                style: TextStyle(
+                  color: isPast
+                      ? (widget.dark ? Colors.grey.shade600 : Colors.grey.shade400)
+                      : isSelected
+                          ? Colors.white
+                          : (widget.dark ? Colors.white : Colors.black),
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
