@@ -350,8 +350,14 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Reject booking?'.tr()),
-        content: Text('Are you sure you want to reject this booking?'.tr()),
+        title: Text(
+          'Reject booking?'.tr(),
+          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Are you sure you want to reject this booking?'.tr(),
+          style: const TextStyle(color: Colors.black87),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),

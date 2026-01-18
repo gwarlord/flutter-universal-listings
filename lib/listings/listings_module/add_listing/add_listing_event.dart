@@ -69,6 +69,7 @@ class ValidateListingInputEvent extends AddListingEvent {
 
   final bool bookingEnabled;
   final String bookingUrl;
+  final List<ServiceItem> services; // ✅ Added
 
   final String instagram;
   final String facebook;
@@ -104,6 +105,7 @@ class ValidateListingInputEvent extends AddListingEvent {
     required this.openingHours,
     required this.bookingEnabled,
     required this.bookingUrl,
+    required this.services, // ✅ Added
     required this.instagram,
     required this.facebook,
     required this.tiktok,
