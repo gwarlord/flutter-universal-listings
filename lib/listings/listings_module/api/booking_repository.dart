@@ -15,4 +15,5 @@ abstract class BookingRepository {
     required String bookingId,
   });
   Future<List<DateTime>> getBookedDates({required String listingId});
+  Future<List<DateTime>> getBlockedDates({required String listingId});
 }

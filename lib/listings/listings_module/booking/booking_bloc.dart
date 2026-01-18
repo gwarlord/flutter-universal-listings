@@ -141,17 +141,25 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
   ) async {
     emit(const BookingLoading());
     try {
-      final bookedDates = await bookingRepository.getBookedDates(
+      final bookedDatesResult = await bookingRepository.getBookedDates(
         listingId: event.listingId,
       ).timeout(
         const Duration(seconds: 15),
-        onTimeout: () {
-          // Return empty list on timeout instead of crashing
-          return <DateTime>[];
-        },
+        onTimeout: () => <DateTime>[],
       );
+
+      final blockedDatesResult = await bookingRepository.getBlockedDates(
+        listingId: event.listingId,
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => <DateTime>[],
+      );
+
+      // Combine booked and blocked dates
+      final unavailableDates = [...bookedDatesResult, ...blockedDatesResult];
+      
       if (!emit.isDone) {
-        emit(BookedDatesLoadedState(bookedDates: bookedDates));
+        emit(BookedDatesLoadedState(bookedDates: unavailableDates));
       }
     } catch (e) {
       if (!emit.isDone) {
