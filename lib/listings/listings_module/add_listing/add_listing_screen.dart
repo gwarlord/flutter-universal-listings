@@ -146,6 +146,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   String? _countryCode;
   bool _verified = false;
   bool _bookingEnabled = false;
+  final List<DateTime> _blockedDates = [];
 
   @override
   void initState() {
@@ -189,6 +190,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
       
       // ✅ Load existing services
       _services.addAll(l.services);
+      
+      // ✅ Load existing blocked dates
+      _blockedDates.addAll(l.blockedDates.map((ms) => DateTime.fromMillisecondsSinceEpoch(ms)));
 
       _placeDetail = _fakePlaceDetailsFromExisting(
         l.title,
@@ -420,6 +424,88 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 ),
               ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ✅ Blocked Dates Editor Widget
+  Widget _buildBlockedDatesEditor(bool dark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Block Unavailable Dates'.tr(),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: dark ? Colors.white : Colors.black,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_blockedDates.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _blockedDates.length,
+              separatorBuilder: (context, index) => Divider(
+                height: 1,
+                color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+              ),
+              itemBuilder: (context, index) {
+                final date = _blockedDates[index];
+                return ListTile(
+                  title: Text(
+                    DateFormat('MMM dd, yyyy').format(date),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: dark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    onPressed: () => setState(() => _blockedDates.removeAt(index)),
+                  ),
+                );
+              },
+            ),
+          ),
+        ElevatedButton.icon(
+          onPressed: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: DateTime.now(),
+              firstDate: DateTime.now(),
+              lastDate: DateTime.now().add(const Duration(days: 365)),
+              builder: (context, child) {
+                return Theme(
+                  data: dark
+                      ? ThemeData.dark(useMaterial3: true)
+                      : ThemeData.light(useMaterial3: true),
+                  child: child ?? const SizedBox(),
+                );
+              },
+            );
+            if (picked != null && !_blockedDates.any((d) => d.year == picked.year && d.month == picked.month && d.day == picked.day)) {
+              setState(() {
+                _blockedDates.add(picked);
+                _blockedDates.sort();
+              });
+            }
+          },
+          icon: const Icon(Icons.calendar_today),
+          label: Text('Add Blocked Date'.tr()),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(colorPrimary),
+            foregroundColor: Colors.white,
           ),
         ),
       ],
@@ -785,6 +871,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
               if (_bookingEnabled) ...[
                 const SizedBox(height: 16),
                 _buildServiceMenuEditor(isDarkMode(context)),
+                const SizedBox(height: 20),
+                _buildBlockedDatesEditor(isDarkMode(context)),
               ],
 
               _buildSectionHeader('Photos'.tr()),
@@ -913,6 +1001,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
             bookingEnabled: _bookingEnabled,
             bookingUrl: _bookingUrlController.text.trim(),
             services: _services, // ✅ Send added services
+            blockedDates: _blockedDates.map((d) => d.millisecondsSinceEpoch).toList(), // ✅ Send blocked dates
             instagram: _instagramController.text.trim(),
             facebook: _facebookController.text.trim(),
             tiktok: _tiktokController.text.trim(),

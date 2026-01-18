@@ -242,6 +242,27 @@ class BookingFirebase extends BookingRepository {
     }
   }
 
+  @override
+  Future<List<DateTime>> getBlockedDates({required String listingId}) async {
+    try {
+      final listingDoc = await _firestore
+          .collection('listings')
+          .doc(listingId)
+          .get();
+
+      if (!listingDoc.exists) {
+        return [];
+      }
+
+      final blockedDatesMs = List<int>.from(listingDoc.data()?['blockedDates'] ?? []);
+      return blockedDatesMs
+          .map((ms) => DateTime.fromMillisecondsSinceEpoch(ms))
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to fetch blocked dates: $e');
+    }
+  }
+
   /// ✅ Internal helper to create email trigger documents in the 'mail' collection
   Future<void> _triggerBookingEmail(BookingModel booking, String status) async {
     try {

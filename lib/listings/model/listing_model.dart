@@ -42,6 +42,9 @@ class ListingModel {
   /// ✅ Digital Service Menu
   List<ServiceItem> services;
 
+  /// ✅ Blocked Dates for Bookings
+  List<int> blockedDates; // Stored as milliseconds since epoch
+
   /// Social Media
   String instagram;
   String facebook;
@@ -92,6 +95,7 @@ class ListingModel {
     this.bookingEnabled = false,
     this.bookingUrl = '',
     this.services = const [],
+    this.blockedDates = const [],
     this.instagram = '',
     this.facebook = '',
     this.tiktok = '',
@@ -138,6 +142,7 @@ class ListingModel {
       services: (json['services'] as List? ?? [])
           .map((e) => ServiceItem.fromJson(e as Map<String, dynamic>))
           .toList(),
+      blockedDates: List<int>.from(json['blockedDates'] ?? []),
       instagram: json['instagram'] ?? '',
       facebook: json['facebook'] ?? '',
       tiktok: json['tiktok'] ?? '',
@@ -181,6 +186,7 @@ class ListingModel {
       'bookingEnabled': bookingEnabled,
       'bookingUrl': bookingUrl,
       'services': services.map((e) => e.toJson()).toList(),
+      'blockedDates': blockedDates,
       'instagram': instagram,
       'facebook': facebook,
       'tiktok': tiktok,
