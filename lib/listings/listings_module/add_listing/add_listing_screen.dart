@@ -146,6 +146,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   String? _countryCode;
   bool _verified = false;
   bool _bookingEnabled = false;
+  bool _allowQuantitySelection = false;
   final List<DateTime> _blockedDates = [];
 
   @override
@@ -187,6 +188,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       _countryCode = (l.countryCode ?? '').trim().isEmpty ? null : l.countryCode;
       _verified = l.verified;
       _bookingEnabled = l.bookingEnabled;
+      _allowQuantitySelection = l.allowQuantitySelection;
       
       // ✅ Load existing services
       _services.addAll(l.services);
@@ -327,6 +329,24 @@ class _AddListingScreenState extends State<AddListingScreen> {
           ),
           activeColor: Color(colorPrimary),
         ),
+        if (_bookingEnabled)
+          SwitchListTile(
+            value: _allowQuantitySelection,
+            onChanged: (value) => setState(() => _allowQuantitySelection = value),
+            title: Text(
+              'Allow quantity selection',
+              style: TextStyle(
+                color: dark ? Colors.white : Colors.black,
+              ),
+            ),
+            subtitle: Text(
+              'Customers can select quantity when booking services.',
+              style: TextStyle(
+                color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+              ),
+            ),
+            activeColor: Color(colorPrimary),
+          ),
       ],
     );
   }
@@ -353,7 +373,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 final s = _services[index];
                 return ListTile(
                   title: Text(s.name, style: TextStyle(fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black)),
-                  subtitle: Text('${s.duration} • ${s.price} $_selectedCurrencyCode • Qty: ${s.quantity}', style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade700)),
+                  subtitle: Text('${s.duration} • ${s.price} $_selectedCurrencyCode', style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade700)),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete_outline, color: Colors.red),
                     onPressed: () => setState(() => _services.removeAt(index)),
@@ -997,6 +1017,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
             openingHours: _openingHoursController.text.trim(),
             bookingEnabled: _bookingEnabled,
             bookingUrl: _bookingUrlController.text.trim(),
+            allowQuantitySelection: _allowQuantitySelection,
             services: _services, // ✅ Send added services
             blockedDates: _blockedDates.map((d) => d.millisecondsSinceEpoch).toList(), // ✅ Send blocked dates
             instagram: _instagramController.text.trim(),

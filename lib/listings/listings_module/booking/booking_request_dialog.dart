@@ -236,8 +236,8 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                       textAlign: TextAlign.center,
                                     ),
                                   ),
-                                  // Quantity Controls
-                                  if (isSelected)
+                                  // Quantity Controls (only if enabled)
+                                  if (isSelected && widget.listing.allowQuantitySelection)
                                     SizedBox(
                                       width: 120,
                                       child: Row(
@@ -302,10 +302,12 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                         ],
                                       ),
                                     )
+                                  else if (isSelected)
+                                    const SizedBox(width: 120),
                                   else
                                     const SizedBox(width: 120),
-                                  // Subtotal (only show when selected)
-                                  if (isSelected)
+                                  // Subtotal (only show when selected and quantity enabled)
+                                  if (isSelected && widget.listing.allowQuantitySelection)
                                     SizedBox(
                                       width: 90,
                                       child: Text(

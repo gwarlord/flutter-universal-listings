@@ -69,6 +69,7 @@ class ValidateListingInputEvent extends AddListingEvent {
 
   final bool bookingEnabled;
   final String bookingUrl;
+  final bool allowQuantitySelection; // ✅ Added
   final List<ServiceItem> services; // ✅ Added
   final List<int> blockedDates; // ✅ Added (milliseconds since epoch)
 
@@ -106,6 +107,7 @@ class ValidateListingInputEvent extends AddListingEvent {
     required this.openingHours,
     required this.bookingEnabled,
     required this.bookingUrl,
+    required this.allowQuantitySelection, // ✅ Added
     required this.services, // ✅ Added
     required this.blockedDates, // ✅ Added
     required this.instagram,
