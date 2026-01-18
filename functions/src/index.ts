@@ -20,7 +20,7 @@ async function sendEmail(to: string, subject: string, html: string) {
   }
   await sgMail.send({
     to,
-    from: {email: "no-reply@caribtap.com", name: "Caribbean Tap"},
+    from: {email: "no-reply@caribtap.com", name: "CaribTap"},
     subject,
     html,
   });

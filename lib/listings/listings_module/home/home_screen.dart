@@ -93,7 +93,10 @@ class HomeScreenState extends State<HomeScreen> {
       final matchesSearch = _searchQuery.isEmpty ||
           listing.title.toLowerCase().contains(_searchQuery) ||
           listing.description.toLowerCase().contains(_searchQuery) ||
-          listing.place.toLowerCase().contains(_searchQuery);
+          listing.place.toLowerCase().contains(_searchQuery) ||
+          listing.services.any((service) => 
+            service.name.toLowerCase().contains(_searchQuery) ||
+            service.duration.toLowerCase().contains(_searchQuery));
 
       // Filter by country (if countries are selected, listing must be in that list)
       final matchesCountry = _selectedCountryCodes.isEmpty ||
