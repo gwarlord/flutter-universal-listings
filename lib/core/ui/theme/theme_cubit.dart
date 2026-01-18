@@ -8,7 +8,7 @@ class ThemeCubit extends Cubit<ThemeState> {
   late SharedPreferences _prefs;
   static const String _themeKey = 'theme_mode';
 
-  ThemeCubit() : super(ThemeState(themeMode: ThemeMode.system)) {
+  ThemeCubit() : super(ThemeState(themeMode: ThemeMode.light)) {
     _initTheme();
   }
 

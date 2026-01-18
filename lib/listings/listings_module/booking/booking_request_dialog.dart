@@ -170,7 +170,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                           dense: true,
                           activeColor: Color(colorPrimary),
                           title: Text(service.name, style: TextStyle(color: dark ? Colors.white : Colors.black87, fontWeight: FontWeight.w500)),
-                          subtitle: service.duration.isNotEmpty ? Text(service.duration, style: const TextStyle(fontSize: 12)) : null,
+                          subtitle: service.duration.isNotEmpty ? Text(service.duration, style: TextStyle(fontSize: 12, color: dark ? Colors.grey.shade400 : Colors.grey.shade700)) : null,
                           secondary: Text(
                             '${service.price} ${widget.listing.currencyCode}',
                             style: TextStyle(color: Color(colorPrimary), fontWeight: FontWeight.bold),
@@ -243,7 +243,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                 Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.remove),
+                      icon: Icon(Icons.remove, color: dark ? Colors.white : Colors.black),
                       onPressed: _numberOfGuests > 1
                           ? () => setState(() => _numberOfGuests--)
                           : null,
@@ -251,16 +251,16 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
+                        border: Border.all(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         _numberOfGuests.toString(),
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.add),
+                      icon: Icon(Icons.add, color: dark ? Colors.white : Colors.black),
                       onPressed: () => setState(() => _numberOfGuests++),
                     ),
                   ],
@@ -278,12 +278,13 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                 TextField(
                   controller: _notesController,
                   maxLines: 3,
+                  style: TextStyle(color: dark ? Colors.white : Colors.black),
                   decoration: InputDecoration(
                     hintText: 'Any special requests...'.tr(),
                     hintStyle: TextStyle(color: Colors.grey.shade400),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
                     ),
                     filled: true,
                     fillColor: dark ? Colors.grey.shade800 : Colors.grey.shade50,
@@ -302,7 +303,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Total Amount:'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text('Total Amount:'.tr(), style: TextStyle(fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black)),
                         Text(
                           '${_calculatedTotal.toStringAsFixed(2)} ${widget.listing.currencyCode}',
                           style: TextStyle(fontWeight: FontWeight.bold, color: Color(colorPrimary), fontSize: 18),
@@ -321,7 +322,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                         Expanded(
                           child: OutlinedButton(
                             onPressed: isLoading ? null : () => Navigator.pop(context),
-                            child: Text('Cancel'.tr()),
+                            child: Text('Cancel'.tr(), style: TextStyle(color: dark ? Colors.white : Colors.black)),
                           ),
                         ),
                         const SizedBox(width: 12),

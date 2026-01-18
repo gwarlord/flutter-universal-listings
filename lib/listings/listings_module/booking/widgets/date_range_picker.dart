@@ -81,6 +81,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Column(
       children: [
         Padding(
@@ -89,7 +90,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                icon: const Icon(Icons.chevron_left),
+                icon: Icon(Icons.chevron_left, color: isDarkMode ? Colors.white : Colors.black),
                 onPressed: () {
                   if (mounted) {
                     setState(() {
@@ -103,13 +104,14 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
               ),
               Text(
                 DateFormat('MMMM yyyy').format(_displayedMonth),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.black,
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.chevron_right),
+                icon: Icon(Icons.chevron_right, color: isDarkMode ? Colors.white : Colors.black),
                 onPressed: () {
                   if (mounted) {
                     setState(() {
@@ -133,18 +135,18 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
               children: [
                 Text(
                   'Start Date: ${DateFormat('MMM dd, yyyy').format(_checkInDate!)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: isDarkMode ? Colors.white : Colors.black),
                 ),
                 if (_checkOutDate != null) ...[
                   const SizedBox(height: 8),
                   Text(
                     'End Date: ${DateFormat('MMM dd, yyyy').format(_checkOutDate!)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: isDarkMode ? Colors.white : Colors.black),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Nights: ${_checkOutDate!.difference(_checkInDate!).inDays}',
-                    style: const TextStyle(color: Colors.grey),
+                    style: TextStyle(color: isDarkMode ? Colors.grey.shade400 : Colors.grey),
                   ),
                 ],
               ],
@@ -156,6 +158,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
   }
 
   Widget _buildCalendar() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final firstDay = DateTime(_displayedMonth.year, _displayedMonth.month, 1);
     final lastDay = DateTime(_displayedMonth.year, _displayedMonth.month + 1, 0);
     final daysInMonth = lastDay.day;
@@ -203,7 +206,9 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
                       ? Colors.blue.withOpacity(0.3)
                       : Colors.transparent,
               border: Border.all(
-                color: isSelected || isCheckOut ? Colors.blue : Colors.grey.shade300,
+                color: isSelected || isCheckOut 
+                    ? Colors.blue 
+                    : (isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300),
               ),
             ),
             child: Center(
@@ -211,10 +216,10 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
                 day.toString(),
                 style: TextStyle(
                   color: isPast || isBooked
-                      ? Colors.grey.shade400
+                      ? (isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400)
                       : isSelected || isCheckOut
                           ? Colors.white
-                          : Colors.black,
+                          : (isDarkMode ? Colors.white : Colors.black),
                   fontWeight: isSelected || isCheckOut ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
