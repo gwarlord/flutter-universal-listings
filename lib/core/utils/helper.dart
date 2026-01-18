@@ -94,6 +94,8 @@ void hideProgress() {
 
 //helper method to show alert dialog
 showAlertDialog(BuildContext context, String title, String content) async {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  
   if (Platform.isIOS) {
     await showCupertinoDialog(
       context: context,
@@ -111,10 +113,20 @@ showAlertDialog(BuildContext context, String title, String content) async {
     await showDialog(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: Text(title),
-        content: Text(content),
+        backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+        title: Text(
+          title,
+          style: TextStyle(color: isDark ? Colors.white : Colors.black),
+        ),
+        content: Text(
+          content,
+          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+        ),
         actions: [
           TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: isDark ? Colors.white : Colors.black,
+              ),
               child: const Text('OK').tr(),
               onPressed: () => Navigator.pop(context))
         ],
