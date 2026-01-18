@@ -51,7 +51,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
 
     final filtered = listings.where((l) {
       final haystack = _buildSearchText(l);
-      return haystack.contains(query);
+      return _fuzzyMatch(query, haystack);
     }).toList();
 
     emit(ListingsFilteredState(filteredListings: filtered));
@@ -110,6 +110,52 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       }
     } catch (_) {}
 
+    // services: include name, duration, price for searchability
+    if (l.services.isNotEmpty) {
+      for (final s in l.services) {
+        b.writeln(s.name);
+        b.writeln(s.duration);
+        b.writeln(s.price);
+      }
+    }
+
     return b.toString().toLowerCase();
   }
+
+  bool _fuzzyMatch(String query, String text) {
+    if (query.isEmpty) return true;
+    if (text.contains(query)) return true;
+    // Basic typo tolerance against tokens
+    final tokens = text.split(RegExp(r'[\s,.;:]+'));
+    for (final token in tokens) {
+      if (token.isEmpty) continue;
+      if (_levenshtein(token, query) <= 1) return true;
+    }
+    return false;
+  }
+
+  int _levenshtein(String a, String b) {
+    if (a == b) return 0;
+    if (a.isEmpty) return b.length;
+    if (b.isEmpty) return a.length;
+    final m = a.length;
+    final n = b.length;
+    List<int> prev = List<int>.generate(n + 1, (j) => j);
+    for (int i = 1; i <= m; i++) {
+      List<int> curr = List<int>.filled(n + 1, 0);
+      curr[0] = i;
+      for (int j = 1; j <= n; j++) {
+        final cost = a[i - 1] == b[j - 1] ? 0 : 1;
+        curr[j] = _min3(
+          curr[j - 1] + 1, // insertion
+          prev[j] + 1, // deletion
+          prev[j - 1] + cost, // substitution
+        );
+      }
+      prev = curr;
+    }
+    return prev[n];
+  }
+
+  int _min3(int a, int b, int c) => a < b ? (a < c ? a : c) : (b < c ? b : c);
 }

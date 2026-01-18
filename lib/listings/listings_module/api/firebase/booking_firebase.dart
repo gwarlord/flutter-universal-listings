@@ -321,8 +321,8 @@ class BookingFirebase extends BookingRepository {
             <p><b>Start Date:</b> $checkInStr</p>
             <p><b>End Date:</b> $checkOutStr</p>
             $servicesHtml
-            <p>Enjoy your stay!</p>
-            <br><p>Best regards,<br>CaribTap Team</p>
+            <p>We appreciate your business.</p>
+            <br><p>Best regards,<br>${booking.listingTitle} Team</p>
           ''';
           break;
 
@@ -330,9 +330,14 @@ class BookingFirebase extends BookingRepository {
           subject = 'Booking Update: ${booking.listingTitle}';
           customerHtml = '''
             <h3>Hello ${booking.customerName},</h3>
-            <p>We're sorry, but your booking request for <b>${booking.listingTitle}</b> was not accepted at this time.</p>
-            <p>Please feel free to browse other listings on CaribTap.</p>
-            <br><p>Best regards,<br>CaribTap Team</p>
+            <p>Thank you for your interest in <b>${booking.listingTitle}</b>.</p>
+            <p>Unfortunately, your booking request cannot be accommodated for the requested dates:</p>
+            <p><b>Start Date:</b> $checkInStr</p>
+            <p><b>End Date:</b> $checkOutStr</p>
+            $servicesHtml
+            <p>We understand this may be disappointing. We encourage you to explore our other wonderful listings that may suit your needs, or consider alternative dates.</p>
+            <p>Thank you for choosing <b>${booking.listingTitle}</b> powered by CaribTap, and we hope to serve you soon.</p>
+            <br><p>Best regards,<br>${booking.listingTitle} Team</p>
           ''';
           break;
 
