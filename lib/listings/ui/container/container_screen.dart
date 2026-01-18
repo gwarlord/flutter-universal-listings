@@ -13,6 +13,8 @@ import 'package:instaflutter/listings/listings_module/categories/categories_scre
 import 'package:instaflutter/listings/listings_module/home/home_screen.dart';
 import 'package:instaflutter/listings/listings_module/map_view/map_view_screen.dart';
 import 'package:instaflutter/listings/listings_module/search/search_screen.dart';
+import 'package:instaflutter/listings/listings_module/my_listings/my_listings_screen.dart';
+import 'package:instaflutter/listings/listings_module/booking_services/booking_services_screen.dart';
 import 'package:instaflutter/listings/ui/profile/profile/profile_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -56,6 +58,9 @@ class _ContainerState extends State<ContainerScreen> {
   int _selectedTapIndex = 0;
   GlobalKey<HomeScreenState> homeKey = GlobalKey();
   late Widget _currentWidget;
+  
+  bool _showProfessionalFeatures = true;
+  bool _showPremiumFeatures = false;
 
   @override
   void initState() {
@@ -74,6 +79,11 @@ class _ContainerState extends State<ContainerScreen> {
       provisional: false,
       sound: true,
     );
+  }
+
+  void _navigateToListingServices(BuildContext context) {
+    Navigator.pop(context); // Close drawer
+    push(context, BookingServicesWrapperWidget(currentUser: currentUser));
   }
 
   @override
@@ -315,6 +325,84 @@ class _ContainerState extends State<ContainerScreen> {
                                       ),
                                     );
                               },
+                            ),
+                            const Divider(height: 16),
+                            
+                            // Professional Features Section
+                            ExpansionTile(
+                              title: Row(
+                                children: [
+                                  Icon(Icons.star, color: Colors.amber, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Professional'.tr(),
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                              initiallyExpanded: _showProfessionalFeatures,
+                              onExpansionChanged: (expanded) {
+                                setState(() => _showProfessionalFeatures = expanded);
+                              },
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      ListTile(
+                                        dense: true,
+                                        title: Text('Booking Services'.tr()),
+                                        leading: const Icon(Icons.room_service, size: 20),
+                                        enabled: currentUser.subscriptionTier == 'professional' || 
+                                                currentUser.subscriptionTier == 'premium' ||
+                                                currentUser.isAdmin,
+                                        onTap: currentUser.subscriptionTier == 'professional' || 
+                                               currentUser.subscriptionTier == 'premium' ||
+                                               currentUser.isAdmin
+                                            ? () => _navigateToListingServices(context)
+                                            : null,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            
+                            // Premium Features Section
+                            ExpansionTile(
+                              title: Row(
+                                children: [
+                                  Icon(Icons.diamond, color: Colors.purple, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Premium'.tr(),
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                              initiallyExpanded: _showPremiumFeatures,
+                              onExpansionChanged: (expanded) {
+                                setState(() => _showPremiumFeatures = expanded);
+                              },
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Coming soon...'.tr(),
+                                        style: TextStyle(
+                                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                          fontSize: 12,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),

@@ -108,90 +108,55 @@ class BookingFirebase extends BookingRepository {
   }) async {
     try {
       final now = DateTime.now();
-      print('🔵 Firebase: Updating booking status - listingId=$listingId, bookingId=$bookingId, status=$status');
       
       // Update in listing's bookings
-      try {
+      await _firestore
+          .collection('listings')
+          .doc(listingId)
+          .collection('bookings')
+          .doc(bookingId)
+          .update({
+        'status': status,
+        'updatedAt': now.toIso8601String(),
+      });
+
+      // Get the booking to update user's collections
+      final bookingDoc = await _firestore
+          .collection('listings')
+          .doc(listingId)
+          .collection('bookings')
+          .doc(bookingId)
+          .get();
+
+      if (bookingDoc.exists) {
+        final booking = BookingModel.fromJson(bookingDoc.data()!);
+
+        // Update in customer's myBookings
         await _firestore
-            .collection('listings')
-            .doc(listingId)
-            .collection('bookings')
+            .collection('users')
+            .doc(booking.customerId)
+            .collection('myBookings')
             .doc(bookingId)
             .update({
           'status': status,
           'updatedAt': now.toIso8601String(),
         });
-        print('✅ Firebase: Updated listing bookings collection');
-      } catch (e) {
-        print('❌ Firebase Error updating listing bookings: $e');
-        rethrow;
-      }
-
-      // Get the booking to update user's collections
-      DocumentSnapshot? bookingDoc;
-      try {
-        bookingDoc = await _firestore
-            .collection('listings')
-            .doc(listingId)
-            .collection('bookings')
-            .doc(bookingId)
-            .get();
-      } catch (e) {
-        print('❌ Firebase Error fetching booking document: $e');
-        rethrow;
-      }
-
-      if (bookingDoc != null && bookingDoc.exists) {
-        final booking = BookingModel.fromJson(bookingDoc.data() as Map<String, dynamic>);
-        print('📖 Firebase: Found booking - customerId=${booking.customerId}, listersUserId=${booking.listersUserId}');
-
-        // Update in customer's myBookings
-        try {
-          await _firestore
-              .collection('users')
-              .doc(booking.customerId)
-              .collection('myBookings')
-              .doc(bookingId)
-              .update({
-            'status': status,
-            'updatedAt': now.toIso8601String(),
-          });
-          print('✅ Firebase: Updated customer myBookings collection');
-        } catch (e) {
-          print('❌ Firebase Error updating customer myBookings: $e');
-          // Don't rethrow - try to continue
-        }
 
         // Update in lister's receivedBookings
-        try {
-          await _firestore
-              .collection('users')
-              .doc(booking.listersUserId)
-              .collection('receivedBookings')
-              .doc(bookingId)
-              .update({
-            'status': status,
-            'updatedAt': now.toIso8601String(),
-          });
-          print('✅ Firebase: Updated lister receivedBookings collection');
-        } catch (e) {
-          print('❌ Firebase Error updating lister receivedBookings: $e');
-          // Don't rethrow - try to continue
-        }
+        await _firestore
+            .collection('users')
+            .doc(booking.listersUserId)
+            .collection('receivedBookings')
+            .doc(bookingId)
+            .update({
+          'status': status,
+          'updatedAt': now.toIso8601String(),
+        });
 
         // ✅ Trigger Status Change Email
-        try {
-          await _triggerBookingEmail(booking, status);
-          print('✅ Firebase: Email notification triggered');
-        } catch (e) {
-          print('⚠️ Firebase Warning - Email trigger error: $e');
-          // Don't rethrow - email is not critical
-        }
-      } else {
-        throw Exception('Booking not found in listing collection');
+        await _triggerBookingEmail(booking, status);
       }
     } catch (e) {
-      print('❌ Firebase Error: $e');
       throw Exception('Failed to update booking status: $e');
     }
   }
@@ -266,8 +231,6 @@ class BookingFirebase extends BookingRepository {
   /// ✅ Internal helper to create email trigger documents in the 'mail' collection
   Future<void> _triggerBookingEmail(BookingModel booking, String status) async {
     try {
-      print('DEBUG: Triggering email for booking: ${booking.id} with status: $status');
-      
       String subject = '';
       String customerHtml = '';
       String listerHtml = '';
@@ -275,29 +238,14 @@ class BookingFirebase extends BookingRepository {
       final checkInStr = booking.checkInDate.toLocal().toString().split(' ')[0];
       final checkOutStr = booking.checkOutDate.toLocal().toString().split(' ')[0];
 
-      // Extract services from guestNotes if present
-      String servicesHtml = '';
-      if (booking.guestNotes.contains('Selected Services:')) {
-        final servicesPart = booking.guestNotes.split('Selected Services:')[1];
-        final services = servicesPart.split('\n').where((s) => s.trim().startsWith('-')).toList();
-        if (services.isNotEmpty) {
-          servicesHtml = '<p><b>Selected Services:</b></p><ul>';
-          for (var service in services) {
-            servicesHtml += '<li>${service.trim().substring(2)}</li>';
-          }
-          servicesHtml += '</ul>';
-        }
-      }
-
       switch (status) {
         case 'pending':
           subject = 'Booking Request: ${booking.listingTitle}';
           customerHtml = '''
             <h3>Hello ${booking.customerName},</h3>
             <p>We've received your booking request for <b>${booking.listingTitle}</b>.</p>
-            <p><b>Start Date:</b> $checkInStr</p>
-            <p><b>End Date:</b> $checkOutStr</p>
-            $servicesHtml
+            <p><b>Check-in:</b> $checkInStr</p>
+            <p><b>Check-out:</b> $checkOutStr</p>
             <p>The lister will review your request and you will receive another email once it's confirmed or rejected.</p>
             <br><p>Best regards,<br>CaribTap Team</p>
           ''';
@@ -305,9 +253,8 @@ class BookingFirebase extends BookingRepository {
             <h3>Hello ${booking.listersName},</h3>
             <p>You have a new booking request for your listing: <b>${booking.listingTitle}</b>.</p>
             <p><b>Customer:</b> ${booking.customerName}</p>
-            <p><b>Start Date:</b> $checkInStr</p>
-            <p><b>End Date:</b> $checkOutStr</p>
-            $servicesHtml
+            <p><b>Check-in:</b> $checkInStr</p>
+            <p><b>Check-out:</b> $checkOutStr</p>
             <p>Please log in to the app to confirm or reject this request.</p>
             <br><p>Best regards,<br>CaribTap Team</p>
           ''';
@@ -318,11 +265,10 @@ class BookingFirebase extends BookingRepository {
           customerHtml = '''
             <h3>Congratulations ${booking.customerName}!</h3>
             <p>Your booking for <b>${booking.listingTitle}</b> has been <b>CONFIRMED</b>.</p>
-            <p><b>Start Date:</b> $checkInStr</p>
-            <p><b>End Date:</b> $checkOutStr</p>
-            $servicesHtml
-            <p>We appreciate your business.</p>
-            <br><p>Best regards,<br>${booking.listingTitle} Team</p>
+            <p><b>Check-in:</b> $checkInStr</p>
+            <p><b>Check-out:</b> $checkOutStr</p>
+            <p>Enjoy your stay!</p>
+            <br><p>Best regards,<br>CaribTap Team</p>
           ''';
           break;
 
@@ -330,14 +276,9 @@ class BookingFirebase extends BookingRepository {
           subject = 'Booking Update: ${booking.listingTitle}';
           customerHtml = '''
             <h3>Hello ${booking.customerName},</h3>
-            <p>Thank you for your interest in <b>${booking.listingTitle}</b>.</p>
-            <p>Unfortunately, your booking request cannot be accommodated for the requested dates:</p>
-            <p><b>Start Date:</b> $checkInStr</p>
-            <p><b>End Date:</b> $checkOutStr</p>
-            $servicesHtml
-            <p>We understand this may be disappointing. We encourage you to explore our other wonderful listings that may suit your needs, or consider alternative dates.</p>
-            <p>Thank you for choosing <b>${booking.listingTitle}</b> powered by CaribTap, and we hope to serve you soon.</p>
-            <br><p>Best regards,<br>${booking.listingTitle} Team</p>
+            <p>We're sorry, but your booking request for <b>${booking.listingTitle}</b> was not accepted at this time.</p>
+            <p>Please feel free to browse other listings on CaribTap.</p>
+            <br><p>Best regards,<br>CaribTap Team</p>
           ''';
           break;
 
@@ -358,9 +299,9 @@ class BookingFirebase extends BookingRepository {
 
       // Send to Customer
       if (customerHtml.isNotEmpty && booking.customerEmail.isNotEmpty) {
-        print('DEBUG: Writing customer email to Firestore for: ${booking.customerEmail}');
         await _firestore.collection('mail').add({
           'to': booking.customerEmail,
+          'from': 'CaribTap <no-reply@caribtap.com>', // ✅ Added explicit FROM name
           'message': {
             'subject': subject,
             'html': customerHtml,
@@ -370,9 +311,9 @@ class BookingFirebase extends BookingRepository {
 
       // Send to Lister
       if (listerHtml.isNotEmpty && booking.listersEmail.isNotEmpty) {
-        print('DEBUG: Writing lister email to Firestore for: ${booking.listersEmail}');
         await _firestore.collection('mail').add({
           'to': booking.listersEmail,
+          'from': 'CaribTap <no-reply@caribtap.com>', // ✅ Added explicit FROM name
           'message': {
             'subject': subject,
             'html': listerHtml,
