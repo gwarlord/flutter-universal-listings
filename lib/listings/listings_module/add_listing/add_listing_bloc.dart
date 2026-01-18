@@ -202,6 +202,8 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
         openingHours: event.openingHours.trim(),
         bookingEnabled: event.bookingEnabled,
         bookingUrl: event.bookingUrl.trim(),
+        services: event.services,
+        blockedDates: event.blockedDates,
         instagram: event.instagram.trim(),
         facebook: event.facebook.trim(),
         tiktok: event.tiktok.trim(),
