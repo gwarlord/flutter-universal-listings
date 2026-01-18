@@ -44,9 +44,9 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
 
   double get _calculatedTotal {
     double total = 0;
-    for (var service in _selectedServices) {
-      total += service.price;
-    }
+    _selectedServicesQuantity.forEach((service, quantity) {
+      total += service.price * quantity;
+    });
     return total;
   }
 
@@ -58,9 +58,9 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
 
     // Build description of selected services
     String servicesNotes = '';
-    if (_selectedServices.isNotEmpty) {
+    if (_selectedServicesQuantity.isNotEmpty) {
       servicesNotes = '\n\nSelected Services:\n' + 
-          _selectedServices.map((s) => '- ${s.name} (${s.price} ${widget.listing.currencyCode})').join('\n');
+          _selectedServicesQuantity.entries.map((e) => '- ${e.value}x ${e.key.name} (${e.key.price} ${widget.listing.currencyCode} each)').join('\n');
     }
 
     final booking = BookingModel(
@@ -165,31 +165,115 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                       separatorBuilder: (context, index) => Divider(height: 1, color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
                       itemBuilder: (context, index) {
                         final service = widget.listing.services[index];
-                        final isSelected = _selectedServices.contains(service);
-                        return CheckboxListTile(
-                          dense: true,
-                          activeColor: Color(colorPrimary),
-                          checkColor: Colors.white,
-                          side: BorderSide(
-                            color: dark ? Colors.grey.shade600 : Colors.grey.shade400,
-                            width: 2,
+                        final isSelected = _selectedServicesQuantity.containsKey(service);
+                        final quantity = _selectedServicesQuantity[service] ?? 1;
+                        
+                        return Container(
+                          color: isSelected ? (dark ? Colors.grey.shade800.withOpacity(0.3) : Colors.grey.shade100) : Colors.transparent,
+                          child: Column(
+                            children: [
+                              CheckboxListTile(
+                                dense: true,
+                                activeColor: Color(colorPrimary),
+                                checkColor: Colors.white,
+                                side: BorderSide(
+                                  color: dark ? Colors.grey.shade600 : Colors.grey.shade400,
+                                  width: 2,
+                                ),
+                                title: Text(service.name, style: TextStyle(color: dark ? Colors.white : Colors.black87, fontWeight: FontWeight.w500)),
+                                subtitle: service.duration.isNotEmpty ? Text(service.duration, style: TextStyle(fontSize: 12, color: dark ? Colors.grey.shade400 : Colors.grey.shade700)) : null,
+                                secondary: Text(
+                                  '${service.price} ${widget.listing.currencyCode}',
+                                  style: TextStyle(color: Color(colorPrimary), fontWeight: FontWeight.bold),
+                                ),
+                                value: isSelected,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      _selectedServicesQuantity[service] = 1;
+                                    } else {
+                                      _selectedServicesQuantity.remove(service);
+                                    }
+                                  });
+                                },
+                              ),
+                              if (isSelected)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 72, right: 16, bottom: 8),
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        'Quantity:',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.remove, size: 18),
+                                              onPressed: quantity > 1 ? () {
+                                                setState(() {
+                                                  _selectedServicesQuantity[service] = quantity - 1;
+                                                });
+                                              } : null,
+                                              padding: const EdgeInsets.all(4),
+                                              constraints: const BoxConstraints(
+                                                minWidth: 32,
+                                                minHeight: 32,
+                                              ),
+                                              color: dark ? Colors.white : Colors.black,
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                                              child: Text(
+                                                '$quantity',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: dark ? Colors.white : Colors.black,
+                                                ),
+                                              ),
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.add, size: 18),
+                                              onPressed: quantity < 99 ? () {
+                                                setState(() {
+                                                  _selectedServicesQuantity[service] = quantity + 1;
+                                                });
+                                              } : null,
+                                              padding: const EdgeInsets.all(4),
+                                              constraints: const BoxConstraints(
+                                                minWidth: 32,
+                                                minHeight: 32,
+                                              ),
+                                              color: dark ? Colors.white : Colors.black,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        '${(service.price * quantity).toStringAsFixed(2)} ${widget.listing.currencyCode}',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(colorPrimary),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
                           ),
-                          title: Text(service.name, style: TextStyle(color: dark ? Colors.white : Colors.black87, fontWeight: FontWeight.w500)),
-                          subtitle: service.duration.isNotEmpty ? Text(service.duration, style: TextStyle(fontSize: 12, color: dark ? Colors.grey.shade400 : Colors.grey.shade700)) : null,
-                          secondary: Text(
-                            '${service.price} ${widget.listing.currencyCode}',
-                            style: TextStyle(color: Color(colorPrimary), fontWeight: FontWeight.bold),
-                          ),
-                          value: isSelected,
-                          onChanged: (bool? value) {
-                            setState(() {
-                              if (value == true) {
-                                _selectedServices.add(service);
-                              } else {
-                                _selectedServices.remove(service);
-                              }
-                            });
-                          },
                         );
                       },
                     ),

@@ -361,6 +361,8 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           'openingHours': event.listingModel.openingHours,
           'bookingEnabled': event.listingModel.bookingEnabled,
           'bookingUrl': event.listingModel.bookingUrl,
+          'services': event.listingModel.services.map((e) => e.toJson()).toList(),
+          'blockedDates': event.listingModel.blockedDates,
           'instagram': event.listingModel.instagram,
           'facebook': event.listingModel.facebook,
           'tiktok': event.listingModel.tiktok,

@@ -208,11 +208,13 @@ class ServiceItem {
   String name;
   double price;
   String duration; // e.g. "30 mins", "1 hour"
+  int quantity;
 
   ServiceItem({
     required this.name,
     required this.price,
     this.duration = '',
+    this.quantity = 1,
   });
 
   factory ServiceItem.fromJson(Map<String, dynamic> json) {
@@ -220,6 +222,7 @@ class ServiceItem {
       name: json['name'] ?? '',
       price: (json['price'] ?? 0.0).toDouble(),
       duration: json['duration'] ?? '',
+      quantity: json['quantity'] ?? 1,
     );
   }
 
@@ -228,6 +231,7 @@ class ServiceItem {
       'name': name,
       'price': price,
       'duration': duration,
+      'quantity': quantity,
     };
   }
 }
