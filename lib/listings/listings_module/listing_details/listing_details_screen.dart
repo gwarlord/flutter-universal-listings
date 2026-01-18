@@ -775,6 +775,82 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                       onX: () => _launchUrl(listing.x),
                     ),
                   ),
+                  // ✅ Services Section
+                  if (listing.services.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16.0, 24, 16, 12),
+                      child: Text(
+                        'Services'.tr(),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Color(colorPrimary),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
+                        ),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: listing.services.length,
+                          separatorBuilder: (context, index) => Divider(height: 1, color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
+                          itemBuilder: (context, index) {
+                            final service = listing.services[index];
+                            return Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          service.name,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: dark ? Colors.white : Colors.black87,
+                                          ),
+                                        ),
+                                        if (service.duration.isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            service.duration,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    '${service.price} ${listing.currencyCode}',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(colorPrimary),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
 
                 Padding(
