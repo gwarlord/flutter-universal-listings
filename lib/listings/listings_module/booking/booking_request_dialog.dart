@@ -303,7 +303,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                       ),
                                     )
                                   else if (isSelected)
-                                    const SizedBox(width: 120),
+                                    const SizedBox(width: 120)
                                   else
                                     const SizedBox(width: 120),
                                   // Subtotal (only show when selected and quantity enabled)
