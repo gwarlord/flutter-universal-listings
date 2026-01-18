@@ -33,8 +33,8 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
   final TextEditingController _notesController = TextEditingController();
   List<DateTime> _bookedDates = [];
   
-  // ✅ Track selected services
-  final List<ServiceItem> _selectedServices = [];
+  // ✅ Track selected services with quantities
+  final Map<ServiceItem, int> _selectedServicesQuantity = {};
 
   @override
   void dispose() {
