@@ -242,12 +242,11 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                               if (isSelected && widget.listing.allowQuantitySelection) ...[
                                 const SizedBox(height: 8),
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
                                     Text(
-                                      'Quantity: ',
+                                      'Qty: ',
                                       style: TextStyle(
-                                        fontSize: 12,
+                                        fontSize: 11,
                                         color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
                                       ),
                                     ),
@@ -263,14 +262,14 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                           padding: const EdgeInsets.all(4),
                                           child: Icon(
                                             Icons.remove,
-                                            size: 16,
+                                            size: 14,
                                             color: quantity > 1 ? Color(colorPrimary) : Colors.grey,
                                           ),
                                         ),
                                       ),
                                     ),
                                     Container(
-                                      width: 32,
+                                      width: 28,
                                       alignment: Alignment.center,
                                       decoration: BoxDecoration(
                                         color: dark ? Colors.grey.shade800 : Colors.grey.shade100,
@@ -279,7 +278,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                       child: Text(
                                         '$quantity',
                                         style: TextStyle(
-                                          fontSize: 13,
+                                          fontSize: 12,
                                           fontWeight: FontWeight.bold,
                                           color: dark ? Colors.white : Colors.black,
                                         ),
@@ -297,19 +296,22 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                           padding: const EdgeInsets.all(4),
                                           child: Icon(
                                             Icons.add,
-                                            size: 16,
+                                            size: 14,
                                             color: quantity < 99 ? Color(colorPrimary) : Colors.grey,
                                           ),
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'Subtotal: ${(service.price * quantity).toStringAsFixed(2)} ${widget.listing.currencyCode}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(colorPrimary),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        'Subtotal: ${(service.price * quantity).toStringAsFixed(2)} ${widget.listing.currencyCode}',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(colorPrimary),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],

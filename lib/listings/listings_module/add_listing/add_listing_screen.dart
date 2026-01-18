@@ -328,6 +328,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
             ),
           ),
           activeColor: Color(colorPrimary),
+          activeTrackColor: Color(colorPrimary).withOpacity(0.5),
+          inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
+          inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
         ),
         if (_bookingEnabled)
           SwitchListTile(
@@ -346,6 +349,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
               ),
             ),
             activeColor: Color(colorPrimary),
+            activeTrackColor: Color(colorPrimary).withOpacity(0.5),
+            inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
+            inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
           ),
       ],
     );
