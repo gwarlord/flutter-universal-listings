@@ -8,6 +8,8 @@ class ListingsUser extends User {
   bool isAdmin;
   String subscriptionTier;
   bool suspended;
+  DateTime? subscriptionExpiresAt;
+  String? revenueCatCustomerId;
 
   List<String> likedListingsIDs;
 
@@ -25,6 +27,8 @@ class ListingsUser extends User {
     this.isAdmin = false,
     this.subscriptionTier = 'free',
     this.suspended = false,
+    this.subscriptionExpiresAt,
+    this.revenueCatCustomerId,
     this.likedListingsIDs = const [],
   }) : super(
           firstName: firstName,
@@ -59,8 +63,14 @@ class ListingsUser extends User {
       profilePictureURL: parsedJson['profilePictureURL'] ?? '',
       pushToken: parsedJson['pushToken'] ?? '',
       isAdmin: parsedJson['isAdmin'] ?? false,
-        subscriptionTier: parsedJson['subscriptionTier']?.toString() ?? 'free',
+      subscriptionTier: parsedJson['subscriptionTier']?.toString() ?? 'free',
       suspended: parsedJson['suspended'] ?? false,
+      subscriptionExpiresAt: parsedJson['subscriptionExpiresAt'] != null
+          ? (parsedJson['subscriptionExpiresAt'] is Timestamp
+              ? (parsedJson['subscriptionExpiresAt'] as Timestamp).toDate()
+              : DateTime.tryParse(parsedJson['subscriptionExpiresAt'].toString()))
+          : null,
+      revenueCatCustomerId: parsedJson['revenueCatCustomerId']?.toString(),
       likedListingsIDs:
           List<String>.from(parsedJson['likedListingsIDs'] ?? const []),
     );
@@ -77,6 +87,10 @@ class ListingsUser extends User {
       'id': userID,
       'active': active,
       'lastOnlineTimestamp': lastOnlineTimestamp,
+      'subscriptionExpiresAt': subscriptionExpiresAt != null
+          ? Timestamp.fromDate(subscriptionExpiresAt!)
+          : null,
+      'revenueCatCustomerId': revenueCatCustomerId,
       'profilePictureURL': profilePictureURL,
       'appIdentifier': appIdentifier,
       'pushToken': pushToken,
@@ -86,4 +100,27 @@ class ListingsUser extends User {
       'likedListingsIDs': likedListingsIDs,
     };
   }
-}
+
+  // Subscription helper methods
+  bool get isFree => subscriptionTier.toLowerCase() == 'free';
+  bool get isProfessional => subscriptionTier.toLowerCase() == 'professional';
+  bool get isPremium => subscriptionTier.toLowerCase() == 'premium';
+  
+  bool get isSubscriptionActive {
+    // Admins always have active access
+    if (isAdmin) return true;
+    
+    // Free tier is always active
+    if (subscriptionTier.toLowerCase() == 'free') return true;
+    
+    // For paid tiers without expiration date (legacy or manually set), treat as active
+    // This handles users set to professional/premium in Firestore before RevenueCat integration
+    if (subscriptionExpiresAt == null && !isFree) return true;
+    
+    // Check if subscription hasn't expired
+    return DateTime.now().isBefore(subscriptionExpiresAt!);
+  }
+
+  bool get hasBookingServices => (isProfessional || isPremium) && isSubscriptionActive;
+  bool get hasAdvancedAnalytics => isPremium && isSubscriptionActive;
+  bool get hasPrioritySupport => isPremium && isSubscriptionActive;}

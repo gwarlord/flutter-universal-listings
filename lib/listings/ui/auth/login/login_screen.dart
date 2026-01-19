@@ -5,6 +5,7 @@ import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
 import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/listings_app_config.dart';
+import 'package:instaflutter/listings/services/revenue_cat_service.dart';
 import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 import 'package:instaflutter/listings/ui/auth/login/login_bloc.dart';
 import 'package:instaflutter/listings/ui/auth/phone_auth/number_input/phone_number_input_screen.dart';
@@ -57,9 +58,18 @@ class _LoginScreen extends State<LoginScreen> {
       child: MultiBlocListener(
         listeners: [
           BlocListener<AuthenticationBloc, AuthenticationState>(
-            listener: (context, state) {
+            listener: (context, state) async {
               context.read<LoadingCubit>().hideLoading();
               if (state.authState == AuthState.authenticated) {
+                // Initialize RevenueCat after successful login
+                try {
+                  await RevenueCatService().initialize(userId: state.user!.userID);
+                  print('✅ RevenueCat initialized for ${state.user!.userID}');
+                } catch (e) {
+                  print('⚠️ RevenueCat initialization failed: $e');
+                  // Don't block login if RevenueCat fails
+                }
+                
                 if (mounted) {
                   pushAndRemoveUntil(
                     context,

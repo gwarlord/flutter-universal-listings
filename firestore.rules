@@ -14,8 +14,9 @@ service cloud.firestore {
     
     function isAdmin() {
       return isSignedIn() && 
-             exists(/databases/$(database)/documents/admins/admins) &&
-             request.auth.uid in get(/databases/$(database)/documents/admins/admins).data.adminUserIds;
+             (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
+              (exists(/databases/$(database)/documents/admins/admins) &&
+               request.auth.uid in get(/databases/$(database)/documents/admins/admins).data.adminUserIds));
     }
     
     function hasSubscription(tier) {
