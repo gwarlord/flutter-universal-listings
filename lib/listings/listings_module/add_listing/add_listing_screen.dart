@@ -1026,6 +1026,47 @@ class _AddListingScreenState extends State<AddListingScreen> {
               _buildServiceMenuEditor(isDarkMode(context)),
               const SizedBox(height: 20),
 
+              // Time Blocks Editor (only if booking with time blocks is enabled)
+              if (_bookingEnabled && _useTimeBlocks) ...[
+                _buildSectionHeader('Time Blocks'.tr()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Define hourly time slots (e.g., 09:00-10:00, 10:00-11:00)',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ..._timeBlocks.map((block) => Chip(
+                            label: Text(block),
+                            deleteIcon: Icon(Icons.close, size: 18),
+                            onDeleted: () => setState(() => _timeBlocks.remove(block)),
+                            backgroundColor: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+                            labelStyle: TextStyle(color: dark ? Colors.white : Colors.black87),
+                          )),
+                          ActionChip(
+                            label: Text('+ Add Time Block'),
+                            onPressed: () => _showAddTimeBlockDialog(dark),
+                            backgroundColor: Color(colorPrimary).withOpacity(0.1),
+                            labelStyle: TextStyle(color: Color(colorPrimary)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+
               // Blocked dates (only if booking enabled)
               if (_bookingEnabled) ...[
                 _buildBlockedDatesEditor(isDarkMode(context)),

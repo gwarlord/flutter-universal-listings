@@ -16,6 +16,7 @@ import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/core/model/user.dart';
 import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:instaflutter/listings/services/revenue_cat_service.dart';
 import 'package:instaflutter/listings/ui/auth/api/authentication_repository.dart';
 import 'package:instaflutter/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -80,6 +81,13 @@ class AuthFirebaseUtils extends AuthenticationRepository {
         user.pushToken = await firebaseMessaging.getToken() ?? '';
       }
         await _updateCurrentUser(user);
+        
+        // Initialize RevenueCat for this user
+        try {
+          await RevenueCatService().initialize(userId: user.userID);
+        } catch (e) {
+          debugPrint('❌ Failed to initialize RevenueCat: $e');
+        }
       }
       return user;
     } on auth.FirebaseAuthException catch (e, s) {

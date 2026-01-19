@@ -83,10 +83,15 @@ class _EditUserSubscriptionScreenState extends State<EditUserSubscriptionScreen>
       _error = null;
     });
     try {
+      print('💾 Updating subscription for ${_loadedUser!.userID} to $_selectedTier');
+      
       await FirebaseFirestore.instance
           .collection(usersCollection)
           .doc(_loadedUser!.userID)
           .set({'subscriptionTier': _selectedTier}, SetOptions(merge: true));
+      
+      print('✅ Subscription updated successfully');
+      
       setState(() {
         _loadedUser = _loadedUser!..subscriptionTier = _selectedTier;
         _isSaving = false;
@@ -99,8 +104,10 @@ class _EditUserSubscriptionScreenState extends State<EditUserSubscriptionScreen>
         ),
       );
     } catch (e) {
+      print('❌ Error updating subscription: $e');
+      print('📋 Stack trace: ${StackTrace.current}');
       setState(() {
-        _error = 'Failed to update subscription.';
+        _error = 'Failed to update subscription: ${e.toString()}';
         _isSaving = false;
       });
     }
