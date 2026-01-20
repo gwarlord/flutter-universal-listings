@@ -17,6 +17,7 @@ import 'package:instaflutter/listings/listings_module/my_listings/my_listings_sc
 import 'package:instaflutter/listings/listings_module/home/home_screen.dart';
 import 'package:instaflutter/listings/listings_module/booking/my_bookings_screen.dart';
 import 'package:instaflutter/listings/listings_module/booking/booking_management_screen.dart';
+import 'package:instaflutter/listings/ui/container/container_screen.dart';
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
 import 'package:instaflutter/listings/ui/profile/account_details/account_details_screen.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
@@ -68,7 +69,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onPressed: () {
                     pushAndRemoveUntil(
                       context,
-                      HomeScreen(currentUser: currentUser),
+                      ContainerWrapperWidget(currentUser: currentUser),
                       false,
                     );
                   },
@@ -81,7 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onPressed: () {
                     pushAndRemoveUntil(
                       context,
-                      HomeScreen(currentUser: currentUser),
+                      ContainerWrapperWidget(currentUser: currentUser),
                       false,
                     );
                   },
