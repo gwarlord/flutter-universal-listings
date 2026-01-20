@@ -136,29 +136,32 @@ class _PaywallScreenState extends State<PaywallScreen> {
               ),
               const SizedBox(height: 16),
               
-              // Monthly Plan
+              // Monthly Plan (Professional)
               _buildPlanCard(
-                'Monthly',
+                'Professional',
                 '\$9.99',
                 'per month',
                 '\$rc_monthly',
+                tierLabel: 'Professional',
               ),
               
-              // Yearly Plan (Best Value)
+              // Yearly Plan (Premium - Best Value)
               _buildPlanCard(
-                'Yearly',
+                'Premium',
                 '\$99.99',
                 'per year',
                 '\$rc_annual',
+                tierLabel: 'Premium',
                 isBestValue: true,
               ),
               
               // Lifetime Plan
               _buildPlanCard(
-                'Lifetime',
+                'Premium Lifetime',
                 '\$299.99',
-                'one-time',
+                'one-time purchase',
                 '\$rc_lifetime',
+                tierLabel: 'Premium',
               ),
               
               const SizedBox(height: 20),
@@ -205,7 +208,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 
-  Widget _buildPlanCard(String title, String price, String duration, String identifier, {bool isBestValue = false}) {
+  Widget _buildPlanCard(String title, String price, String duration, String identifier, {bool isBestValue = false, String? tierLabel}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -431,8 +434,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
         print('   Expires: ${freshUser.subscriptionExpiresAt}');
         print('   RevenueCat ID: ${freshUser.revenueCatCustomerId}');
         
-        // Update the auth bloc with fresh user data
-        context.read<AuthenticationBloc>().user = freshUser;
+        // Update the auth bloc with fresh user data - emit event to trigger rebuild
+        context.read<AuthenticationBloc>().add(
+          UpdateAuthUserEvent(freshUser),
+        );
         
         // Also update the widget's current user for context
         widget.currentUser.subscriptionTier = freshUser.subscriptionTier;

@@ -313,58 +313,6 @@ class _ContainerState extends State<ContainerScreen> {
                                   },
                                 ),
                                 const SizedBox(height: 8),
-                                sectionLabel('Premium Features'.tr()),
-                                if (currentUser.isAdmin || const ['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase()))
-                                  ListTile(
-                                    selected: _drawerSelection == DrawerSelection.home,
-                                    title: Row(
-                                      children: [
-                                        const Icon(Icons.analytics, size: 20),
-                                        const SizedBox(width: 12),
-                                        Text('Advanced Analytics'.tr()),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Color(colorPrimary).withOpacity(0.2),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            'Premium',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: Color(colorPrimary),
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      push(context, AnalyticsScreen(currentUser: currentUser));
-                                    },
-                                  )
-                                else
-                                  ListTile(
-                                    title: Row(
-                                      children: [
-                                        const Icon(Icons.analytics, size: 20),
-                                        const SizedBox(width: 12),
-                                        Text('Advanced Analytics'.tr()),
-                                        const Spacer(),
-                                        Icon(Icons.lock, size: 16, color: Colors.grey),
-                                      ],
-                                    ),
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      _showUpgradeDialog(context, 'Advanced Analytics', 'Premium');
-                                    },
-                                  ),
-                                const SizedBox(height: 8),
                                 sectionLabel('Browse'.tr()),
                                 ListTile(
                                   selected: _drawerSelection == DrawerSelection.home,
@@ -611,8 +559,10 @@ class _ContainerState extends State<ContainerScreen> {
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
-                                                const SizedBox(width: 8),
-                                                Icon(Icons.lock, size: 16, color: Colors.grey[600]),
+                                                if (!currentUser.isAdmin && !['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase()))
+                                                  const SizedBox(width: 8),
+                                                if (!currentUser.isAdmin && !['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase()))
+                                                  Icon(Icons.lock, size: 16, color: Colors.grey[600]),
                                               ],
                                             ),
                                             leading: const Icon(Icons.analytics, size: 20),
@@ -633,7 +583,11 @@ class _ContainerState extends State<ContainerScreen> {
                                             ),
                                             onTap: () {
                                               Navigator.pop(context);
-                                              _showUpgradeDialog(context, 'Advanced Analytics', 'Premium');
+                                              if (currentUser.isAdmin || ['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase())) {
+                                                push(context, AnalyticsScreen(currentUser: currentUser));
+                                              } else {
+                                                _showUpgradeDialog(context, 'Advanced Analytics', 'Premium');
+                                              }
                                             },
                                           ),
                                           ListTile(

@@ -2,8 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:instaflutter/constants.dart';
+import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 
@@ -61,10 +61,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       int ratedListings = 0;
 
       for (var listing in listings) {
-        totalViews += listing.viewCount ?? 0;
+        // Note: viewCount is not tracked in current model, using 0
+        // totalViews += listing.viewCount ?? 0;
         totalLikes += widget.currentUser.likedListingsIDs.contains(listing.id) ? 1 : 0;
-        if ((listing.rating ?? 0) > 0) {
-          totalRating += listing.rating ?? 0;
+        if ((listing.reviewsCount ?? 0) > 0) {
+          final avgRating = (listing.reviewsSum ?? 0) / (listing.reviewsCount ?? 1);
+          totalRating += avgRating;
           ratedListings++;
         }
       }
@@ -109,10 +111,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Color(colorPrimary).withOpacity(0.1),
+                        color: Color(cfg.colorPrimary).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: Color(colorPrimary).withOpacity(0.3),
+                          color: Color(cfg.colorPrimary).withOpacity(0.3),
                         ),
                       ),
                       child: Row(
@@ -121,13 +123,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           Icon(
                             Icons.star,
                             size: 16,
-                            color: Color(colorPrimary),
+                            color: Color(cfg.colorPrimary),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'Premium Feature'.tr(),
                             style: TextStyle(
-                              color: Color(colorPrimary),
+                              color: Color(cfg.colorPrimary),
                               fontWeight: FontWeight.w600,
                               fontSize: 12,
                             ),
@@ -258,7 +260,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         children: [
           Icon(
             icon,
-            color: Color(colorPrimary),
+            color: Color(cfg.colorPrimary),
             size: 28,
           ),
           Column(
@@ -349,7 +351,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '${listing.viewCount ?? 0} views',
+                      'Listing',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -363,7 +365,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '${(listing.rating ?? 0).toStringAsFixed(1)} stars',
+                      listing.reviewsCount != null && listing.reviewsCount! > 0
+                          ? '${((listing.reviewsSum ?? 0) / (listing.reviewsCount ?? 1)).toStringAsFixed(1)} stars (${listing.reviewsCount} reviews)'
+                          : 'No ratings',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],

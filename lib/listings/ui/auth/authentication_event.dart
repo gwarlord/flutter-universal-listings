@@ -56,3 +56,9 @@ class UserDeletedEvent extends AuthenticationEvent {}
 class FinishedOnBoardingEvent extends AuthenticationEvent {}
 
 class CheckFirstRunEvent extends AuthenticationEvent {}
+
+class UpdateAuthUserEvent extends AuthenticationEvent {
+  ListingsUser updatedUser;
+
+  UpdateAuthUserEvent(this.updatedUser);
+}
