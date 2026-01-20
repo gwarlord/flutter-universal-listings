@@ -22,7 +22,9 @@ import 'package:instaflutter/listings/ui/subscription/paywall_screen.dart';
 import 'package:instaflutter/listings/ui/subscription/customer_center_screen.dart';
 import 'package:instaflutter/listings/listings_module/analytics/analytics_screen.dart';
 import 'package:instaflutter/listings/listings_module/analytics/advanced_analytics_screen.dart';
+import 'package:instaflutter/listings/listings_module/chat_settings/chat_settings_screen.dart';
 import 'package:instaflutter/listings/ui/profile/profile/profile_screen.dart';
+import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
 import 'package:provider/provider.dart';
 
 enum DrawerSelection { home, conversations, categories, search, profile }
@@ -683,8 +685,14 @@ class _ContainerState extends State<ContainerScreen> {
                                             onTap: () {
                                               Navigator.pop(context);
                                               if (currentUser.hasDirectMessaging) {
-                                                // Navigate to chat settings (conversations with premium features)
-                                                push(context, ConversationsWrapperWidget(user: currentUser));
+                                                // Navigate to chat settings screen for managing listing chat toggles
+                                                push(
+                                                  context,
+                                                  ChatSettingsScreen(
+                                                    currentUser: currentUser,
+                                                    listingsRepository: listingsApiManager,
+                                                  ),
+                                                );
                                               } else {
                                                 _showUpgradeDialog(context, 'Chat Settings', 'Premium');
                                               }
