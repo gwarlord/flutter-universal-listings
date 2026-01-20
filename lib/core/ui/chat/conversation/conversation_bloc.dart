@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:instaflutter/core/model/channel_data_model.dart';
 import 'package:instaflutter/core/model/chat_feed_model.dart';
 import 'package:instaflutter/core/model/user.dart';
+import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/core/ui/chat/api/chat_repository.dart';
 
 part 'conversation_event.dart';
@@ -76,36 +77,50 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
     });
 
     on<FriendTapEvent>((event, emit) async {
-      String channelID;
-      if (event.friend.userID.compareTo(currentUser.userID) < 0) {
-        channelID = event.friend.userID + currentUser.userID;
-      } else {
-        channelID = currentUser.userID + event.friend.userID;
-      }
+      final channelID = _generateChannelID(currentUser.userID, event.friend.userID, event.listing?.id);
+      
       ChannelDataModel channelDataModel = await chatRepository.getChannelById(
           channelID, [event.friend], currentUser.userID);
+      
+      // If we have a listing context, make sure the channel name reflects it
+      if (event.listing != null) {
+        channelDataModel.name = '${event.listing!.title} - ${event.friend.fullName()}';
+      }
+      
       emit(FriendTapState(channelDataModel: channelDataModel));
     });
+
     on<FetchFriendByIDEvent>((event, emit) async {
       User? friend = await chatRepository.getUserByID(event.friendID);
       if (friend != null) {
-        String channelID;
-        if (friend.userID.compareTo(currentUser.userID) < 0) {
-          channelID = friend.userID + currentUser.userID;
-        } else {
-          channelID = currentUser.userID + friend.userID;
-        }
+        final channelID = _generateChannelID(currentUser.userID, friend.userID, event.listing?.id);
+        
         ChannelDataModel channelDataModel = await chatRepository.getChannelById(
             channelID, [friend], currentUser.userID);
+            
+        // If we have a listing context, make sure the channel name reflects it
+        if (event.listing != null) {
+          channelDataModel.name = '${event.listing!.title} - ${friend.fullName()}';
+        }
+            
         emit(FriendTapState(channelDataModel: channelDataModel));
       }
     });
   }
 
+  String _generateChannelID(String id1, String id2, String? listingID) {
+    List<String> ids = [id1, id2];
+    ids.sort();
+    String baseID = ids.join();
+    if (listingID != null && listingID.isNotEmpty) {
+      return '${baseID}_$listingID';
+    }
+    return baseID;
+  }
+
   @override
   Future<void> close() async {
     chatRepository.cleanConversationStreams();
-    // friendsStreamSub?.cancel();
     conversationsStreamSub?.cancel();
     super.close();
   }
