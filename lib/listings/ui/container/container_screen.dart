@@ -690,7 +690,7 @@ class _ContainerState extends State<ContainerScreen> {
                                                   context,
                                                   ChatSettingsScreen(
                                                     currentUser: currentUser,
-                                                    listingsRepository: listingsApiManager,
+                                                    listingsRepository: listingApiManager,
                                                   ),
                                                 );
                                               } else {
