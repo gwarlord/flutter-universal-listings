@@ -410,14 +410,57 @@ class ChatFireStoreUtils extends ChatRepository {
   createChannel(
       {required ChannelDataModel channelDataModel,
       required User currentUser}) async {
-    if (channelDataModel.isGroupChat) {
-      channelDataModel.admins = [];
-    } else {
-      channelDataModel.admins = null;
+    try {
+      if (channelDataModel.isGroupChat) {
+        channelDataModel.admins = [];
+      } else {
+        channelDataModel.admins = null;
+      }
+      
+      // Direct Firestore write instead of cloud function
+      await firestore
+          .collection(chatChannelsCollection)
+          .doc(channelDataModel.channelID)
+          .set({
+        'id': channelDataModel.channelID,
+        'channelID': channelDataModel.channelID,
+        'name': channelDataModel.name,
+        'creatorID': channelDataModel.creatorID,
+        'participants': channelDataModel.participants.map((p) => p.userID).toList(),
+        'participantProfilePictureURLs': channelDataModel.participantProfilePictureURLs
+            .map((p) => {'profilePictureURL': p.profilePictureURL, 'participantId': p.participantId})
+            .toList(),
+        'lastMessage': channelDataModel.lastMessage,
+        'lastMessageDate': channelDataModel.lastMessageDate,
+        'readUserIDs': channelDataModel.readUserIDs,
+        'createdAt': Timestamp.now().seconds,
+        'admins': channelDataModel.admins,
+      });
+      
+      // Create chat feed entries for each participant
+      for (var participant in channelDataModel.participants) {
+        await firestore
+            .collection(socialFeedsCollection)
+            .doc(participant.userID)
+            .collection(chatFeedLiveCollection)
+            .doc(channelDataModel.channelID)
+            .set({
+          'id': channelDataModel.channelID,
+          'participants': channelDataModel.participants
+              .where((p) => p.userID != participant.userID)
+              .map((p) => p.toJson())
+              .toList(),
+          'createdAt': Timestamp.now().seconds,
+          'markedAsRead': false,
+          'content': {
+            'content': '',
+            'createdAt': Timestamp.now().seconds,
+          },
+        });
+      }
+    } catch (e, s) {
+      debugPrint('ChatFireStoreUtils.createChannel error: $e $s');
     }
-    await functions
-        .httpsCallable('createChannel')
-        .call(channelDataModel.toJson(currentUser));
   }
 
   Future<String> _uploadVideoThumbnailToFireStorage(File file) async {
