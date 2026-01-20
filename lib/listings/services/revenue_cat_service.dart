@@ -243,6 +243,8 @@ class RevenueCatService {
   /// Update user subscription in Firestore based on CustomerInfo
   Future<void> _updateUserSubscription(String userId, CustomerInfo customerInfo) async {
     try {
+      print('💾 Starting subscription update for user: $userId');
+      
       // Check if user is admin - don't override admin subscriptions
       final userDoc = await _firestore.collection('users').doc(userId).get();
       if (userDoc.exists) {
@@ -254,6 +256,7 @@ class RevenueCatService {
       }
       
       final tier = await getSubscriptionTier();
+      print('📊 Determined subscription tier: $tier');
       
       DateTime? expiresAt;
       if (customerInfo.entitlements.all.isNotEmpty) {
@@ -262,18 +265,22 @@ class RevenueCatService {
         
         if (activeEntitlement.expirationDate != null) {
           expiresAt = DateTime.parse(activeEntitlement.expirationDate!);
+          print('📅 Subscription expires: $expiresAt');
         }
       }
       
+      // Update Firestore
       await _firestore.collection('users').doc(userId).update({
         'subscriptionTier': tier,
         'subscriptionExpiresAt': expiresAt != null ? Timestamp.fromDate(expiresAt) : null,
         'revenueCatCustomerId': customerInfo.originalAppUserId,
       });
 
-      print('✅ Updated Firestore subscription for user $userId to $tier');
+      print('✅ Successfully updated Firestore subscription for user $userId to $tier');
     } catch (e) {
       print('❌ Error updating user subscription in Firestore: $e');
+      print('❌ Stack: ${StackTrace.current}');
+      rethrow; // Re-throw so caller knows it failed
     }
   }
 
