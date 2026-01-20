@@ -2,6 +2,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -16,7 +17,7 @@ import 'package:instaflutter/core/ui/chat/conversation/conversation_bloc.dart';
 import 'package:instaflutter/core/ui/full_screen_image_viewer/full_screen_image_viewer.dart';
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
 import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
+import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listing_review_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
@@ -117,6 +118,11 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     _buildMediaList();
 
     context.read<ListingDetailsBloc>().add(GetListingReviewsEvent());
+
+    // Increment view count (don't count owner's own views)
+    if (currentUser.userID != listing.authorID) {
+      _incrementViewCount();
+    }
 
     if (_mediaList.length > 1) {
       _startAutoScroll();
@@ -1093,6 +1099,20 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     _mapController?.dispose();
     _videoController?.dispose();
     super.dispose();
+  }
+
+  Future<void> _incrementViewCount() async {
+    try {
+      await FirebaseFirestore.instance
+          .collection(cfg.listingsCollection)
+          .doc(listing.id)
+          .update({
+        'viewCount': FieldValue.increment(1),
+      });
+      print('✅ View count incremented for listing: ${listing.id}');
+    } catch (e) {
+      print('❌ Error incrementing view count: $e');
+    }
   }
 
   void _onMapCreated(GoogleMapController controller) {

@@ -23,7 +23,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Map<String, dynamic> _analytics = {
     'totalListings': 0,
     'totalViews': 0,
-    'totalLikes': 0,
+    'totalFavorites': 0,
     'averageRating': 0.0,
   };
 
@@ -56,14 +56,32 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
       // Calculate analytics
       int totalViews = 0;
-      int totalLikes = 0;
+      int totalFavorites = 0;
       double totalRating = 0;
       int ratedListings = 0;
 
+      // Count favorites across all users for this user's listings
+      final listingIds = listings.map((l) => l.id).toList();
+      if (listingIds.isNotEmpty) {
+        final usersSnap = await _firestore.collection('users').get();
+        for (var userDoc in usersSnap.docs) {
+          try {
+            final likedListings = List<String>.from(userDoc.data()['likedListingsIDs'] ?? []);
+            for (var listingId in listingIds) {
+              if (likedListings.contains(listingId)) {
+                totalFavorites++;
+              }
+            }
+          } catch (e) {
+            // Skip users with invalid data
+          }
+        }
+      }
+
       for (var listing in listings) {
-        // Note: viewCount is not tracked in current model, using 0
-        // totalViews += listing.viewCount ?? 0;
-        totalLikes += widget.currentUser.likedListingsIDs.contains(listing.id) ? 1 : 0;
+        // Count views
+        totalViews += listing.viewCount;
+        
         if ((listing.reviewsCount ?? 0) > 0) {
           final avgRating = (listing.reviewsSum ?? 0) / (listing.reviewsCount ?? 1);
           totalRating += avgRating;
@@ -75,7 +93,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         _analytics = {
           'totalListings': listings.length,
           'totalViews': totalViews,
-          'totalLikes': totalLikes,
+          'totalFavorites': totalFavorites,
           'averageRating': ratedListings > 0 ? totalRating / ratedListings : 0.0,
         };
         _isLoading = false;
@@ -171,8 +189,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         ),
                         _buildAnalyticsCard(
                           icon: Icons.favorite,
-                          title: 'Total Likes'.tr(),
-                          value: _analytics['totalLikes'].toString(),
+                          title: 'Total Favorites'.tr(),
+                          value: _analytics['totalFavorites'].toString(),
                           dark: dark,
                         ),
                         _buildAnalyticsCard(

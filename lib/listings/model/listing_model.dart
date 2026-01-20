@@ -67,6 +67,9 @@ class ListingModel {
   num reviewsCount;
   num reviewsSum;
 
+  /// Analytics
+  int viewCount;
+
   /// Region
   String countryCode;
 
@@ -116,6 +119,7 @@ class ListingModel {
     this.verified = false,
     this.reviewsCount = 0,
     this.reviewsSum = 0,
+    this.viewCount = 0,
     this.countryCode = '',
   }) : createdAt = createdAt ?? Timestamp.now().seconds;
 
@@ -167,6 +171,7 @@ class ListingModel {
       verified: json['verified'] ?? false,
       reviewsCount: json['reviewsCount'] ?? 0,
       reviewsSum: json['reviewsSum'] ?? 0,
+      viewCount: json['viewCount'] ?? 0,
       countryCode: json['countryCode'] ?? '',
     );
   }
@@ -215,6 +220,7 @@ class ListingModel {
       'verified': verified,
       'reviewsCount': reviewsCount,
       'reviewsSum': reviewsSum,
+      'viewCount': viewCount,
       'countryCode': countryCode,
     };
   }

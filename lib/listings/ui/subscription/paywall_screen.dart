@@ -342,9 +342,15 @@ class _PaywallScreenState extends State<PaywallScreen> {
         
         if (mounted) {
           print('✅ Subscription updated, navigating back to refresh UI');
+          
+          // Build welcome message based on subscription tier
+          final tierName = widget.currentUser.subscriptionTier == 'premium' 
+              ? 'Premium' 
+              : 'Professional';
+          
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Welcome to CaribTap Pro!'.tr()),
+              content: Text('Welcome to CaribTap $tierName!'.tr()),
               backgroundColor: Colors.green,
               duration: const Duration(seconds: 2),
             ),
