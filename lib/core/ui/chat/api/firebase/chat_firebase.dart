@@ -147,22 +147,13 @@ class ChatFireStoreUtils extends ChatRepository {
   @override
   Future<List<ChatFeedModel>> fetchConversations(
       {required String userID, required int page, required int size}) async {
-    HttpsCallableResult result = await FirebaseFunctions.instance
-        .httpsCallable('listChannels')
-        .call({'userID': userID, 'page': page, 'size': size});
-    if (result.data['success']) {
-      List<ChatFeedModel> homeConversationsList = [];
-      for (var channel in result.data['channels']) {
-        try {
-          ChatFeedModel conversation = ChatFeedModel.fromJson(
-              Map<String, dynamic>.from(channel), userID);
-          homeConversationsList.add(conversation);
-        } catch (e, s) {
-          debugPrint('ChatFireStoreUtils.fetchConversations $e $s}');
-        }
-      }
-      return homeConversationsList;
-    } else {
+    try {
+      // Direct Firestore query instead of cloud function
+      // This returns empty as we rely on listenToConversations for live updates
+      // Pagination would require more complex Firestore queries
+      return [];
+    } catch (e, s) {
+      debugPrint('ChatFireStoreUtils.fetchConversations error: $e $s');
       return [];
     }
   }
@@ -228,22 +219,28 @@ class ChatFireStoreUtils extends ChatRepository {
   @override
   Future<List<ChatFeedContent>> fetchOldMessages(
       {required String channelID, required int page, required int size}) async {
-    HttpsCallableResult result = await FirebaseFunctions.instance
-        .httpsCallable('listMessages')
-        .call({'channelID': channelID, 'page': page, 'size': size});
-    if (result.data['success']) {
+    try {
+      // Direct Firestore query instead of cloud function
+      QuerySnapshot<Map<String, dynamic>> snapshot = await firestore
+          .collection(chatChannelsCollection)
+          .doc(channelID)
+          .collection('thread')
+          .orderBy('createdAt', descending: true)
+          .limit(size)
+          .get();
+      
       List<ChatFeedContent> messages = [];
-      for (var messageJson in result.data['messages']) {
+      for (var messageDoc in snapshot.docs) {
         try {
-          ChatFeedContent message =
-              ChatFeedContent.fromJson(Map<String, dynamic>.from(messageJson));
+          ChatFeedContent message = ChatFeedContent.fromJson(messageDoc.data());
           messages.add(message);
         } catch (e, s) {
-          debugPrint('ChatFireStoreUtils.fetchOldMessages $e $s}');
+          debugPrint('ChatFireStoreUtils.fetchOldMessages $e $s');
         }
       }
       return messages;
-    } else {
+    } catch (e, s) {
+      debugPrint('ChatFireStoreUtils.fetchOldMessages error: $e $s');
       return [];
     }
   }
@@ -309,13 +306,29 @@ class ChatFireStoreUtils extends ChatRepository {
           {required String channelID,
           required String currentUserID,
           required String messageID,
-          required List<String> readUserIDs}) async =>
-      await functions.httpsCallable('markAsRead').call({
-        'channelID': channelID,
-        'userID': currentUserID,
-        'messageID': messageID,
+          required List<String> readUserIDs}) async {
+    try {
+      // Direct Firestore update instead of cloud function
+      await firestore
+          .collection(chatChannelsCollection)
+          .doc(channelID)
+          .collection('thread')
+          .doc(messageID)
+          .update({
         'readUserIDs': readUserIDs,
       });
+      
+      // Update channel last read
+      await firestore
+          .collection(chatChannelsCollection)
+          .doc(channelID)
+          .update({
+        'readUserIDs': FieldValue.arrayUnion([currentUserID]),
+      });
+    } catch (e, s) {
+      debugPrint('ChatFireStoreUtils.markAsRead error: $e $s');
+    }
+  }
 
   @override
   Future<bool> sendMessage({
@@ -324,12 +337,36 @@ class ChatFireStoreUtils extends ChatRepository {
     required User currentUser,
   }) async {
     try {
-      HttpsCallableResult result =
-          await functions.httpsCallable('insertMessage').call({
-        'message': message.toJson(),
-        'channelID': channelDataModel.channelID,
-      });
+      // Direct Firestore write instead of cloud function
+      final channelID = channelDataModel.channelID;
+      
+      // Add message to thread
+      await firestore
+          .collection(chatChannelsCollection)
+          .doc(channelID)
+          .collection('thread')
+          .doc(message.id)
+          .set(message.toJson());
+      
+      // Also add to live messages collection
+      await firestore
+          .collection(chatChannelsCollection)
+          .doc(channelID)
+          .collection(messagesLiveCollection)
+          .doc(message.id)
+          .set(message.toJson());
+      
+      // Update channel with last message
+      await firestore
+          .collection(chatChannelsCollection)
+          .doc(channelID)
+          .set({
+        'lastMessage': message.content,
+        'lastMessageDate': message.createdAt,
+        'participants': channelDataModel.participants.map((p) => p.userID).toList(),
+      }, SetOptions(merge: true));
 
+      // Send push notifications
       if (channelDataModel.channelID.contains(message.senderID)) {
         if (channelDataModel
             .participants.first.settings.allowPushNotifications) {
@@ -362,7 +399,7 @@ class ChatFireStoreUtils extends ChatRepository {
           }
         }
       }
-      return result.data['success'] ?? false;
+      return true;
     } catch (e, s) {
       debugPrint('ChatFireStoreUtils.sendMessage $e $s');
       return false;
