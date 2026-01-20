@@ -155,6 +155,21 @@ class _BookingServicesScreenState extends State<BookingServicesScreen> {
               },
               dark: dark,
             ),
+            const SizedBox(height: 12),
+            // Enable Chat Toggle
+            _buildToggleTile(
+              title: 'Enable Chat'.tr(),
+              subtitle: 'Allow customers to message you directly'.tr(),
+              value: listing.chatEnabled ?? true,
+              onChanged: _isUpdating ? null : (value) {
+                final updated = listing.copyWith(chatEnabled: value);
+                _updateListing(updated);
+                setState(() {
+                  _listings = _listings.map((l) => l.id == listing.id ? updated : l).toList();
+                });
+              },
+              dark: dark,
+            ),
 
             if (listing.bookingEnabled ?? false) ...[
               const SizedBox(height: 12),
