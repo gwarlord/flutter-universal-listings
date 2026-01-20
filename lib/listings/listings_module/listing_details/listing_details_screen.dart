@@ -1156,10 +1156,11 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   }
 
   void _showChatUnlockDialog(BuildContext context) {
+    final isDark = isDarkMode(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: dark ? Colors.grey[900] : Colors.white,
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
         title: Row(
           children: [
             Icon(Icons.lock, color: Color(cfg.colorPrimary)),
@@ -1167,21 +1168,21 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
             Expanded(
               child: Text(
                 'Premium Feature',
-                style: TextStyle(color: dark ? Colors.white : Colors.black),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black),
               ),
             ),
           ],
         ),
         content: Text(
           'Direct messaging is a Premium feature. Upgrade to connect directly with sellers and buyers!',
-          style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
+          style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(
               'Cancel'.tr(),
-              style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
+              style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
             ),
           ),
           ElevatedButton(
