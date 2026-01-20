@@ -146,7 +146,9 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         // Allow any authenticated user to create a conversation feed for another user (when starting a chat)
         allow create: if isSignedIn();
-        allow update, delete: if isOwner(userId);
+        // Allow updates if user is authenticated (they're updating as a chat participant)
+        allow update: if isSignedIn();
+        allow delete: if isOwner(userId);
       }
     }
     
