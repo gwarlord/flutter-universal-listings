@@ -121,7 +121,8 @@ class _ChatScreenState extends State<ChatScreen> {
         .read<ChatBloc>()
         .add(SetupChatListeners(channelDataModel: channelDataModel));
 
-    if (!channelDataModel.readUserIDs.contains(currentUser.userID)) {
+    if (!channelDataModel.readUserIDs.contains(currentUser.userID) && 
+        channelDataModel.id.isNotEmpty) {
       channelDataModel.readUserIDs.add(currentUser.userID);
       context.read<ChatBloc>().add(
         MarkChatAsReadEvent(
