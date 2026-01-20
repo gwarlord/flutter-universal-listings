@@ -31,6 +31,7 @@ import 'package:instaflutter/listings/listings_module/booking/booking_event.dart
 import 'package:instaflutter/listings/listings_module/booking/booking_request_dialog.dart';
 import 'package:instaflutter/listings/listings_module/api/booking_api_manager.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
+import 'package:instaflutter/listings/ui/subscription/paywall_screen.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
@@ -374,12 +375,23 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                               Icons.chat,
                               color: adaptiveTextColor,
                             ),
+                            trailing: !currentUser.hasDirectMessaging
+                                ? Icon(
+                                    Icons.lock,
+                                    size: 16,
+                                    color: Colors.orange,
+                                  )
+                                : null,
                             title: Text(
                               'Send Message'.tr(),
                               style: TextStyle(fontSize: 18, color: adaptiveTextColor),
                             ),
                             onTap: () {
                               Navigator.pop(context);
+                              if (!currentUser.hasDirectMessaging) {
+                                _showChatUnlockDialog(context);
+                                return;
+                              }
                               context.read<ConversationsBloc>().add(
                                 FetchFriendByIDEvent(
                                   friendID: listing.authorID,
@@ -1141,6 +1153,58 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
               '{"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#515c6d"}]},'
               '{"featureType":"water","elementType":"labels.text.stroke","stylers":[{"lightness":-20}]}]');
     }
+  }
+
+  void _showChatUnlockDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: dark ? Colors.grey[900] : Colors.white,
+        title: Row(
+          children: [
+            Icon(Icons.lock, color: Color(cfg.colorPrimary)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Premium Feature',
+                style: TextStyle(color: dark ? Colors.white : Colors.black),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Direct messaging is a Premium feature. Upgrade to connect directly with sellers and buyers!',
+          style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Cancel'.tr(),
+              style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(cfg.colorPrimary),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PaywallScreen(
+                    currentUser: currentUser,
+                  ),
+                ),
+              );
+            },
+            child: Text('Upgrade Now'.tr()),
+          ),
+        ],
+      ),
+    );
   }
 
   deleteListing(BuildContext blocContext) {

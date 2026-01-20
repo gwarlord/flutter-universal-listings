@@ -8,6 +8,7 @@ import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/ui/container/container_bloc.dart';
 import 'package:instaflutter/core/ui/chat/conversation/conversations_screen.dart';
+import 'package:instaflutter/core/ui/chat/premium_unlock_chat_screen.dart';
 import 'package:instaflutter/listings/listings_module/add_listing/add_listing_screen.dart';
 import 'package:instaflutter/listings/listings_module/categories/categories_screen.dart';
 import 'package:instaflutter/listings/listings_module/home/home_screen.dart';
@@ -90,6 +91,64 @@ class _ContainerState extends State<ContainerScreen> {
   void _navigateToListingServices(BuildContext context) {
     Navigator.pop(context); // Close drawer
     push(context, BookingServicesWrapperWidget(currentUser: currentUser));
+  }
+
+  void _showPremiumUnlockDialog(BuildContext context, String featureName, String description) {
+    final dark = isDarkMode(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: dark ? Colors.grey[900] : Colors.white,
+        title: Row(
+          children: [
+            Icon(Icons.lock, color: Color(colorPrimary)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                featureName,
+                style: TextStyle(color: dark ? Colors.white : Colors.black),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          description,
+          style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel'.tr(),
+              style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(colorPrimary),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(context);
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PaywallScreen(
+                    currentUser: currentUser,
+                  ),
+                ),
+              );
+              if (result == true) {
+                setState(() {
+                  _selectedTapIndex = 2;
+                });
+              }
+            },
+            child: Text('Upgrade to Premium'.tr()),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showUpgradeDialog(BuildContext context, String featureName, String requiredTier) {
@@ -224,14 +283,15 @@ class _ContainerState extends State<ContainerScreen> {
                                 ));
                             break;
                           case 2:
+                            // Direct Messaging - Premium Feature
                             context.read<ContainerBloc>().add(TabSelectedEvent(
-                                  appBarTitle: 'Conversations'.tr(),
+                                  appBarTitle: 'Chats'.tr(),
                                   currentTabIndex: 2,
                                   drawerSelection:
                                       DrawerSelection.conversations,
-                                  currentWidget: ConversationsWrapperWidget(
-                                    user: currentUser,
-                                  ),
+                                  currentWidget: currentUser.hasDirectMessaging
+                                      ? ConversationsWrapperWidget(user: currentUser)
+                                      : PremiumUnlockChatScreen(currentUser: currentUser),
                                 ));
                             break;
                           case 3:
@@ -254,8 +314,14 @@ class _ContainerState extends State<ContainerScreen> {
                             icon: const Icon(Icons.category),
                             label: 'Categories'.tr()),
                         BottomNavigationBarItem(
-                            icon: const Icon(Icons.message),
-                            label: 'Conversations'.tr()),
+                            icon: currentUser.hasDirectMessaging
+                                ? const Icon(Icons.message)
+                                : Badge(
+                                    label: const Icon(Icons.lock, size: 10, color: Colors.white),
+                                    backgroundColor: Colors.orange,
+                                    child: const Icon(Icons.message),
+                                  ),
+                            label: 'Chats'.tr()),
                         BottomNavigationBarItem(
                             icon: const Icon(Icons.search),
                             label: 'Search'.tr()),
