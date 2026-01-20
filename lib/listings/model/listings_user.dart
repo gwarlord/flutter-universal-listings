@@ -124,7 +124,7 @@ class ListingsUser extends User {
   // Feature access helpers
   // Note: Premium users get ALL professional features plus premium-only features
   bool get hasBookingServices => (isProfessional || isPremium) && isSubscriptionActive;
-  bool get hasAdvancedAnalytics => isPremium && isSubscriptionActive;
+  bool get hasAdvancedAnalytics => (isPremium && isSubscriptionActive) || isAdmin;
   bool get hasPrioritySupport => isPremium && isSubscriptionActive;
-  bool get hasDirectMessaging => isPremium && isSubscriptionActive;
+  bool get hasDirectMessaging => (isPremium && isSubscriptionActive) || isAdmin;
 }

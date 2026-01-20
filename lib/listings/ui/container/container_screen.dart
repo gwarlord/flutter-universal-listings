@@ -420,16 +420,24 @@ class _ContainerState extends State<ContainerScreen> {
                                 ListTile(
                                   selected: _drawerSelection == DrawerSelection.conversations,
                                   leading: const Icon(Icons.message),
-                                  title: Text('Conversations'.tr()),
+                                  trailing: !currentUser.hasDirectMessaging
+                                      ? Icon(
+                                          Icons.lock,
+                                          size: 16,
+                                          color: Colors.orange,
+                                        )
+                                      : null,
+                                  title: Text('Chats'.tr()),
                                   onTap: () {
                                     Navigator.pop(context);
                                     context.read<ContainerBloc>().add(
                                           TabSelectedEvent(
-                                            appBarTitle: 'Conversations'.tr(),
+                                            appBarTitle: 'Chats'.tr(),
                                             currentTabIndex: 2,
                                             drawerSelection: DrawerSelection.conversations,
-                                            currentWidget: ConversationsWrapperWidget(
-                                                user: currentUser),
+                                            currentWidget: currentUser.hasDirectMessaging
+                                                ? ConversationsWrapperWidget(user: currentUser)
+                                                : PremiumUnlockChatScreen(currentUser: currentUser),
                                           ),
                                         );
                                   },
