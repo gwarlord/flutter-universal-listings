@@ -18,6 +18,7 @@ import 'package:instaflutter/listings/listings_module/add_listing/add_listing_bl
 import 'package:instaflutter/listings/listings_module/add_listing/add_listing_event.dart';
 import 'package:instaflutter/listings/listings_module/add_listing/add_listing_state.dart';
 import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
+import 'package:instaflutter/listings/services/gemini_ai_service.dart';
 import 'package:instaflutter/listings/listings_module/filters/filters_screen.dart';
 import 'package:instaflutter/listings/model/categories_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
@@ -666,6 +667,45 @@ class _AddListingScreenState extends State<AddListingScreen> {
     );
   }
 
+  Future<void> _showAIDescriptionDialog(BuildContext context, bool dark) async {
+    final title = _titleController.text.trim();
+    final category = _categoryValue?.title ?? '';
+    final existingDesc = _descController.text.trim();
+    final location = _placeDetail?.formattedAddress ?? _selectedPrediction?.description ?? '';
+    final services = _services.map((s) => s.name).toList();
+
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter a title first'.tr())),
+      );
+      return;
+    }
+
+    if (category.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please select a category first'.tr())),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _AIDescriptionSheet(
+        title: title,
+        category: category,
+        existingDescription: existingDesc,
+        location: location,
+        services: services,
+        onAccept: (generatedText) {
+          setState(() => _descController.text = generatedText);
+        },
+        isDark: dark,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
@@ -888,6 +928,28 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   hint: 'Describe your listing...'.tr(),
                 ),
               ),
+              const SizedBox(height: 8),
+              // AI Enhancement Buttons
+              if (GeminiAIService().isReady)
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.auto_awesome, size: 18),
+                        label: Text(
+                          _descController.text.trim().isEmpty ? 'Generate with AI' : 'Enhance with AI',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Color(colorPrimary),
+                          side: BorderSide(color: Color(colorPrimary).withOpacity(0.5)),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                        onPressed: () => _showAIDescriptionDialog(context, dark),
+                      ),
+                    ),
+                  ],
+                ),
 
               _buildSectionHeader('Details & Hours'.tr()),
               InkWell(
@@ -1845,6 +1907,268 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
           ),
         );
       },
+    );
+  }
+}
+
+// AI Description Generation Bottom Sheet
+class _AIDescriptionSheet extends StatefulWidget {
+  final String title;
+  final String category;
+  final String? existingDescription;
+  final String? location;
+  final List<String> services;
+  final Function(String) onAccept;
+  final bool isDark;
+
+  const _AIDescriptionSheet({
+    required this.title,
+    required this.category,
+    this.existingDescription,
+    this.location,
+    this.services = const [],
+    required this.onAccept,
+    required this.isDark,
+  });
+
+  @override
+  State<_AIDescriptionSheet> createState() => _AIDescriptionSheetState();
+}
+
+class _AIDescriptionSheetState extends State<_AIDescriptionSheet> {
+  bool _isGenerating = false;
+  String? _generatedText;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _generateDescription();
+  }
+
+  Future<void> _generateDescription() async {
+    setState(() {
+      _isGenerating = true;
+      _error = null;
+    });
+
+    try {
+      final hasExisting = widget.existingDescription?.isNotEmpty ?? false;
+      
+      final result = hasExisting
+          ? await GeminiAIService().enhanceDescription(
+              description: widget.existingDescription!,
+              category: widget.category,
+            )
+          : await GeminiAIService().generateListingDescription(
+              title: widget.title,
+              category: widget.category,
+              location: widget.location,
+              services: widget.services,
+            );
+
+      setState(() {
+        _generatedText = result;
+        _isGenerating = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isGenerating = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: widget.isDark ? Colors.grey[900] : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) {
+          return Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              
+              // Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.auto_awesome,
+                      color: Color(colorPrimary),
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'AI Generated Description',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: widget.isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.close,
+                        color: widget.isDark ? Colors.white : Colors.black,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const Divider(height: 1),
+              
+              // Content
+              Expanded(
+                child: _isGenerating
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              color: Color(colorPrimary),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Generating description...',
+                              style: TextStyle(
+                                color: widget.isDark ? Colors.grey[400] : Colors.grey[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _error != null
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    size: 64,
+                                    color: Colors.red[300],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Failed to generate description',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: widget.isDark ? Colors.white : Colors.black,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _error!,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: widget.isDark ? Colors.grey[400] : Colors.grey[700],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  ElevatedButton.icon(
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Try Again'),
+                                    onPressed: _generateDescription,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Color(colorPrimary),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : SingleChildScrollView(
+                            controller: scrollController,
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: widget.isDark ? Colors.grey[850] : Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: widget.isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    _generatedText ?? '',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      height: 1.5,
+                                      color: widget.isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton.icon(
+                                        icon: const Icon(Icons.refresh),
+                                        label: const Text('Regenerate'),
+                                        onPressed: _generateDescription,
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Color(colorPrimary),
+                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      flex: 2,
+                                      child: ElevatedButton.icon(
+                                        icon: const Icon(Icons.check),
+                                        label: const Text('Use This'),
+                                        onPressed: () {
+                                          widget.onAccept(_generatedText ?? '');
+                                          Navigator.pop(context);
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Color(colorPrimary),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
