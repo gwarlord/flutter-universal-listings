@@ -308,6 +308,12 @@ class ChatFireStoreUtils extends ChatRepository {
           required String messageID,
           required List<String> readUserIDs}) async {
     try {
+      // Guard against empty channelID
+      if (channelID.isEmpty) {
+        debugPrint('ChatFireStoreUtils.markAsRead: channelID is empty, skipping');
+        return;
+      }
+      
       // Direct Firestore update instead of cloud function
       await firestore
           .collection(chatChannelsCollection)
