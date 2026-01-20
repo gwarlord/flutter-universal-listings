@@ -338,27 +338,29 @@ class _PaywallScreenState extends State<PaywallScreen> {
       
       if (customerInfo != null && mounted) {
         // 🔄 Refresh user data from Firestore to get updated subscription
+        // This happens after purchasePackage already updated Firestore
         await _refreshUserData();
         
         if (mounted) {
-          print('✅ Subscription updated, navigating back to refresh UI');
+          print('✅ Subscription updated, profile refreshed');
           
-          // Build welcome message based on subscription tier
+          // Build welcome message based on updated subscription tier
           final tierName = widget.currentUser.subscriptionTier == 'premium' 
               ? 'Premium' 
-              : 'Professional';
+              : widget.currentUser.subscriptionTier == 'professional'
+              ? 'Professional'
+              : 'Pro';
           
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Welcome to CaribTap $tierName!'.tr()),
+              content: Text('Welcome to CaribTap $tierName! 🎉'.tr()),
               backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
+              duration: const Duration(seconds: 3),
             ),
           );
-          // Pop twice: close paywall, then close any parent screen to force rebuild
+          
+          // Return true to indicate successful purchase and profile update
           Navigator.pop(context, true);
-          // Give a moment for the Firestore update to fully propagate
-          await Future.delayed(const Duration(milliseconds: 500));
         }
       } else {
         setState(() => _isLoading = false);
@@ -425,30 +427,27 @@ class _PaywallScreenState extends State<PaywallScreen> {
   Future<void> _refreshUserData() async {
     try {
       print('🔄 Refreshing user data from Firestore...');
-      // Add small delay to ensure Firestore write is complete
-      await Future.delayed(const Duration(milliseconds: 500));
       
+      // Force fetch from server (not cache) to get latest subscription data
       final doc = await FirebaseFirestore.instance
           .collection(usersCollection)
           .doc(widget.currentUser.userID)
-          .get(GetOptions(source: Source.server)); // Force server read
+          .get(const GetOptions(source: Source.server)); // Force server read
       
       if (doc.exists && mounted) {
         final freshUser = ListingsUser.fromJson(doc.data()!);
-        print('✅ User refreshed successfully');
-        print('   Subscription Tier: ${freshUser.subscriptionTier}');
-        print('   Expires: ${freshUser.subscriptionExpiresAt}');
-        print('   RevenueCat ID: ${freshUser.revenueCatCustomerId}');
+        print('✅ User profile refreshed successfully');
+        print('   📊 Subscription Tier: ${freshUser.subscriptionTier}');
+        print('   📅 Expires: ${freshUser.subscriptionExpiresAt}');
+        print('   🆔 RevenueCat ID: ${freshUser.revenueCatCustomerId}');
+        print('   ✅ Has Booking Services: ${freshUser.hasBookingServices}');
         
-        // Update the auth bloc with fresh user data - emit event to trigger rebuild
+        // Update the auth bloc with fresh user data - this triggers a rebuild of all listeners
         context.read<AuthenticationBloc>().add(
           UpdateAuthUserEvent(freshUser),
         );
         
-        // Also update the widget's current user for context
-        widget.currentUser.subscriptionTier = freshUser.subscriptionTier;
-        widget.currentUser.subscriptionExpiresAt = freshUser.subscriptionExpiresAt;
-        widget.currentUser.revenueCatCustomerId = freshUser.revenueCatCustomerId;
+        print('✅ Authentication state updated with new subscription');
       } else {
         print('❌ User document not found in Firestore');
       }

@@ -245,8 +245,8 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                 ChatWrapperWidget(
                   channelDataModel: state.channelDataModel,
                   currentUser: currentUser,
-                  colorAccent: Color(colorAccent),
-                  colorPrimary: Color(colorPrimary),
+                  colorAccent: Color(cfg.colorAccent),
+                  colorPrimary: Color(cfg.colorPrimary),
                 ),
               );
             }
@@ -283,7 +283,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                           leading: Icon(
                             Icons.favorite,
                             color: listing.isFav
-                                ? Color(colorPrimary)
+                                ? Color(cfg.colorPrimary)
                                 : adaptiveTextColor,
                           ),
                           title: Text(
@@ -307,7 +307,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             contentPadding: const EdgeInsets.all(0),
                             leading: Icon(
                               Icons.edit,
-                              color: dark ? Color(colorPrimary) : Colors.black,
+                              color: dark ? Color(cfg.colorPrimary) : Colors.black,
                             ),
                             title: Text(
                               'Edit Listing'.tr(),
@@ -544,7 +544,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                               alignment: Alignment.bottomCenter,
                               child: SmoothPageIndicator(
                                 effect: ColorTransitionEffect(
-                                  activeDotColor: Color(colorPrimary),
+                                  activeDotColor: Color(cfg.colorPrimary),
                                   dotHeight: 8,
                                   dotWidth: 8,
                                   dotColor: Colors.grey.shade300,
@@ -627,7 +627,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w700,
-                              color: Color(colorPrimary),
+                              color: Color(cfg.colorPrimary),
                             ),
                           ),
                         ),
@@ -666,7 +666,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                               icon: const Icon(Icons.event_available),
                               label: const Text('Book Now'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(colorPrimary),
+                                backgroundColor: Color(cfg.colorPrimary),
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                               ),
@@ -686,7 +686,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                         color: dark ? Colors.grey.shade900 : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: Color(colorPrimary).withOpacity(0.3),
+                          color: Color(cfg.colorPrimary).withOpacity(0.3),
                           width: 1,
                         ),
                       ),
@@ -703,7 +703,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Color(colorPrimary),
+                              color: Color(cfg.colorPrimary),
                             ),
                           ),
                         ],
@@ -721,7 +721,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
-                          color: Color(colorPrimary),
+                          color: Color(cfg.colorPrimary),
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -760,7 +760,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: Color(colorPrimary),
+                        color: Color(cfg.colorPrimary),
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -769,7 +769,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: _ContactHoursCard(
                       listing: listing,
-                      colorPrimary: Color(colorPrimary),
+                      colorPrimary: Color(cfg.colorPrimary),
                       isDark: dark,
                       onCall: () => _launchPhone(listing.phone),
                       onEmail: () => _launchEmail(listing.email),
@@ -796,7 +796,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
-                                  color: Color(colorPrimary),
+                                  color: Color(cfg.colorPrimary),
                                   letterSpacing: 0.5,
                                 ),
                               ),
@@ -815,7 +815,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             tooltip: _servicesExpanded ? 'Collapse' : 'Expand',
                             icon: Icon(
                               _servicesExpanded ? Icons.expand_less : Icons.expand_more,
-                              color: Color(colorPrimary),
+                              color: Color(cfg.colorPrimary),
                             ),
                             onPressed: () => setState(() => _servicesExpanded = !_servicesExpanded),
                           ),
@@ -874,7 +874,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(colorPrimary),
+                                        color: Color(cfg.colorPrimary),
                                       ),
                                     ),
                                   ],
@@ -895,7 +895,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      color: Color(colorPrimary),
+                      color: Color(cfg.colorPrimary),
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -975,7 +975,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: Color(colorPrimary),
+                        color: Color(cfg.colorPrimary),
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -998,7 +998,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                         itemBuilder: (context, index) => FilterDetailsWidget(
                           filter: listing.filters.entries.elementAt(index),
                           isDark: dark,
-                          colorPrimary: Color(colorPrimary),
+                          colorPrimary: Color(cfg.colorPrimary),
                           isLast: index == listing.filters.entries.length - 1,
                         ),
                       ),
@@ -1013,7 +1013,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      color: Color(colorPrimary),
+                      color: Color(cfg.colorPrimary),
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -1068,7 +1068,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                                   .add(GetListingReviewsEvent());
                             }
                           },
-                          colorPrimary: Color(colorPrimary),
+                          colorPrimary: Color(cfg.colorPrimary),
                         ),
                       );
                     } else {
@@ -1166,7 +1166,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   context,
                   'Deleting...'.tr(),
                   false,
-                  Color(colorPrimary),
+                  Color(cfg.colorPrimary),
                 );
                 blocContext.read<ListingDetailsBloc>().add(DeleteListingEvent());
               },
@@ -1198,7 +1198,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   context,
                   'Deleting...'.tr(),
                   false,
-                  Color(colorPrimary),
+                  Color(cfg.colorPrimary),
                 );
                 blocContext.read<ListingDetailsBloc>().add(DeleteListingEvent());
               },
@@ -1691,11 +1691,11 @@ class ReviewWidget extends StatelessWidget {
             rating: review.starCount,
             itemBuilder: (context, index) => Icon(
               Icons.star,
-              color: Color(colorPrimary),
+              color: Color(cfg.colorPrimary),
             ),
             itemCount: 5,
             itemSize: 20.0,
-            unratedColor: Color(colorPrimary).withOpacity(.3),
+            unratedColor: Color(cfg.colorPrimary).withOpacity(.3),
             direction: Axis.horizontal,
           ),
         ),

@@ -267,7 +267,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   bool _canUseBooking() {
     if (currentUser.isAdmin) return true;
-    const bookingTiers = {'pro', 'premium', 'business'};
+    const bookingTiers = {'professional', 'premium', 'business'};
     return bookingTiers.contains(currentUser.subscriptionTier.toLowerCase());
   }
 
