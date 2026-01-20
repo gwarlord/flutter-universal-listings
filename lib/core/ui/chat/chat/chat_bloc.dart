@@ -50,6 +50,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       try {
         if (event.page == -1) {
           if (channelDataModel.channelID.isNotEmpty) {
+            // Cancel existing subscription to prevent duplicates
+            await messagesStreamSub?.cancel();
             messagesStreamSub = chatRepository
                 .listenToMessages(channelID: channelDataModel.channelID)
                 .listen((listOfLiveMessages) {
