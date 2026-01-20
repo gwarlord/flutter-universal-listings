@@ -338,13 +338,6 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
                           Colors.orange,
                           dark,
                         ),
-                        _buildMetricCard(
-                          'Chat Enabled',
-                          '${_advancedMetrics['chatEnabledCount'] ?? 0}/${_advancedMetrics['totalListings'] ?? 0}',
-                          Icons.chat_bubble,
-                          Colors.purple,
-                          dark,
-                        ),
                       ],
                     ),
 
