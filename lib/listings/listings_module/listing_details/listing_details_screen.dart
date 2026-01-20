@@ -819,10 +819,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                           ),
                         ),
                         onPressed: () {
-                          if (!currentUser.hasDirectMessaging) {
-                            _showChatUnlockDialog(context);
-                            return;
-                          }
+                          // Anyone can message a premium lister without premium subscription
                           context.read<ConversationsBloc>().add(
                             FetchFriendByIDEvent(
                               friendID: listing.authorID,
