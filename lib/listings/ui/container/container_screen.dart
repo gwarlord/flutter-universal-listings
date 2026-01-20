@@ -19,6 +19,7 @@ import 'package:instaflutter/listings/listings_module/booking/my_bookings_screen
 import 'package:instaflutter/listings/listings_module/booking/booking_management_screen.dart';
 import 'package:instaflutter/listings/ui/subscription/paywall_screen.dart';
 import 'package:instaflutter/listings/ui/subscription/customer_center_screen.dart';
+import 'package:instaflutter/listings/listings_module/analytics/analytics_screen.dart';
 import 'package:instaflutter/listings/ui/profile/profile/profile_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -311,6 +312,58 @@ class _ContainerState extends State<ContainerScreen> {
                                     );
                                   },
                                 ),
+                                const SizedBox(height: 8),
+                                sectionLabel('Premium Features'.tr()),
+                                if (currentUser.isAdmin || const ['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase()))
+                                  ListTile(
+                                    selected: _drawerSelection == DrawerSelection.home,
+                                    title: Row(
+                                      children: [
+                                        const Icon(Icons.analytics, size: 20),
+                                        const SizedBox(width: 12),
+                                        Text('Advanced Analytics'.tr()),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Color(colorPrimary).withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            'Premium',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: Color(colorPrimary),
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      push(context, AnalyticsScreen(currentUser: currentUser));
+                                    },
+                                  )
+                                else
+                                  ListTile(
+                                    title: Row(
+                                      children: [
+                                        const Icon(Icons.analytics, size: 20),
+                                        const SizedBox(width: 12),
+                                        Text('Advanced Analytics'.tr()),
+                                        const Spacer(),
+                                        Icon(Icons.lock, size: 16, color: Colors.grey),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      _showUpgradeDialog(context, 'Advanced Analytics', 'Premium');
+                                    },
+                                  ),
                                 const SizedBox(height: 8),
                                 sectionLabel('Browse'.tr()),
                                 ListTile(
