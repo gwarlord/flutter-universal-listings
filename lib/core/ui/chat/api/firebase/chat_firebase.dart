@@ -212,7 +212,16 @@ class ChatFireStoreUtils extends ChatRepository {
           debugPrint('ChatFireStoreUtils.listenToMessages $e, $s');
         }
       }
-      messagesStream.add(messages);
+      if (!messagesStream.isClosed) {
+        messagesStream.add(messages);
+      }
+    }, onDone: () {
+      messagesStream.close();
+    }, onError: (error) {
+      if (!messagesStream.isClosed) {
+        messagesStream.addError(error);
+      }
+      messagesStream.close();
     });
     chatStreamSubs.add(messagesStreamSub);
     yield* messagesStream.stream;
