@@ -406,7 +406,8 @@ class ChatFireStoreUtils extends ChatRepository {
               'click_action': 'FLUTTER_NOTIFICATION_CLICK',
               'id': '1',
               'status': 'done',
-              'channelDataModel': channelDataModel.toJson(currentUser),
+              'channelID': channelDataModel.channelID,
+              'senderID': message.senderID,
             },
           );
         }
@@ -421,7 +422,8 @@ class ChatFireStoreUtils extends ChatRepository {
                 'click_action': 'FLUTTER_NOTIFICATION_CLICK',
                 'id': '1',
                 'status': 'done',
-                'channelDataModel': channelDataModel.toJson(currentUser),
+                'channelID': channelDataModel.channelID,
+                'senderID': message.senderID,
               },
             );
           }
