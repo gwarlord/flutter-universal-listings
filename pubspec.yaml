@@ -71,6 +71,7 @@ dependencies:
   lints: ^6.0.0
   purchases_flutter: ^9.10.7
   purchases_ui_flutter: ^9.10.7
+  google_generative_ai: ^0.4.6
 
 #dependency_overrides:
  # http: 0.13.4

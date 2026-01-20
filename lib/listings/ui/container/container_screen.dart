@@ -283,22 +283,27 @@ class _ContainerState extends State<ContainerScreen> {
                                         color: Color(colorPrimary),
                                       ),
                                       child: Column(
+                                        mainAxisSize: MainAxisSize.min,
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           displayCircleImage(
-                                              user.profilePictureURL, 65, false),
+                                              user.profilePictureURL, 50, false),
                                           Padding(
-                                            padding: const EdgeInsets.only(top: 8.0),
+                                            padding: const EdgeInsets.only(top: 4.0),
                                             child: Text(
                                               user.fullName(),
                                               style: const TextStyle(color: Colors.white),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
                                             ),
                                           ),
                                           Padding(
-                                            padding: const EdgeInsets.only(top: 8.0),
+                                            padding: const EdgeInsets.only(top: 2.0),
                                             child: Text(
                                               user.email,
-                                              style: const TextStyle(color: Colors.white),
+                                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
                                             ),
                                           ),
                                         ],

@@ -1,8 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/services/revenue_cat_service.dart';
+import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 /// Custom Paywall Screen with native Flutter UI
@@ -330,6 +334,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
       final customerInfo = await RevenueCatService().purchasePackage(package);
       
       if (customerInfo != null && mounted) {
+        // 🔄 Refresh user data from Firestore to get updated subscription
+        await _refreshUserData();
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Welcome to CaribTap Pro!'.tr()),
@@ -360,6 +367,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
           .entitlements.all[RevenueCatService.caribTapProEntitlement]?.isActive ?? false;
       
       if (hasActiveSubscription) {
+        // 🔄 Refresh user data from Firestore
+        await _refreshUserData();
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -392,6 +402,26 @@ class _PaywallScreenState extends State<PaywallScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _refreshUserData() async {
+    try {
+      print('🔄 Refreshing user data from Firestore...');
+      final doc = await FirebaseFirestore.instance
+          .collection(usersCollection)
+          .doc(widget.currentUser.userID)
+          .get();
+      
+      if (doc.exists && mounted) {
+        final freshUser = ListingsUser.fromJson(doc.data()!);
+        print('✅ User refreshed: ${freshUser.subscriptionTier}');
+        
+        // Update the auth bloc with fresh user data
+        context.read<AuthenticationBloc>().user = freshUser;
+      }
+    } catch (e) {
+      print('❌ Error refreshing user: $e');
     }
   }
 }
