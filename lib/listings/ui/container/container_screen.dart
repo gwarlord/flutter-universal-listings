@@ -283,15 +283,13 @@ class _ContainerState extends State<ContainerScreen> {
                                 ));
                             break;
                           case 2:
-                            // Direct Messaging - Premium Feature
+                            // Direct Messaging
                             context.read<ContainerBloc>().add(TabSelectedEvent(
                                   appBarTitle: 'Chats'.tr(),
                                   currentTabIndex: 2,
                                   drawerSelection:
                                       DrawerSelection.conversations,
-                                  currentWidget: currentUser.hasDirectMessaging
-                                      ? ConversationsWrapperWidget(user: currentUser)
-                                      : PremiumUnlockChatScreen(currentUser: currentUser),
+                                  currentWidget: ConversationsWrapperWidget(user: currentUser),
                                 ));
                             break;
                           case 3:
@@ -314,13 +312,7 @@ class _ContainerState extends State<ContainerScreen> {
                             icon: const Icon(Icons.category),
                             label: 'Categories'.tr()),
                         BottomNavigationBarItem(
-                            icon: currentUser.hasDirectMessaging
-                                ? const Icon(Icons.message)
-                                : Badge(
-                                    label: const Icon(Icons.lock, size: 10, color: Colors.white),
-                                    backgroundColor: Colors.orange,
-                                    child: const Icon(Icons.message),
-                                  ),
+                            icon: const Icon(Icons.message),
                             label: 'Chats'.tr()),
                         BottomNavigationBarItem(
                             icon: const Icon(Icons.search),
@@ -420,13 +412,6 @@ class _ContainerState extends State<ContainerScreen> {
                                 ListTile(
                                   selected: _drawerSelection == DrawerSelection.conversations,
                                   leading: const Icon(Icons.message),
-                                  trailing: !currentUser.hasDirectMessaging
-                                      ? Icon(
-                                          Icons.lock,
-                                          size: 16,
-                                          color: Colors.orange,
-                                        )
-                                      : null,
                                   title: Text('Chats'.tr()),
                                   onTap: () {
                                     Navigator.pop(context);
@@ -435,9 +420,7 @@ class _ContainerState extends State<ContainerScreen> {
                                             appBarTitle: 'Chats'.tr(),
                                             currentTabIndex: 2,
                                             drawerSelection: DrawerSelection.conversations,
-                                            currentWidget: currentUser.hasDirectMessaging
-                                                ? ConversationsWrapperWidget(user: currentUser)
-                                                : PremiumUnlockChatScreen(currentUser: currentUser),
+                                            currentWidget: ConversationsWrapperWidget(user: currentUser),
                                           ),
                                         );
                                   },
@@ -663,6 +646,50 @@ class _ContainerState extends State<ContainerScreen> {
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
+                                          ListTile(
+                                            dense: true,
+                                            title: Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    'Chat Settings'.tr(),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                if (!currentUser.hasDirectMessaging)
+                                                  const SizedBox(width: 8),
+                                                if (!currentUser.hasDirectMessaging)
+                                                  Icon(Icons.lock, size: 16, color: Colors.grey[600]),
+                                              ],
+                                            ),
+                                            leading: const Icon(Icons.chat, size: 20),
+                                            trailing: currentUser.hasDirectMessaging
+                                                ? null
+                                                : Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.purple,
+                                                      borderRadius: BorderRadius.circular(12),
+                                                    ),
+                                                    child: Text(
+                                                      'PREMIUM'.tr(),
+                                                      style: const TextStyle(
+                                                        fontSize: 10,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ),
+                                            onTap: () {
+                                              Navigator.pop(context);
+                                              if (currentUser.hasDirectMessaging) {
+                                                // Navigate to chat settings (conversations with premium features)
+                                                push(context, ConversationsWrapperWidget(user: currentUser));
+                                              } else {
+                                                _showUpgradeDialog(context, 'Chat Settings', 'Premium');
+                                              }
+                                            },
+                                          ),
                                           ListTile(
                                             dense: true,
                                             title: Row(
