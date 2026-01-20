@@ -35,22 +35,19 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
   Future<void> _loadMyListings() async {
     setState(() => _isLoading = true);
     try {
-      final listings = await widget.listingsRepository.getListings(
-        filters: {},
-        currentUser: widget.currentUser,
+      final listings = await widget.listingsRepository.getMyListings(
+        currentUserID: widget.currentUser.userID,
+        favListingsIDs: widget.currentUser.likedListingsIDs,
       );
-      
-      // Filter to only show current user's listings
-      final myListings = listings.where((l) => l.authorID == widget.currentUser.userID).toList();
       
       // Initialize chat enabled states
       final states = <String, bool>{};
-      for (var listing in myListings) {
+      for (var listing in listings) {
         states[listing.id] = listing.chatEnabled;
       }
       
       setState(() {
-        _myListings = myListings;
+        _myListings = listings;
         _chatEnabledStates = states;
         _isLoading = false;
       });
@@ -70,8 +67,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
     try {
       final updatedListing = listing.copyWith(chatEnabled: enabled);
       await widget.listingsRepository.postListing(
-        listing: updatedListing,
-        images: [],
+        newListing: updatedListing,
       );
       
       if (mounted) {
