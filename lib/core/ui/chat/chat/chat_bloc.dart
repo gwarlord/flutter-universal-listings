@@ -284,8 +284,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       message.recipientProfilePictureURL =
           channelDataModel.participants.first.profilePictureURL;
     }
-    actualMessages.insert(0, message);
-    updateLiveMessages(actualMessages);
+    // Don't add optimistically - let the stream update handle it to avoid duplicates
     await chatRepository.sendMessage(
       message: message,
       channelDataModel: channelDataModel,
