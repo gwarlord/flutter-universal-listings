@@ -174,6 +174,8 @@ class ChatFireStoreUtils extends ChatRepository {
         await firestore.collection(chatChannelsCollection).doc(channelID).get();
     if (channel.exists && channel.data() != null) {
       channelModel = ChannelDataModel.fromJson(channel.data()!, currentUserID);
+      // Set participants from the provided list since Firestore stores only IDs
+      channelModel.participants = channelParticipants;
     } else {
       channelModel = ChannelDataModel(
         participants: channelParticipants,
