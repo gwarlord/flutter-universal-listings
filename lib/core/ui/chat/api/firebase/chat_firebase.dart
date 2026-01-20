@@ -197,7 +197,7 @@ class ChatFireStoreUtils extends ChatRepository {
     var messagesStreamSub = firestore
         .collection(chatChannelsCollection)
         .doc(channelID)
-        .collection(messagesLiveCollection)
+        .collection('thread')
         .orderBy('createdAt', descending: true)
         .snapshots()
         .listen((messagesSnapshot) {
@@ -340,19 +340,11 @@ class ChatFireStoreUtils extends ChatRepository {
       // Direct Firestore write instead of cloud function
       final channelID = channelDataModel.channelID;
       
-      // Add message to thread
+      // Add message to thread collection (single source of truth)
       await firestore
           .collection(chatChannelsCollection)
           .doc(channelID)
           .collection('thread')
-          .doc(message.id)
-          .set(message.toJson());
-      
-      // Also add to live messages collection
-      await firestore
-          .collection(chatChannelsCollection)
-          .doc(channelID)
-          .collection(messagesLiveCollection)
           .doc(message.id)
           .set(message.toJson());
       
