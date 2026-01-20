@@ -434,6 +434,12 @@ class ChatFireStoreUtils extends ChatRepository {
         channelDataModel.admins = null;
       }
       
+      // Ensure both participants are in the list (sender and recipient)
+      bool hasCurrentUser = channelDataModel.participants.any((p) => p.userID == currentUser.userID);
+      if (!hasCurrentUser) {
+        channelDataModel.participants.add(currentUser);
+      }
+      
       // Direct Firestore write instead of cloud function
       await firestore
           .collection(chatChannelsCollection)
