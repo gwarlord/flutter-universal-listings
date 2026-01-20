@@ -364,6 +364,25 @@ class ChatFireStoreUtils extends ChatRepository {
         'participants': channelDataModel.participants.map((p) => p.userID).toList(),
       }, SetOptions(merge: true));
 
+      // Update conversation feed for each participant
+      for (var participant in channelDataModel.participants) {
+        await firestore
+            .collection(socialFeedsCollection)
+            .doc(participant.userID)
+            .collection(chatFeedLiveCollection)
+            .doc(channelID)
+            .set({
+          'id': channelID,
+          'participants': channelDataModel.participants
+              .where((p) => p.userID != participant.userID)
+              .map((p) => p.toJson())
+              .toList(),
+          'createdAt': message.createdAt,
+          'markedAsRead': participant.userID == message.senderID,
+          'content': message.toJson(),
+        }, SetOptions(merge: true));
+      }
+
       // Send push notifications
       if (channelDataModel.channelID.contains(message.senderID)) {
         if (channelDataModel

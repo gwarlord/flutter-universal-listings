@@ -135,16 +135,18 @@ service cloud.firestore {
     // Social feeds collection (for chat conversation lists)
     match /social_feeds/{userId} {
       allow read: if isOwner(userId);
-      allow write: if false; // Managed by cloud functions
+      allow write: if false; // Parent document managed by system
       
       match /chat_feed/{feedId} {
         allow read: if isOwner(userId);
-        allow write: if false; // Managed by cloud functions
+        allow write: if false; // Historical feeds managed by cloud functions
       }
       
       match /chat_feed_live/{feedId} {
         allow read: if isOwner(userId);
-        allow write: if false; // Managed by cloud functions
+        // Allow any authenticated user to create a conversation feed for another user (when starting a chat)
+        allow create: if isSignedIn();
+        allow update, delete: if isOwner(userId);
       }
     }
     
