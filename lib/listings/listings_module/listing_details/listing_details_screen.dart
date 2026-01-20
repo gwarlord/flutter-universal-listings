@@ -773,7 +773,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                       height: 52,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: currentUser.hasDirectMessaging
+                          backgroundColor: listing.chatEnabled
                               ? Color(cfg.colorPrimary)
                               : Colors.grey,
                           foregroundColor: Colors.white,
@@ -783,19 +783,22 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                           elevation: 2,
                         ),
                         icon: Icon(
-                          currentUser.hasDirectMessaging ? Icons.chat_bubble : Icons.lock,
+                          listing.chatEnabled ? Icons.chat_bubble : Icons.lock,
                           size: 22,
                         ),
                         label: Text(
-                          currentUser.hasDirectMessaging
+                          listing.chatEnabled
                               ? 'Message Seller'.tr()
-                              : 'Message Seller (Premium)'.tr(),
+                              : 'Chat Disabled'.tr(),
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         onPressed: () {
+                          if (!listing.chatEnabled) {
+                            return;
+                          }
                           if (!currentUser.hasDirectMessaging) {
                             _showChatUnlockDialog(context);
                             return;

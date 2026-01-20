@@ -103,6 +103,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
     // Total Views
     int totalViews = listings.fold(0, (sum, l) => sum + l.viewCount);
     
+    // Chat Enabled Count
+    int chatEnabledCount = listings.where((l) => l.chatEnabled).length;
+    
     // Rating Breakdown
     Map<int, int> ratingDistribution = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
     for (var review in reviews) {
@@ -154,6 +157,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
         'rankedListings': rankedListings,
         'avgRating': avgRating,
         'totalListings': listings.length,
+        'chatEnabledCount': chatEnabledCount,
       };
     });
   }
@@ -318,6 +322,13 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
                           '${_advancedMetrics['avgRating']?.toStringAsFixed(1) ?? '0.0'}★',
                           Icons.star,
                           Colors.orange,
+                          dark,
+                        ),
+                        _buildMetricCard(
+                          'Chat Enabled',
+                          '${_advancedMetrics['chatEnabledCount'] ?? 0}/${_advancedMetrics['totalListings'] ?? 0}',
+                          Icons.chat_bubble,
+                          Colors.purple,
                           dark,
                         ),
                       ],

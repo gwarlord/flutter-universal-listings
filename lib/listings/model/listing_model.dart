@@ -49,6 +49,9 @@ class ListingModel {
   /// ✅ Blocked Dates for Bookings
   List<int> blockedDates; // Stored as milliseconds since epoch
 
+  /// Chat
+  bool chatEnabled;
+
   /// Social Media
   String instagram;
   String facebook;
@@ -107,6 +110,7 @@ class ListingModel {
     this.timeBlocks = const [],
     this.services = const [],
     this.blockedDates = const [],
+    this.chatEnabled = true,
     this.instagram = '',
     this.facebook = '',
     this.tiktok = '',
@@ -159,6 +163,7 @@ class ListingModel {
           .map((e) => ServiceItem.fromJson(e as Map<String, dynamic>))
           .toList(),
       blockedDates: List<int>.from(json['blockedDates'] ?? []),
+      chatEnabled: json['chatEnabled'] ?? true,
       instagram: json['instagram'] ?? '',
       facebook: json['facebook'] ?? '',
       tiktok: json['tiktok'] ?? '',
@@ -208,6 +213,7 @@ class ListingModel {
       'timeBlocks': timeBlocks,
       'services': services.map((e) => e.toJson()).toList(),
       'blockedDates': blockedDates,
+      'chatEnabled': chatEnabled,
       'instagram': instagram,
       'facebook': facebook,
       'tiktok': tiktok,
@@ -256,6 +262,7 @@ class ListingModel {
     List<String>? timeBlocks,
     List<ServiceItem>? services,
     List<int>? blockedDates,
+    bool? chatEnabled,
     String? instagram,
     String? facebook,
     String? tiktok,
@@ -301,6 +308,7 @@ class ListingModel {
       timeBlocks: timeBlocks ?? this.timeBlocks,
       services: services ?? this.services,
       blockedDates: blockedDates ?? this.blockedDates,
+      chatEnabled: chatEnabled ?? this.chatEnabled,
       instagram: instagram ?? this.instagram,
       facebook: facebook ?? this.facebook,
       tiktok: tiktok ?? this.tiktok,
