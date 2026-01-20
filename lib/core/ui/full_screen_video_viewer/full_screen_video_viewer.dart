@@ -50,12 +50,24 @@ class _FullScreenVideoViewerState extends State<FullScreenVideoViewer> {
           child: Hero(
             tag: videoUrl,
             child: Center(
-              child: _controller.value.isInitialized
-                  ? AspectRatio(
-                      aspectRatio: _controller.value.aspectRatio,
-                      child: VideoPlayer(_controller),
-                    )
-                  : const CircularProgressIndicator.adaptive(),
+                child: _controller.value.isInitialized
+                    ? AdaptiveVideoPlayer(
+                        controller: _controller,
+                        // In full-screen, cover is usually desired for immersive viewing
+                        fit: _controller.value.aspectRatio < 1.0
+                            ? BoxFit.cover
+                            : BoxFit.contain,
+                        showPlayOverlay: true,
+                        showMuteToggle: false,
+                        onTogglePlay: () {
+                          setState(() {
+                            _controller.value.isPlaying
+                                ? _controller.pause()
+                                : _controller.play();
+                          });
+                        },
+                      )
+                    : const CircularProgressIndicator.adaptive(),
             ),
           )),
       floatingActionButton: FloatingActionButton(

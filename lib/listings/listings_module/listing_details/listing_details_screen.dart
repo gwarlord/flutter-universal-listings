@@ -157,49 +157,27 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     }
   }
 
-  void _buildMediaList() {
-    _mediaList = [];
-    for (final photo in listing.photos) {
-      _mediaList.add(MediaItem.photo(photo));
-    }
-    final videos = listing.videos ?? [];
-    for (final videoUrl in videos) {
-      _mediaList.add(MediaItem.video(videoUrl));
-    }
-  }
-
-  String _getCurrencySymbol(String code) {
-    switch (code) {
-      case 'USD':
-      case 'XCD':
-      case 'JMD':
-      case 'TTD':
-      case 'BSD':
-      case 'BBD':
-      case 'GYD':
-      case 'DOP':
-      case 'KYD':
-      case 'SRD':
-        return '\$';
-      case 'ANG':
-        return 'ƒ';
-      case 'XOF':
-        return 'CFA';
-      case 'HTG':
-        return 'G';
-      default:
-        return '\$';
-    }
-  }
-
-  void _loadVideoController(String videoUrl) {
-    _videoController?.dispose();
-    _videoReady = false;
-    _videoMuted = true;
-    
-    _videoController = VideoPlayerController.network(
-      videoUrl,
-      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+                            ? AdaptiveVideoPlayer(
+                                controller: _videoController!,
+                                // Use cover to make portrait videos fill like TikTok; contain for landscape
+                                fit: _videoController!.value.aspectRatio < 1.0
+                                    ? BoxFit.cover
+                                    : BoxFit.contain,
+                                isMuted: _videoMuted,
+                                onTogglePlay: () {
+                                  setState(() {
+                                    _videoController!.value.isPlaying
+                                        ? _videoController!.pause()
+                                        : _videoController!.play();
+                                  });
+                                },
+                                onToggleMute: () {
+                                  setState(() {
+                                    _videoMuted = !_videoMuted;
+                                    _videoController!.setVolume(_videoMuted ? 0 : 1);
+                                  });
+                                },
+                              )
     )
       ..setLooping(true)
       ..initialize().then((_) {
