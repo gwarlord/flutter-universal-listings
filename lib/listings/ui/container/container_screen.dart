@@ -412,12 +412,12 @@ class _ContainerState extends State<ContainerScreen> {
                                 ListTile(
                                   selected: _drawerSelection == DrawerSelection.conversations,
                                   leading: const Icon(Icons.message),
-                                  title: Text('Chats'.tr()),
+                                  title: Text('Conversations'.tr()),
                                   onTap: () {
                                     Navigator.pop(context);
                                     context.read<ContainerBloc>().add(
                                           TabSelectedEvent(
-                                            appBarTitle: 'Chats'.tr(),
+                                            appBarTitle: 'Conversations'.tr(),
                                             currentTabIndex: 2,
                                             drawerSelection: DrawerSelection.conversations,
                                             currentWidget: ConversationsWrapperWidget(user: currentUser),
