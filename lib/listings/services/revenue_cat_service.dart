@@ -124,12 +124,16 @@ class RevenueCatService {
 
       print('✅ Purchase successful!');
       
-      // Update Firestore with new subscription info
+      // Update Firestore with new subscription info and wait for completion
       await _updateUserSubscription(
         customerInfo.originalAppUserId,
         customerInfo,
       );
       
+      // Add small delay to ensure Firestore write is fully propagated
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      print('✅ Firestore update complete, returning customer info');
       return customerInfo;
     } on PlatformException catch (e) {
       final errorCode = PurchasesErrorHelper.getErrorCode(e);

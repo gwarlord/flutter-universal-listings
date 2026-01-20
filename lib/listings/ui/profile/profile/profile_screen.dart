@@ -309,7 +309,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               color: Color(colorPrimary),
                             ),
                           ),
-                          if (currentUser.isAdmin || const ['pro', 'premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase()))
+                          if (currentUser.isAdmin || const ['professional', 'premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase()))
                             ListTile(
                               dense: true,
                               onTap: () => push(

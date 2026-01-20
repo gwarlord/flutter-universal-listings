@@ -71,8 +71,26 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
 
       _allReviews = allReviews;
 
+      // Calculate total favorites across all users for this user's listings
+      int totalFavorites = 0;
+      if (listingIds.isNotEmpty) {
+        final usersSnap = await _firestore.collection('users').get();
+        for (var userDoc in usersSnap.docs) {
+          try {
+            final likedListings = List<String>.from(userDoc.data()['likedListingsIDs'] ?? []);
+            for (var listingId in listingIds) {
+              if (likedListings.contains(listingId)) {
+                totalFavorites++;
+              }
+            }
+          } catch (e) {
+            // Skip users with invalid data
+          }
+        }
+      }
+
       // Calculate advanced metrics
-      _calculateAdvancedMetrics(listings, allReviews);
+      _calculateAdvancedMetrics(listings, allReviews, totalFavorites);
 
       setState(() => _isLoading = false);
     } catch (e) {
@@ -81,10 +99,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
     }
   }
 
-  void _calculateAdvancedMetrics(List<ListingModel> listings, List<ListingReviewModel> reviews) {
-    // Total Views and Favorites
+  void _calculateAdvancedMetrics(List<ListingModel> listings, List<ListingReviewModel> reviews, int totalFavorites) {
+    // Total Views
     int totalViews = listings.fold(0, (sum, l) => sum + l.viewCount);
-    int totalFavorites = 0;
     
     // Rating Breakdown
     Map<int, int> ratingDistribution = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
@@ -114,11 +131,12 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
       return score;
     }).reduce((a, b) => a + b) / listings.length;
 
-    // Top performing listing
-    ListingModel? topListing = listings.isEmpty ? null : listings.reduce((a, b) {
+    // Rank all listings by performance score
+    List<ListingModel> rankedListings = List.from(listings);
+    rankedListings.sort((a, b) {
       int aScore = a.viewCount * 2 + (a.reviewsCount as int) * 5;
       int bScore = b.viewCount * 2 + (b.reviewsCount as int) * 5;
-      return aScore > bScore ? a : b;
+      return bScore.compareTo(aScore); // Sort descending
     });
 
     // Average rating
@@ -133,11 +151,69 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
         'engagementRate': engagementRate,
         'avgQualityScore': avgQualityScore,
         'ratingDistribution': ratingDistribution,
-        'topListing': topListing,
+        'rankedListings': rankedListings,
         'avgRating': avgRating,
         'totalListings': listings.length,
       };
     });
+  }
+
+  void _showInfoDialog(String title, String description) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.info_outline, color: Color(cfg.colorPrimary)),
+            const SizedBox(width: 12),
+            Expanded(child: Text(title.tr())),
+          ],
+        ),
+        content: Text(description.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it').tr(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoIcon(String title, String description) {
+    return GestureDetector(
+      onTap: () => _showInfoDialog(title, description),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Color(cfg.colorPrimary).withOpacity(0.1),
+        ),
+        child: Icon(
+          Icons.info_outline,
+          size: 16,
+          color: Color(cfg.colorPrimary),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, String? infoTitle, String? infoDescription, bool dark) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        if (infoTitle != null && infoDescription != null)
+          _buildInfoIcon(infoTitle, infoDescription),
+      ],
+    );
   }
 
   @override
@@ -154,7 +230,12 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
               onRefresh: _loadAdvancedAnalytics,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom: 100, // Extra bottom padding for floating buttons
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -194,12 +275,11 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
                     const SizedBox(height: 24),
 
                     // Overview Stats
-                    Text(
+                    _buildSectionHeader(
                       'Performance Overview'.tr(),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      'Performance Overview',
+                      'Track your listing performance with these key metrics: Engagement Rate measures how users interact with your listings (favorites + reviews divided by views), Quality Score reflects your listing completeness and quality, Total Reviews shows all feedback received, and Avg Rating is your overall rating.',
+                      dark,
                     ),
                     const SizedBox(height: 16),
 
@@ -246,42 +326,39 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
                     const SizedBox(height: 32),
 
                     // Rating Distribution
-                    Text(
+                    _buildSectionHeader(
                       'Rating Distribution'.tr(),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      'Rating Distribution',
+                      'Shows how your reviews are distributed across star ratings (5-star down to 1-star). This helps you see if your listings are generally well-received or if there are areas to improve.',
+                      dark,
                     ),
                     const SizedBox(height: 16),
                     _buildRatingDistribution(dark),
 
                     const SizedBox(height: 32),
 
-                    // Top Performing Listing
-                    if (_advancedMetrics['topListing'] != null) ...[
-                      Text(
-                        'Top Performing Listing'.tr(),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTopListingCard(_advancedMetrics['topListing'], dark),
-                      const SizedBox(height: 32),
-                    ],
-
-                    // Listing Quality Breakdown
-                    Text(
-                      'Listing Quality Breakdown'.tr(),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    // All Listings Ranked (Expandable)
+                    _buildSectionHeader(
+                      'All Listings Ranked'.tr(),
+                      'Listings Ranked',
+                      'All your listings ranked by performance score, which is calculated from views and reviews. The top-ranked listing is performing best. Expand to see detailed metrics for each listing.',
+                      dark,
                     ),
                     const SizedBox(height: 16),
-                    _buildQualityBreakdown(dark),
+                    _buildRankedListingsExpansion(dark),
+                    const SizedBox(height: 32),
+
+                    // Listing Quality Breakdown (Premium users and Admins)
+                    if (widget.currentUser.isAdmin || widget.currentUser.isPremium) ...[
+                      _buildSectionHeader(
+                        'Listing Quality Breakdown'.tr(),
+                        'Quality Breakdown',
+                        'Shows what percentage of your listings meet quality standards: Complete Profiles (has photos, description, and contact info), With Photos (at least one image), With Reviews (has received feedback), and With Contact Info (phone or email provided).',
+                        dark,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildQualityBreakdown(dark),
+                    ],
                   ],
                 ),
               ),
@@ -290,43 +367,73 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
   }
 
   Widget _buildMetricCard(String title, String value, IconData icon, Color color, bool dark) {
-    return Container(
-      decoration: BoxDecoration(
-        color: dark ? Colors.grey[850] : Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: dark ? Colors.grey[700]! : Colors.grey[300]!,
-        ),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(icon, color: color, size: 28),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title.tr(),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: dark ? Colors.grey[400] : Colors.grey[600],
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+    String? infoTitle;
+    String? infoDescription;
+    
+    // Add info tooltips for each metric
+    if (title == 'Engagement Rate') {
+      infoTitle = 'Engagement Rate';
+      infoDescription = 'Calculated as (Favorites + Reviews) / Views × 100%. This percentage shows how engaged users are with your listings. Higher is better!';
+    } else if (title == 'Quality Score') {
+      infoTitle = 'Quality Score';
+      infoDescription = 'A 0-100 score based on listing completeness: photos (30 pts), description length (20 pts), reviews (25 pts), contact info (15 pts), and services (10 pts).';
+    } else if (title == 'Total Reviews') {
+      infoTitle = 'Total Reviews';
+      infoDescription = 'Combined count of all reviews received across all your listings.';
+    } else if (title == 'Avg Rating') {
+      infoTitle = 'Average Rating';
+      infoDescription = 'Average star rating across all reviews from all your listings.';
+    }
+    
+    return GestureDetector(
+      onTap: infoTitle != null && infoDescription != null 
+          ? () => _showInfoDialog(infoTitle!, infoDescription!)
+          : null,
+      child: Container(
+        decoration: BoxDecoration(
+          color: dark ? Colors.grey[850] : Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: dark ? Colors.grey[700]! : Colors.grey[300]!,
           ),
-        ],
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, color: color, size: 28),
+                if (infoTitle != null)
+                  _buildInfoIcon(infoTitle, infoDescription!),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title.tr(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: dark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -492,6 +599,168 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRankedListingsExpansion(bool dark) {
+    final rankedListings = (_advancedMetrics['rankedListings'] as List<ListingModel>?) ?? [];
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: dark ? Colors.grey[850] : Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: dark ? Colors.grey[700]! : Colors.grey[300]!,
+        ),
+      ),
+      child: ExpansionTile(
+        title: Row(
+          children: [
+            const Icon(Icons.trending_up, size: 20),
+            const SizedBox(width: 12),
+            Text(
+              'All Listings Ranked'.tr(),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Color(cfg.colorPrimary).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '${rankedListings.length} listings',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(cfg.colorPrimary),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        children: [
+          if (rankedListings.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'No listings yet'.tr(),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            )
+          else
+            Column(
+              children: List.generate(rankedListings.length, (index) {
+                final listing = rankedListings[index];
+                final score = listing.viewCount * 2 + (listing.reviewsCount as int) * 5;
+                return _buildRankedListingTile(listing, index + 1, score, dark);
+              }),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRankedListingTile(ListingModel listing, int rank, int score, bool dark) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: dark ? Colors.grey[800] : Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: dark ? Colors.grey[700]! : Colors.grey[200]!,
+        ),
+      ),
+      child: Row(
+        children: [
+          // Rank Badge
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: rank == 1 
+                  ? Colors.amber 
+                  : rank == 2 
+                  ? Colors.grey[400]
+                  : rank == 3
+                  ? Colors.orange[300]
+                  : Color(cfg.colorPrimary).withOpacity(0.3),
+              borderRadius: BorderRadius.circular(50),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '$rank',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: rank <= 3 ? Colors.white : Color(cfg.colorPrimary),
+                fontSize: 14,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Listing Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  listing.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.visibility, size: 12, color: Colors.grey[600]),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${listing.viewCount}',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(Icons.star, size: 12, color: Colors.amber),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${listing.reviewsCount ?? 0}',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Score
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Color(cfg.colorPrimary).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              'Score: $score',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(cfg.colorPrimary),
+              ),
             ),
           ),
         ],

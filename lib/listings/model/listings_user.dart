@@ -121,6 +121,9 @@ class ListingsUser extends User {
     return DateTime.now().isBefore(subscriptionExpiresAt!);
   }
 
+  // Feature access helpers
+  // Note: Premium users get ALL professional features plus premium-only features
   bool get hasBookingServices => (isProfessional || isPremium) && isSubscriptionActive;
   bool get hasAdvancedAnalytics => isPremium && isSubscriptionActive;
-  bool get hasPrioritySupport => isPremium && isSubscriptionActive;}
+  bool get hasPrioritySupport => isPremium && isSubscriptionActive;
+}
