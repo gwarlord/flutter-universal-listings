@@ -93,11 +93,11 @@ class _ConversationsState extends State<ConversationsScreen> {
           final isLastPage = state.newPage.length < pageSize;
           
           // FIX 3: Replaced direct manipulation with state copy
-          final existingPages = _conversationsController.value.pages;
+          final existingPages = _conversationsController.value.pages ?? [];
           final newPageIds = Set.from(state.newPage.map((c) => c.id));
           
           // 1. Remove duplicates from existing pages
-          final List<List<ChatFeedModel>> updatedPages = existingPages!
+          final List<List<ChatFeedModel>> updatedPages = existingPages
               .map((page) =>
                   page.where((c) => !newPageIds.contains(c.id)).toList())
               .toList();
