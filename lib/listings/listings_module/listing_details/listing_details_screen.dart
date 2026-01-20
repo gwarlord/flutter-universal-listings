@@ -98,6 +98,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
   late ListingsUser currentUser;
   bool isLoadingReviews = true;
+  bool? _authorIsPremium;
 
   List<ListingReviewModel> reviews = [];
   List<MediaItem> _mediaList = [];
@@ -127,6 +128,32 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
     if (_mediaList.length > 1) {
       _startAutoScroll();
+    }
+
+    // Check if listing author has premium subscription
+    _checkAuthorPremiumStatus();
+  }
+
+  Future<void> _checkAuthorPremiumStatus() async {
+    try {
+      final authorDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(listing.authorID)
+          .get();
+      
+      if (authorDoc.exists) {
+        final subscriptionTier = authorDoc.data()?['subscriptionTier'] as String? ?? 'free';
+        setState(() {
+          _authorIsPremium = subscriptionTier.toLowerCase() == 'premium' ||
+                            subscriptionTier.toLowerCase() == 'professional' ||
+                            (authorDoc.data()?['isAdmin'] as bool? ?? false);
+        });
+      } else {
+        setState(() => _authorIsPremium = false);
+      }
+    } catch (e) {
+      print('❌ Error checking author premium status: $e');
+      setState(() => _authorIsPremium = false);
     }
   }
 
@@ -773,7 +800,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                       height: 52,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: listing.chatEnabled
+                          backgroundColor: (listing.chatEnabled && (_authorIsPremium ?? false))
                               ? Color(cfg.colorPrimary)
                               : Colors.grey,
                           foregroundColor: Colors.white,
@@ -783,20 +810,20 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                           elevation: 2,
                         ),
                         icon: Icon(
-                          listing.chatEnabled ? Icons.chat_bubble : Icons.lock,
+                          (listing.chatEnabled && (_authorIsPremium ?? false)) ? Icons.chat_bubble : Icons.lock,
                           size: 22,
                         ),
                         label: Text(
-                          listing.chatEnabled
+                          (listing.chatEnabled && (_authorIsPremium ?? false))
                               ? 'Message Seller'.tr()
-                              : 'Chat Disabled'.tr(),
+                              : 'Chat Unavailable'.tr(),
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         onPressed: () {
-                          if (!listing.chatEnabled) {
+                          if (!listing.chatEnabled || !(_authorIsPremium ?? false)) {
                             return;
                           }
                           if (!currentUser.hasDirectMessaging) {
