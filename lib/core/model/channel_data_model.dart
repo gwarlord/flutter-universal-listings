@@ -56,6 +56,7 @@ class ChannelDataModel {
               .map((e) => ChatFeedParticipantProfilePictureURL.fromJson(e))
               .toList(),
       participants: ((parsedJson['participants'] ?? []) as Iterable)
+          .where((e) => e is Map<String, dynamic>)
           .map((e) => User.fromJson(e))
           .toList()
         ..removeWhere((element) => element.userID == currentUserID),
