@@ -126,4 +126,5 @@ class ListingsUser extends User {
   bool get hasBookingServices => (isProfessional || isPremium) && isSubscriptionActive;
   bool get hasAdvancedAnalytics => isPremium && isSubscriptionActive;
   bool get hasPrioritySupport => isPremium && isSubscriptionActive;
+  bool get hasDirectMessaging => isPremium && isSubscriptionActive;
 }
