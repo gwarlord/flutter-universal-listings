@@ -791,8 +791,8 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   ),
                 ),
 
-                // Contact Seller Button (only show if not own listing)
-                if (currentUser.userID != listing.authorID) ...[
+                // Contact Seller Button (only show if not own listing AND lister is premium AND chat enabled)
+                if (currentUser.userID != listing.authorID && listing.chatEnabled && (_authorIsPremium ?? false)) ...[
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
                     child: SizedBox(
@@ -800,32 +800,25 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                       height: 52,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: (listing.chatEnabled && (_authorIsPremium ?? false))
-                              ? Color(cfg.colorPrimary)
-                              : Colors.grey,
+                          backgroundColor: Color(cfg.colorPrimary),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           elevation: 2,
                         ),
-                        icon: Icon(
-                          (listing.chatEnabled && (_authorIsPremium ?? false)) ? Icons.chat_bubble : Icons.lock,
+                        icon: const Icon(
+                          Icons.chat_bubble,
                           size: 22,
                         ),
                         label: Text(
-                          (listing.chatEnabled && (_authorIsPremium ?? false))
-                              ? 'Message Seller'.tr()
-                              : 'Chat Unavailable'.tr(),
+                          'Message Seller'.tr(),
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         onPressed: () {
-                          if (!listing.chatEnabled || !(_authorIsPremium ?? false)) {
-                            return;
-                          }
                           if (!currentUser.hasDirectMessaging) {
                             _showChatUnlockDialog(context);
                             return;
