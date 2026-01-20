@@ -134,5 +134,9 @@ class AuthenticationBloc
       user = null;
       emit(AuthenticationState.unauthenticated());
     });
+    on<UpdateAuthUserEvent>((event, emit) {
+      user = event.updatedUser;
+      emit(AuthenticationState.authenticated(user!));
+    });
   }
 }
