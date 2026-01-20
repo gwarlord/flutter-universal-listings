@@ -764,6 +764,53 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   ),
                 ),
 
+                // Contact Seller Button (only show if not own listing)
+                if (currentUser.userID != listing.authorID) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: currentUser.hasDirectMessaging
+                              ? Color(cfg.colorPrimary)
+                              : Colors.grey,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                        icon: Icon(
+                          currentUser.hasDirectMessaging ? Icons.chat_bubble : Icons.lock,
+                          size: 22,
+                        ),
+                        label: Text(
+                          currentUser.hasDirectMessaging
+                              ? 'Message Seller'.tr()
+                              : 'Message Seller (Premium)'.tr(),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        onPressed: () {
+                          if (!currentUser.hasDirectMessaging) {
+                            _showChatUnlockDialog(context);
+                            return;
+                          }
+                          context.read<ConversationsBloc>().add(
+                            FetchFriendByIDEvent(
+                              friendID: listing.authorID,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+
                 if (_hasContactOrHours(listing)) ...[                  
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16.0, 24, 16, 12),
