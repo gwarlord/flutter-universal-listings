@@ -337,14 +337,20 @@ class _PaywallScreenState extends State<PaywallScreen> {
         // 🔄 Refresh user data from Firestore to get updated subscription
         await _refreshUserData();
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Welcome to CaribTap Pro!'.tr()),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-        Navigator.pop(context, true);
+        if (mounted) {
+          print('✅ Subscription updated, navigating back to refresh UI');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Welcome to CaribTap Pro!'.tr()),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          // Pop twice: close paywall, then close any parent screen to force rebuild
+          Navigator.pop(context, true);
+          // Give a moment for the Firestore update to fully propagate
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
       } else {
         setState(() => _isLoading = false);
       }
@@ -377,7 +383,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
               backgroundColor: Colors.green,
             ),
           );
+          print('✅ Subscription restored, navigating back');
           Navigator.pop(context, true);
+          await Future.delayed(const Duration(milliseconds: 500));
         }
       } else {
         if (mounted) {
@@ -408,20 +416,34 @@ class _PaywallScreenState extends State<PaywallScreen> {
   Future<void> _refreshUserData() async {
     try {
       print('🔄 Refreshing user data from Firestore...');
+      // Add small delay to ensure Firestore write is complete
+      await Future.delayed(const Duration(milliseconds: 500));
+      
       final doc = await FirebaseFirestore.instance
           .collection(usersCollection)
           .doc(widget.currentUser.userID)
-          .get();
+          .get(GetOptions(source: Source.server)); // Force server read
       
       if (doc.exists && mounted) {
         final freshUser = ListingsUser.fromJson(doc.data()!);
-        print('✅ User refreshed: ${freshUser.subscriptionTier}');
+        print('✅ User refreshed successfully');
+        print('   Subscription Tier: ${freshUser.subscriptionTier}');
+        print('   Expires: ${freshUser.subscriptionExpiresAt}');
+        print('   RevenueCat ID: ${freshUser.revenueCatCustomerId}');
         
         // Update the auth bloc with fresh user data
         context.read<AuthenticationBloc>().user = freshUser;
+        
+        // Also update the widget's current user for context
+        widget.currentUser.subscriptionTier = freshUser.subscriptionTier;
+        widget.currentUser.subscriptionExpiresAt = freshUser.subscriptionExpiresAt;
+        widget.currentUser.revenueCatCustomerId = freshUser.revenueCatCustomerId;
+      } else {
+        print('❌ User document not found in Firestore');
       }
     } catch (e) {
       print('❌ Error refreshing user: $e');
+      print('❌ Stack: ${StackTrace.current}');
     }
   }
 }
