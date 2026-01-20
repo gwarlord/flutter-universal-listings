@@ -120,10 +120,8 @@ service cloud.firestore {
       
       // Messages subcollection
       match /thread/{messageId} {
-        allow read: if isSignedIn() && 
-                       request.auth.uid in get(/databases/$(database)/documents/channels/$(channelId)).data.participants;
+        allow read: if isSignedIn();
         allow create: if isSignedIn() && 
-                         request.auth.uid in get(/databases/$(database)/documents/channels/$(channelId)).data.participants &&
                          request.auth.uid == request.resource.data.senderID;
         allow update, delete: if isSignedIn() && 
                                  request.auth.uid == resource.data.senderID;
