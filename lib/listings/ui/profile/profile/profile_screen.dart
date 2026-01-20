@@ -63,8 +63,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
         appBar: Platform.isIOS
             ? AppBar(
                 title: Text('Profile'.tr()),
+                leading: IconButton(
+                  icon: const Icon(Icons.home),
+                  onPressed: () {
+                    pushAndRemoveUntil(
+                      context,
+                      HomeScreen(currentUser: currentUser),
+                      false,
+                    );
+                  },
+                ),
               )
-            : null,
+            : AppBar(
+                title: Text('Profile'.tr()),
+                leading: IconButton(
+                  icon: const Icon(Icons.home),
+                  onPressed: () {
+                    pushAndRemoveUntil(
+                      context,
+                      HomeScreen(currentUser: currentUser),
+                      false,
+                    );
+                  },
+                ),
+              ),
         body: BlocProvider(
         create: (context) => ProfileBloc(
           currentUser: currentUser,

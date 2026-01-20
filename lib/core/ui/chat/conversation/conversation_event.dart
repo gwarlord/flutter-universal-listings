@@ -8,19 +8,25 @@ class FetchConversationsPageEvent extends ConversationsEvent {
   int page;
   int size;
 
-  FetchConversationsPageEvent({required this.page, required this.size, required Completer<List<ChatFeedModel>> completer});
+  FetchConversationsPageEvent({
+    required this.page,
+    required this.size,
+    required Completer<List<ChatFeedModel>> completer,
+  });
 }
 
 class FriendTapEvent extends ConversationsEvent {
   User friend;
+  ListingModel? listing;
 
-  FriendTapEvent({required this.friend});
+  FriendTapEvent({required this.friend, this.listing});
 }
 
 class FetchFriendByIDEvent extends ConversationsEvent {
   String friendID;
+  ListingModel? listing;
 
-  FetchFriendByIDEvent({required this.friendID});
+  FetchFriendByIDEvent({required this.friendID, this.listing});
 }
 
 class SearchConversationsEvent extends ConversationsEvent {
@@ -28,8 +34,9 @@ class SearchConversationsEvent extends ConversationsEvent {
   List<ChatFeedModel> conversations;
   List<User> friends;
 
-  SearchConversationsEvent(
-      {required this.query,
-      required this.conversations,
-      required this.friends});
+  SearchConversationsEvent({
+    required this.query,
+    required this.conversations,
+    required this.friends,
+  });
 }
