@@ -20,6 +20,7 @@ import 'package:instaflutter/listings/listings_module/booking/booking_management
 import 'package:instaflutter/listings/ui/subscription/paywall_screen.dart';
 import 'package:instaflutter/listings/ui/subscription/customer_center_screen.dart';
 import 'package:instaflutter/listings/listings_module/analytics/analytics_screen.dart';
+import 'package:instaflutter/listings/listings_module/analytics/advanced_analytics_screen.dart';
 import 'package:instaflutter/listings/ui/profile/profile/profile_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -522,6 +523,45 @@ class _ContainerState extends State<ContainerScreen> {
                                               }
                                             },
                                           ),
+                                          ListTile(
+                                            dense: true,
+                                            title: Row(
+                                              children: [
+                                                Text('Analytics'.tr()),
+                                                if (!currentUser.hasBookingServices) ...[
+                                                  const SizedBox(width: 8),
+                                                  Icon(Icons.lock, size: 16, color: Colors.grey[600]),
+                                                ],
+                                              ],
+                                            ),
+                                            leading: const Icon(Icons.bar_chart, size: 20),
+                                            trailing: !currentUser.hasBookingServices
+                                                ? Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.amber,
+                                                      borderRadius: BorderRadius.circular(12),
+                                                    ),
+                                                    child: Text(
+                                                      'PRO'.tr(),
+                                                      style: const TextStyle(
+                                                        fontSize: 10,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  )
+                                                : null,
+                                            onTap: () {
+                                              if (currentUser.hasBookingServices) {
+                                                Navigator.pop(context);
+                                                push(context, AnalyticsScreen(currentUser: currentUser));
+                                              } else {
+                                                Navigator.pop(context);
+                                                _showUpgradeDialog(context, 'Analytics', 'Professional');
+                                              }
+                                            },
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -584,7 +624,7 @@ class _ContainerState extends State<ContainerScreen> {
                                             onTap: () {
                                               Navigator.pop(context);
                                               if (currentUser.isAdmin || ['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase())) {
-                                                push(context, AnalyticsScreen(currentUser: currentUser));
+                                                push(context, AdvancedAnalyticsScreen(currentUser: currentUser));
                                               } else {
                                                 _showUpgradeDialog(context, 'Advanced Analytics', 'Premium');
                                               }
