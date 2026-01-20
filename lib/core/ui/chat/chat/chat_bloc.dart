@@ -61,6 +61,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           // Complete empty list just in case
           event.completer.complete([]);
         } else {
+          // Guard against empty channelID before fetching old messages
+          if (channelDataModel.channelID.isEmpty) {
+            event.completer.complete([]);
+            return;
+          }
+          
           final newMessagesPage = await chatRepository.fetchOldMessages(
             channelID: channelDataModel.channelID,
             page: event.page,
