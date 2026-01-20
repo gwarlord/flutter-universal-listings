@@ -89,8 +89,22 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
         }
       }
 
+      // Calculate total chats initiated to user's listings
+      int totalChats = 0;
+      try {
+        // Count unique conversations where current user is a participant
+        final socialFeedsSnap = await _firestore
+            .collection(socialFeedsCollection)
+            .doc(widget.currentUser.userID)
+            .collection('chat_feed_live')
+            .get();
+        totalChats = socialFeedsSnap.docs.length;
+      } catch (e) {
+        print('Error fetching chat count: $e');
+      }
+
       // Calculate advanced metrics
-      _calculateAdvancedMetrics(listings, allReviews, totalFavorites);
+      _calculateAdvancedMetrics(listings, allReviews, totalFavorites, totalChats);
 
       setState(() => _isLoading = false);
     } catch (e) {
@@ -99,7 +113,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
     }
   }
 
-  void _calculateAdvancedMetrics(List<ListingModel> listings, List<ListingReviewModel> reviews, int totalFavorites) {
+  void _calculateAdvancedMetrics(List<ListingModel> listings, List<ListingReviewModel> reviews, int totalFavorites, int totalChats) {
     // Total Views
     int totalViews = listings.fold(0, (sum, l) => sum + l.viewCount);
     
@@ -113,9 +127,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
       ratingDistribution[rating] = (ratingDistribution[rating] ?? 0) + 1;
     }
 
-    // Engagement Rate: (favorites + reviews) / views
+    // Engagement Rate: (favorites + reviews + chats) / views
     double engagementRate = totalViews > 0 
-        ? ((totalFavorites + reviews.length) / totalViews * 100)
+        ? ((totalFavorites + reviews.length + totalChats) / totalViews * 100)
         : 0;
 
     // Listing Quality Score (0-100)
@@ -282,7 +296,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
                     _buildSectionHeader(
                       'Performance Overview'.tr(),
                       'Performance Overview',
-                      'Track your listing performance with these key metrics: Engagement Rate measures how users interact with your listings (favorites + reviews divided by views), Quality Score reflects your listing completeness and quality, Total Reviews shows all feedback received, and Avg Rating is your overall rating.',
+                      'Track your listing performance with these key metrics: Engagement Rate measures how users interact with your listings (favorites + reviews + chats divided by views), Quality Score reflects your listing completeness and quality, Total Reviews shows all feedback received, and Avg Rating is your overall rating.',
                       dark,
                     ),
                     const SizedBox(height: 16),
@@ -364,7 +378,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
                       _buildSectionHeader(
                         'Listing Quality Breakdown'.tr(),
                         'Quality Breakdown',
-                        'Shows what percentage of your listings meet quality standards: Complete Profiles (has photos, description, and contact info), With Photos (at least one image), With Reviews (has received feedback), and With Contact Info (phone or email provided).',
+                        'Shows what percentage of your listings meet quality standards: Complete Profiles (has photos, description, and contact info), With Photos (at least one image), With Reviews (has received feedback), With Contact Info (phone or email provided), and Chat Enabled (allows users to message you).',
                         dark,
                       ),
                       const SizedBox(height: 16),
@@ -384,7 +398,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
     // Add info tooltips for each metric
     if (title == 'Engagement Rate') {
       infoTitle = 'Engagement Rate';
-      infoDescription = 'Calculated as (Favorites + Reviews) / Views × 100%. This percentage shows how engaged users are with your listings. Higher is better!';
+      infoDescription = 'Calculated as (Favorites + Reviews + Chats) / Views × 100%. This percentage shows how engaged users are with your listings. Higher is better!';
     } else if (title == 'Quality Score') {
       infoTitle = 'Quality Score';
       infoDescription = 'A 0-100 score based on listing completeness: photos (30 pts), description length (20 pts), reviews (25 pts), contact info (15 pts), and services (10 pts).';
@@ -785,6 +799,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
       {'label': 'With Photos', 'value': _userListings.where((l) => l.photos.isNotEmpty).length, 'total': _userListings.length},
       {'label': 'With Reviews', 'value': _userListings.where((l) => l.reviewsCount > 0).length, 'total': _userListings.length},
       {'label': 'With Contact Info', 'value': _userListings.where((l) => l.phone.isNotEmpty || l.email.isNotEmpty).length, 'total': _userListings.length},
+      {'label': 'Chat Enabled', 'value': _userListings.where((l) => l.chatEnabled).length, 'total': _userListings.length},
     ];
 
     return Container(
