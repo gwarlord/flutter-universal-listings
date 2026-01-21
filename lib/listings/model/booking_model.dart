@@ -20,6 +20,7 @@ class BookingModel {
   String status; // pending, confirmed, rejected, cancelled
   DateTime createdAt;
   DateTime updatedAt;
+  Map<String, String> customAnswers; // ✅ question -> answer
 
   BookingModel({
     this.id = '',
@@ -41,10 +42,12 @@ class BookingModel {
     this.totalPrice = 0,
     this.currency = 'USD',
     this.status = 'pending',
+    Map<String, String>? customAnswers,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
-        updatedAt = updatedAt ?? DateTime.now();
+      updatedAt = updatedAt ?? DateTime.now(),
+      customAnswers = customAnswers ?? {};
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
     return BookingModel(
@@ -71,6 +74,7 @@ class BookingModel {
       totalPrice: json['totalPrice'] ?? 0,
       currency: json['currency'] ?? 'USD',
       status: json['status'] ?? 'pending',
+        customAnswers: Map<String, String>.from(json['customAnswers'] ?? {}),
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
@@ -101,6 +105,7 @@ class BookingModel {
       'totalPrice': totalPrice,
       'currency': currency,
       'status': status,
+      'customAnswers': customAnswers,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
