@@ -60,10 +60,12 @@ class HomeScreenState extends State<HomeScreen> {
   List<ListingModel> listings = [];
   List<ListingModel?> listingsWithAds = [];
   List<CategoriesModel> _categories = [];
+  List<ListingModel> _featuredListings = [];
 
   bool _showAll = false;
   bool loadingCategories = true;
   bool loadingListings = true;
+  bool loadingFeatured = true;
 
   late ListingsUser currentUser;
   
@@ -79,6 +81,21 @@ class HomeScreenState extends State<HomeScreen> {
     _searchController = TextEditingController();
     context.read<HomeBloc>().add(GetCategoriesEvent());
     context.read<HomeBloc>().add(GetListingsEvent());
+    _loadFeaturedListings();
+  }
+
+  Future<void> _loadFeaturedListings() async {
+    try {
+      final featured = await listingApiManager.getFeaturedListings();
+      setState(() {
+        _featuredListings = featured;
+        loadingFeatured = false;
+      });
+    } catch (e) {
+      setState(() {
+        loadingFeatured = false;
+      });
+    }
   }
 
   @override
@@ -239,6 +256,7 @@ class HomeScreenState extends State<HomeScreen> {
           context.read<HomeBloc>().add(LoadingEvent());
           context.read<HomeBloc>().add(GetCategoriesEvent());
           context.read<HomeBloc>().add(GetListingsEvent());
+          await _loadFeaturedListings();
         },
         child: BlocConsumer<HomeBloc, HomeState>(
           listener: (context, state) {
@@ -287,6 +305,121 @@ class HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.all(16.0),
               child: CustomScrollView(
                 slivers: [
+                  // Featured Section
+                  if (_featuredListings.isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: Row(
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 24),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Featured'.tr(),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 22,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 220,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _featuredListings.length,
+                          itemBuilder: (context, index) {
+                            final listing = _featuredListings[index];
+                            return GestureDetector(
+                              onTap: () => push(
+                                context,
+                                ListingDetailsScreen(
+                                  currentUser: currentUser,
+                                  listing: listing,
+                                ),
+                              ),
+                              child: Container(
+                                width: 180,
+                                margin: const EdgeInsets.only(right: 12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Stack(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Image.network(
+                                            listing.photo,
+                                            height: 140,
+                                            width: 180,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (ctx, err, st) => Container(
+                                              height: 140,
+                                              width: 180,
+                                              color: Colors.grey.shade300,
+                                              child: const Icon(Icons.image_not_supported),
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 8,
+                                          right: 8,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.amber,
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(Icons.star, size: 12, color: Colors.white),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  'Featured'.tr(),
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      listing.title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      listing.place,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                  ],
+
                   SliverToBoxAdapter(
                     child: Text(
                       'Categories'.tr(),

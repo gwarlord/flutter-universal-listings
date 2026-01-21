@@ -55,6 +55,11 @@ abstract class ListingsRepository {
   Future<void> rejectListing(String listingId);
   Future<void> unsuspendListing({required ListingModel listing});
 
+  // Featured listings
+  Future<List<ListingModel>> getFeaturedListings();
+  Future<void> featureListing(String listingID, String featuredBy, {int? durationDays});
+  Future<void> unfeatureListing(String listingID);
+
   // Legacy
   Future<void> postListing({required ListingModel newListing});
 }

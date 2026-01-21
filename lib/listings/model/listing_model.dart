@@ -80,6 +80,11 @@ class ListingModel {
   /// Region
   String countryCode;
 
+  /// Featured
+  bool isFeatured;
+  int? featuredUntil; // Timestamp in seconds, null = no expiration
+  String? featuredBy; // 'auto-premium', 'admin', or admin user ID
+
   /// UI-only
   bool isFav = false;
 
@@ -133,6 +138,9 @@ class ListingModel {
     this.reviewsSum = 0,
     this.viewCount = 0,
     this.countryCode = '',
+    this.isFeatured = false,
+    this.featuredUntil,
+    this.featuredBy,
   }) : createdAt = createdAt ?? Timestamp.now().seconds;
 
   factory ListingModel.fromJson(Map<String, dynamic> json) {
@@ -190,6 +198,9 @@ class ListingModel {
       reviewsSum: json['reviewsSum'] ?? 0,
       viewCount: json['viewCount'] ?? 0,
       countryCode: json['countryCode'] ?? '',
+      isFeatured: json['isFeatured'] ?? false,
+      featuredUntil: json['featuredUntil'],
+      featuredBy: json['featuredBy'],
     );
   }
 
@@ -244,6 +255,9 @@ class ListingModel {
       'reviewsSum': reviewsSum,
       'viewCount': viewCount,
       'countryCode': countryCode,
+      'isFeatured': isFeatured,
+      'featuredUntil': featuredUntil,
+      'featuredBy': featuredBy,
     };
   }
 
