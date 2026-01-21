@@ -14,9 +14,9 @@ class GeminiAIService {
   void initialize() {
     if (_initialized && _model != null) return;
     
-    // 'gemini-1.5-flash' is the fastest "Free Tier" model available.
-    // We use the 'models/' prefix which is sometimes required by the backend.
-    const String modelName = 'gemini-1.5-flash';
+    // Use 'gemini-2.0-flash' or 'gemini-1.5-flash' depending on API availability
+    // For most cases, 'gemini-2.0-flash' is the latest stable fast model.
+    const String modelName = 'gemini-2.0-flash';
     
     _model = GenerativeModel(
       model: modelName, 
@@ -29,7 +29,7 @@ class GeminiAIService {
     
     _initialized = true;
     print('🚀 [GEMINI v1.3] INITIALIZED');
-    print('🚀 [GEMINI v1.3] Fast AI: gemini-1.5-flash (Free Tier)');
+    print('🚀 [GEMINI v1.3] Fast AI: gemini-2.0-flash (Latest)');
   }
 
   Future<String> generateListingDescription({
