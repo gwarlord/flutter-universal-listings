@@ -595,18 +595,18 @@ class ListingsFirebaseUtils extends ListingsRepository {
   Future<List<ListingModel>> getUnverifiedListings() async {
     final snapshot = await firestore
         .collection(cfg.listingsCollection)
-        .where('verified', isEqualTo: false)
         .where('suspended', isEqualTo: false)
         .limit(100)
         .get();
 
-    return snapshot.docs
-        .map((doc) {
-          final model = ListingModel.fromJson(doc.data());
-          model.id = doc.id;
-          return model;
-        })
-        .toList();
+    final all = snapshot.docs.map((doc) {
+      final model = ListingModel.fromJson(doc.data());
+      model.id = doc.id;
+      return model;
+    }).toList();
+
+    // Treat missing 'verified' field as false (unverified)
+    return all.where((m) => m.verified != true).toList();
   }
 
   @override
