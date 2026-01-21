@@ -14,9 +14,8 @@ class GeminiAIService {
   void initialize() {
     if (_initialized && _model != null) return;
     
-    // Use 'gemini-pro' which is the most stable and widely available model in v1beta API.
-    // Note: gemini-1.5-flash and gemini-2.0-flash require specific API access.
-    const String modelName = 'gemini-pro';
+    // Use 'gemini-1.5-flash' which is available and reliable in v1beta API
+    const String modelName = 'gemini-1.5-flash';
     
     _model = GenerativeModel(
       model: modelName, 
@@ -29,7 +28,7 @@ class GeminiAIService {
     
     _initialized = true;
     print('🚀 [GEMINI v1.3] INITIALIZED');
-    print('🚀 [GEMINI v1.3] Using: gemini-pro (Stable v1beta)');
+    print('🚀 [GEMINI v1.3] Using: gemini-1.5-flash (v1beta)');
   }
 
   Future<String> generateListingDescription({
