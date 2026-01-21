@@ -6,9 +6,11 @@ class AdaptiveVideoPlayer extends StatelessWidget {
   final BoxFit fit;
   final bool showPlayOverlay;
   final bool showMuteToggle;
+  final bool showFullScreenButton;
   final bool isMuted;
   final VoidCallback? onTogglePlay;
   final VoidCallback? onToggleMute;
+  final VoidCallback? onToggleFullScreen;
 
   const AdaptiveVideoPlayer({
     super.key,
@@ -16,9 +18,11 @@ class AdaptiveVideoPlayer extends StatelessWidget {
     this.fit = BoxFit.contain,
     this.showPlayOverlay = true,
     this.showMuteToggle = true,
+    this.showFullScreenButton = true,
     this.isMuted = false,
     this.onTogglePlay,
     this.onToggleMute,
+    this.onToggleFullScreen,
   });
 
   @override
@@ -29,7 +33,17 @@ class AdaptiveVideoPlayer extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isPortrait = controller.value.aspectRatio < 1.0;
+        final aspectRatio = controller.value.aspectRatio;
+        final isPortrait = aspectRatio < 1.0;
+        
+        // Calculate video dimensions based on aspect ratio for proper scaling
+        final videoWidth = controller.value.size.width > 0
+            ? controller.value.size.width
+            : constraints.maxWidth;
+        final videoHeight = controller.value.size.height > 0
+            ? controller.value.size.height
+            : (videoWidth / aspectRatio);
+        
         // Container takes available space; FittedBox scales/crops the video to match desired fit.
         return Stack(
           fit: StackFit.expand,
@@ -39,13 +53,8 @@ class AdaptiveVideoPlayer extends StatelessWidget {
                 fit: fit,
                 alignment: Alignment.center,
                 child: SizedBox(
-                  // Use the raw video dimensions to allow FittedBox to scale correctly
-                  width: controller.value.size.width == 0
-                      ? constraints.maxWidth
-                      : controller.value.size.width,
-                  height: controller.value.size.height == 0
-                      ? constraints.maxHeight
-                      : controller.value.size.height,
+                  width: videoWidth,
+                  height: videoHeight,
                   child: VideoPlayer(controller),
                 ),
               ),
@@ -78,6 +87,26 @@ class AdaptiveVideoPlayer extends StatelessWidget {
                     ),
                     child: Icon(
                       isMuted ? Icons.volume_off : Icons.volume_up,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            if (showFullScreenButton)
+              Positioned(
+                bottom: 12,
+                right: 12,
+                child: GestureDetector(
+                  onTap: onToggleFullScreen,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.fullscreen,
                       color: Colors.white,
                       size: 20,
                     ),

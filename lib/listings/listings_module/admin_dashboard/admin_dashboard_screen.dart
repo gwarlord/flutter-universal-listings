@@ -48,6 +48,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   List<ListingsUser> allUsers = [];
   List<ListingModel> suspendedListings = [];
   List<ListingModel> allListings = [];
+  List<ListingModel> unverifiedListings = [];
   late ListingsUser currentUser;
   bool isLoading = true;
   String userSearchQuery = '';
@@ -58,7 +59,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     currentUser = widget.currentUser;
     _loadAllData();
   }
@@ -112,6 +113,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           tabs: [
             Tab(text: 'All Users'.tr()),
             Tab(text: 'All Listings'.tr()),
+            Tab(text: 'Verification'.tr()),
           ],
         ),
       ),
@@ -156,6 +158,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             children: [
               _buildAllUsersTab(),
               _buildAllListingsTab(),
+              _buildVerificationTab(),
             ],
           );
         },
@@ -391,6 +394,131 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             listing.authorName.toLowerCase().contains(listingSearchQuery.toLowerCase()))
         .toList();
   }
+
+  Widget _buildVerificationTab() {
+    return RefreshIndicator(
+      onRefresh: () async {
+        final snap = await context.read<AdminBloc>().listingsRepository.getUnverifiedListings();
+        setState(() {
+          unverifiedListings = snap;
+        });
+      },
+      child: unverifiedListings.isEmpty
+          ? Center(
+              child: Text('No unverified listings'.tr()),
+            )
+          : ListView.builder(
+              itemCount: unverifiedListings.length,
+              itemBuilder: (context, index) {
+                final listing = unverifiedListings[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: ExpansionTile(
+                    title: Text(
+                      listing.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      '${listing.authorName} • ${listing.place}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Reviews: ${listing.reviewsCount.toInt()} (${(listing.reviewsSum / (listing.reviewsCount > 0 ? listing.reviewsCount : 1)).toStringAsFixed(1)}/5)',
+                              style: TextStyle(fontSize: 12, color: isDarkMode(context) ? Colors.grey.shade300 : Colors.grey.shade600),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => _verifyListing(listing),
+                                    icon: const Icon(Icons.check_circle, size: 18),
+                                    label: const Text('Verify'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => _rejectListing(listing),
+                                    icon: const Icon(Icons.cancel, size: 18),
+                                    label: const Text('Reject'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  Future<void> _verifyListing(ListingModel listing) async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Verify Listing'),
+        content: TextField(
+          decoration: const InputDecoration(hintText: 'Verification reason (optional)'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ''),
+            child: const Text('Verify'),
+          ),
+        ],
+      ),
+    );
+
+    if (reason != null) {
+      try {
+        await context.read<AdminBloc>().listingsRepository.verifyListing(
+              listing.id,
+              currentUser.userID,
+              reason.isNotEmpty ? reason : 'Admin verified',
+            );
+        setState(() {
+          unverifiedListings.removeWhere((l) => l.id == listing.id);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing verified')));
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  Future<void> _rejectListing(ListingModel listing) async {
+    try {
+      await context.read<AdminBloc>().listingsRepository.rejectListing(listing.id);
+      setState(() {
+        unverifiedListings.removeWhere((l) => l.id == listing.id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing rejected')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
 }
 
 class AllUserCard extends StatelessWidget {
@@ -461,6 +589,129 @@ class AllUserCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class AllUserCard extends StatelessWidget {
+    return RefreshIndicator(
+      onRefresh: () async {
+        final snap = await context.read<AdminBloc>().listingsRepository.getUnverifiedListings();
+        setState(() {
+          unverifiedListings = snap;
+        });
+      },
+      child: ListView.builder(
+        itemCount: unverifiedListings.length,
+        itemBuilder: (context, index) {
+          final listing = unverifiedListings[index];
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: ExpansionTile(
+              title: Text(
+                listing.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                '${listing.authorName} • ${listing.place}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Reviews: ${listing.reviewsCount.toInt()} (${(listing.reviewsSum / (listing.reviewsCount > 0 ? listing.reviewsCount : 1)).toStringAsFixed(1)}/5)',
+                        style: TextStyle(fontSize: 12, color: isDarkMode(context) ? Colors.grey.shade300 : Colors.grey.shade600),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _verifyListing(listing),
+                              icon: const Icon(Icons.check_circle, size: 18),
+                              label: const Text('Verify'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _rejectListing(listing),
+                              icon: const Icon(Icons.cancel, size: 18),
+                              label: const Text('Reject'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _verifyListing(ListingModel listing) async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Verify Listing'),
+        content: TextField(
+          decoration: const InputDecoration(hintText: 'Verification reason (optional)'),
+          onChanged: (val) {},
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ''),
+            child: const Text('Verify'),
+          ),
+        ],
+      ),
+    );
+
+    if (reason != null) {
+      try {
+        await context.read<AdminBloc>().listingsRepository.verifyListing(
+              listing.id,
+              currentUser.userID,
+              reason.isNotEmpty ? reason : 'Admin verified',
+            );
+        setState(() {
+          unverifiedListings.removeWhere((l) => l.id == listing.id);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing verified')));
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  Future<void> _rejectListing(ListingModel listing) async {
+    try {
+      await context.read<AdminBloc>().listingsRepository.rejectListing(listing.id);
+      setState(() {
+        unverifiedListings.removeWhere((l) => l.id == listing.id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing rejected')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }  }
 
   void _showSuspendConfirmation(BuildContext context, ListingsUser user) {
     showDialog(

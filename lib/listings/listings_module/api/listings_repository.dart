@@ -48,6 +48,11 @@ abstract class ListingsRepository {
   // Listing suspension
   Future<List<ListingModel>> getSuspendedListings();
   Future<void> suspendListing({required ListingModel listing});
+
+  // Verification
+  Future<List<ListingModel>> getUnverifiedListings();
+  Future<void> verifyListing(String listingId, String adminId, String reason);
+  Future<void> rejectListing(String listingId);
   Future<void> unsuspendListing({required ListingModel listing});
 
   // Legacy

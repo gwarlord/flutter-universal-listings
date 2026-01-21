@@ -586,4 +586,51 @@ class ListingsFirebaseUtils extends ListingsRepository {
     Uri.decodeFull(path.basename(videoURL)).replaceAll(RegExp(r'(\?alt).*'), '');
     await storage.child(fileUrl).delete();
   }
+
+  // ---------------------------
+  // Verification
+  // ---------------------------
+
+  @override
+  Future<List<ListingModel>> getUnverifiedListings() async {
+    final snapshot = await firestore
+        .collection(cfg.listingsCollection)
+        .where('verified', isEqualTo: false)
+        .where('suspended', isEqualTo: false)
+        .limit(100)
+        .get();
+
+    return snapshot.docs
+        .map((doc) {
+          final model = ListingModel.fromJson(doc.data());
+          model.id = doc.id;
+          return model;
+        })
+        .toList();
+  }
+
+  @override
+  Future<void> verifyListing(String listingId, String adminId, String reason) async {
+    await firestore
+        .collection(cfg.listingsCollection)
+        .doc(listingId)
+        .update({
+          'verified': true,
+          'verificationMethod': 'manual',
+          'verifiedAt': Timestamp.now().seconds,
+          'verifiedBy': adminId,
+          'verificationReason': reason,
+        });
+  }
+
+  @override
+  Future<void> rejectListing(String listingId) async {
+    await firestore
+        .collection(cfg.listingsCollection)
+        .doc(listingId)
+        .update({
+          'suspended': true,
+          'verificationReason': 'Rejected by admin',
+        });
+  }
 }
