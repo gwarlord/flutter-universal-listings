@@ -96,4 +96,13 @@ class ListingsLocalData extends ListingsRepository {
 
   @override
   Future<void> rejectListing(String listingID) async {}
+
+  @override
+  Future<List<ListingModel>> getFeaturedListings() async => [];
+
+  @override
+  Future<void> featureListing(String listingID, String featuredBy, {int? durationDays}) async {}
+
+  @override
+  Future<void> unfeatureListing(String listingID) async {}
 }

@@ -633,4 +633,62 @@ class ListingsFirebaseUtils extends ListingsRepository {
           'verificationReason': 'Rejected by admin',
         });
   }
+
+  // ---------------------------
+  // Featured
+  // ---------------------------
+
+  @override
+  Future<List<ListingModel>> getFeaturedListings() async {
+    final now = Timestamp.now().seconds;
+    final snapshot = await firestore
+        .collection(cfg.listingsCollection)
+        .where('isFeatured', isEqualTo: true)
+        .where('suspended', isEqualTo: false)
+        .limit(20)
+        .get();
+
+    final all = snapshot.docs.map((doc) {
+      final model = ListingModel.fromJson(doc.data());
+      model.id = doc.id;
+      return model;
+    }).toList();
+
+    // Filter expired featured listings
+    return all.where((m) {
+      if (m.featuredUntil == null) return true; // No expiration
+      return m.featuredUntil! > now;
+    }).toList();
+  }
+
+  @override
+  Future<void> featureListing(String listingID, String featuredBy, {int? durationDays}) async {
+    final data = <String, dynamic>{
+      'isFeatured': true,
+      'featuredBy': featuredBy,
+    };
+
+    if (durationDays != null) {
+      final now = Timestamp.now().seconds;
+      final expiry = now + (durationDays * 24 * 60 * 60);
+      data['featuredUntil'] = expiry;
+    }
+
+    await firestore
+        .collection(cfg.listingsCollection)
+        .doc(listingID)
+        .update(data);
+  }
+
+  @override
+  Future<void> unfeatureListing(String listingID) async {
+    await firestore
+        .collection(cfg.listingsCollection)
+        .doc(listingID)
+        .update({
+          'isFeatured': false,
+          'featuredUntil': null,
+          'featuredBy': null,
+        });
+  }
 }

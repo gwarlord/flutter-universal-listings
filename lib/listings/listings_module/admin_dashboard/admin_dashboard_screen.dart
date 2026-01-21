@@ -391,6 +391,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                         .read<AdminBloc>()
                                         .add(SuspendListingEvent(listing: listing));
                                   },
+                                  onFeature: (listing) {
+                                    _featureListing(listing);
+                                  },
+                                  onUnfeature: (listing) {
+                                    _unfeatureListing(listing);
+                                  },
                                 );
                         },
                       ),
@@ -655,6 +661,72 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         unverifiedListings.removeWhere((l) => l.id == listing.id);
       });
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing rejected')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  Future<void> _featureListing(ListingModel listing) async {
+    final duration = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Feature Listing'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Feature "${listing.title}" for how many days?'),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                TextButton(onPressed: () => Navigator.pop(ctx, 7), child: const Text('7 days')),
+                TextButton(onPressed: () => Navigator.pop(ctx, 14), child: const Text('14 days')),
+                TextButton(onPressed: () => Navigator.pop(ctx, 30), child: const Text('30 days')),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+        ],
+      ),
+    );
+
+    if (duration != null) {
+      try {
+        await context.read<AdminBloc>().listingsRepository.featureListing(
+              listing.id,
+              currentUser.userID,
+              durationDays: duration,
+            );
+        setState(() {
+          final idx = allListings.indexWhere((l) => l.id == listing.id);
+          if (idx >= 0) {
+            allListings[idx].isFeatured = true;
+            final now = Timestamp.now().seconds;
+            allListings[idx].featuredUntil = now + (duration * 24 * 60 * 60);
+            allListings[idx].featuredBy = currentUser.userID;
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Featured for $duration days')));
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  Future<void> _unfeatureListing(ListingModel listing) async {
+    try {
+      await context.read<AdminBloc>().listingsRepository.unfeatureListing(listing.id);
+      setState(() {
+        final idx = allListings.indexWhere((l) => l.id == listing.id);
+        if (idx >= 0) {
+          allListings[idx].isFeatured = false;
+          allListings[idx].featuredUntil = null;
+          allListings[idx].featuredBy = null;
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unfeatured')));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
@@ -1009,11 +1081,15 @@ class SuspendedListingCard extends StatelessWidget {
 class AllListingCard extends StatelessWidget {
   final ListingModel listing;
   final Function(ListingModel) onSuspend;
+  final Function(ListingModel)? onFeature;
+  final Function(ListingModel)? onUnfeature;
 
   const AllListingCard({
     super.key,
     required this.listing,
     required this.onSuspend,
+    this.onFeature,
+    this.onUnfeature,
   });
 
   @override
@@ -1081,6 +1157,35 @@ class AllListingCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (onFeature != null || onUnfeature != null) const SizedBox(width: 8),
+                    if (listing.isFeatured && onUnfeature != null)
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => onUnfeature!(listing),
+                          icon: const Icon(Icons.star_border, size: 14),
+                          label: Text('Unfeature'.tr(), style: const TextStyle(fontSize: 11)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.grey,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            minimumSize: const Size(0, 28),
+                          ),
+                        ),
+                      ),
+                    if (!listing.isFeatured && onFeature != null)
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => onFeature!(listing),
+                          icon: const Icon(Icons.star, size: 14),
+                          label: Text('Feature'.tr(), style: const TextStyle(fontSize: 11)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            minimumSize: const Size(0, 28),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ],
