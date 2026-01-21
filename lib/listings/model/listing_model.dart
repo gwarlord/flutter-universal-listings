@@ -65,6 +65,10 @@ class ListingModel {
   bool isApproved;
   bool suspended;
   bool verified;
+  String? verificationMethod; // 'auto', 'manual', or null
+  int? verifiedAt; // Timestamp in seconds
+  String? verifiedBy; // User ID of admin who verified (if manual)
+  String? verificationReason; // Reason for manual verification or auto-verification rule met
 
   /// Reviews
   num reviewsCount;
@@ -121,6 +125,10 @@ class ListingModel {
     this.isApproved = false,
     this.suspended = false,
     this.verified = false,
+    this.verificationMethod,
+    this.verifiedAt,
+    this.verifiedBy,
+    this.verificationReason,
     this.reviewsCount = 0,
     this.reviewsSum = 0,
     this.viewCount = 0,
@@ -174,6 +182,10 @@ class ListingModel {
       isApproved: json['isApproved'] ?? false,
       suspended: json['suspended'] ?? false,
       verified: json['verified'] ?? false,
+      verificationMethod: json['verificationMethod'],
+      verifiedAt: json['verifiedAt'],
+      verifiedBy: json['verifiedBy'],
+      verificationReason: json['verificationReason'],
       reviewsCount: json['reviewsCount'] ?? 0,
       reviewsSum: json['reviewsSum'] ?? 0,
       viewCount: json['viewCount'] ?? 0,
@@ -224,6 +236,10 @@ class ListingModel {
       'isApproved': isApproved,
       'suspended': suspended,
       'verified': verified,
+      'verificationMethod': verificationMethod,
+      'verifiedAt': verifiedAt,
+      'verifiedBy': verifiedBy,
+      'verificationReason': verificationReason,
       'reviewsCount': reviewsCount,
       'reviewsSum': reviewsSum,
       'viewCount': viewCount,

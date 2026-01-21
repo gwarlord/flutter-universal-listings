@@ -35,6 +35,8 @@ import 'package:instaflutter/listings/ui/subscription/paywall_screen.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
+import 'package:instaflutter/core/ui/video/adaptive_video_player.dart';
+import 'package:instaflutter/core/ui/full_screen_video_viewer/full_screen_video_viewer.dart';
 
 class ListingDetailsWrappingWidget extends StatelessWidget {
   final ListingModel listing;
@@ -119,6 +121,11 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
     _buildMediaList();
 
+    // Preload video controller if the first media item is a video
+    if (_mediaList.isNotEmpty && _mediaList.first.isVideo) {
+      _loadVideoController(_mediaList.first.url);
+    }
+
     context.read<ListingDetailsBloc>().add(GetListingReviewsEvent());
 
     // Increment view count (don't count owner's own views)
@@ -132,6 +139,41 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
     // Check if listing author has premium subscription
     _checkAuthorPremiumStatus();
+  }
+
+  void _buildMediaList() {
+    _mediaList = [];
+    for (final photo in listing.photos) {
+      _mediaList.add(MediaItem.photo(photo));
+    }
+    final videos = listing.videos ?? [];
+    for (final videoUrl in videos) {
+      _mediaList.add(MediaItem.video(videoUrl));
+    }
+  }
+
+  String _getCurrencySymbol(String code) {
+    switch (code) {
+      case 'USD':
+      case 'XCD':
+      case 'JMD':
+      case 'TTD':
+      case 'BSD':
+      case 'BBD':
+      case 'GYD':
+      case 'DOP':
+      case 'KYD':
+      case 'SRD':
+        return '\$';
+      case 'ANG':
+        return 'ƒ';
+      case 'XOF':
+        return 'CFA';
+      case 'HTG':
+        return 'G';
+      default:
+        return '\$';
+    }
   }
 
   Future<void> _checkAuthorPremiumStatus() async {
@@ -156,42 +198,29 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
       setState(() => _authorIsPremium = false);
     }
   }
-
-                            ? AdaptiveVideoPlayer(
-                                controller: _videoController!,
-                                // Use cover to make portrait videos fill like TikTok; contain for landscape
-                                fit: _videoController!.value.aspectRatio < 1.0
-                                    ? BoxFit.cover
-                                    : BoxFit.contain,
-                                isMuted: _videoMuted,
-                                onTogglePlay: () {
-                                  setState(() {
-                                    _videoController!.value.isPlaying
-                                        ? _videoController!.pause()
-                                        : _videoController!.play();
-                                  });
-                                },
-                                onToggleMute: () {
-                                  setState(() {
-                                    _videoMuted = !_videoMuted;
-                                    _videoController!.setVolume(_videoMuted ? 0 : 1);
-                                  });
-                                },
-                              )
-    )
-      ..setLooping(true)
-      ..initialize().then((_) {
-        if (mounted) {
-          setState(() {
-            _videoReady = true;
-          });
-          _videoController!.setVolume(0); 
-          _videoController!.play();
-        }
-      }).catchError((e) {
-        debugPrint('Video loading error: $e');
-      });
-  }
+  
+    void _loadVideoController(String videoUrl) {
+      _videoController?.dispose();
+      _videoReady = false;
+      _videoMuted = true;
+    
+      _videoController = VideoPlayerController.networkUrl(
+        Uri.parse(videoUrl),
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+      )
+        ..setLooping(true)
+        ..initialize().then((_) {
+          if (mounted) {
+            setState(() {
+              _videoReady = true;
+            });
+            _videoController!.setVolume(0);
+            _videoController!.play();
+          }
+        }).catchError((e) {
+          debugPrint('Video loading error: $e');
+        });
+    }
 
   void _pauseAutoScroll() {
     _autoScroll?.cancel();
@@ -456,61 +485,55 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                           itemBuilder: (context, index) {
                             final media = _mediaList[index];
                             if (media.isVideo) {
+                              final isPortrait = _videoController?.value.isInitialized == true
+                                  ? _videoController!.value.aspectRatio < 1.0
+                                  : false;
                               return GestureDetector(
                                 onTap: () {
                                   _pauseAutoScroll();
                                   if (_videoReady && _videoController != null) {
                                     setState(() {
-                                      _videoController!.value.isPlaying
-                                          ? _videoController!.pause()
-                                          : _videoController!.play();
+                                      if (_videoController!.value.isPlaying) {
+                                        _videoController!.pause();
+                                      } else {
+                                        _videoController!.play();
+                                      }
                                     });
                                   }
                                   _resumeAutoScrollAfterDelay();
                                 },
                                 child: _videoReady && _videoController != null
-                                    ? Stack(
-                                        fit: StackFit.expand,
-                                        children: [
-                                          VideoPlayer(_videoController!),
-                                          if (!_videoController!.value.isPlaying)
-                                            Container(
-                                              color: Colors.black.withOpacity(0.2),
-                                              child: const Center(
-                                                child: Icon(
-                                                  Icons.play_circle_fill,
-                                                  size: 64,
-                                                  color: Colors.white70,
-                                                ),
-                                              ),
+                                    ? AdaptiveVideoPlayer(
+                                        controller: _videoController!,
+                                        fit: isPortrait ? BoxFit.cover : BoxFit.contain,
+                                        isMuted: _videoMuted,
+                                        onTogglePlay: () {
+                                          setState(() {
+                                            if (_videoController!.value.isPlaying) {
+                                              _videoController!.pause();
+                                            } else {
+                                              _videoController!.play();
+                                            }
+                                          });
+                                        },
+                                        onToggleMute: () {
+                                          setState(() {
+                                            _videoMuted = !_videoMuted;
+                                            _videoController!.setVolume(_videoMuted ? 0 : 1);
+                                          });
+                                        },
+                                        onToggleFullScreen: () {
+                                          _pauseAutoScroll();
+                                          push(
+                                            context,
+                                            FullScreenVideoViewer(
+                                              videoUrl: media.url,
+                                              heroTag: 'listing_video_${media.url}',
                                             ),
-                                          Positioned(
-                                            top: 12,
-                                            right: 12,
-                                            child: GestureDetector(
-                                              onTap: () {
-                                                if (_videoController != null) {
-                                                  setState(() {
-                                                    _videoMuted = !_videoMuted;
-                                                    _videoController!.setVolume(_videoMuted ? 0 : 1);
-                                                  });
-                                                }
-                                              },
-                                              child: Container(
-                                                padding: const EdgeInsets.all(8),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.black.withOpacity(0.5),
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: Icon(
-                                                  _videoMuted ? Icons.volume_off : Icons.volume_up,
-                                                  color: Colors.white,
-                                                  size: 20,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
+                                          ).then((_) {
+                                            _resumeAutoScrollAfterDelay();
+                                          });
+                                        },
                                       )
                                     : Container(
                                         color: Colors.black.withOpacity(0.3),

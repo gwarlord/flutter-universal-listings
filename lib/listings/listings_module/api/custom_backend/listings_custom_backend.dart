@@ -99,4 +99,13 @@ class ListingsCustomBackendUtils extends ListingsRepository {
 
   @override
   Future<PlaceDetails?> getPlaceDetails(Prediction prediction) async => null;
+
+  @override
+  Future<List<ListingModel>> getUnverifiedListings() async => [];
+
+  @override
+  Future<void> verifyListing(String listingID, String verifiedBy, String reason) async {}
+
+  @override
+  Future<void> rejectListing(String listingID) async {}
 }

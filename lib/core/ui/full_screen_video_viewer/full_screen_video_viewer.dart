@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:instaflutter/core/ui/video/adaptive_video_player.dart';
 
 class FullScreenVideoViewer extends StatefulWidget {
   final String videoUrl;

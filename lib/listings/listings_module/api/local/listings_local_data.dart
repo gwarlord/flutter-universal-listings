@@ -87,4 +87,13 @@ class ListingsLocalData extends ListingsRepository {
 
   @override
   Future<void> unsuspendListing({required ListingModel listing}) async {}
+
+  @override
+  Future<List<ListingModel>> getUnverifiedListings() async => [];
+
+  @override
+  Future<void> verifyListing(String listingID, String verifiedBy, String reason) async {}
+
+  @override
+  Future<void> rejectListing(String listingID) async {}
 }
