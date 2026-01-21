@@ -268,6 +268,45 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
                 ),
               ),
             ],
+            if (booking.customAnswers.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Custom questions'.tr(),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: dark ? Colors.white : Colors.black,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: booking.customAnswers.entries.map((e) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        e.key,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: dark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        e.value.isEmpty ? '-'.tr() : e.value,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: dark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                )).toList(),
+              ),
+            ],
             if (booking.isPending) ...[
               const SizedBox(height: 16),
               Row(

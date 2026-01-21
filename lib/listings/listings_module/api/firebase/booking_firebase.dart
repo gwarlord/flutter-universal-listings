@@ -237,6 +237,12 @@ class BookingFirebase extends BookingRepository {
 
       final checkInStr = booking.checkInDate.toLocal().toString().split(' ')[0];
       final checkOutStr = booking.checkOutDate.toLocal().toString().split(' ')[0];
+        final String qnaHtml = booking.customAnswers.isNotEmpty
+          ? '<h4>Custom Questions</h4>' +
+            booking.customAnswers.entries
+              .map((e) => '<p><b>${e.key}</b><br>${e.value.isEmpty ? '-' : e.value}</p>')
+              .join('')
+          : '';
 
       switch (status) {
         case 'pending':
@@ -246,6 +252,7 @@ class BookingFirebase extends BookingRepository {
             <p>We've received your booking request for <b>${booking.listingTitle}</b>.</p>
             <p><b>Check-in:</b> $checkInStr</p>
             <p><b>Check-out:</b> $checkOutStr</p>
+            $qnaHtml
             <p>The lister will review your request and you will receive another email once it's confirmed or rejected.</p>
             <br><p>Best regards,<br>CaribTap Team</p>
           ''';
@@ -255,6 +262,7 @@ class BookingFirebase extends BookingRepository {
             <p><b>Customer:</b> ${booking.customerName}</p>
             <p><b>Check-in:</b> $checkInStr</p>
             <p><b>Check-out:</b> $checkOutStr</p>
+            $qnaHtml
             <p>Please log in to the app to confirm or reject this request.</p>
             <br><p>Best regards,<br>CaribTap Team</p>
           ''';
@@ -267,6 +275,7 @@ class BookingFirebase extends BookingRepository {
             <p>Your booking for <b>${booking.listingTitle}</b> has been <b>CONFIRMED</b>.</p>
             <p><b>Check-in:</b> $checkInStr</p>
             <p><b>Check-out:</b> $checkOutStr</p>
+            $qnaHtml
             <p>Enjoy your stay!</p>
             <br><p>Best regards,<br>CaribTap Team</p>
           ''';
@@ -277,6 +286,7 @@ class BookingFirebase extends BookingRepository {
           customerHtml = '''
             <h3>Hello ${booking.customerName},</h3>
             <p>We're sorry, but your booking request for <b>${booking.listingTitle}</b> was not accepted at this time.</p>
+            $qnaHtml
             <p>Please feel free to browse other listings on CaribTap.</p>
             <br><p>Best regards,<br>CaribTap Team</p>
           ''';
@@ -287,11 +297,13 @@ class BookingFirebase extends BookingRepository {
           customerHtml = '''
             <h3>Hello ${booking.customerName},</h3>
             <p>Your booking for <b>${booking.listingTitle}</b> has been successfully cancelled.</p>
+            $qnaHtml
             <br><p>Best regards,<br>CaribTap Team</p>
           ''';
           listerHtml = '''
             <h3>Hello ${booking.listersName},</h3>
             <p>The booking request from ${booking.customerName} for <b>${booking.listingTitle}</b> has been cancelled by the customer.</p>
+            $qnaHtml
             <br><p>Best regards,<br>CaribTap Team</p>
           ''';
           break;

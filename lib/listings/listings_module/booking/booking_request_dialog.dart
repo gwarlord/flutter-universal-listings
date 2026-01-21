@@ -34,14 +34,31 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
   List<DateTime> _bookedDates = [];
   String? _selectedTimeBlock; // ✅ Selected time block
   List<String> _availableTimeBlocks = []; // ✅ Available time blocks for selected date
+  final Map<String, TextEditingController> _questionControllers = {}; // ✅ Answers for custom questions
   
   // ✅ Track selected services with quantities
   final Map<ServiceItem, int> _selectedServicesQuantity = {};
 
   @override
   void dispose() {
+    _questionControllers.values.forEach((c) => c.dispose());
     _notesController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initQuestionControllers();
+  }
+
+  void _initQuestionControllers() {
+    _questionControllers.clear();
+    if (widget.listing.enableCustomQuestions && widget.listing.customQuestions.isNotEmpty) {
+      for (final q in widget.listing.customQuestions) {
+        _questionControllers[q] = TextEditingController();
+      }
+    }
   }
 
   double get _calculatedTotal {
@@ -89,6 +106,9 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
       timeBlock: _selectedTimeBlock ?? '', // ✅ Include selected time block
       totalPrice: _calculatedTotal, 
       currency: widget.listing.currencyCode,
+      customAnswers: widget.listing.enableCustomQuestions
+          ? _questionControllers.map((k, v) => MapEntry(k, v.text.trim()))
+          : {},
     );
 
     context.read<BookingBloc>().add(CreateBookingEvent(booking: booking));
@@ -481,6 +501,53 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                     ),
                   ],
                 ),
+                if (widget.listing.enableCustomQuestions && widget.listing.customQuestions.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    'Custom questions'.tr(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: dark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...widget.listing.customQuestions.map((q) {
+                    final controller = _questionControllers[q]!;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            q,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: dark ? Colors.white : Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: controller,
+                            maxLines: 2,
+                            style: TextStyle(color: dark ? Colors.white : Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Type your answer'.tr(),
+                              hintStyle: TextStyle(color: Colors.grey.shade400),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                              ),
+                              filled: true,
+                              fillColor: dark ? Colors.grey.shade800 : Colors.grey.shade50,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ],
                 const SizedBox(height: 20),
                 Text(
                   'Notes for the lister'.tr(),

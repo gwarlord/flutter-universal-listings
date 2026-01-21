@@ -42,6 +42,8 @@ class ListingModel {
   bool useTimeBlocks; // ✅ Enable time block bookings
   bool allowMultipleBookingsPerDay; // ✅ Allow multiple bookings on same day
   List<String> timeBlocks; // ✅ Available time slots (e.g., "09:00-10:00", "10:00-11:00")
+  bool enableCustomQuestions; // ✅ Toggle for custom booking questions
+  List<String> customQuestions; // ✅ Questions asked during booking
 
   /// ✅ Digital Service Menu
   List<ServiceItem> services;
@@ -117,6 +119,8 @@ class ListingModel {
     this.useTimeBlocks = false,
     this.allowMultipleBookingsPerDay = false,
     this.timeBlocks = const [],
+    this.enableCustomQuestions = false,
+    this.customQuestions = const [],
     this.services = const [],
     this.blockedDates = const [],
     this.chatEnabled = true,
@@ -175,6 +179,8 @@ class ListingModel {
       useTimeBlocks: json['useTimeBlocks'] ?? false,
       allowMultipleBookingsPerDay: json['allowMultipleBookingsPerDay'] ?? false,
       timeBlocks: List<String>.from(json['timeBlocks'] ?? []),
+      enableCustomQuestions: json['enableCustomQuestions'] ?? false,
+      customQuestions: List<String>.from(json['customQuestions'] ?? []),
       services: (json['services'] as List? ?? [])
           .map((e) => ServiceItem.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -234,6 +240,8 @@ class ListingModel {
       'useTimeBlocks': useTimeBlocks,
       'allowMultipleBookingsPerDay': allowMultipleBookingsPerDay,
       'timeBlocks': timeBlocks,
+      'enableCustomQuestions': enableCustomQuestions,
+      'customQuestions': customQuestions,
       'services': services.map((e) => e.toJson()).toList(),
       'blockedDates': blockedDates,
       'chatEnabled': chatEnabled,
@@ -290,6 +298,8 @@ class ListingModel {
     bool? useTimeBlocks,
     bool? allowMultipleBookingsPerDay,
     List<String>? timeBlocks,
+    bool? enableCustomQuestions,
+    List<String>? customQuestions,
     List<ServiceItem>? services,
     List<int>? blockedDates,
     bool? chatEnabled,
@@ -336,6 +346,8 @@ class ListingModel {
       useTimeBlocks: useTimeBlocks ?? this.useTimeBlocks,
       allowMultipleBookingsPerDay: allowMultipleBookingsPerDay ?? this.allowMultipleBookingsPerDay,
       timeBlocks: timeBlocks ?? this.timeBlocks,
+      enableCustomQuestions: enableCustomQuestions ?? this.enableCustomQuestions,
+      customQuestions: customQuestions ?? this.customQuestions,
       services: services ?? this.services,
       blockedDates: blockedDates ?? this.blockedDates,
       chatEnabled: chatEnabled ?? this.chatEnabled,
