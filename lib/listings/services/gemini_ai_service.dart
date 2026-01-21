@@ -70,8 +70,23 @@ class GeminiAIService {
 
   String _diagnoseAndFallback(Object e) {
     final err = e.toString();
-    if (err.contains('not found')) {
-      return 'DIAGNOSIS: The API key is valid, but the "Generative Language API" is NOT ENABLED in the Cloud Console for this project. Please go to the Google Cloud Console and enable it.';
+    if (err.contains('not found') || err.contains('not supported')) {
+      print('');
+      print('═════════════════════════════════════════════════════════════');
+      print('⚠️  GEMINI API NOT ENABLED OR RESTRICTED');
+      print('═════════════════════════════════════════════════════════════');
+      print('The Generative Language API is NOT ENABLED for this project.');
+      print('');
+      print('FIX: Go to Google Cloud Console and:');
+      print('  1. Select your project');
+      print('  2. Enable "Generative Language API"');
+      print('  3. Ensure the API key has the correct permissions');
+      print('═════════════════════════════════════════════════════════════');
+      print('');
+      return 'AI feature temporarily unavailable. Please enable Generative Language API in Google Cloud Console.';
+    }
+    if (err.contains('UNAUTHENTICATED') || err.contains('invalid API key')) {
+      return 'Invalid or expired API key. Please verify your API key.';
     }
     return 'Error: $err';
   }
