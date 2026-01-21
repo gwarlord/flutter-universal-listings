@@ -55,6 +55,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   String listingSearchQuery = '';
   bool showOnlySuspendedUsers = false;
   bool showOnlySuspendedListings = false;
+  // Verification tab filters
+  String verificationSearchQuery = '';
+  bool vHasPhone = false;
+  bool vHasEmail = false;
+  bool vHasVideo = false;
+  bool vHighRating = false;
+  String vCountryCode = '';
 
   @override
   void initState() {
@@ -62,6 +69,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     _tabController = TabController(length: 3, vsync: this);
     currentUser = widget.currentUser;
     _loadAllData();
+
+    _tabController.addListener(() {
+      if (_tabController.index == 2 && unverifiedListings.isEmpty) {
+        _loadUnverifiedListings();
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadUnverifiedListings();
+    });
   }
 
   void _loadAllData() {
@@ -395,23 +412,146 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         .toList();
   }
 
+  List<ListingModel> _getFilteredUnverifiedListings() {
+    List<ListingModel> list = List<ListingModel>.from(unverifiedListings);
+
+    if (verificationSearchQuery.isNotEmpty) {
+      final q = verificationSearchQuery.toLowerCase();
+      list = list.where((l) =>
+          l.title.toLowerCase().contains(q) ||
+          l.place.toLowerCase().contains(q) ||
+          l.authorName.toLowerCase().contains(q)
+      ).toList();
+    }
+
+    if (vHasPhone) {
+      list = list.where((l) => l.phone.trim().isNotEmpty).toList();
+    }
+    if (vHasEmail) {
+      list = list.where((l) => l.email.trim().isNotEmpty).toList();
+    }
+    if (vHasVideo) {
+      list = list.where((l) => (l.videos).isNotEmpty).toList();
+    }
+    if (vHighRating) {
+      list = list.where((l) {
+        final avg = (l.reviewsCount > 0) ? (l.reviewsSum / l.reviewsCount) : 0.0;
+        return avg >= 4.0;
+      }).toList();
+    }
+    if (vCountryCode.isNotEmpty) {
+      list = list.where((l) => (l.countryCode == vCountryCode)).toList();
+    }
+
+    return list;
+  }
+
+  Future<void> _loadUnverifiedListings() async {
+    try {
+      final snap = await context.read<AdminBloc>().listingsRepository.getUnverifiedListings();
+      setState(() {
+        unverifiedListings = snap;
+      });
+    } catch (_) {}
+  }
+
   Widget _buildVerificationTab() {
     return RefreshIndicator(
       onRefresh: () async {
-        final snap = await context.read<AdminBloc>().listingsRepository.getUnverifiedListings();
-        setState(() {
-          unverifiedListings = snap;
-        });
+        await _loadUnverifiedListings();
       },
       child: unverifiedListings.isEmpty
           ? Center(
               child: Text('No unverified listings'.tr()),
             )
-          : ListView.builder(
-              itemCount: unverifiedListings.length,
-              itemBuilder: (context, index) {
-                final listing = unverifiedListings[index];
-                return Card(
+          : ListView(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 40,
+                              child: TextField(
+                                style: TextStyle(
+                                  color: isDarkMode(context) ? Colors.white : Colors.black,
+                                  fontSize: 14,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: 'Search unverified listings...'.tr(),
+                                  hintStyle: TextStyle(
+                                    color: isDarkMode(context) ? Colors.grey.shade400 : Colors.grey.shade600,
+                                    fontSize: 14,
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.search,
+                                    color: isDarkMode(context) ? Colors.white : Colors.grey.shade600,
+                                    size: 20,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  isDense: true,
+                                ),
+                                onChanged: (value) {
+                                  setState(() {
+                                    verificationSearchQuery = value;
+                                  });
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          FilterChip(
+                            label: Text('Phone'.tr(), style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black)),
+                            selected: vHasPhone,
+                            onSelected: (v) => setState(() => vHasPhone = v),
+                            selectedColor: Colors.blue.shade100,
+                            checkmarkColor: Colors.blue.shade900,
+                          ),
+                          FilterChip(
+                            label: Text('Email'.tr(), style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black)),
+                            selected: vHasEmail,
+                            onSelected: (v) => setState(() => vHasEmail = v),
+                            selectedColor: Colors.blue.shade100,
+                            checkmarkColor: Colors.blue.shade900,
+                          ),
+                          FilterChip(
+                            label: Text('Video'.tr(), style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black)),
+                            selected: vHasVideo,
+                            onSelected: (v) => setState(() => vHasVideo = v),
+                            selectedColor: Colors.purple.shade100,
+                            checkmarkColor: Colors.purple.shade900,
+                          ),
+                          FilterChip(
+                            label: Text('Rating 4+'.tr(), style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black)),
+                            selected: vHighRating,
+                            onSelected: (v) => setState(() => vHighRating = v),
+                            selectedColor: Colors.green.shade100,
+                            checkmarkColor: Colors.green.shade900,
+                          ),
+                          if (vCountryCode.isNotEmpty)
+                            InputChip(
+                              label: Text('Country: $vCountryCode'.tr()),
+                              onPressed: () {},
+                              onDeleted: () => setState(() => vCountryCode = ''),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                ..._getFilteredUnverifiedListings().map((listing) => Card(
                   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: ExpansionTile(
                     title: Text(
@@ -468,8 +608,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                       ),
                     ],
                   ),
-                );
-              },
+                )),
+              ],
             ),
     );
   }
@@ -589,130 +729,6 @@ class AllUserCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class AllUserCard extends StatelessWidget {
-    return RefreshIndicator(
-      onRefresh: () async {
-        final snap = await context.read<AdminBloc>().listingsRepository.getUnverifiedListings();
-        setState(() {
-          unverifiedListings = snap;
-        });
-      },
-      child: ListView.builder(
-        itemCount: unverifiedListings.length,
-        itemBuilder: (context, index) {
-          final listing = unverifiedListings[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: ExpansionTile(
-              title: Text(
-                listing.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(
-                '${listing.authorName} • ${listing.place}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Reviews: ${listing.reviewsCount.toInt()} (${(listing.reviewsSum / (listing.reviewsCount > 0 ? listing.reviewsCount : 1)).toStringAsFixed(1)}/5)',
-                        style: TextStyle(fontSize: 12, color: isDarkMode(context) ? Colors.grey.shade300 : Colors.grey.shade600),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => _verifyListing(listing),
-                              icon: const Icon(Icons.check_circle, size: 18),
-                              label: const Text('Verify'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => _rejectListing(listing),
-                              icon: const Icon(Icons.cancel, size: 18),
-                              label: const Text('Reject'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Future<void> _verifyListing(ListingModel listing) async {
-    final reason = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Verify Listing'),
-        content: TextField(
-          decoration: const InputDecoration(hintText: 'Verification reason (optional)'),
-          onChanged: (val) {},
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, ''),
-            child: const Text('Verify'),
-          ),
-        ],
-      ),
-    );
-
-    if (reason != null) {
-      try {
-        await context.read<AdminBloc>().listingsRepository.verifyListing(
-              listing.id,
-              currentUser.userID,
-              reason.isNotEmpty ? reason : 'Admin verified',
-            );
-        setState(() {
-          unverifiedListings.removeWhere((l) => l.id == listing.id);
-        });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing verified')));
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
-    }
-  }
-
-  Future<void> _rejectListing(ListingModel listing) async {
-    try {
-      await context.read<AdminBloc>().listingsRepository.rejectListing(listing.id);
-      setState(() {
-        unverifiedListings.removeWhere((l) => l.id == listing.id);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing rejected')));
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-    }
-  }  }
-
   void _showSuspendConfirmation(BuildContext context, ListingsUser user) {
     showDialog(
       context: context,
@@ -723,8 +739,7 @@ class AllUserCard extends StatelessWidget {
           style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black),
         ),
         content: Text(
-          'Are you sure you want to suspend ${user.firstName} ${user.lastName}?'
-              .tr(),
+          'Are you sure you want to suspend ${user.firstName} ${user.lastName}?'.tr(),
           style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black),
         ),
         actions: [
@@ -747,6 +762,7 @@ class AllUserCard extends StatelessWidget {
     );
   }
 }
+
 
 class SuspendedUserCard extends StatelessWidget {
   final ListingsUser user;

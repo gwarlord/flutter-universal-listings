@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../model/listing_model.dart';
 import 'opening_hours_migration.dart';
 
