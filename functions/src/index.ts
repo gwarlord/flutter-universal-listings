@@ -206,3 +206,71 @@ export const onBookingUpdated = functions.firestore
       );
     }
   });
+
+function buildReminderEmail(user: admin.firestore.DocumentData, expiresAt: Date) {
+  const friendlyDate = expiresAt.toISOString().split("T")[0];
+  return {
+    subject: `Your CaribTap subscription expires on ${friendlyDate}`,
+    html: `
+      <p>Hi ${user.firstName || "there"},</p>
+      <p>Your subscription will expire on <strong>${friendlyDate}</strong>.</p>
+      <p>Open the app to renew and avoid losing booking and premium features.</p>
+      <p><a href="https://caribtap.com">Open CaribTap</a></p>
+    `,
+  };
+}
+
+export const sendSubscriptionReminders = functions.pubsub
+  .schedule("every 1 hours")
+  .onRun(async () => {
+    const now = new Date();
+
+    const snap = await db
+      .collection("users")
+      .where("subscriptionExpiresAt", "!=", null)
+      .get();
+
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      const settings = (data.settings || {}) as { subscriptionReminderDays?: number | string; allowPushNotifications?: boolean };
+      const tier = (data.subscriptionTier || "").toString().trim().toLowerCase();
+      const expiresAt = data.subscriptionExpiresAt?.toDate?.() as Date | undefined;
+
+      if (!expiresAt) continue;
+      if (!["professional", "premium", "business"].includes(tier)) continue;
+
+      let reminderDays = 3;
+      if (typeof settings.subscriptionReminderDays === "number") {
+        reminderDays = settings.subscriptionReminderDays;
+      } else if (typeof settings.subscriptionReminderDays === "string") {
+        const parsed = parseInt(settings.subscriptionReminderDays, 10);
+        if (!isNaN(parsed)) reminderDays = parsed;
+      }
+      if (reminderDays <= 0) continue;
+
+      const reminderAt = new Date(expiresAt.getTime() - reminderDays * 24 * 60 * 60 * 1000);
+      if (now < reminderAt) continue;
+      if (now > expiresAt) continue; // already expired; skip
+
+      const lastSent: admin.firestore.Timestamp | undefined = data.subscriptionReminderLastSentAt;
+      if (lastSent && lastSent.toDate() >= reminderAt) continue; // already sent for this window
+
+      const email = buildReminderEmail(data, expiresAt);
+      if (data.email) {
+        await sendEmail(data.email, email.subject, email.html);
+      }
+
+      if (settings.allowPushNotifications !== false) {
+        await sendPushNotification(
+          doc.id,
+          "Subscription expiring soon",
+          `Renews by ${expiresAt.toDateString()}`,
+          { type: "subscription_reminder" }
+        );
+      }
+
+      await doc.ref.update({ subscriptionReminderLastSentAt: admin.firestore.FieldValue.serverTimestamp() });
+    }
+
+    return null;
+  });

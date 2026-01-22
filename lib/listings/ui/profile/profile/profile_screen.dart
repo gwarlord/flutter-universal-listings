@@ -472,7 +472,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           ListTile(
-                            onTap: () => push(context, const ContactUsScreen()),
+                            onTap: () => push(context, ContactUsScreen(currentUser: currentUser)),
                             title: const Text(
                               'Contact Us',
                               style: TextStyle(fontSize: 16),

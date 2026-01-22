@@ -17,7 +17,7 @@ const Set<String> kCaribbeanCountryCodes = {
   'VC', 'SX', 'SR', 'TT', 'TC', 'VI',
 };
 
-const Set<String> kBookingEligibleTiers = {'pro', 'premium', 'business'};
+const Set<String> kBookingEligibleTiers = {'professional', 'premium'};
 
 class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
   final ListingsUser currentUser;
@@ -116,7 +116,7 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
 
     /* -------------------- Validate -------------------- */
 
-    on<ValidateListingInputEvent>((event, emit) {
+    on<ValidateListingInputEvent>((event, emit) async {
       if (event.title.trim().isEmpty) {
         emit(AddListingErrorState(
           errorTitle: 'Missing Title'.tr(),
@@ -166,15 +166,53 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
         return;
       }
 
-      // Subscription gating for bookings
-      final String tier = currentUser.subscriptionTier.toLowerCase();
-      final bool canUseBooking = kBookingEligibleTiers.contains(tier);
-      if (event.bookingEnabled && !canUseBooking) {
-        emit(AddListingErrorState(
-          errorTitle: 'Upgrade required'.tr(),
-          errorMessage: 'Bookings are available on paid plans. Upgrade to enable bookings.'.tr(),
-        ));
-        return;
+      // Subscription gating for bookings - fetch fresh data from Firestore
+      print('🔍 DEBUG: Checking booking eligibility...');
+      print('🔍 DEBUG: event.bookingEnabled = ${event.bookingEnabled}');
+      print('🔍 DEBUG: currentUser.subscriptionTier (cached) = ${currentUser.subscriptionTier}');
+      print('🔍 DEBUG: kBookingEligibleTiers = $kBookingEligibleTiers');
+      
+      if (event.bookingEnabled) {
+        try {
+          print('🔍 DEBUG: Fetching fresh subscription data from Firestore...');
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser.userID)
+              .get();
+          
+          print('🔍 DEBUG: User doc exists = ${userDoc.exists}');
+          print('🔍 DEBUG: User doc data = ${userDoc.data()}');
+          
+          final String tier = (userDoc.data()?['subscriptionTier'] as String? ?? 'free').toLowerCase();
+          print('🔍 DEBUG: Fresh subscription tier from Firestore = $tier');
+          
+          final bool canUseBooking = kBookingEligibleTiers.contains(tier);
+          print('🔍 DEBUG: canUseBooking = $canUseBooking');
+          
+          if (!canUseBooking) {
+            print('❌ DEBUG: Blocking save - user does not have eligible tier');
+            emit(AddListingErrorState(
+              errorTitle: 'Upgrade required'.tr(),
+              errorMessage: 'Bookings are available on paid plans. Upgrade to enable bookings.'.tr(),
+            ));
+            return;
+          }
+          print('✅ DEBUG: Subscription check passed, proceeding with save');
+        } catch (e) {
+          print('❌ DEBUG: Error checking subscription: $e');
+          // If error checking subscription, fall back to currentUser data
+          final String tier = currentUser.subscriptionTier.toLowerCase();
+          final bool canUseBooking = kBookingEligibleTiers.contains(tier);
+          if (!canUseBooking) {
+            emit(AddListingErrorState(
+              errorTitle: 'Upgrade required'.tr(),
+              errorMessage: 'Bookings are available on paid plans. Upgrade to enable bookings.'.tr(),
+            ));
+            return;
+          }
+        }
+      } else {
+        print('🔍 DEBUG: Bookings not enabled, skipping subscription check');
       }
 
       // Require at least one photo overall (existing + new)
@@ -206,6 +244,8 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
         useTimeBlocks: event.useTimeBlocks,
         allowMultipleBookingsPerDay: event.allowMultipleBookingsPerDay,
         timeBlocks: event.timeBlocks,
+        enableCustomQuestions: event.enableCustomQuestions,
+        customQuestions: event.customQuestions,
         services: event.services,
         blockedDates: event.blockedDates,
         instagram: event.instagram.trim(),
@@ -249,12 +289,28 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
         listingIdToUpdate: event.listingToEdit?.id,
         existingPhotoUrls: event.existingPhotoUrls,
         existingVideoUrls: event.existingVideoUrls,
+        newLogoFile: event.newLogoFile,
+        existingLogoUrl: event.existingLogoUrl,
       ));
     });
 
     /* -------------------- Publish (Add or Edit) -------------------- */
 
     on<PublishListingEvent>((event, emit) async {
+      // Upload NEW logo
+      String? logoUrl;
+      if (event.newLogoFile != null) {
+        emit(AddListingProgressState(progressMessage: 'Uploading Logo...'.tr()));
+        final logoUrls = await listingsRepository.uploadListingImages(
+          images: [event.newLogoFile!],
+        );
+        if (logoUrls.isNotEmpty) {
+          logoUrl = logoUrls.first;
+        }
+      } else if (event.existingLogoUrl != null && event.existingLogoUrl!.trim().isNotEmpty) {
+        logoUrl = event.existingLogoUrl;
+      }
+
       // Upload NEW images
       List<String> newImageUrls = [];
       if (listingImages.isNotEmpty) {
@@ -310,6 +366,7 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
       // update these assignments to match.
       event.listingModel.photos = allPhotos;
       event.listingModel.photo = allPhotos.first;
+      event.listingModel.logo = logoUrl ?? '';
 
       // Optional: only set if your model supports videos
       try {
@@ -379,6 +436,7 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           'x': event.listingModel.x,
           'photo': event.listingModel.photo,
           'photos': event.listingModel.photos,          'videos': allVideos,
+          'logo': event.listingModel.logo,
           'price': event.listingModel.price,
           'currencyCode': event.listingModel.currencyCode,          'countryCode': (event.listingModel.countryCode).toUpperCase(),
           'verified': event.listingModel.verified,

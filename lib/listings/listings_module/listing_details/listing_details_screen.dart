@@ -400,40 +400,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             },
                           ),
                         ),
-                      if (currentUser.userID != listing.authorID)
-                        PopupMenuItem(
-                          child: ListTile(
-                            dense: true,
-                            contentPadding: const EdgeInsets.all(0),
-                            leading: Icon(
-                              Icons.chat,
-                              color: adaptiveTextColor,
-                            ),
-                            trailing: !currentUser.hasDirectMessaging
-                                ? Icon(
-                                    Icons.lock,
-                                    size: 16,
-                                    color: Colors.orange,
-                                  )
-                                : null,
-                            title: Text(
-                              'Send Message'.tr(),
-                              style: TextStyle(fontSize: 18, color: adaptiveTextColor),
-                            ),
-                            onTap: () {
-                              Navigator.pop(context);
-                              if (!currentUser.hasDirectMessaging) {
-                                _showChatUnlockDialog(context);
-                                return;
-                              }
-                              context.read<ConversationsBloc>().add(
-                                FetchFriendByIDEvent(
-                                  friendID: listing.authorID,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
                       if (_canEditOrDelete)
                         PopupMenuItem(
                           child: ListTile(
@@ -603,6 +569,40 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Logo display
+                      if (listing.logo.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isDarkMode(context) 
+                                    ? Colors.grey.shade700 
+                                    : Colors.grey.shade300,
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.network(
+                                listing.logo,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stack) => const SizedBox.shrink(),
+                              ),
+                            ),
+                          ),
+                        ),
                       Row(
                         children: [
                           Expanded(
@@ -1866,6 +1866,15 @@ class FilterDetailsWidget extends StatelessWidget {
     List<String> valuesList = [];
     if (value is List) {
       valuesList = value.map((e) => e.toString()).toList();
+    } else if (value is Map) {
+      // Support map-style filters (e.g., {option: true}) by collecting truthy keys
+      final truthyKeys = value.entries
+          .where((e) => e.value == true || e.value == 'true')
+          .map((e) => e.key.toString())
+          .toList();
+      valuesList = truthyKeys.isNotEmpty
+          ? truthyKeys
+          : value.keys.map((e) => e.toString()).toList();
     } else if (value is String && value.contains(',')) {
       valuesList = value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
     } else if (value != null && value.toString().isNotEmpty) {

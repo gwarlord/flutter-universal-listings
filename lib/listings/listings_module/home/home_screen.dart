@@ -488,26 +488,50 @@ class HomeScreenState extends State<HomeScreen> {
                   // Featured Section moved below Filter Countries
                   if (_featuredListings.isNotEmpty) ...[
                     SliverToBoxAdapter(
-                      child: Row(
-                        children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 24),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Featured'.tr(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 22,
-                            ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.amber.withOpacity(0.15),
+                              Colors.orange.withOpacity(0.1),
+                            ],
                           ),
-                        ],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        margin: const EdgeInsets.only(left: 16, right: 16, top: 4, bottom: 4),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.amber,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(Icons.star, color: Colors.white, size: 16),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Featured'.tr(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.amber,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                    const SliverToBoxAdapter(child: SizedBox(height: 4)),
                     SliverToBoxAdapter(
                       child: SizedBox(
-                        height: 220,
+                        height: 240,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
                           itemCount: _featuredListings.length,
                           itemBuilder: (context, index) {
                             final listing = _featuredListings[index];
@@ -520,23 +544,40 @@ class HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                               child: Container(
-                                width: 180,
+                                width: 200,
                                 margin: const EdgeInsets.only(right: 12),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.15),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                  border: Border.all(
+                                    color: Colors.amber.withOpacity(0.3),
+                                    width: 2,
+                                  ),
+                                ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Stack(
                                       children: [
                                         ClipRRect(
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(10),
+                                            topRight: Radius.circular(10),
+                                          ),
                                           child: Image.network(
                                             listing.photo,
                                             height: 140,
-                                            width: 180,
+                                            width: 200,
                                             fit: BoxFit.cover,
                                             errorBuilder: (ctx, err, st) => Container(
                                               height: 140,
-                                              width: 180,
+                                              width: 200,
                                               color: Colors.grey.shade300,
                                               child: const Icon(Icons.image_not_supported),
                                             ),
@@ -544,49 +585,45 @@ class HomeScreenState extends State<HomeScreen> {
                                         ),
                                         Positioned(
                                           top: 8,
-                                          right: 8,
+                                          left: 8,
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                                             decoration: BoxDecoration(
                                               color: Colors.amber,
-                                              borderRadius: BorderRadius.circular(12),
+                                              borderRadius: BorderRadius.circular(4),
                                             ),
-                                            child: Row(
-                                              children: [
-                                                const Icon(Icons.star, size: 12, color: Colors.white),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  'Featured'.tr(),
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                            child: const Icon(Icons.star, size: 10, color: Colors.white),
                                           ),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      listing.title,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      listing.place,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade600,
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(10),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              listing.title,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              listing.place,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -891,6 +928,36 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
                       ),
                     ),
                   ),
+                  // Logo in top-left
+                  if (listing.logo.isNotEmpty)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.network(
+                            listing.logo,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stack) => const SizedBox.shrink(),
+                          ),
+                        ),
+                      ),
+                    ),
                   Positioned(
                     top: 6,
                     right: 6,

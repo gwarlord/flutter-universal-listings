@@ -22,7 +22,7 @@ class _EditUserSubscriptionScreenState extends State<EditUserSubscriptionScreen>
   String _selectedTier = 'free';
   String? _error;
 
-  final List<String> _tiers = ['free', 'pro', 'premium', 'business'];
+  final List<String> _tiers = ['free', 'professional', 'premium'];
 
   @override
   void dispose() {

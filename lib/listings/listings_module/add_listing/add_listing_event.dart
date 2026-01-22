@@ -73,6 +73,8 @@ class ValidateListingInputEvent extends AddListingEvent {
   final bool useTimeBlocks; // ✅ Added
   final bool allowMultipleBookingsPerDay; // ✅ Added
   final List<String> timeBlocks; // ✅ Added
+  final bool enableCustomQuestions; // ✅ Added
+  final List<String> customQuestions; // ✅ Added
   final List<ServiceItem> services; // ✅ Added
   final List<int> blockedDates; // ✅ Added (milliseconds since epoch)
 
@@ -96,6 +98,10 @@ class ValidateListingInputEvent extends AddListingEvent {
   /// "Required named parameter 'existingVideoUrls' must be provided."
   final List<String> existingVideoUrls;
 
+  // Logo
+  final File? newLogoFile;
+  final String? existingLogoUrl;
+
   final String countryCode;
   final bool verified;
 
@@ -114,6 +120,8 @@ class ValidateListingInputEvent extends AddListingEvent {
     required this.useTimeBlocks, // ✅ Added
     required this.allowMultipleBookingsPerDay, // ✅ Added
     required this.timeBlocks, // ✅ Added
+    required this.enableCustomQuestions, // ✅ Added
+    required this.customQuestions, // ✅ Added
     required this.services, // ✅ Added
     required this.blockedDates, // ✅ Added
     required this.instagram,
@@ -129,6 +137,8 @@ class ValidateListingInputEvent extends AddListingEvent {
     required this.listingToEdit,
     required this.existingPhotoUrls,
     this.existingVideoUrls = const <String>[],
+    this.newLogoFile,
+    this.existingLogoUrl,
     required this.countryCode,
     required this.verified,
   });
@@ -143,11 +153,17 @@ class PublishListingEvent extends AddListingEvent {
   final List<String> existingPhotoUrls;
   final List<String> existingVideoUrls;
 
+  // Logo
+  final File? newLogoFile;
+  final String? existingLogoUrl;
+
   PublishListingEvent({
     required this.listingModel,
     required this.isEdit,
     required this.listingIdToUpdate,
     required this.existingPhotoUrls,
     this.existingVideoUrls = const <String>[],
+    this.newLogoFile,
+    this.existingLogoUrl,
   });
 }

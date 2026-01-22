@@ -155,21 +155,6 @@ class _BookingServicesScreenState extends State<BookingServicesScreen> {
               },
               dark: dark,
             ),
-            const SizedBox(height: 12),
-            // Enable Chat Toggle
-            _buildToggleTile(
-              title: 'Enable Chat'.tr(),
-              subtitle: 'Allow customers to message you directly'.tr(),
-              value: listing.chatEnabled ?? true,
-              onChanged: _isUpdating ? null : (value) {
-                final updated = listing.copyWith(chatEnabled: value);
-                _updateListing(updated);
-                setState(() {
-                  _listings = _listings.map((l) => l.id == listing.id ? updated : l).toList();
-                });
-              },
-              dark: dark,
-            ),
 
             if (listing.bookingEnabled ?? false) ...[
               const SizedBox(height: 12),
@@ -206,7 +191,7 @@ class _BookingServicesScreenState extends State<BookingServicesScreen> {
               // Custom Questions Toggle
               _buildToggleTile(
                 title: 'Custom Booking Questions'.tr(),
-                subtitle: 'Ask extra questions during booking (shown to you on approval and in emails)'.tr(),
+                subtitle: 'Ask customers to answer questions when they book'.tr(),
                 value: listing.enableCustomQuestions,
                 onChanged: _isUpdating ? null : (value) {
                   final updated = listing.copyWith(enableCustomQuestions: value);
@@ -217,10 +202,6 @@ class _BookingServicesScreenState extends State<BookingServicesScreen> {
                 },
                 dark: dark,
               ),
-              if (listing.enableCustomQuestions) ...[
-                const SizedBox(height: 12),
-                _buildQuestionsEditor(listing, dark),
-              ],
               if (listing.useTimeBlocks ?? false) ...[
                 const SizedBox(height: 12),
                 // Allow Multiple Bookings Per Day Toggle
@@ -274,96 +255,6 @@ class _BookingServicesScreenState extends State<BookingServicesScreen> {
       activeTrackColor: Color(colorPrimary).withOpacity(0.5),
       inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
       inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
-    );
-  }
-
-  Widget _buildQuestionsEditor(ListingModel listing, bool dark) {
-    final questions = List<String>.from(listing.customQuestions);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Custom questions'.tr(),
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: dark ? Colors.white : Colors.black,
-              ),
-            ),
-            TextButton.icon(
-              onPressed: _isUpdating
-                  ? null
-                  : () async {
-                      final controller = TextEditingController();
-                      final result = await showDialog<String>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: Text('Add question'.tr()),
-                          content: TextField(
-                            controller: controller,
-                            autofocus: true,
-                            decoration: InputDecoration(hintText: 'e.g., Do you have allergies?'.tr()),
-                          ),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel'.tr())),
-                            TextButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: Text('Add'.tr())),
-                          ],
-                        ),
-                      );
-                      if (result != null && result.isNotEmpty) {
-                        questions.add(result);
-                        final updated = listing.copyWith(customQuestions: questions);
-                        await _updateListing(updated);
-                        if (mounted) {
-                          setState(() {
-                            _listings = _listings.map((l) => l.id == listing.id ? updated : l).toList();
-                          });
-                        }
-                      }
-                    },
-              icon: const Icon(Icons.add),
-              label: Text('Add question'.tr()),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (questions.isEmpty)
-          Text(
-            'No questions added yet.'.tr(),
-            style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade700, fontSize: 12),
-          )
-        else
-          Column(
-            children: questions
-                .map(
-                  (q) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      q,
-                      style: TextStyle(color: dark ? Colors.white : Colors.black),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      onPressed: _isUpdating
-                          ? null
-                          : () async {
-                              questions.remove(q);
-                              final updated = listing.copyWith(customQuestions: questions);
-                              await _updateListing(updated);
-                              if (mounted) {
-                                setState(() {
-                                  _listings = _listings.map((l) => l.id == listing.id ? updated : l).toList();
-                                });
-                              }
-                            },
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-      ],
     );
   }
 }

@@ -26,6 +26,7 @@ class ListingModel {
   String photo; // PRIMARY image (used everywhere)
   List<String> photos;
   List<String> videos;
+  String logo; // Business/listing logo (square mini logo)
 
   /// Optional
   String price; // Changed back to String to match your existing Firestore data and UI logic
@@ -107,6 +108,7 @@ class ListingModel {
     this.photo = '',
     this.photos = const [],
     this.videos = const [],
+    this.logo = '',
     this.price = '',
     this.currencyCode = 'USD',
     this.phone = '',
@@ -167,6 +169,7 @@ class ListingModel {
       photo: json['photo'] ?? '',
       photos: List<String>.from(json['photos'] ?? []),
       videos: List<String>.from(json['videos'] ?? []),
+      logo: json['logo'] ?? '',
       price: json['price']?.toString() ?? '',
       currencyCode: json['currencyCode']?.toString() ?? 'USD',
       phone: json['phone'] ?? '',
@@ -228,6 +231,7 @@ class ListingModel {
       'photo': photo,
       'photos': photos,
       'videos': videos,
+      'logo': logo,
       'price': price,
       'currencyCode': currencyCode,
       'phone': phone,
@@ -286,6 +290,7 @@ class ListingModel {
     String? photo,
     List<String>? photos,
     List<String>? videos,
+    String? logo,
     String? price,
     String? currencyCode,
     String? phone,
@@ -334,6 +339,7 @@ class ListingModel {
       photo: photo ?? this.photo,
       photos: photos ?? this.photos,
       videos: videos ?? this.videos,
+      logo: logo ?? this.logo,
       price: price ?? this.price,
       currencyCode: currencyCode ?? this.currencyCode,
       phone: phone ?? this.phone,

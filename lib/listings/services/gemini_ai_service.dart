@@ -5,17 +5,24 @@ class GeminiAIService {
   factory GeminiAIService() => _instance;
   GeminiAIService._internal();
 
-  // Current Key: AIzaSyAnjfu8oJV3syOW_iqxFPAaLZw4Qf10S4c
-  static const String _apiKey = 'AIzaSyAnjfu8oJV3syOW_iqxFPAaLZw4Qf10S4c';
+  // Current Key: AIzaSyA3CwlusQIn63Egk2Bt0O0oWwMDazO1FNA
+  static const String _apiKey = 'AIzaSyA3CwlusQIn63Egk2Bt0O0oWwMDazO1FNA';
   
   GenerativeModel? _model;
   bool _initialized = false;
 
+  String get _maskedKey {
+    if (_apiKey.length < 8) return '***';
+    final start = _apiKey.substring(0, 6);
+    final end = _apiKey.substring(_apiKey.length - 4);
+    return '$start...$end';
+  }
+
   void initialize() {
     if (_initialized && _model != null) return;
     
-    // Use 'gemini-1.5-flash' which is available and reliable in v1beta API
-    const String modelName = 'gemini-1.5-flash';
+    // Use 'gemini-2.0-flash' as recommended by Google
+    const String modelName = 'gemini-2.0-flash';
     
     _model = GenerativeModel(
       model: modelName, 
@@ -27,8 +34,8 @@ class GeminiAIService {
     );
     
     _initialized = true;
-    print('🚀 [GEMINI v1.3] INITIALIZED');
-    print('🚀 [GEMINI v1.3] Using: gemini-1.5-flash (v1beta)');
+    print('🚀 [GEMINI v1.3] INITIALIZED (key: $_maskedKey)');
+    print('🚀 [GEMINI v1.3] Using: gemini-2.0-flash (v1beta)');
   }
 
   Future<String> generateListingDescription({
@@ -46,7 +53,7 @@ class GeminiAIService {
       final response = await _model!.generateContent(content);
       return response.text ?? '';
     } catch (e) {
-      print('❌ [GEMINI] Error: $e');
+      print('❌ [GEMINI] Error (generateListingDescription): $e');
       return _diagnoseAndFallback(e);
     }
   }
@@ -62,13 +69,15 @@ class GeminiAIService {
       final response = await _model!.generateContent(content);
       return response.text ?? description;
     } catch (e) {
-      print('❌ [GEMINI] Error: $e');
+      print('❌ [GEMINI] Error (enhanceDescription): $e');
       return _diagnoseAndFallback(e);
     }
   }
 
   String _diagnoseAndFallback(Object e) {
     final err = e.toString();
+    print('🔎 [GEMINI] Raw error: $err');
+    print('🔑 [GEMINI] Key in use (masked): $_maskedKey');
     if (err.contains('not found') || err.contains('not supported')) {
       print('');
       print('═════════════════════════════════════════════════════════════');

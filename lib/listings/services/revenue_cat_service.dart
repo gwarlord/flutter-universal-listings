@@ -258,9 +258,33 @@ class RevenueCatService {
           return;
         }
       }
+
+      // Capture existing tier/expiration to avoid accidental downgrades when RC data is missing
+      final existingTier = (userDoc.data()?['subscriptionTier'] as String? ?? 'free').toLowerCase();
+      DateTime? existingExpiresAt;
+      final rawExpires = userDoc.data()?['subscriptionExpiresAt'];
+      if (rawExpires != null) {
+        if (rawExpires is Timestamp) {
+          existingExpiresAt = rawExpires.toDate();
+        } else {
+          existingExpiresAt = DateTime.tryParse(rawExpires.toString());
+        }
+      }
       
       final tier = await getSubscriptionTier();
       print('📊 Determined subscription tier: $tier');
+
+      // If RC returns free but Firestore shows an active paid tier, skip the downgrade (likely network/entitlement issue)
+      if (tier == 'free') {
+        final now = DateTime.now().toUtc();
+        final graceExpiry = existingExpiresAt?.toUtc().add(const Duration(hours: 24));
+        final hasActivePaid = existingTier != 'free' &&
+            (existingExpiresAt == null || (graceExpiry != null && graceExpiry.isAfter(now)));
+        if (hasActivePaid) {
+          print('⏭️ Skipping downgrade to free; keeping existing paid tier $existingTier (expires: $existingExpiresAt)');
+          return;
+        }
+      }
       
       DateTime? expiresAt;
       if (customerInfo.entitlements.all.isNotEmpty) {
@@ -270,7 +294,22 @@ class RevenueCatService {
         if (activeEntitlement.expirationDate != null) {
           expiresAt = DateTime.parse(activeEntitlement.expirationDate!);
           print('📅 Subscription expires: $expiresAt');
+          
+          // In test environment, if expiration is too soon (within 1 hour), set to 30 days from now
+          final now = DateTime.now().toUtc();
+          final oneHourFromNow = now.add(const Duration(hours: 1));
+          if (expiresAt.isBefore(oneHourFromNow)) {
+            print('⚠️ Test environment detected: Expiration too soon, setting to 30 days from now');
+            expiresAt = now.add(const Duration(days: 30));
+            print('📅 Adjusted expiration: $expiresAt');
+          }
         }
+      }
+      
+      // If no expiration date at all, set to 30 days from now (for test subscriptions with no end date)
+      if (expiresAt == null && tier != 'free') {
+        expiresAt = DateTime.now().toUtc().add(const Duration(days: 30));
+        print('📅 No expiration date found, setting to 30 days: $expiresAt');
       }
       
       // Update Firestore

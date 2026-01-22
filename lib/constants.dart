@@ -1,3 +1,5 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 const facebookButtonColor = 0xFF415893;
 const usersCollection = 'users';
 const socialFeedsCollection = 'social_feeds';
@@ -6,8 +8,12 @@ const chatChannelsCollection = 'channels';
 const messagesLiveCollection = 'messages_live';
 const pageSizeLimit = 20;
 const liveCollectionLimit = 50;
-const serverKey =
-    'AAAAZz4RcfQ:APA91bEljtQ-DRJv3ZIXNR__lrY3m9puCSx9GeHs619bqhVDSwzo1tnXSZEYU0eMN1WNOvoeTx6Mkc_vSEaoJ65HCf_1BKXnGHQA9dwF3II4rH9I3YvUkWYCW2ocyGWqLS-pUYIr_ux-';
+
+// DEPRECATED: Move to Firebase Cloud Functions - client-side FCM tokens are insecure
+String get serverKey => dotenv.env['FCM_SERVER_KEY'] ?? '';
+
 const eula = 'https://www.instamobile.io/eula-instachatty/';
 const privacyPolicyURL = 'https://instamobile.io/privacy-policy/';
-const googleApiKey = 'AIzaSyAmBTqCgeWA_-F9Dz5eHoYdGURT_YiAwWI';
+
+// Load from .env file - NEVER commit actual keys to git
+String get googleApiKey => dotenv.env['GOOGLE_API_KEY'] ?? '';

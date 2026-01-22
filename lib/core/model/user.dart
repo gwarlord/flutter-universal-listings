@@ -89,15 +89,32 @@ class User with ChangeNotifier {
 
 class UserSettings {
   bool allowPushNotifications;
+  int subscriptionReminderDays;
 
-  UserSettings({this.allowPushNotifications = true});
+  UserSettings({
+    this.allowPushNotifications = true,
+    this.subscriptionReminderDays = 3,
+  });
 
   factory UserSettings.fromJson(Map<dynamic, dynamic> parsedJson) {
+    final dynamic reminderValue = parsedJson['subscriptionReminderDays'];
+    int parsedReminderDays = 3;
+    if (reminderValue is num) {
+      parsedReminderDays = reminderValue.toInt();
+    } else if (reminderValue is String) {
+      parsedReminderDays = int.tryParse(reminderValue) ?? 3;
+    }
+
     return UserSettings(
-        allowPushNotifications: parsedJson['allowPushNotifications'] ?? true);
+      allowPushNotifications: parsedJson['allowPushNotifications'] ?? true,
+      subscriptionReminderDays: parsedReminderDays,
+    );
   }
 
   Map<String, dynamic> toJson() {
-    return {'allowPushNotifications': allowPushNotifications};
+    return {
+      'allowPushNotifications': allowPushNotifications,
+      'subscriptionReminderDays': subscriptionReminderDays,
+    };
   }
 }

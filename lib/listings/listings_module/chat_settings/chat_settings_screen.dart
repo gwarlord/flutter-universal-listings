@@ -169,6 +169,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
+      color: dark ? Colors.grey.shade900 : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
@@ -184,10 +185,10 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                   : Container(
                       width: 60,
                       height: 60,
-                      color: Colors.grey[300],
+                      color: dark ? Colors.grey.shade800 : Colors.grey[300],
                       child: Icon(
                         Icons.image_not_supported,
-                        color: Colors.grey[600],
+                        color: dark ? Colors.grey.shade600 : Colors.grey[600],
                         size: 30,
                       ),
                     ),
@@ -201,9 +202,10 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                 children: [
                   Text(
                     listing.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
+                      color: dark ? Colors.white : Colors.black,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -213,7 +215,9 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                     isEnabled ? 'Chat enabled'.tr() : 'Chat disabled'.tr(),
                     style: TextStyle(
                       fontSize: 12,
-                      color: isEnabled ? Colors.green : Colors.grey,
+                      color: isEnabled 
+                        ? Colors.green 
+                        : (dark ? Colors.grey.shade400 : Colors.grey),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -225,6 +229,9 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
             Switch(
               value: isEnabled,
               activeColor: Color(cfg.colorPrimary),
+              activeTrackColor: Color(cfg.colorPrimary).withOpacity(0.5),
+              inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
+              inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
               onChanged: (value) => _toggleChatEnabled(listing, value),
             ),
           ],

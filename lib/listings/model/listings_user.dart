@@ -102,28 +102,37 @@ class ListingsUser extends User {
   }
 
   // Subscription helper methods
-  bool get isFree => subscriptionTier.toLowerCase() == 'free';
-  bool get isProfessional => subscriptionTier.toLowerCase() == 'professional';
-  bool get isPremium => subscriptionTier.toLowerCase() == 'premium';
+  String get _normalizedTier => subscriptionTier.trim().toLowerCase();
+
+  bool get isFree => _normalizedTier == 'free';
+  bool get isProfessional => _normalizedTier == 'professional';
+  bool get isPremium => _normalizedTier == 'premium';
+  bool get isBusiness => _normalizedTier == 'business';
   
   bool get isSubscriptionActive {
     // Admins always have active access
     if (isAdmin) return true;
     
     // Free tier is always active
-    if (subscriptionTier.toLowerCase() == 'free') return true;
+    if (isFree) return true;
     
     // For paid tiers without expiration date (legacy or manually set), treat as active
     // This handles users set to professional/premium in Firestore before RevenueCat integration
     if (subscriptionExpiresAt == null && !isFree) return true;
     
-    // Check if subscription hasn't expired
-    return DateTime.now().isBefore(subscriptionExpiresAt!);
+    // Allow a small grace window on expiration to tolerate timezone and clock drift
+    final graceExpiry = subscriptionExpiresAt!.add(const Duration(hours: 24));
+    final now = DateTime.now();
+    return now.isBefore(graceExpiry) || now.isAtSameMomentAs(graceExpiry);
   }
 
   // Feature access helpers
   // Note: Premium users get ALL professional features plus premium-only features
-  bool get hasBookingServices => (isProfessional || isPremium) && isSubscriptionActive;
+  bool get hasBookingServices {
+    if (isAdmin) return true;
+    final paidTier = isProfessional || isPremium || isBusiness;
+    return paidTier && isSubscriptionActive;
+  }
   bool get hasAdvancedAnalytics => (isPremium && isSubscriptionActive) || isAdmin;
   bool get hasPrioritySupport => isPremium && isSubscriptionActive;
   bool get hasDirectMessaging => (isPremium && isSubscriptionActive) || isAdmin;

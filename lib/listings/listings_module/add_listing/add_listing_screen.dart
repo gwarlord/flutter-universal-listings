@@ -136,6 +136,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
   List<File> _newImages = [];
   List<File> _newVideos = [];
   
+  // Logo state
+  String? _existingLogoUrl;
+  File? _newLogo;
+  
   // ✅ Service Menu State
   final List<ServiceItem> _services = [];
 
@@ -150,7 +154,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
   bool _allowQuantitySelection = false;
   bool _useTimeBlocks = false;
   bool _allowMultipleBookingsPerDay = false;
+  bool _enableCustomQuestions = false;
   final List<String> _timeBlocks = [];
+  final List<String> _customQuestions = [];
   final List<DateTime> _blockedDates = [];
 
   @override
@@ -164,7 +170,27 @@ class _AddListingScreenState extends State<AddListingScreen> {
     context.read<AddListingBloc>().add(GetCategoriesEvent());
 
     if (isEdit) {
-      final l = widget.listingToEdit!;
+      _initializeEditListing();
+    }
+  }
+
+  Future<void> _initializeEditListing() async {
+    try {
+      // Reload listing from Firestore to ensure we have latest changes (e.g., from booking services)
+      final freshListing = await listingApiManager.getListing(listingID: widget.listingToEdit!.id);
+      if (freshListing != null) {
+        _populateListingData(freshListing);
+      } else {
+        // Fallback to passed listing if fresh data unavailable
+        _populateListingData(widget.listingToEdit!);
+      }
+    } catch (e) {
+      // Fallback to passed listing on error
+      _populateListingData(widget.listingToEdit!);
+    }
+  }
+
+  void _populateListingData(ListingModel l) {
       _titleController.text = l.title;
       _descController.text = l.description;
       _priceController.text = l.price.toString();
@@ -176,6 +202,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       _existingVideoUrls.addAll(
         List<String>.from(l.videos ?? []).where((e) => e.trim().isNotEmpty),
       );
+      _existingLogoUrl = (l.logo ?? '').trim().isEmpty ? null : l.logo;
 
       _phoneController.text = (l.phone ?? '').trim();
       _emailController.text = (l.email ?? '').trim();
@@ -195,12 +222,16 @@ class _AddListingScreenState extends State<AddListingScreen> {
       _allowQuantitySelection = l.allowQuantitySelection;
       _useTimeBlocks = l.useTimeBlocks;
       _allowMultipleBookingsPerDay = l.allowMultipleBookingsPerDay;
+      _enableCustomQuestions = l.enableCustomQuestions;
       
       // ✅ Load existing services
       _services.addAll(l.services);
       
       // ✅ Load existing time blocks
       _timeBlocks.addAll(l.timeBlocks);
+      
+      // ✅ Load existing custom questions
+      _customQuestions.addAll(l.customQuestions);
       
       // ✅ Load existing blocked dates
       _blockedDates.addAll(l.blockedDates.map((ms) => DateTime.fromMillisecondsSinceEpoch(ms)));
@@ -211,7 +242,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
         l.latitude,
         l.longitude,
       );
-    }
   }
 
   Future<void> _refreshUserSubscription() async {
@@ -239,6 +269,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
     String? hint,
     IconData? icon,
     bool isRequired = false,
+    bool alwaysFloatLabel = false,
   }) {
     final dark = isDarkMode(context);
     return InputDecoration(
@@ -262,6 +293,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Color(colorPrimary), width: 2),
       ),
+      floatingLabelBehavior:
+          alwaysFloatLabel ? FloatingLabelBehavior.always : FloatingLabelBehavior.auto,
     );
   }
 
@@ -455,10 +488,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   // ✅ New Service Menu Widget
   Widget _buildServiceMenuEditor(bool dark) {
-    // Check if user has professional or premium subscription
-    final canUseServices = widget.currentUser.subscriptionTier == 'professional' || 
-                           widget.currentUser.subscriptionTier == 'premium' ||
-                           widget.currentUser.isAdmin;
+    // Check if user has subscription tier that unlocks booking services
+    final canUseServices = widget.currentUser.hasBookingServices;
     
     if (!canUseServices) {
       return Container(
@@ -593,15 +624,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Block Unavailable Dates'.tr(),
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: dark ? Colors.white : Colors.black,
-          ),
-        ),
-        const SizedBox(height: 12),
         if (_blockedDates.isNotEmpty)
           Container(
             margin: const EdgeInsets.only(bottom: 12),
@@ -636,35 +658,157 @@ class _AddListingScreenState extends State<AddListingScreen> {
               },
             ),
           ),
-        ElevatedButton.icon(
-          onPressed: () async {
-            final selectedDates = await showDialog<List<DateTime>>(
-              context: context,
-              builder: (context) => _MultiDatePickerDialog(
-                initialSelectedDates: _blockedDates,
-                dark: dark,
-              ),
-            );
-            if (selectedDates != null) {
-              setState(() {
-                for (var date in selectedDates) {
-                  if (!_blockedDates.any((d) => d.year == date.year && d.month == date.month && d.day == date.day)) {
-                    _blockedDates.add(DateTime(date.year, date.month, date.day));
-                  }
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ActionChip(
+              label: Text('+ Add Blocked Dates'),
+              onPressed: () async {
+                final selectedDates = await showDialog<List<DateTime>>(
+                  context: context,
+                  builder: (context) => _MultiDatePickerDialog(
+                    initialSelectedDates: _blockedDates,
+                    dark: dark,
+                  ),
+                );
+                if (selectedDates != null) {
+                  setState(() {
+                    for (var date in selectedDates) {
+                      if (!_blockedDates.any((d) => d.year == date.year && d.month == date.month && d.day == date.day)) {
+                        _blockedDates.add(DateTime(date.year, date.month, date.day));
+                      }
+                    }
+                    _blockedDates.sort();
+                  });
                 }
-                _blockedDates.sort();
-              });
-            }
-          },
-          icon: const Icon(Icons.calendar_today),
-          label: Text('Add Blocked Dates'.tr()),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(colorPrimary),
-            foregroundColor: Colors.white,
-          ),
+              },
+              backgroundColor: Color(colorPrimary).withOpacity(0.1),
+              labelStyle: TextStyle(color: Color(colorPrimary)),
+            ),
+          ],
         ),
       ],
     );
+  }
+
+  Widget _buildLogoUpload() {
+    final dark = isDarkMode(context);
+    final bool hasLogo = _newLogo != null || _existingLogoUrl != null;
+    
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        width: 100,
+        height: 100,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          color: dark ? Colors.grey[900] : Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+          border: hasLogo ? null : Border.all(color: Color(colorPrimary).withOpacity(0.5)),
+        ),
+        child: Stack(
+          children: [
+            if (hasLogo)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: _newLogo != null
+                    ? Image.file(_newLogo!, fit: BoxFit.cover, width: 100, height: 100)
+                    : Image.network(_existingLogoUrl!, fit: BoxFit.cover, width: 100, height: 100),
+              )
+            else
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add_a_photo, color: Color(colorPrimary), size: 28),
+                    const SizedBox(height: 4),
+                    Text('Logo'.tr(), style: TextStyle(fontSize: 12, color: Color(colorPrimary))),
+                  ],
+                ),
+              ),
+
+            // Tap target for add/replace
+            Positioned.fill(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => _showLogoUploadOptions(),
+                  child: hasLogo
+                      ? Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.black.withOpacity(0.26),
+                          ),
+                          child: const Icon(Icons.edit, color: Colors.white, size: 26),
+                        )
+                      : null,
+                ),
+              ),
+            ),
+
+            // Remove button (only show if logo exists)
+            if (hasLogo)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: GestureDetector(
+                  onTap: () => setState(() {
+                    _newLogo = null;
+                    _existingLogoUrl = null;
+                  }),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                    child: const Icon(Icons.close, color: Colors.white, size: 14),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showLogoUploadOptions() async {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: Text('Choose from gallery'.tr()),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickLogo(fromGallery: true);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: Text('Take a photo'.tr()),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickLogo(fromGallery: false);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickLogo({required bool fromGallery}) async {
+    final image = await listingApiManager.getListingImage(fromGallery: fromGallery);
+    if (image != null) {
+      setState(() => _newLogo = image);
+    }
   }
 
   Future<void> _showAIDescriptionDialog(BuildContext context, bool dark) async {
@@ -798,40 +942,41 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       onChanged: (value) => setState(() => _countryCode = value),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: TextField(
+                      controller: _priceController,
+                      keyboardType: TextInputType.number,
+                      decoration: _getInputDecoration(
+                        label: 'Base Price'.tr(),
+                        hint: 'Optional'.tr(),
+                        icon: Icons.attach_money,
+                        alwaysFloatLabel: true,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     flex: 2,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: TextField(
-                            controller: _priceController,
-                            keyboardType: TextInputType.number,
-                            decoration: _getInputDecoration(
-                              label: 'Base Price'.tr(),
-                              hint: 'Optional'.tr(),
-                              icon: Icons.attach_money,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          flex: 1,
-                          child: DropdownButtonFormField<String>(
-                            value: _selectedCurrencyCode,
-                            decoration: _getInputDecoration(
-                              label: 'Curr',
-                              icon: Icons.money,
-                            ),
-                            items: _currencies.map((currency) => DropdownMenuItem<String>(
-                              value: currency['code'],
-                              child: Text(currency['code'] ?? ''),
-                            )).toList(),
-                            onChanged: (value) => setState(() => _selectedCurrencyCode = value ?? 'USD'),
-                          ),
-                        ),
-                      ],
+                    child: DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      value: _selectedCurrencyCode,
+                      decoration: _getInputDecoration(
+                        label: 'Currency'.tr(),
+                        icon: Icons.money,
+                      ),
+                      items: _currencies
+                          .map((currency) => DropdownMenuItem<String>(
+                                value: currency['code'],
+                                child: Text(currency['code'] ?? ''),
+                              ))
+                          .toList(),
+                      onChanged: (value) => setState(() => _selectedCurrencyCode = value ?? 'USD'),
                     ),
                   ),
                 ],
@@ -1129,10 +1274,68 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 const SizedBox(height: 20),
               ],
 
+              // Custom Booking Questions (only if booking enabled)
+              if (_bookingEnabled) ...[
+                _buildSectionHeader('Custom Booking Questions'.tr()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Add questions customers must answer when they book.'.tr(),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (_enableCustomQuestions) ...[
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ..._customQuestions.map((q) => Chip(
+                              label: Text(q, maxLines: 1, overflow: TextOverflow.ellipsis),
+                              deleteIcon: Icon(Icons.close, size: 18),
+                              onDeleted: () => setState(() => _customQuestions.remove(q)),
+                              backgroundColor: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+                              labelStyle: TextStyle(color: dark ? Colors.white : Colors.black87),
+                            )),
+                            ActionChip(
+                              label: Text('+ Add Question'),
+                              onPressed: () => _showAddQuestionDialog(dark),
+                              backgroundColor: Color(colorPrimary).withOpacity(0.1),
+                              labelStyle: TextStyle(color: Color(colorPrimary)),
+                            ),
+                          ],
+                        ),
+                      ] else ...[
+                        Text(
+                          'Enable custom questions in Booking Services to add questions here.'.tr(),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+
               // Blocked dates (only if booking enabled)
               if (_bookingEnabled) ...[
+                _buildSectionHeader('Block Unavailable Dates'.tr()),
                 _buildBlockedDatesEditor(isDarkMode(context)),
               ],
+
+              // Logo upload
+              _buildSectionHeader('Logo (Optional)'.tr()),
+              _buildLogoUpload(),
+              const SizedBox(height: 12),
 
               _buildSectionHeader('Photos'.tr()),
               SizedBox(
@@ -1238,7 +1441,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
     }
 
     final tier = currentUser.subscriptionTier.toLowerCase();
-    final bool canUseBooking = currentUser.isAdmin || const ['pro', 'premium', 'business'].contains(tier);
+    final bool canUseBooking = currentUser.isAdmin || const ['professional', 'premium'].contains(tier);
     if (_bookingEnabled && !canUseBooking) {
       showAlertDialog(context, 'Upgrade required'.tr(), 'Bookings are available on paid plans. Upgrade to enable bookings.'.tr());
       return;
@@ -1263,6 +1466,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
             useTimeBlocks: _useTimeBlocks,
             allowMultipleBookingsPerDay: _allowMultipleBookingsPerDay,
             timeBlocks: _timeBlocks,
+            enableCustomQuestions: _enableCustomQuestions,
+            customQuestions: _customQuestions,
             services: _services, // ✅ Send added services
             blockedDates: _blockedDates.map((d) => d.millisecondsSinceEpoch).toList(), // ✅ Send blocked dates
             instagram: _instagramController.text.trim(),
@@ -1295,6 +1500,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
             listingToEdit: listingToEdit,
             existingPhotoUrls: List<String>.from(_existingPhotoUrls),
             existingVideoUrls: List<String>.from(_existingVideoUrls),
+            newLogoFile: _newLogo,
+            existingLogoUrl: _existingLogoUrl,
             countryCode: _countryCode!.trim().toUpperCase(),
             verified: _verified,
           ),
@@ -1424,6 +1631,51 @@ class _AddListingScreenState extends State<AddListingScreen> {
       }
     }
   }
+
+  void _showAddQuestionDialog(bool dark) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Add Booking Question'.tr()),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            maxLength: 200,
+            decoration: InputDecoration(
+              labelText: 'Question'.tr(),
+              hintText: 'e.g., What time slot do you prefer?',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'.tr()),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final question = controller.text.trim();
+                if (question.isNotEmpty) {
+                  Navigator.pop(context, question);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(colorPrimary),
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Add'.tr()),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null && result.isNotEmpty && !_customQuestions.contains(result)) {
+      setState(() => _customQuestions.add(result));
+    }
+  }
 }
 
 class ExistingListingImageWidget extends StatelessWidget {
@@ -1464,14 +1716,43 @@ class ExistingListingImageWidget extends StatelessWidget {
   }
 }
 
-class ExistingListingVideoWidget extends StatelessWidget {
+class ExistingListingVideoWidget extends StatefulWidget {
   final String videoUrl;
   final VoidCallback onRemove;
 
   const ExistingListingVideoWidget({super.key, required this.videoUrl, required this.onRemove});
 
   @override
+  State<ExistingListingVideoWidget> createState() => _ExistingListingVideoWidgetState();
+}
+
+class _ExistingListingVideoWidgetState extends State<ExistingListingVideoWidget> {
+  Uint8List? _thumbnail;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _generateThumbnail();
+  }
+
+  Future<void> _generateThumbnail() async {
+    try {
+      final data = await VideoThumbnail.thumbnailData(
+        video: widget.videoUrl,
+        imageFormat: ImageFormat.JPEG,
+        maxWidth: 320,
+        quality: 40,
+      );
+      if (mounted) setState(() => _thumbnail = data);
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final dark = isDarkMode(context);
     return Container(
       width: 100,
       margin: const EdgeInsets.only(right: 12),
@@ -1479,18 +1760,33 @@ class ExistingListingVideoWidget extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Container(
-              color: Colors.black87,
-              child: const Center(
-                child: Icon(Icons.play_circle_fill, size: 44, color: Colors.white70),
+            child: _thumbnail != null
+                ? Image.memory(_thumbnail!, fit: BoxFit.cover, width: 100, height: 100)
+                : Container(
+                    color: dark ? Colors.grey[900] : Colors.black87,
+                    child: const Center(
+                      child: Icon(Icons.play_circle_fill, size: 44, color: Colors.white70),
+                    ),
+                  ),
+          ),
+          if (_failed)
+            Positioned(
+              bottom: 6,
+              left: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text('Preview unavailable', style: TextStyle(color: Colors.white, fontSize: 10)),
               ),
             ),
-          ),
           Positioned(
             top: 4,
             right: 4,
             child: GestureDetector(
-              onTap: onRemove,
+              onTap: widget.onRemove,
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
