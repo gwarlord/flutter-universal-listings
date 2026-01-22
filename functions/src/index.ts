@@ -80,7 +80,8 @@ function bookingRequestedEmail(data: any) {
       <p>You have a new booking request.</p>
       <p>Listing: ${data.listingTitle}</p>
       <p>Guest: ${data.customerName} (${data.customerEmail})</p>
-      <p>Dates: ${data.checkInDate} → ${data.checkOutDate}</p>
+      <p><b>Start Date:</b> ${data.checkInDate}</p>
+      <p><b>End Date:</b> ${data.checkOutDate}</p>
       <p>Guests: ${data.numberOfGuests}</p>
       <p>Notes: ${data.guestNotes || "—"}</p>
     `,
@@ -93,13 +94,19 @@ function bookingStatusEmail(data: any, status: string) {
     rejected: "Booking rejected",
     cancelled: "Booking cancelled",
   };
+  let extra = '';
+  if (status === 'confirmed') {
+    extra = '<p>Thank you for your business!</p>';
+  }
   return {
     subject: `${titles[status] ?? "Booking update"}: ${data.listingTitle}`,
     html: `
       <p>Your booking has been ${status}.</p>
       <p>Listing: ${data.listingTitle}</p>
-      <p>Dates: ${data.checkInDate} → ${data.checkOutDate}</p>
+      <p><b>Start Date:</b> ${data.checkInDate}</p>
+      <p><b>End Date:</b> ${data.checkOutDate}</p>
       <p>Status: ${status}</p>
+      ${extra}
     `,
   };
 }
@@ -272,5 +279,9 @@ export const sendSubscriptionReminders = functions.pubsub
       await doc.ref.update({ subscriptionReminderLastSentAt: admin.firestore.FieldValue.serverTimestamp() });
     }
 
+
     return null;
   });
+
+// Export deal ad notification trigger
+export { onDealAdApproved } from './deal_ad_notifications';

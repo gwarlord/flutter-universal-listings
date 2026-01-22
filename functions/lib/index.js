@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onBookingUpdated = exports.onBookingCreated = void 0;
+exports.onDealAdApproved = exports.sendSubscriptionReminders = exports.onBookingUpdated = exports.onBookingCreated = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
@@ -56,7 +56,7 @@ async function sendEmail(to, subject, html) {
     }
     await mail_1.default.send({
         to,
-        from: { email: "no-reply@caribtap.com", name: "Caribbean Tap" },
+        from: { email: "no-reply@caribtap.com", name: "CaribTap" },
         subject,
         html,
     });
@@ -104,7 +104,8 @@ function bookingRequestedEmail(data) {
       <p>You have a new booking request.</p>
       <p>Listing: ${data.listingTitle}</p>
       <p>Guest: ${data.customerName} (${data.customerEmail})</p>
-      <p>Dates: ${data.checkInDate} → ${data.checkOutDate}</p>
+      <p><b>Start Date:</b> ${data.checkInDate}</p>
+      <p><b>End Date:</b> ${data.checkOutDate}</p>
       <p>Guests: ${data.numberOfGuests}</p>
       <p>Notes: ${data.guestNotes || "—"}</p>
     `,
@@ -116,13 +117,19 @@ function bookingStatusEmail(data, status) {
         rejected: "Booking rejected",
         cancelled: "Booking cancelled",
     };
+    let extra = '';
+    if (status === 'confirmed') {
+        extra = '<p>Thank you for your business!</p>';
+    }
     return {
         subject: `${titles[status] ?? "Booking update"}: ${data.listingTitle}`,
         html: `
       <p>Your booking has been ${status}.</p>
       <p>Listing: ${data.listingTitle}</p>
-      <p>Dates: ${data.checkInDate} → ${data.checkOutDate}</p>
+      <p><b>Start Date:</b> ${data.checkInDate}</p>
+      <p><b>End Date:</b> ${data.checkOutDate}</p>
       <p>Status: ${status}</p>
+      ${extra}
     `,
     };
 }
@@ -191,3 +198,65 @@ exports.onBookingUpdated = functions.firestore
         await sendPushNotification(after.listersUserId, "Booking Cancelled", `${after.customerName} cancelled their booking for ${after.listingTitle}`, { bookingId: after.id, listingId: after.listingId, type: "booking_cancelled" });
     }
 });
+function buildReminderEmail(user, expiresAt) {
+    const friendlyDate = expiresAt.toISOString().split("T")[0];
+    return {
+        subject: `Your CaribTap subscription expires on ${friendlyDate}`,
+        html: `
+      <p>Hi ${user.firstName || "there"},</p>
+      <p>Your subscription will expire on <strong>${friendlyDate}</strong>.</p>
+      <p>Open the app to renew and avoid losing booking and premium features.</p>
+      <p><a href="https://caribtap.com">Open CaribTap</a></p>
+    `,
+    };
+}
+exports.sendSubscriptionReminders = functions.pubsub
+    .schedule("every 1 hours")
+    .onRun(async () => {
+    const now = new Date();
+    const snap = await db
+        .collection("users")
+        .where("subscriptionExpiresAt", "!=", null)
+        .get();
+    for (const doc of snap.docs) {
+        const data = doc.data();
+        const settings = (data.settings || {});
+        const tier = (data.subscriptionTier || "").toString().trim().toLowerCase();
+        const expiresAt = data.subscriptionExpiresAt?.toDate?.();
+        if (!expiresAt)
+            continue;
+        if (!["professional", "premium", "business"].includes(tier))
+            continue;
+        let reminderDays = 3;
+        if (typeof settings.subscriptionReminderDays === "number") {
+            reminderDays = settings.subscriptionReminderDays;
+        }
+        else if (typeof settings.subscriptionReminderDays === "string") {
+            const parsed = parseInt(settings.subscriptionReminderDays, 10);
+            if (!isNaN(parsed))
+                reminderDays = parsed;
+        }
+        if (reminderDays <= 0)
+            continue;
+        const reminderAt = new Date(expiresAt.getTime() - reminderDays * 24 * 60 * 60 * 1000);
+        if (now < reminderAt)
+            continue;
+        if (now > expiresAt)
+            continue; // already expired; skip
+        const lastSent = data.subscriptionReminderLastSentAt;
+        if (lastSent && lastSent.toDate() >= reminderAt)
+            continue; // already sent for this window
+        const email = buildReminderEmail(data, expiresAt);
+        if (data.email) {
+            await sendEmail(data.email, email.subject, email.html);
+        }
+        if (settings.allowPushNotifications !== false) {
+            await sendPushNotification(doc.id, "Subscription expiring soon", `Renews by ${expiresAt.toDateString()}`, { type: "subscription_reminder" });
+        }
+        await doc.ref.update({ subscriptionReminderLastSentAt: admin.firestore.FieldValue.serverTimestamp() });
+    }
+    return null;
+});
+// Export deal ad notification trigger
+var deal_ad_notifications_1 = require("./deal_ad_notifications");
+Object.defineProperty(exports, "onDealAdApproved", { enumerable: true, get: function () { return deal_ad_notifications_1.onDealAdApproved; } });

@@ -1638,21 +1638,28 @@ class _AddListingScreenState extends State<AddListingScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Add Booking Question'.tr()),
+          backgroundColor: dark ? Colors.grey[900] : Colors.white,
+          title: Text('Add Booking Question'.tr(), style: TextStyle(color: dark ? Colors.white : Colors.black)),
           content: TextField(
             controller: controller,
             autofocus: true,
             maxLength: 200,
+            style: TextStyle(color: dark ? Colors.white : Colors.black),
             decoration: InputDecoration(
               labelText: 'Question'.tr(),
-              hintText: 'e.g., What time slot do you prefer?',
+              labelStyle: TextStyle(color: dark ? Colors.grey[300] : Colors.grey[700]),
+              hintText: 'e.g., Do you have any allergies?',
+              hintStyle: TextStyle(color: dark ? Colors.grey[500] : Colors.grey[400]),
               border: OutlineInputBorder(),
+              filled: true,
+              fillColor: dark ? Colors.grey[850] : Colors.grey[50],
+              counterStyle: TextStyle(color: dark ? Colors.white : Colors.grey[700]),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'.tr()),
+              child: Text('Cancel'.tr(), style: TextStyle(color: dark ? Colors.grey[300] : Color(colorPrimary))),
             ),
             ElevatedButton(
               onPressed: () {

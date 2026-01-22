@@ -281,30 +281,32 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
               const SizedBox(height: 6),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: booking.customAnswers.entries.map((e) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        e.key,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: dark ? Colors.white70 : Colors.black87,
-                        ),
+                children: booking.customAnswers.entries
+                    .map<Widget>((e) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            e.key,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: dark ? Colors.white70 : Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            e.value.isEmpty ? '-'.tr() : e.value,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: dark ? Colors.white70 : Colors.black87,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        e.value.isEmpty ? '-'.tr() : e.value,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: dark ? Colors.white70 : Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                )).toList(),
+                    ))
+                    .toList(),
               ),
             ],
             if (booking.isPending) ...[

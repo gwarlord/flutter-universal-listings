@@ -8,8 +8,18 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // DEAL ADS collection (DEVELOPMENT ONLY - restrict for production!)
+    match /deal_ads/{adId} {
+      // Allow any signed-in user to create or update their own ad
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (request.auth.uid == resource.data.authorID || isAdmin());
+      allow read: if true; // Publicly readable
+      allow delete: if isAdmin();
     }
     
     function isAdmin() {

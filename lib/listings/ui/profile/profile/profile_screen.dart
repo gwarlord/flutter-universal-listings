@@ -11,6 +11,7 @@ import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 import 'package:instaflutter/listings/ui/auth/reauth_user/reauth_user_screen.dart';
 import 'package:instaflutter/listings/ui/auth/welcome/welcome_screen.dart';
 import 'package:instaflutter/listings/listings_module/admin_dashboard/admin_dashboard_screen.dart';
+import 'package:instaflutter/listings/ui/profile/profile/ad_approval_screen.dart';
 import 'package:instaflutter/listings/listings_module/admin_dashboard/edit_user_subscription_screen.dart';
 import 'package:instaflutter/listings/listings_module/favorite_listings/favorite_listings_screen.dart';
 import 'package:instaflutter/listings/listings_module/my_listings/my_listings_screen.dart';
@@ -283,6 +284,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: const EdgeInsets.only(top: 8),
                       child: Column(
                         children: [
+                          ListTile(
+                            dense: true,
+                            onTap: () => push(
+                                context,
+                                AdApprovalScreen(currentUser: currentUser)),
+                            title: Text(
+                              'Ad Approval'.tr(),
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                            leading: const Icon(
+                              Icons.verified,
+                              color: Colors.green,
+                            ),
+                          ),
                           ListTile(
                             dense: true,
                             onTap: () => push(

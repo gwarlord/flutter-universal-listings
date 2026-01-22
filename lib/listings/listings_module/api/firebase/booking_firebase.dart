@@ -235,8 +235,8 @@ class BookingFirebase extends BookingRepository {
       String customerHtml = '';
       String listerHtml = '';
 
-      final checkInStr = booking.checkInDate.toLocal().toString().split(' ')[0];
-      final checkOutStr = booking.checkOutDate.toLocal().toString().split(' ')[0];
+      final startDateStr = booking.checkInDate.toLocal().toString().split(' ')[0];
+      final endDateStr = booking.checkOutDate.toLocal().toString().split(' ')[0];
         final String qnaHtml = booking.customAnswers.isNotEmpty
           ? '<h4>Custom Questions</h4>' +
             booking.customAnswers.entries
@@ -250,8 +250,8 @@ class BookingFirebase extends BookingRepository {
           customerHtml = '''
             <h3>Hello ${booking.customerName},</h3>
             <p>We've received your booking request for <b>${booking.listingTitle}</b>.</p>
-            <p><b>Check-in:</b> $checkInStr</p>
-            <p><b>Check-out:</b> $checkOutStr</p>
+            <p><b>Start Date:</b> $startDateStr</p>
+            <p><b>End Date:</b> $endDateStr</p>
             $qnaHtml
             <p>The lister will review your request and you will receive another email once it's confirmed or rejected.</p>
             <br><p>Best regards,<br>CaribTap Team</p>
@@ -260,8 +260,8 @@ class BookingFirebase extends BookingRepository {
             <h3>Hello ${booking.listersName},</h3>
             <p>You have a new booking request for your listing: <b>${booking.listingTitle}</b>.</p>
             <p><b>Customer:</b> ${booking.customerName}</p>
-            <p><b>Check-in:</b> $checkInStr</p>
-            <p><b>Check-out:</b> $checkOutStr</p>
+            <p><b>Start Date:</b> $startDateStr</p>
+            <p><b>End Date:</b> $endDateStr</p>
             $qnaHtml
             <p>Please log in to the app to confirm or reject this request.</p>
             <br><p>Best regards,<br>CaribTap Team</p>
@@ -273,10 +273,10 @@ class BookingFirebase extends BookingRepository {
           customerHtml = '''
             <h3>Congratulations ${booking.customerName}!</h3>
             <p>Your booking for <b>${booking.listingTitle}</b> has been <b>CONFIRMED</b>.</p>
-            <p><b>Check-in:</b> $checkInStr</p>
-            <p><b>Check-out:</b> $checkOutStr</p>
+            <p><b>Start Date:</b> $startDateStr</p>
+            <p><b>End Date:</b> $endDateStr</p>
             $qnaHtml
-            <p>Enjoy your stay!</p>
+            <p>Thank you for your business!</p>
             <br><p>Best regards,<br>CaribTap Team</p>
           ''';
           break;

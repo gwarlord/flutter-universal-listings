@@ -24,6 +24,8 @@ import 'package:instaflutter/listings/listings_module/analytics/analytics_screen
 import 'package:instaflutter/listings/listings_module/analytics/advanced_analytics_screen.dart';
 import 'package:instaflutter/listings/listings_module/chat_settings/chat_settings_screen.dart';
 import 'package:instaflutter/listings/ui/profile/profile/profile_screen.dart';
+import '../deals/deals_promotion_screen.dart';
+import '../deals/ad_review_approval_screen.dart';
 import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
 import 'package:provider/provider.dart';
 
@@ -477,6 +479,17 @@ class _ContainerState extends State<ContainerScreen> {
                                     push(
                                       context,
                                       MyListingsWrapperWidget(currentUser: currentUser),
+                                    );
+                                  },
+                                ),
+                                ListTile(
+                                  title: Text('Deals & Promotions'.tr()),
+                                  leading: Icon(Icons.local_offer, color: Color(colorPrimary)),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    push(
+                                      context,
+                                      DealsPromotionScreen(),
                                     );
                                   },
                                 ),
