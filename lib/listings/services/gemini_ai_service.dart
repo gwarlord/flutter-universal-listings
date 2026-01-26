@@ -65,9 +65,33 @@ class GeminiAIService {
     initialize();
     try {
       print('🤖 [GEMINI] Enhancing description...');
-      final content = [Content.text('Improve this $category listing: $description')];
+      final content = [Content.text('Expand and improve this $category listing description for a Caribbean business. Write a multi-sentence, detailed, and engaging About section that highlights the business’s value, services, and benefits. Make the output longer and more helpful than the original. End with a clear, friendly call to action urging readers to contact, call, message, or book now. Do not include any preamble, explanation, or options. Only return the improved About text itself:\n\n$description')];
       final response = await _model!.generateContent(content);
-      return response.text ?? description;
+      var aiText = response.text ?? description;
+      // Post-process: Remove preamble, explanations, or options, keep only the first user-ready sentence/paragraph
+      if (aiText.contains('\n')) {
+        // Take only the first non-empty line
+        aiText = aiText.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).first;
+      }
+      // Remove common preambles if present
+      final preambles = [
+        'Here is',
+        'Here\'s',
+        'Suggestion:',
+        'Improved',
+        'Enhanced',
+        'Option',
+        'Sure,',
+        'Certainly,',
+        'Of course,',
+        'AI-generated',
+      ];
+      for (final p in preambles) {
+        if (aiText.toLowerCase().startsWith(p.toLowerCase())) {
+          aiText = aiText.substring(p.length).trimLeft();
+        }
+      }
+      return aiText;
     } catch (e) {
       print('❌ [GEMINI] Error (enhanceDescription): $e');
       return _diagnoseAndFallback(e);
