@@ -35,6 +35,9 @@ class _ReAuthUserScreenState extends State<ReAuthUserScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
+    final cardColor = isDark ? Colors.grey[900] : Colors.white;
+
     return BlocProvider(
       create: (context) => ReauthUserBloc(
           provider: widget.provider, authenticationRepository: authApiManager),
@@ -74,26 +77,64 @@ class _ReAuthUserScreenState extends State<ReAuthUserScreen> {
             }
 
             return Dialog(
-              elevation: 16,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: SizedBox(
-                  height: 300,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 40.0),
-                        child: Text(
-                          'Please Re-Authenticate in order to perform this action.',
-                          textAlign: TextAlign.center,
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(24.0),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Color(colorPrimary).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.security_outlined,
+                          size: 32, color: Color(colorPrimary)),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Verify Identity'.tr(),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Please re-authenticate to confirm this action.'.tr(),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    body,
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Cancel'.tr(),
+                        style: TextStyle(
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
                         ),
                       ),
-                      body,
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -104,26 +145,49 @@ class _ReAuthUserScreenState extends State<ReAuthUserScreen> {
   }
 
   Widget buildPasswordField(BuildContext context) {
+    final isDark = isDarkMode(context);
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
         TextField(
           controller: _passwordController,
           obscureText: true,
-          decoration: InputDecoration(hintText: 'Password'.tr()),
+          style: TextStyle(color: isDark ? Colors.white : Colors.black),
+          decoration: InputDecoration(
+            hintText: 'Password'.tr(),
+            hintStyle:
+                TextStyle(color: isDark ? Colors.grey[600] : Colors.grey[400]),
+            filled: true,
+            fillColor: isDark ? Colors.black26 : Colors.grey[50],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                  color: isDark ? Colors.grey[800]! : Colors.grey[300]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                  color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
         ),
-        Padding(
-          padding: const EdgeInsets.only(top: 12.0),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(colorPrimary),
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(
-                  Radius.circular(12),
-                ),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
+              elevation: 0,
             ),
             onPressed: () {
+              if (_passwordController.text.trim().isEmpty) return;
               context.read<LoadingCubit>().showLoading(
                     context,
                     'Verifying...'.tr(),
@@ -141,8 +205,7 @@ class _ReAuthUserScreenState extends State<ReAuthUserScreen> {
             },
             child: Text(
               'Verify'.tr(),
-              style: TextStyle(
-                  color: isDarkMode(context) ? Colors.black : Colors.white),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
         ),
@@ -151,38 +214,38 @@ class _ReAuthUserScreenState extends State<ReAuthUserScreen> {
   }
 
   Widget buildFacebookButton(BuildContext context) {
-    return ElevatedButton.icon(
-      label: Text(
-        'Facebook Verify'.tr(),
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-            fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-      ),
-      icon: Image.asset(
-        'assets/images/facebook_logo.png',
-        color: Colors.white,
-        height: 30,
-        width: 30,
-      ),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16),
-        backgroundColor: const Color(facebookButtonColor),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          side: const BorderSide(
-            color: Color(facebookButtonColor),
-          ),
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton.icon(
+        label: Text(
+          'Continue with Facebook'.tr(),
+          style: const TextStyle(
+              fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
         ),
+        icon: Image.asset(
+          'assets/images/facebook_logo.png',
+          color: Colors.white,
+          height: 24,
+          width: 24,
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(facebookButtonColor),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          elevation: 0,
+        ),
+        onPressed: () {
+          context.read<LoadingCubit>().showLoading(
+                context,
+                'Verifying...'.tr(),
+                false,
+                Color(colorPrimary),
+              );
+          context.read<ReauthUserBloc>().add(FacebookClickEvent());
+        },
       ),
-      onPressed: () {
-        context.read<LoadingCubit>().showLoading(
-              context,
-              'Verifying...'.tr(),
-              false,
-              Color(colorPrimary),
-            );
-        context.read<ReauthUserBloc>().add(FacebookClickEvent());
-      },
     );
   }
 
@@ -198,21 +261,25 @@ class _ReAuthUserScreenState extends State<ReAuthUserScreen> {
               child:
                   Text('Apple sign in is not available on this device.'.tr()));
         } else {
-          return apple.AppleSignInButton(
-            cornerRadius: 12.0,
-            type: apple.ButtonType.continueButton,
-            style: isDarkMode(context)
-                ? apple.ButtonStyle.white
-                : apple.ButtonStyle.black,
-            onPressed: () {
-              context.read<LoadingCubit>().showLoading(
-                    context,
-                    'Verifying...'.tr(),
-                    false,
-                    Color(colorPrimary),
-                  );
-              context.read<ReauthUserBloc>().add(AppleClickEvent());
-            },
+          return SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: apple.AppleSignInButton(
+              cornerRadius: 12.0,
+              type: apple.ButtonType.continueButton,
+              style: isDarkMode(context)
+                  ? apple.ButtonStyle.white
+                  : apple.ButtonStyle.black,
+              onPressed: () {
+                context.read<LoadingCubit>().showLoading(
+                      context,
+                      'Verifying...'.tr(),
+                      false,
+                      Color(colorPrimary),
+                    );
+                context.read<ReauthUserBloc>().add(AppleClickEvent());
+              },
+            ),
           );
         }
       },
@@ -220,28 +287,29 @@ class _ReAuthUserScreenState extends State<ReAuthUserScreen> {
   }
 
   Widget buildPhoneField(BuildContext context) {
+    final isDark = isDarkMode(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: PinCodeTextField(
             length: 6,
             appContext: context,
             keyboardType: TextInputType.phone,
             backgroundColor: Colors.transparent,
+            textStyle: TextStyle(color: isDark ? Colors.white : Colors.black),
             pinTheme: PinTheme(
                 shape: PinCodeFieldShape.box,
-                borderRadius: BorderRadius.circular(5),
-                fieldHeight: 40,
+                borderRadius: BorderRadius.circular(8),
+                fieldHeight: 45,
                 fieldWidth: 40,
                 activeColor: Color(colorPrimary),
-                activeFillColor: isDarkMode(context)
-                    ? Colors.grey.shade700
-                    : Colors.grey.shade100,
+                activeFillColor:
+                    isDark ? Colors.grey.shade800 : Colors.grey.shade100,
                 selectedFillColor: Colors.transparent,
                 selectedColor: Color(colorPrimary),
-                inactiveColor: Colors.grey.shade600,
+                inactiveColor: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
                 inactiveFillColor: Colors.transparent),
             enableActiveFill: true,
             onCompleted: (code) {

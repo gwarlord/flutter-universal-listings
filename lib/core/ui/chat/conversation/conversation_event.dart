@@ -7,11 +7,12 @@ class InitConversationsEvent extends ConversationsEvent {}
 class FetchConversationsPageEvent extends ConversationsEvent {
   int page;
   int size;
+  Completer<List<ChatFeedModel>> completer;
 
   FetchConversationsPageEvent({
     required this.page,
     required this.size,
-    required Completer<List<ChatFeedModel>> completer,
+    required this.completer,
   });
 }
 

@@ -23,14 +23,30 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
     required this.chatRepository,
     required this.currentUser,
   }) : super(ConversationInitial()) {
+    
+    // START LIVE CONVERSATION LISTENER
+    on<InitConversationsEvent>((event, emit) async {
+       await conversationsStreamSub?.cancel();
+       await emit.forEach<List<ChatFeedModel>>(
+          chatRepository.listenToConversations(userID: currentUser.userID),
+          onData: (listOfLiveConversations) {
+            print('🔔 [DEBUG] ConversationsBloc received ${listOfLiveConversations.length} live conversations');
+            return UpdateLiveConversationsState(liveConversations: listOfLiveConversations);
+          },
+          onError: (error, stackTrace) {
+            debugPrint('ConversationsBloc Stream Error: $error');
+            return ConversationsPageErrorState(error: error);
+          },
+       );
+    });
+
     on<FetchConversationsPageEvent>((event, emit) async {
       try {
         if (event.page == -1) {
-          conversationsStreamSub = chatRepository
-              .listenToConversations(userID: currentUser.userID)
-              .listen((listOfLiveConversations) {
-            updateLiveConversations(listOfLiveConversations);
-          });
+          add(InitConversationsEvent());
+          if (!event.completer.isCompleted) {
+            event.completer.complete([]);
+          }
         } else {
           List<ChatFeedModel> newConversationsPage =
               await chatRepository.fetchConversations(
@@ -39,10 +55,17 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
                   size: event.size);
           emit(NewConversationsPageState(
               newPage: newConversationsPage, oldPageKey: event.page));
+          
+          if (!event.completer.isCompleted) {
+            event.completer.complete(newConversationsPage);
+          }
         }
       } catch (e, s) {
-        debugPrint('ConversationsBloc.ConversationsBloc $e $s');
+        debugPrint('ConversationsBloc.FetchConversationsPageEvent $e $s');
         emit(ConversationsPageErrorState(error: e));
+        if (!event.completer.isCompleted) {
+          event.completer.completeError(e);
+        }
       }
     });
 

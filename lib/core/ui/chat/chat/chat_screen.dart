@@ -23,6 +23,8 @@ import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/core/utils/user_report/api/api_manager.dart';
 import 'package:instaflutter/core/utils/user_report/api/user_report_repository.dart';
 
+import 'firestore_chat_screen_v2.dart';
+
 String activeNow = 'Active now'.tr();
 String lastSeenOn = 'Last seen'.tr();
 
@@ -42,20 +44,13 @@ class ChatWrapperWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => ChatBloc(
-        channelDataModel: channelDataModel,
-        chatRepository: chatApiManager,
-        currentUser: currentUser,
-        userReportRepository: userReportingApiManager,
-      ),
-      child: ChatScreen(
-        channelDataModel: channelDataModel,
-        currentUser: currentUser,
-        colorPrimary: colorPrimary,
-        colorAccent: colorAccent,
-      ),
-    );
+      return FirestoreChatScreenV2(
+        channelId: channelDataModel.channelID,
+        currentUserId: currentUser.userID,
+        listingTitle: channelDataModel.listingTitle ?? '',
+        listingImage: channelDataModel.listingImage ?? '',
+        otherParticipants: channelDataModel.participants,
+      );
   }
 }
 
@@ -78,6 +73,9 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+    // Local list to keep track of loaded messages for day separator logic
+    List<ChatFeedContent> _loadedMessages = [];
+    final ScrollController _scrollController = ScrollController();
   late User currentUser;
   final TextEditingController _messageController = TextEditingController();
   RecordingState currentRecordingState = RecordingState.hidden;
@@ -95,9 +93,11 @@ class _ChatScreenState extends State<ChatScreen> {
     channelDataModel = widget.channelDataModel;
     currentUser = widget.currentUser;
 
-    subtitleText = channelDataModel.participants.first.active
+    subtitleText = channelDataModel.participants.isNotEmpty && channelDataModel.participants.first.active
         ? activeNow
-        : '$lastSeenOn ${formatTimestamp(channelDataModel.participants.first.lastOnlineTimestamp, lastSeen: true)}';
+        : channelDataModel.participants.isNotEmpty 
+            ? '$lastSeenOn ${formatTimestamp(channelDataModel.participants.first.lastOnlineTimestamp, lastSeen: true)}'
+            : '';
 
     _pagingController = PagingController<int, ChatFeedContent>(
       fetchPage: (pageKey) {
@@ -117,9 +117,31 @@ class _ChatScreenState extends State<ChatScreen> {
       state.lastPageIsEmpty ? null : state.nextIntPageKey,
     );
 
+    // Listen to page changes and update _loadedMessages
+    _pagingController.addListener(() {
+      final pages = _pagingController.value.pages;
+      if (pages != null) {
+        // Flatten all pages into a single list and sort by createdAt ascending (oldest first)
+        final allMessages = pages.expand((page) => page).toList();
+        allMessages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        setState(() {
+          _loadedMessages = allMessages;
+        });
+        // Optionally scroll to bottom when new messages arrive
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+          }
+        });
+      }
+    });
+
     context
         .read<ChatBloc>()
         .add(SetupChatListeners(channelDataModel: channelDataModel));
+
+    // START LIVE MESSAGE LISTENER (NON-BLOCKING)
+    context.read<ChatBloc>().add(StartLiveMessagesListenerEvent());
 
     if (!channelDataModel.readUserIDs.contains(currentUser.userID) && 
         channelDataModel.id.isNotEmpty) {
@@ -148,7 +170,6 @@ class _ChatScreenState extends State<ChatScreen> {
               channelDataModel.participants.removeWhere(
                     (element) => element.userID == state.updatedUser.userID,
               );
-              channelDataModel.participants.add(state.updatedUser);
             }
           },
           buildWhen: (old, current) =>
@@ -156,22 +177,58 @@ class _ChatScreenState extends State<ChatScreen> {
               current is ParticipantsUpdatedStream) &&
               old != current,
           builder: (context, state) {
+            String? statusText;
+            if (channelDataModel.participants.isNotEmpty) {
+              final first = channelDataModel.participants.first;
+              if (first.active) {
+                statusText = activeNow;
+              } else if (first.lastOnlineTimestamp != null) {
+                statusText = '$lastSeenOn ${formatTimestamp(first.lastOnlineTimestamp, lastSeen: true)}';
+              }
+            }
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                if (channelDataModel.listingTitle != null && channelDataModel.listingTitle!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2.0),
+                    child: Text(
+                      channelDataModel.listingTitle!,
+                      style: TextStyle(
+                        color: isDarkMode(context) ? Colors.white : Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 17,
+                        letterSpacing: 0.1,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 Text(
                   channelDataModel.name,
                   style: TextStyle(
                     color:
                     isDarkMode(context) ? Colors.grey.shade200 : Colors.white,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                if (!channelDataModel.isGroupChat)
+                if (statusText != null && statusText.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.all(2.0),
-                    child: buildSubTitle(channelDataModel.participants.first),
+                    padding: const EdgeInsets.only(top: 2.0),
+                    child: Text(
+                      statusText,
+                      style: TextStyle(
+                        color: isDarkMode(context) ? Colors.grey[300] : Colors.white70,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
               ],
             );
@@ -347,11 +404,13 @@ class _ChatScreenState extends State<ChatScreen> {
                         builder: (context, state, fetchNextPage) =>
                             PagedListView<int, ChatFeedContent>(
                               keyboardDismissBehavior:
-                              ScrollViewKeyboardDismissBehavior.onDrag,
+                                ScrollViewKeyboardDismissBehavior.onDrag,
                               state: state,
                               fetchNextPage: fetchNextPage,
+                              reverse: false, // Show oldest at top, newest at bottom
+                              scrollController: _scrollController,
                               builderDelegate:
-                              PagedChildBuilderDelegate<ChatFeedContent>(
+                                PagedChildBuilderDelegate<ChatFeedContent>(
                                 invisibleItemsThreshold: 5,
                                 noItemsFoundIndicatorBuilder: (_) => Center(
                                   child: const Text('No Messages Yet.').tr(),
@@ -364,13 +423,57 @@ class _ChatScreenState extends State<ChatScreen> {
                                 const Center(
                                   child: CircularProgressIndicator.adaptive(),
                                 ),
-                                itemBuilder: (context, message, index) =>
-                                    buildMessage(
-                                      message,
-                                      channelDataModel.participants,
-                                    ),
+                                itemBuilder: (context, message, index) {
+                                  // Use the local _loadedMessages for day separator logic
+                                  final messages = _loadedMessages;
+                                  bool showDaySeparator = false;
+                                  String? dayString;
+                                  if (index == messages.length - 1) {
+                                    showDaySeparator = true;
+                                  } else if (index < messages.length - 1) {
+                                    final nextMsg = messages[index + 1];
+                                    final currDate = DateTime.fromMillisecondsSinceEpoch(message.createdAt);
+                                    final nextDate = DateTime.fromMillisecondsSinceEpoch(nextMsg.createdAt);
+                                    if (currDate.year != nextDate.year || currDate.month != nextDate.month || currDate.day != nextDate.day) {
+                                      showDaySeparator = true;
+                                    }
+                                  }
+                                  if (showDaySeparator) {
+                                    final currDate = DateTime.fromMillisecondsSinceEpoch(message.createdAt);
+                                    dayString = DateFormat('MMM d, h:mma').format(currDate).toLowerCase();
+                                  }
+                                  return Column(
+                                    children: [
+                                      if (showDaySeparator && dayString != null)
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.grey.shade300,
+                                                  borderRadius: BorderRadius.circular(16),
+                                                ),
+                                                child: Text(
+                                                  dayString,
+                                                  style: const TextStyle(fontSize: 13, color: Colors.black54, fontWeight: FontWeight.w500),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      buildMessage(
+                                        message,
+                                        channelDataModel.participants,
+                                        showTime: true,
+                                      ),
+                                    ],
+                                  );
+                                },
+                                // reverse: true, // Removed invalid parameter
                               ),
-                              reverse: true,
                             ),
                       ),
                     ),
@@ -397,7 +500,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                   borderRadius:
                                   BorderRadius.all(Radius.circular(360)),
                                   borderSide:
-                                  BorderSide(style: BorderStyle.none),
+                                  BorderSide.none,
                                 ),
                                 color: isDarkMode(context)
                                     ? Colors.grey[700]
@@ -455,18 +558,14 @@ class _ChatScreenState extends State<ChatScreen> {
                                           borderRadius: BorderRadius.all(
                                             Radius.circular(360),
                                           ),
-                                          borderSide: BorderSide(
-                                            style: BorderStyle.none,
-                                          ),
+                                          borderSide: BorderSide.none,
                                         ),
                                         enabledBorder:
                                         const OutlineInputBorder(
                                           borderRadius: BorderRadius.all(
                                             Radius.circular(360),
                                           ),
-                                          borderSide: BorderSide(
-                                            style: BorderStyle.none,
-                                          ),
+                                          borderSide: BorderSide.none,
                                         ),
                                       ),
                                       textCapitalization:
@@ -565,9 +664,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 const EdgeInsets.only(top: 12, bottom: 12),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(25.0),
-                                  side: const BorderSide(
-                                    style: BorderStyle.none,
-                                  ),
+                                  side: BorderSide.none,
                                 ),
                               ),
                               child: const Text(
@@ -604,9 +701,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 const EdgeInsets.only(top: 12, bottom: 12),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(25.0),
-                                  side: const BorderSide(
-                                    style: BorderStyle.none,
-                                  ),
+                                  side: BorderSide.none,
                                 ),
                               ),
                               child: const Text(
@@ -636,7 +731,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             const EdgeInsets.only(top: 12, bottom: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(25.0),
-                              side: const BorderSide(style: BorderStyle.none),
+                              side: BorderSide.none,
                             ),
                           ),
                           child: const Text(
@@ -745,16 +840,34 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget buildMessage(ChatFeedContent messageData, List<User> members) {
+  Widget buildMessage(ChatFeedContent messageData, List<User> members, {bool showTime = true}) {
+    Widget messageWidget;
     if (messageData.senderID == currentUser.userID) {
-      return myMessageView(messageData);
+      messageWidget = myMessageView(messageData);
     } else {
-      return remoteMessageView(
+      messageWidget = remoteMessageView(
         messageData: messageData,
-        sender: members
-            .firstWhereOrNull((user) => user.userID == messageData.senderID),
+        sender: members.firstWhereOrNull((user) => user.userID == messageData.senderID),
       );
     }
+    if (!showTime) return messageWidget;
+    final msgDate = DateTime.fromMillisecondsSinceEpoch(messageData.createdAt);
+    final msgTimeString = DateFormat('MMM d, h:mma').format(msgDate).toLowerCase();
+    return Column(
+      crossAxisAlignment: messageData.senderID == currentUser.userID
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      children: [
+        messageWidget,
+        Padding(
+          padding: const EdgeInsets.only(left: 12.0, right: 12.0, top: 2, bottom: 2),
+          child: Text(
+            msgTimeString,
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget myMessageView(ChatFeedContent messageData) {
@@ -1140,7 +1253,7 @@ class _ChatScreenState extends State<ChatScreen> {
               context.read<ChatBloc>().add(
                 BlockUserEvent(
                   targetUser: channelDataModel.participants.first,
-                  action: reportUserAction,
+                  action: blockUserAction,
                 ),
               );
             },

@@ -20,7 +20,7 @@ async function sendEmail(to: string, subject: string, html: string) {
   }
   await sgMail.send({
     to,
-    from: {email: "no-reply@caribtap.com", name: "CaribTap"},
+    from: {email: "admin@caribtap.com", name: "CaribTap"},
     subject,
     html,
   });
@@ -283,5 +283,6 @@ export const sendSubscriptionReminders = functions.pubsub
     return null;
   });
 
-// Export deal ad notification trigger
+// Export deal ad and chat notification triggers
 export { onDealAdApproved } from './deal_ad_notifications';
+export { onChatMessageCreated } from './chat_notifications';

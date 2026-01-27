@@ -62,209 +62,163 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       },
       child: Scaffold(
-        appBar: Platform.isIOS
-            ? AppBar(
-                title: Text('Profile'.tr()),
-                leading: IconButton(
-                  icon: const Icon(Icons.home),
-                  onPressed: () {
-                    pushAndRemoveUntil(
-                      context,
-                      ContainerWrapperWidget(currentUser: currentUser),
-                      false,
-                    );
-                  },
-                ),
-              )
-            : AppBar(
-                title: Text('Profile'.tr()),
-                leading: IconButton(
-                  icon: const Icon(Icons.home),
-                  onPressed: () {
-                    pushAndRemoveUntil(
-                      context,
-                      ContainerWrapperWidget(currentUser: currentUser),
-                      false,
-                    );
-                  },
-                ),
-              ),
-        body: BlocProvider(
-        create: (context) => ProfileBloc(
-          currentUser: currentUser,
-          profileRepository: profileApiManager,
+        appBar: AppBar(
+          title: Text('Profile'.tr()),
+          leading: IconButton(
+            icon: const Icon(Icons.home),
+            onPressed: () {
+              pushAndRemoveUntil(
+                context,
+                ContainerWrapperWidget(currentUser: currentUser),
+                false,
+              );
+            },
+          ),
         ),
-        child: Builder(
-          builder: (context) {
-            return MultiBlocListener(
-              listeners: [
-                BlocListener<AuthenticationBloc, AuthenticationState>(
-                  listener: (context, state) {
-                    context.read<LoadingCubit>().hideLoading();
-                    if (state.authState == AuthState.unauthenticated) {
-                      pushAndRemoveUntil(context, const WelcomeScreen(), false);
-                    }
-                  },
-                ),
-                BlocListener<ProfileBloc, ProfileState>(
-                  listener: (context, state) async {
-                    if (state is UpdatedUserState) {
+        body: BlocProvider(
+          create: (context) => ProfileBloc(
+            currentUser: currentUser,
+            profileRepository: profileApiManager,
+          ),
+          child: Builder(
+            builder: (context) {
+              return MultiBlocListener(
+                listeners: [
+                  BlocListener<AuthenticationBloc, AuthenticationState>(
+                    listener: (context, state) {
                       context.read<LoadingCubit>().hideLoading();
-                      context.read<AuthenticationBloc>().user =
-                          state.updatedUser;
-                      currentUser = state.updatedUser;
-                    } else if (state is UploadingImageState) {
-                      context.read<LoadingCubit>().showLoading(
-                            context,
-                            'Uploading image...'.tr(),
-                            false,
-                            Color(colorPrimary),
-                          );
-                    } else if (state is ReauthRequiredState) {
-                      bool? result = await showDialog(
-                        context: context,
-                        builder: (context) => ReAuthUserScreen(
-                          provider: state.authProvider,
-                          currentEmail:
-                              auth.FirebaseAuth.instance.currentUser!.email,
-                          phoneNumber: auth
-                              .FirebaseAuth.instance.currentUser!.phoneNumber,
-                          isDeleteUser: true,
-                        ),
-                      );
-                      if (result != null && result) {
-                        if (!context.mounted) return;
+                      if (state.authState == AuthState.unauthenticated) {
+                        pushAndRemoveUntil(context, const WelcomeScreen(), false);
+                      }
+                    },
+                  ),
+                  BlocListener<ProfileBloc, ProfileState>(
+                    listener: (context, state) async {
+                      if (state is UpdatedUserState) {
+                        context.read<LoadingCubit>().hideLoading();
+                        context.read<AuthenticationBloc>().user =
+                            state.updatedUser;
+                        currentUser = state.updatedUser;
+                      } else if (state is UploadingImageState) {
+                        context.read<LoadingCubit>().showLoading(
+                              context,
+                              'Uploading image...'.tr(),
+                              false,
+                              Color(colorPrimary),
+                            );
+                      } else if (state is ReauthRequiredState) {
+                        bool? result = await showDialog(
+                          context: context,
+                          builder: (context) => ReAuthUserScreen(
+                            provider: state.authProvider,
+                            currentEmail:
+                                auth.FirebaseAuth.instance.currentUser!.email,
+                            phoneNumber: auth
+                                .FirebaseAuth.instance.currentUser!.phoneNumber,
+                            isDeleteUser: true,
+                          ),
+                        );
+                        if (result != null && result) {
+                          if (!context.mounted) return;
+                          context
+                              .read<AuthenticationBloc>()
+                              .add(UserDeletedEvent());
+                        }
+                      } else if (state is DeleteUserConfirmationState) {
+                        bool? result = await _showModernDeleteConfirmationDialog(context);
+                        if (result == true) {
+                          if (!context.mounted) return;
+                          context.read<LoadingCubit>().showLoading(
+                                context,
+                                'Deleting account...'.tr(),
+                                false,
+                                Color(colorPrimary),
+                              );
+                          context
+                              .read<ProfileBloc>()
+                              .add(DeleteUserConfirmedEvent());
+                        }
+                      } else if (state is UserDeletedState) {
+                        context.read<LoadingCubit>().hideLoading();
                         context
                             .read<AuthenticationBloc>()
                             .add(UserDeletedEvent());
                       }
-                    } else if (state is DeleteUserConfirmationState) {
-                      bool? result;
-                      String title = 'Account Deletion'.tr();
-                      String content =
-                          'Are you sure you want to delete your account? This can not be undone.'
-                              .tr();
-                      if (Platform.isIOS) {
-                        await showCupertinoDialog(
-                            context: context,
-                            builder: (context) => CupertinoAlertDialog(
-                                  title: Text(title),
-                                  content: Text(content),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () {
-                                        result = true;
-                                        Navigator.pop(context);
-                                      },
-                                      child: const Text('Yes').tr(),
+                    },
+                  ),
+                ],
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding:
+                            const EdgeInsets.only(top: 32.0, left: 32, right: 32),
+                        child: Column(
+                          children: [
+                            BlocBuilder<ProfileBloc, ProfileState>(
+                                buildWhen: (old, current) =>
+                                    current is UpdatedUserState && old != current,
+                                builder: (context, state) {
+                                  return Center(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black26,
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                        border: Border.all(
+                                          color: Theme.of(context).colorScheme.primary,
+                                          width: 3,
+                                        ),
+                                      ),
+                                      child: ClipOval(
+                                        child: displayCircleImage(
+                                          currentUser.profilePictureURL,
+                                          130,
+                                          false,
+                                        ),
+                                      ),
                                     ),
-                                    TextButton(
-                                      onPressed: () {
-                                        result = false;
-                                        Navigator.pop(context);
-                                      },
-                                      child: const Text('No').tr(),
-                                    ),
-                                  ],
-                                ));
-                      } else {
-                        await showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: Text(title),
-                            content: Text(content),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  result = true;
-                                  Navigator.pop(context);
-                                },
-                                child: const Text('Yes').tr(),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  result = false;
-                                  Navigator.pop(context);
-                                },
-                                child: const Text('No').tr(),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                      if (result != null && result!) {
-                        if (!context.mounted) return;
-                        context.read<LoadingCubit>().showLoading(
-                              context,
-                              'Deleting account...'.tr(),
-                              false,
-                              Color(colorPrimary),
-                            );
-                        context
-                            .read<ProfileBloc>()
-                            .add(DeleteUserConfirmedEvent());
-                      }
-                    } else if (state is UserDeletedState) {
-                      context.read<LoadingCubit>().hideLoading();
-                      context
-                          .read<AuthenticationBloc>()
-                          .add(UserDeletedEvent());
-                    }
-                  },
-                ),
-              ],
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    Padding(
-                      padding:
-                          const EdgeInsets.only(top: 32.0, left: 32, right: 32),
-                      child: Column(
-                        children: [
-                          BlocBuilder<ProfileBloc, ProfileState>(
-                              buildWhen: (old, current) =>
-                                  current is UpdatedUserState && old != current,
-                              builder: (context, state) {
-                                return Center(
-                                    child: displayCircleImage(
-                                        currentUser.profilePictureURL,
-                                        130,
-                                        false));
-                              }),
-                          SizedBox(
-                            width: 175,
-                            child: FloatingActionButton(
-                                backgroundColor: Color(colorAccent),
-                                mini: true,
-                                onPressed: () => _onCameraClick(context),
-                                child: Icon(
-                                  Icons.camera_alt,
-                                  color: isDarkMode(context)
-                                      ? Colors.black
-                                      : Colors.white,
-                                )),
-                          )
-                        ],
+                                  );
+                                }),
+                            SizedBox(
+                              width: 175,
+                              child: FloatingActionButton(
+                                  backgroundColor: Color(colorAccent),
+                                  mini: true,
+                                  onPressed: () => _onCameraClick(context),
+                                  child: Icon(
+                                    Icons.camera_alt,
+                                    color: isDarkMode(context)
+                                        ? Colors.black
+                                        : Colors.white,
+                                  )),
+                            )
+                          ],
+                        ),
                       ),
-                    ),
-                    Padding(
-                      padding:
-                          const EdgeInsets.only(top: 16.0, right: 32, left: 32),
-                      child: BlocBuilder<ProfileBloc, ProfileState>(
-                          buildWhen: (old, current) =>
-                              current is UpdatedUserState && old != current,
-                          builder: (context, state) {
-                            return Text(
-                              currentUser.fullName(),
-                              style: TextStyle(
-                                  color: isDarkMode(context)
-                                      ? Colors.white
-                                      : Colors.black,
-                                  fontSize: 20),
-                              textAlign: TextAlign.center,
-                            );
-                          }),
-                    ),
+                      Padding(
+                        padding:
+                            const EdgeInsets.only(top: 16.0, right: 32, left: 32),
+                        child: BlocBuilder<ProfileBloc, ProfileState>(
+                            buildWhen: (old, current) =>
+                                current is UpdatedUserState && old != current,
+                            builder: (context, state) {
+                              return Text(
+                                currentUser.fullName(),
+                                style: TextStyle(
+                                    color: isDarkMode(context)
+                                        ? Colors.white
+                                        : Colors.black,
+                                    fontSize: 20),
+                                textAlign: TextAlign.center,
+                              );
+                            }),
+                      ),
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
@@ -280,324 +234,327 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                       ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Column(
-                        children: [
-                          ListTile(
-                            dense: true,
-                            onTap: () => push(
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Column(
+                          children: [
+                            _modernListTile(
+                              context,
+                              icon: Icons.verified_outlined,
+                              iconColor: Theme.of(context).colorScheme.primary,
+                              title: 'Ad Approval'.tr(),
+                              onTap: () => push(context, AdApprovalScreen(currentUser: currentUser)),
+                            ),
+                            _modernListTile(
+                              context,
+                              icon: Icons.list_alt_outlined,
+                              iconColor: Theme.of(context).colorScheme.primary,
+                              title: 'My Listings'.tr(),
+                              onTap: () => push(context, MyListingsWrapperWidget(currentUser: currentUser)),
+                            ),
+                            _modernListTile(
+                              context,
+                              icon: Icons.favorite_outline,
+                              iconColor: Theme.of(context).colorScheme.primary,
+                              title: 'My Favorites'.tr(),
+                              onTap: () => push(context, FavoriteListingsWrapperWidget(currentUser: currentUser)),
+                            ),
+                            _modernListTile(
+                              context,
+                              icon: Icons.calendar_month_outlined,
+                              iconColor: Theme.of(context).colorScheme.primary,
+                              title: 'My Bookings'.tr(),
+                              onTap: () => push(context, MyBookingsWrapperWidget(currentUser: currentUser)),
+                            ),
+                            if (currentUser.isAdmin || const ['professional', 'premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase()))
+                              _modernListTile(
                                 context,
-                                AdApprovalScreen(currentUser: currentUser)),
-                            title: Text(
-                              'Ad Approval'.tr(),
-                              style: const TextStyle(fontSize: 16),
+                                icon: Icons.event_note_outlined,
+                                iconColor: Theme.of(context).colorScheme.primary,
+                                title: 'Booking Requests'.tr(),
+                                onTap: () => push(context, BookingManagementWrapperWidget(currentUser: currentUser)),
+                              ),
+                            _modernListTile(
+                              context,
+                              icon: Icons.person_outline,
+                              iconColor: Theme.of(context).colorScheme.primary,
+                              title: 'Account Details'.tr(),
+                              onTap: () async {
+                                await push(context, AccountDetailsWrapperWidget(user: currentUser));
+                                if (!context.mounted) return;
+                                currentUser = context.read<AuthenticationBloc>().user!;
+                                context.read<ProfileBloc>().add(InvalidateUserObjectEvent(newUser: currentUser));
+                              },
                             ),
-                            leading: const Icon(
-                              Icons.verified,
-                              color: Colors.green,
+                            _modernListTile(
+                              context,
+                              icon: Icons.settings_outlined,
+                              iconColor: Theme.of(context).colorScheme.primary,
+                              title: 'Settings'.tr(),
+                              onTap: () => push(context, SettingsScreen(user: currentUser)),
                             ),
-                          ),
-                          ListTile(
-                            dense: true,
-                            onTap: () => push(
+                            _modernListTile(
+                              context,
+                              icon: isDarkMode(context) ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+                              iconColor: Theme.of(context).colorScheme.primary,
+                              title: 'Theme'.tr(),
+                              onTap: () => _showThemeSelectionDialog(context),
+                            ),
+                            _modernListTile(
+                              context,
+                              icon: Icons.call_outlined,
+                              iconColor: Theme.of(context).colorScheme.primary,
+                              title: 'Contact Us'.tr(),
+                              onTap: () => push(context, ContactUsScreen(currentUser: currentUser)),
+                            ),
+                            _modernListTile(
+                              context,
+                              icon: Icons.delete_outline,
+                              iconColor: Colors.red,
+                              title: 'Delete Account'.tr(),
+                              onTap: () => context.read<ProfileBloc>().add(TryToDeleteUserEvent()),
+                            ),
+                            if (currentUser.isAdmin)
+                              _modernListTile(
                                 context,
-                                MyListingsWrapperWidget(
-                                    currentUser: currentUser)),
-                            title: Text(
-                              'My Listings'.tr(),
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                            leading: Image.asset(
-                              'assets/images/listings_welcome_image.png',
-                              height: 24,
-                              width: 24,
-                              color: Color(colorPrimary),
-                            ),
-                          ),
-                          ListTile(
-                            dense: true,
-                            onTap: () => push(
+                                icon: Icons.dashboard_outlined,
+                                iconColor: Colors.blueGrey,
+                                title: 'Admin Dashboard'.tr(),
+                                onTap: () => push(context, AdminDashboardWrappingWidget(currentUser: currentUser)),
+                              ),
+                            if (currentUser.isAdmin)
+                              _modernListTile(
                                 context,
-                                FavoriteListingsWrapperWidget(
-                                  currentUser: currentUser,
-                                )),
-                            title: Text(
-                              'My Favorites'.tr(),
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                            leading: const Icon(
-                              Icons.favorite,
-                              color: Colors.red,
-                            ),
-                          ),
-                          ListTile(
-                            dense: true,
-                            onTap: () => push(
-                                context,
-                                MyBookingsWrapperWidget(
-                                  currentUser: currentUser,
-                                )),
-                            title: Text(
-                              'My Bookings'.tr(),
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                            leading: Icon(
-                              Icons.calendar_month,
-                              color: Color(colorPrimary),
-                            ),
-                          ),
-                          if (currentUser.isAdmin || const ['professional', 'premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase()))
-                            ListTile(
-                              dense: true,
-                              onTap: () => push(
-                                  context,
-                                  BookingManagementWrapperWidget(
-                                    currentUser: currentUser,
-                                  )),
-                              title: Text(
-                                'Booking Requests'.tr(),
-                                style: const TextStyle(fontSize: 16),
+                                icon: Icons.manage_accounts_outlined,
+                                iconColor: Colors.indigo,
+                                title: 'Edit User Subscription',
+                                onTap: () => push(context, EditUserSubscriptionScreen(currentUser: currentUser)),
                               ),
-                              leading: Icon(
-                                Icons.event_note,
-                                color: Color(colorPrimary),
-                              ),
-                            ),
-                          ListTile(
-                            onTap: () async {
-                              await push(
-                                  context,
-                                  AccountDetailsWrapperWidget(
-                                      user: currentUser));
-                              if (!context.mounted) return;
-                              currentUser =
-                                  context.read<AuthenticationBloc>().user!;
-                              context.read<ProfileBloc>().add(
-                                  InvalidateUserObjectEvent(
-                                      newUser: currentUser));
-                            },
-                            title: const Text(
-                              'Account Details',
-                              style: TextStyle(fontSize: 16),
-                            ).tr(),
-                            leading: Icon(
-                              Icons.person,
-                              color: Color(colorPrimary),
-                            ),
-                          ),
-                          ListTile(
-                            onTap: () => push(
-                                context, SettingsScreen(user: currentUser)),
-                            title: const Text(
-                              'Settings',
-                              style: TextStyle(fontSize: 16),
-                            ).tr(),
-                            leading: Icon(
-                              Icons.settings,
-                              color: isDarkMode(context)
-                                  ? Colors.white54
-                                  : Colors.black45,
-                            ),
-                          ),
-                          ListTile(
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => BlocBuilder<ThemeCubit, ThemeState>(
-                                  builder: (context, themeState) {
-                                    return AlertDialog(
-                                      title: Text('Theme'.tr()),
-                                      content: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          RadioListTile<ThemeMode>(
-                                            title: Text(
-                                              'Light'.tr(),
-                                              style: const TextStyle(
-                                                color: Colors.black,
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                            value: ThemeMode.light,
-                                            groupValue: themeState.themeMode,
-                                            onChanged: (ThemeMode? value) {
-                                              if (value != null) {
-                                                context.read<ThemeCubit>().setThemeMode(value);
-                                                Navigator.pop(context);
-                                              }
-                                            },
-                                          ),
-                                          RadioListTile<ThemeMode>(
-                                            title: Text(
-                                              'Dark'.tr(),
-                                              style: const TextStyle(
-                                                color: Colors.black,
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                            value: ThemeMode.dark,
-                                            groupValue: themeState.themeMode,
-                                            onChanged: (ThemeMode? value) {
-                                              if (value != null) {
-                                                context.read<ThemeCubit>().setThemeMode(value);
-                                                Navigator.pop(context);
-                                              }
-                                            },
-                                          ),
-                                          RadioListTile<ThemeMode>(
-                                            title: Text(
-                                              'System Default'.tr(),
-                                              style: const TextStyle(
-                                                color: Colors.black,
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                            value: ThemeMode.system,
-                                            groupValue: themeState.themeMode,
-                                            onChanged: (ThemeMode? value) {
-                                              if (value != null) {
-                                                context.read<ThemeCubit>().setThemeMode(value);
-                                                Navigator.pop(context);
-                                              }
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context),
-                                          child: Text('Close'.tr()),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                              );
-                            },
-                            title: const Text(
-                              'Theme',
-                              style: TextStyle(fontSize: 16),
-                            ).tr(),
-                            leading: Icon(
-                              isDarkMode(context) ? Icons.dark_mode : Icons.light_mode,
-                              color: isDarkMode(context)
-                                  ? Colors.yellow.shade600
-                                  : Colors.orange,
-                            ),
-                          ),
-                          ListTile(
-                            onTap: () => push(context, ContactUsScreen(currentUser: currentUser)),
-                            title: const Text(
-                              'Contact Us',
-                              style: TextStyle(fontSize: 16),
-                            ).tr(),
-                            leading: const Icon(
-                              Icons.call,
-                              color: Colors.green,
-                            ),
-                          ),
-                          ListTile(
-                            dense: true,
-                            onTap: () => context
-                                .read<ProfileBloc>()
-                                .add(TryToDeleteUserEvent()),
-                            title: Text(
-                              'Delete Account'.tr(),
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                            leading: const Icon(
-                              CupertinoIcons.delete,
-                              color: Colors.red,
-                            ),
-                          ),
-                          if (currentUser.isAdmin)
-                            ListTile(
-                              dense: true,
-                              onTap: () => push(
-                                  context,
-                                  AdminDashboardWrappingWidget(
-                                      currentUser: currentUser)),
-                              title: Text(
-                                'Admin Dashboard'.tr(),
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                              leading: const Icon(
-                                Icons.dashboard,
-                                color: Colors.blueGrey,
-                              ),
-                            ),
-                          if (currentUser.isAdmin)
-                            ListTile(
-                              dense: true,
-                              onTap: () => push(
-                                  context,
-                                  EditUserSubscriptionScreen(
-                                      currentUser: currentUser)),
-                              title: const Text(
-                                'Edit User Subscription',
-                                style: TextStyle(fontSize: 16),
-                              ),
-                              leading: const Icon(
-                                Icons.manage_accounts,
-                                color: Colors.indigo,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: ConstrainedBox(
-                        constraints:
-                            const BoxConstraints(minWidth: double.infinity),
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            padding: const EdgeInsets.only(top: 12, bottom: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8.0),
-                              side: BorderSide(
-                                  color: isDarkMode(context)
-                                      ? Colors.grey.shade700
-                                      : Colors.grey.shade200),
-                            ),
-                          ),
-                          child: Text(
-                            'Logout',
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: isDarkMode(context)
-                                    ? Colors.white
-                                    : Colors.black),
-                          ).tr(),
-                          onPressed: () {
-                            context.read<LoadingCubit>().showLoading(
-                                  context,
-                                  'Logging out...'.tr(),
-                                  false,
-                                  Color(colorPrimary),
-                                );
-                            context
-                                .read<AuthenticationBloc>()
-                                .add(LogoutEvent(currentUser));
-                          },
+                          ],
                         ),
                       ),
-                    ),
-                  ],
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 48.0),
+                        child: ConstrainedBox(
+                          constraints:
+                              const BoxConstraints(minWidth: double.infinity),
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              padding: const EdgeInsets.only(top: 12, bottom: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.0),
+                                side: BorderSide(
+                                    color: isDarkMode(context)
+                                        ? Colors.grey.shade700
+                                        : Colors.grey.shade200),
+                              ),
+                            ),
+                            onPressed: () {
+                              context.read<LoadingCubit>().showLoading(
+                                    context,
+                                    'Logging out...'.tr(),
+                                    false,
+                                    Color(colorPrimary),
+                                  );
+                              context
+                                  .read<AuthenticationBloc>()
+                                  .add(LogoutEvent(currentUser));
+                            },
+                            child: Text(
+                              'Logout',
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDarkMode(context)
+                                      ? Colors.white
+                                      : Colors.black),
+                            ).tr(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
-    ),
     );
   }
 
-  _onCameraClick(BuildContext context) => showCupertinoModalPopup(
+  Future<bool?> _showModernDeleteConfirmationDialog(BuildContext context) {
+    final isDark = isDarkMode(context);
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+            const SizedBox(width: 12),
+            Text(
+              'Delete Account'.tr(),
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you absolutely sure?'.tr(),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'This action is permanent and cannot be undone. All your listings, bookings, and data will be lost forever.'.tr(),
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Keep My Account'.tr(),
+              style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Delete Permanently'.tr()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showThemeSelectionDialog(BuildContext context) {
+    final isDark = isDarkMode(context);
+    showDialog(
+      context: context,
+      builder: (context) => BlocBuilder<ThemeCubit, ThemeState>(
+        builder: (context, themeState) {
+          return AlertDialog(
+            backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text(
+              'Select Theme'.tr(),
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildThemeOption(
+                  context,
+                  title: 'Light'.tr(),
+                  icon: Icons.light_mode_outlined,
+                  value: ThemeMode.light,
+                  groupValue: themeState.themeMode,
+                  isDark: isDark,
+                ),
+                _buildThemeOption(
+                  context,
+                  title: 'Dark'.tr(),
+                  icon: Icons.dark_mode_outlined,
+                  value: ThemeMode.dark,
+                  groupValue: themeState.themeMode,
+                  isDark: isDark,
+                ),
+                _buildThemeOption(
+                  context,
+                  title: 'System Default'.tr(),
+                  icon: Icons.settings_suggest_outlined,
+                  value: ThemeMode.system,
+                  groupValue: themeState.themeMode,
+                  isDark: isDark,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Close'.tr(),
+                  style: TextStyle(color: Color(colorPrimary)),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildThemeOption(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required ThemeMode value,
+    required ThemeMode groupValue,
+    required bool isDark,
+  }) {
+    final isSelected = value == groupValue;
+    return InkWell(
+      onTap: () {
+        context.read<ThemeCubit>().setThemeMode(value);
+        Navigator.pop(context);
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? Color(colorPrimary).withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Color(colorPrimary) : (isDark ? Colors.white70 : Colors.black54),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+            ),
+            if (isSelected)
+              Icon(Icons.check_circle, color: Color(colorPrimary), size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _onCameraClick(BuildContext context) => showCupertinoModalPopup(
         context: context,
         builder: (actionSheetContext) => CupertinoActionSheet(
           message: const Text(
@@ -641,4 +598,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       );
+
+  Widget _modernListTile(BuildContext context, {required IconData icon, required Color iconColor, required String title, required VoidCallback onTap}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ListTile(
+          leading: Icon(icon, color: iconColor, size: 28),
+          title: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+          onTap: onTap,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          tileColor: Theme.of(context).colorScheme.surface,
+        ),
+      ),
+    );
+  }
 }

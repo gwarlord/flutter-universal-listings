@@ -45,6 +45,8 @@ class SetupChatListeners extends ChatEvent {
   SetupChatListeners({required this.channelDataModel});
 }
 
+class StartLiveMessagesListenerEvent extends ChatEvent {}
+
 class AddMediaToChatEvent extends ChatEvent {
   String mediaType;
   String mediaSource;

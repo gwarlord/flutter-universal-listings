@@ -110,7 +110,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Advanced Analytics'.tr()),
+        title: Text('Analytics'.tr()),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator.adaptive())
@@ -145,7 +145,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Premium Feature'.tr(),
+                            'Professional Feature'.tr(),
                             style: TextStyle(
                               color: Color(cfg.colorPrimary),
                               fontWeight: FontWeight.w600,

@@ -6,6 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/core/model/chat_feed_model.dart';
+import 'package:instaflutter/core/model/channel_data_model.dart';
+import 'package:instaflutter/core/ui/chat/chat/chat_screen.dart';
 import 'package:instaflutter/core/ui/chat/api/chat_api_manager.dart';
 import 'package:instaflutter/core/ui/chat/api/conversations_data_factory.dart';
 import 'package:instaflutter/core/ui/chat/conversation/conversation_bloc.dart';
@@ -50,19 +52,20 @@ class _ConversationsState extends State<ConversationsScreen> {
   void initState() {
     super.initState();
     user = widget.user;
-    
+    // Start live conversation listener
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ConversationsBloc>().add(InitConversationsEvent());
+    });
     // FIX 1: UPGRADED PagingController INITIALIZATION with fetchPage
     _conversationsController = PagingController<int, ChatFeedModel>(
-     
       fetchPage: (pageKey) {
         final completer = Completer<List<ChatFeedModel>>();
-
         // Call the Bloc event, using the Completer to signal when data is ready
         context.read<ConversationsBloc>().add(FetchConversationsPageEvent(
-              page: pageKey,
-              size: pageSize,
-              completer: completer, // Assuming the event/bloc handles this
-            ));
+          page: pageKey,
+          size: pageSize,
+          completer: completer, // Assuming the event/bloc handles this
+        ));
         return completer.future;
       },
       getNextPageKey: (state) =>
@@ -80,8 +83,10 @@ class _ConversationsState extends State<ConversationsScreen> {
               state.liveConversations;
               
           // FIX 3: Replaced _conversationsController.itemList = ... with copyWith
-          final allConversations =
-              conversationsDataFactory.getAllConversations();
+            final allConversations =
+              conversationsDataFactory.getAllConversations()
+                .where((c) => c.id != null && c.id.isNotEmpty && (c.chatFeedContent.content != null && c.chatFeedContent.content.trim().isNotEmpty))
+                .toList();
           _conversationsController.value = _conversationsController.value.copyWith(
             pages: [allConversations],
             hasNextPage: true,
@@ -139,6 +144,8 @@ class _ConversationsState extends State<ConversationsScreen> {
           child: RefreshIndicator(
             onRefresh: () async {
               _conversationsController.refresh();
+              // Also restart the live conversation listener
+              context.read<ConversationsBloc>().add(InitConversationsEvent());
             },
             child: CustomScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -203,31 +210,129 @@ class _ConversationsState extends State<ConversationsScreen> {
     );
   }
 
-  _buildConversationRow(ChatFeedModel chatFeedModel) {
-    String user1Image = '';
-    String user2Image = '';
-    if (chatFeedModel.participants.length >= 2) {
-      user1Image = chatFeedModel.participants.first.profilePictureURL;
-      user2Image = chatFeedModel.participants.elementAt(1).profilePictureURL;
-    }
-    if (chatFeedModel.isGroupChat) {
-      // FIX 5: Removed 'const' keyword to resolve the color error
-      return GroupConversationTile(
-        colorAccent: Color(colorAccent),
-        colorPrimary: Color(colorPrimary),
-        currentUser: user,
-        chatFeedModel: chatFeedModel,
-        membersImages: [user1Image, user2Image],
-      );
-    } else {
-      // FIX 5: Removed 'const' keyword to resolve the color error
-      return PrivateConversationTile(
-        colorAccent: Color(colorAccent),
-        colorPrimary: Color(colorPrimary),
-        currentUser: user,
-        chatFeedModel: chatFeedModel,
-      );
-    }
+  Widget _buildConversationRow(ChatFeedModel chatFeedModel) {
+    final hasListing = chatFeedModel.listingTitle.isNotEmpty || chatFeedModel.listingImage.isNotEmpty;
+    final listingTitle = chatFeedModel.listingTitle.isNotEmpty
+      ? chatFeedModel.listingTitle
+      : 'Listing';
+    final listingImage = chatFeedModel.listingImage;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final cardColor = isDark ? theme.colorScheme.surface : Colors.white;
+    final dividerColor = isDark ? Colors.grey[800] : Colors.grey[200];
+    final shadowColor = isDark ? Colors.black26 : Colors.grey.withOpacity(0.15);
+    final lastMessage = chatFeedModel.chatFeedContent.content;
+    final lastMessageDate = chatFeedModel.createdAt;
+    final dateTime = lastMessageDate > 0
+      ? DateTime.fromMillisecondsSinceEpoch(lastMessageDate)
+      : null;
+    final dateStr = dateTime != null ? DateFormat('E, MMM-dd, yyyy').format(dateTime) : '';
+    final timeStr = dateTime != null ? DateFormat('hh:mm a').format(dateTime) : '';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+      child: Card(
+        color: cardColor,
+        elevation: 2,
+        shadowColor: shadowColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            // Open chat conversation on tap
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ChatWrapperWidget(
+                  channelDataModel: ChannelDataModel(
+                    id: chatFeedModel.id,
+                    participants: chatFeedModel.participants,
+                    participantProfilePictureURLs: chatFeedModel.chatFeedContent.participantProfilePictureURLs,
+                    name: chatFeedModel.title,
+                    channelID: chatFeedModel.id,
+                    lastMessage: chatFeedModel.chatFeedContent,
+                    lastMessageDate: chatFeedModel.chatFeedContent.createdAt,
+                    lastThreadMessageId: chatFeedModel.chatFeedContent.id,
+                    listingId: chatFeedModel.listingId,
+                    listingTitle: chatFeedModel.listingTitle,
+                    listingImage: chatFeedModel.listingImage,
+                  ),
+                  currentUser: user,
+                  colorPrimary: Color(colorPrimary),
+                  colorAccent: Color(colorAccent),
+                ),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundImage: (listingImage.isNotEmpty)
+                      ? NetworkImage(listingImage)
+                      : null,
+                  backgroundColor: Colors.grey[200],
+                  child: listingImage.isEmpty
+                      ? Icon(Icons.image, color: Colors.grey[400], size: 32)
+                      : null,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hasListing && listingTitle.isNotEmpty ? listingTitle : 'Listing',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        lastMessage,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: isDark ? Colors.grey[400] : Colors.grey[700],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      dateStr,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: isDark ? Colors.grey[500] : Colors.grey[500],
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      timeStr,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: isDark ? Colors.grey[500] : Colors.grey[500],
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override

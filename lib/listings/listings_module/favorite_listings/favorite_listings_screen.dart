@@ -83,7 +83,9 @@ class _FavoriteListingScreenState extends State<FavoriteListingScreen> {
             if (isLoading) {
               return const Center(child: CircularProgressIndicator.adaptive());
             }
-            if (favorites.isEmpty) {
+            // Filter out listings created by the current user
+            final filteredFavorites = favorites.where((listing) => listing.authorID != currentUser.userID).toList();
+            if (filteredFavorites.isEmpty) {
               return Stack(
                 children: [
                   ListView(),
@@ -104,9 +106,9 @@ class _FavoriteListingScreenState extends State<FavoriteListingScreen> {
                     crossAxisCount: 2,
                     mainAxisSpacing: 24,
                     crossAxisSpacing: 16),
-                itemCount: favorites.length,
+                itemCount: filteredFavorites.length,
                 itemBuilder: (context, index) => FavoriteListingCard(
-                  listing: favorites[index],
+                  listing: filteredFavorites[index],
                   currentUser: currentUser,
                 ),
               );

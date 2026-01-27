@@ -20,6 +20,7 @@ class _FullScreenVideoViewerState extends State<FullScreenVideoViewer> {
   late VideoPlayerController _controller;
   late String videoUrl;
   late String heroTag;
+  bool _isMuted = false;
 
   @override
   void initState() {
@@ -30,7 +31,6 @@ class _FullScreenVideoViewerState extends State<FullScreenVideoViewer> {
         ? VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
         : VideoPlayerController.file(widget.videoFile!)
       ..initialize().then((_) {
-        // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
         _controller.play();
         _controller.setLooping(true);
         setState(() {});
@@ -41,50 +41,43 @@ class _FullScreenVideoViewerState extends State<FullScreenVideoViewer> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
+      backgroundColor: Colors.black,
       appBar: AppBar(
         elevation: 0.0,
         backgroundColor: Colors.transparent,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Container(
-          color: Colors.black,
-          child: Hero(
-            tag: videoUrl,
-            child: Center(
-                child: _controller.value.isInitialized
-                    ? AdaptiveVideoPlayer(
-                        controller: _controller,
-                        // In full-screen, cover is usually desired for immersive viewing
-                        fit: _controller.value.aspectRatio < 1.0
-                            ? BoxFit.cover
-                            : BoxFit.contain,
-                        showPlayOverlay: true,
-                        showMuteToggle: false,
-                        onTogglePlay: () {
-                          setState(() {
-                            _controller.value.isPlaying
-                                ? _controller.pause()
-                                : _controller.play();
-                          });
-                        },
-                      )
-                    : const CircularProgressIndicator.adaptive(),
-            ),
-          )),
-      floatingActionButton: FloatingActionButton(
-        heroTag: heroTag,
-        onPressed: () {
-          setState(() {
-            _controller.value.isPlaying
-                ? _controller.pause()
-                : _controller.play();
-          });
-        },
-        child: Icon(
-          _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
+      body: Hero(
+        tag: videoUrl,
+        child: Center(
+          child: _controller.value.isInitialized
+              ? AdaptiveVideoPlayer(
+                  controller: _controller,
+                  fit: _controller.value.aspectRatio < 1.0
+                      ? BoxFit.cover
+                      : BoxFit.contain,
+                  showPlayOverlay: true,
+                  showMuteToggle: true,
+                  isMuted: _isMuted,
+                  fullScreenIcon: Icons.fullscreen_exit,
+                  onTogglePlay: () {
+                    setState(() {
+                      _controller.value.isPlaying
+                          ? _controller.pause()
+                          : _controller.play();
+                    });
+                  },
+                  onToggleMute: () {
+                    setState(() {
+                      _isMuted = !_isMuted;
+                      _controller.setVolume(_isMuted ? 0 : 1);
+                    });
+                  },
+                  onToggleFullScreen: () => Navigator.pop(context),
+                )
+              : const CircularProgressIndicator.adaptive(),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 

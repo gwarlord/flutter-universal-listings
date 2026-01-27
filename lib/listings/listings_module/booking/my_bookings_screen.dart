@@ -1,5 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/listings_module/booking/booking_bloc.dart';
@@ -293,29 +295,53 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   }
 
   void _cancelBooking(dynamic booking) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Cancel booking request?'.tr()),
-        content: Text('Are you sure you want to cancel this booking request?'.tr()),
+        backgroundColor: isDark ? const Color(0xFF22242A) : null,
+        title: Text(
+          'Cancel booking request?'.tr(),
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to cancel this booking request?'.tr(),
+          style: TextStyle(
+            color: isDark ? Colors.white70 : Colors.black87,
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('No'.tr()),
+            child: Text(
+              'No'.tr(),
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+              ),
+            ),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
               context.read<BookingBloc>().add(
-                    CancelBookingEvent(
-                      listingId: booking.listingId,
-                      bookingId: booking.id,
-                    ),
-                  );
+                CancelBookingEvent(
+                  listingId: booking.listingId,
+                  bookingId: booking.id,
+                ),
+              );
+              // Wait a short moment for cancellation to process, then refresh bookings
+              await Future.delayed(const Duration(milliseconds: 500));
+              if (mounted) {
+                context.read<BookingBloc>().add(
+                  GetMyBookingsEvent(userId: widget.currentUser.userID),
+                );
+              }
             },
             child: Text(
               'Yes, cancel'.tr(),
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: Colors.red),
             ),
           ),
         ],
@@ -324,27 +350,132 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   }
 
   void _showContactHost(dynamic booking) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final listersEmail = booking.listersEmail ?? '';
+    final listersName = booking.listersName ?? '';
+    // Use only fields that exist on BookingModel for host phone
+    // Only use customerPhone if it exists on BookingModel
+    final listersPhone = (booking.customerPhone ?? '').toString();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Contact host'.tr()),
+        backgroundColor: isDark ? const Color(0xFF22242A) : null,
+        title: Text(
+          'Contact host'.tr(),
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${booking.listersName}'),
+            Text(
+              listersName,
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+              ),
+            ),
             const SizedBox(height: 8),
-            if (booking.listersEmail.isNotEmpty)
-              Text(
-                'Email: ${booking.listersEmail}',
-                style: const TextStyle(fontSize: 12),
+            if (listersEmail.isNotEmpty)
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Email: $listersEmail',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.grey[300] : Colors.black87,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 20),
+                    tooltip: 'Copy Email',
+                    color: Theme.of(context).colorScheme.primary,
+                    onPressed: () {
+                      Clipboard.setData(const ClipboardData(text: '')); // dummy to ensure import
+                      Clipboard.setData(ClipboardData(text: listersEmail));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Email copied'.tr())),
+                      );
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.email, size: 20),
+                    tooltip: 'Send Email',
+                    color: Theme.of(context).colorScheme.primary,
+                    onPressed: () async {
+                      final uri = Uri(
+                        scheme: 'mailto',
+                        path: listersEmail,
+                      );
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            // Only show phone actions if a valid phone field exists on booking
+            if (listersPhone.isNotEmpty)
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Phone: $listersPhone',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.grey[300] : Colors.black87,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 20),
+                    tooltip: 'Copy Phone',
+                    color: Theme.of(context).colorScheme.primary,
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: listersPhone));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Phone copied'.tr())),
+                      );
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.call, size: 20),
+                    tooltip: 'Call',
+                    color: Theme.of(context).colorScheme.primary,
+                    onPressed: () async {
+                      final uri = Uri(scheme: 'tel', path: listersPhone);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri);
+                      }
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.sms, size: 20),
+                    tooltip: 'Send SMS',
+                    color: Theme.of(context).colorScheme.primary,
+                    onPressed: () async {
+                      final uri = Uri(scheme: 'sms', path: listersPhone);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri);
+                      }
+                    },
+                  ),
+                ],
               ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Close'.tr()),
+            child: Text(
+              'Close'.tr(),
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+              ),
+            ),
           ),
         ],
       ),

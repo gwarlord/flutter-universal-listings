@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onDealAdApproved = exports.sendSubscriptionReminders = exports.onBookingUpdated = exports.onBookingCreated = void 0;
+exports.onChatMessageCreated = exports.onDealAdApproved = exports.sendSubscriptionReminders = exports.onBookingUpdated = exports.onBookingCreated = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
@@ -56,7 +56,7 @@ async function sendEmail(to, subject, html) {
     }
     await mail_1.default.send({
         to,
-        from: { email: "no-reply@caribtap.com", name: "CaribTap" },
+        from: { email: "admin@caribtap.com", name: "CaribTap" },
         subject,
         html,
     });
@@ -257,6 +257,8 @@ exports.sendSubscriptionReminders = functions.pubsub
     }
     return null;
 });
-// Export deal ad notification trigger
+// Export deal ad and chat notification triggers
 var deal_ad_notifications_1 = require("./deal_ad_notifications");
 Object.defineProperty(exports, "onDealAdApproved", { enumerable: true, get: function () { return deal_ad_notifications_1.onDealAdApproved; } });
+var chat_notifications_1 = require("./chat_notifications");
+Object.defineProperty(exports, "onChatMessageCreated", { enumerable: true, get: function () { return chat_notifications_1.onChatMessageCreated; } });

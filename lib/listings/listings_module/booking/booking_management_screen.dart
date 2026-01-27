@@ -388,21 +388,26 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
     
     print('✅ DEBUG: Booking data valid - listingId: ${booking.listingId}, bookingId: ${booking.id}');
     
+    final dark = isDarkMode(context);
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        backgroundColor: dark ? Colors.grey[900] : Colors.white,
         title: Text(
           'Reject booking?'.tr(),
-          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: dark ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         content: Text(
           'Are you sure you want to reject this booking?'.tr(),
-          style: const TextStyle(color: Colors.black87),
+          style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text('Cancel'.tr()),
+            child: Text('Cancel'.tr(), style: TextStyle(color: dark ? Colors.white70 : Colors.black87)),
           ),
           TextButton(
             onPressed: () {
@@ -419,7 +424,7 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
             },
             child: Text(
               'Reject'.tr(),
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: Colors.red),
             ),
           ),
         ],
@@ -428,15 +433,17 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
   }
 
   void _cancelBooking(dynamic booking) {
+    final dark = isDarkMode(context);
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Cancel booking?'.tr()),
-        content: Text('Are you sure you want to cancel this confirmed booking?'.tr()),
+        backgroundColor: dark ? Colors.grey[900] : Colors.white,
+        title: Text('Cancel booking?'.tr(), style: TextStyle(color: dark ? Colors.white : Colors.black87)),
+        content: Text('Are you sure you want to cancel this confirmed booking?'.tr(), style: TextStyle(color: dark ? Colors.white70 : Colors.black87)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text('No'.tr()),
+            child: Text('No'.tr(), style: TextStyle(color: dark ? Colors.white70 : Colors.black87)),
           ),
           TextButton(
             onPressed: () {
@@ -451,7 +458,7 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
             },
             child: Text(
               'Yes, cancel'.tr(),
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: Colors.red),
             ),
           ),
         ],

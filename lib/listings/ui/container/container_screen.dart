@@ -2,13 +2,12 @@ import 'dart:io';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:instaflutter/core/ui/chat/conversation/conversations_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/ui/container/container_bloc.dart';
-import 'package:instaflutter/core/ui/chat/conversation/conversations_screen.dart';
-import 'package:instaflutter/core/ui/chat/premium_unlock_chat_screen.dart';
 import 'package:instaflutter/listings/listings_module/add_listing/add_listing_screen.dart';
 import 'package:instaflutter/listings/listings_module/categories/categories_screen.dart';
 import 'package:instaflutter/listings/listings_module/home/home_screen.dart';
@@ -28,8 +27,10 @@ import '../deals/deals_promotion_screen.dart';
 import '../deals/ad_review_approval_screen.dart';
 import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 
-enum DrawerSelection { home, conversations, categories, search, profile }
+// Add legacy chat for later deletion
+enum DrawerSelection { home, conversations, categories, search, profile, legacychat }
 
 class ContainerWrapperWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -62,7 +63,6 @@ class ContainerScreen extends StatefulWidget {
 
 class _ContainerState extends State<ContainerScreen> {
   DateTime? _lastBackPressed;
-  late ListingsUser currentUser;
   DrawerSelection _drawerSelection = DrawerSelection.home;
   String _appBarTitle = 'Home'.tr();
 
@@ -76,9 +76,8 @@ class _ContainerState extends State<ContainerScreen> {
   @override
   void initState() {
     super.initState();
-    currentUser = widget.user;
     _currentWidget = HomeWrapperWidget(
-      currentUser: currentUser,
+      currentUser: widget.user,
       homeKey: homeKey,
     );
     FirebaseMessaging.instance.requestPermission(
@@ -94,69 +93,13 @@ class _ContainerState extends State<ContainerScreen> {
 
   void _navigateToListingServices(BuildContext context) {
     Navigator.pop(context); // Close drawer
+    final currentUser = context.read<AuthenticationBloc>().state.user ?? widget.user;
     push(context, BookingServicesWrapperWidget(currentUser: currentUser));
-  }
-
-  void _showPremiumUnlockDialog(BuildContext context, String featureName, String description) {
-    final dark = isDarkMode(context);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: dark ? Colors.grey[900] : Colors.white,
-        title: Row(
-          children: [
-            Icon(Icons.lock, color: Color(colorPrimary)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                featureName,
-                style: TextStyle(color: dark ? Colors.white : Colors.black),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          description,
-          style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel'.tr(),
-              style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(colorPrimary),
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              Navigator.pop(context);
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PaywallScreen(
-                    currentUser: currentUser,
-                  ),
-                ),
-              );
-              if (result == true) {
-                setState(() {
-                  _selectedTapIndex = 2;
-                });
-              }
-            },
-            child: Text('Upgrade to Premium'.tr()),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showUpgradeDialog(BuildContext context, String featureName, String requiredTier) {
     final dark = isDarkMode(context);
+    final currentUser = context.read<AuthenticationBloc>().state.user ?? widget.user;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -192,8 +135,7 @@ class _ContainerState extends State<ContainerScreen> {
             ),
             onPressed: () async {
               Navigator.pop(context);
-              // Open RevenueCat Paywall
-              final result = await Navigator.push(
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => PaywallScreen(
@@ -201,12 +143,6 @@ class _ContainerState extends State<ContainerScreen> {
                   ),
                 ),
               );
-              
-              // If user successfully subscribed, refresh the UI
-              if (result == true) {
-                // Subscription successful - could refresh user data here
-                print('🎉 User successfully subscribed!');
-              }
             },
             child: Text('Upgrade Now'.tr()),
           ),
@@ -234,630 +170,599 @@ class _ContainerState extends State<ContainerScreen> {
         }
         return true;
       },
-      child: ChangeNotifierProvider<ListingsUser>.value(
-        value: currentUser,
-        child: BlocConsumer<ContainerBloc, ContainerState>(
-          listener: (context, state) {
-            if (state is TabSelectedState) {
-              _currentWidget = state.currentWidget;
-              _selectedTapIndex = state.currentTabIndex;
-              _appBarTitle = state.appBarTitle;
-              _drawerSelection = state.drawerSelection;
-            }
-          },
-          builder: (context, state) {
-            final isDark = isDarkMode(context);
-            Widget sectionLabel(String title) => Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 12,
-                      letterSpacing: 0.2,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white70 : Colors.black54,
-                    ),
-                  ),
-                );
-            return Scaffold(
-              bottomNavigationBar: Platform.isIOS
-                  ? BottomNavigationBar(
-                      currentIndex: _selectedTapIndex,
-                      onTap: (index) {
-                        switch (index) {
-                          case 0:
-                            context.read<ContainerBloc>().add(TabSelectedEvent(
-                                  appBarTitle: 'Home'.tr(),
-                                  currentTabIndex: 0,
-                                  drawerSelection: DrawerSelection.home,
-                                  currentWidget: HomeWrapperWidget(
-                                    currentUser: currentUser,
-                                    homeKey: homeKey,
-                                  ),
-                                ));
-                            break;
-                          case 1:
-                            context.read<ContainerBloc>().add(TabSelectedEvent(
-                                  appBarTitle: 'Categories'.tr(),
-                                  currentTabIndex: 1,
-                                  drawerSelection: DrawerSelection.categories,
-                                  currentWidget: CategoriesWrapperWidget(
-                                    currentUser: currentUser,
-                                  ),
-                                ));
-                            break;
-                          case 2:
-                            // Direct Messaging
-                            context.read<ContainerBloc>().add(TabSelectedEvent(
-                                  appBarTitle: 'Chats'.tr(),
-                                  currentTabIndex: 2,
-                                  drawerSelection:
-                                      DrawerSelection.conversations,
-                                  currentWidget: ConversationsWrapperWidget(user: currentUser),
-                                ));
-                            break;
-                          case 3:
-                            context.read<ContainerBloc>().add(TabSelectedEvent(
-                                  appBarTitle: 'Search'.tr(),
-                                  currentTabIndex: 3,
-                                  drawerSelection: DrawerSelection.search,
-                                  currentWidget: SearchWrapperWidget(
-                                      currentUser: currentUser),
-                                ));
-                            break;
-                        }
-                      },
-                      unselectedItemColor: Colors.grey,
-                      selectedItemColor: Color(colorPrimary),
-                      items: [
-                        BottomNavigationBarItem(
-                            icon: const Icon(Icons.home), label: 'Home'.tr()),
-                        BottomNavigationBarItem(
-                            icon: const Icon(Icons.category),
-                            label: 'Categories'.tr()),
-                        BottomNavigationBarItem(
-                            icon: const Icon(Icons.message),
-                            label: 'Chats'.tr()),
-                        BottomNavigationBarItem(
-                            icon: const Icon(Icons.search),
-                            label: 'Search'.tr()),
-                      ],
-                    )
-                  : null,
-              drawer: Platform.isAndroid
-                  ? SafeArea(
-                      child: Drawer(
-                        child: ListTileTheme(
-                          data: ListTileThemeData(
-                            style: ListTileStyle.drawer,
-                            dense: true,
-                            selectedColor: Color(colorPrimary),
-                            iconColor: isDark ? Colors.white : Colors.black87,
-                            textColor: isDark ? Colors.white : Colors.black87,
-                          ),
-                          child: SingleChildScrollView(
-                            padding: EdgeInsets.zero,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Consumer<ListingsUser>(
-                                  builder: (context, user, _) {
-                                    return DrawerHeader(
-                                      decoration: BoxDecoration(
-                                        color: Color(colorPrimary),
-                                      ),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          displayCircleImage(
-                                              user.profilePictureURL, 50, false),
-                                          Padding(
-                                            padding: const EdgeInsets.only(top: 4.0),
-                                            child: Text(
-                                              user.fullName(),
-                                              style: const TextStyle(color: Colors.white),
-                                              overflow: TextOverflow.ellipsis,
-                                              maxLines: 1,
-                                            ),
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.only(top: 2.0),
-                                            child: Text(
-                                              user.email,
-                                              style: const TextStyle(color: Colors.white, fontSize: 12),
-                                              overflow: TextOverflow.ellipsis,
-                                              maxLines: 1,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
+      child: BlocBuilder<AuthenticationBloc, AuthenticationState>(
+        builder: (context, authState) {
+          final currentUser = authState.user ?? widget.user;
+          return BlocConsumer<ContainerBloc, ContainerState>(
+            listener: (context, state) {
+              if (state is TabSelectedState) {
+                _currentWidget = state.currentWidget;
+                _selectedTapIndex = state.currentTabIndex;
+                _appBarTitle = state.appBarTitle;
+                _drawerSelection = state.drawerSelection;
+              }
+            },
+            builder: (context, state) {
+              final isDark = isDarkMode(context);
+              return Scaffold(
+                bottomNavigationBar: Platform.isIOS
+                    ? BottomNavigationBar(
+                        currentIndex: _selectedTapIndex,
+                        onTap: (index) {
+                          switch (index) {
+                            case 0:
+                              context.read<ContainerBloc>().add(TabSelectedEvent(
+                                appBarTitle: 'Home'.tr(),
+                                currentTabIndex: 0,
+                                drawerSelection: DrawerSelection.home,
+                                currentWidget: HomeWrapperWidget(
+                                  currentUser: currentUser,
+                                  homeKey: homeKey,
                                 ),
-                                const SizedBox(height: 8),
-                                sectionLabel('Browse'.tr()),
-                                ListTile(
-                                  selected: _drawerSelection == DrawerSelection.home,
-                                  title: Text('Home'.tr()),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    context.read<ContainerBloc>().add(
-                                          TabSelectedEvent(
-                                            appBarTitle: 'Home'.tr(),
-                                            currentTabIndex: 0,
-                                            drawerSelection: DrawerSelection.home,
-                                            currentWidget: HomeWrapperWidget(
-                                              homeKey: homeKey,
-                                              currentUser: currentUser,
-                                            ),
-                                          ),
-                                        );
-                                  },
-                                  leading: const Icon(Icons.home),
+                              ));
+                              break;
+                            case 1:
+                              context.read<ContainerBloc>().add(TabSelectedEvent(
+                                appBarTitle: 'Categories'.tr(),
+                                currentTabIndex: 1,
+                                drawerSelection: DrawerSelection.categories,
+                                currentWidget: CategoriesWrapperWidget(
+                                  currentUser: currentUser,
                                 ),
-                                ListTile(
-                                  selected: _drawerSelection == DrawerSelection.categories,
-                                  leading: const Icon(Icons.category),
-                                  title: Text('Categories'.tr()),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    context.read<ContainerBloc>().add(
-                                          TabSelectedEvent(
-                                            appBarTitle: 'Categories'.tr(),
-                                            currentTabIndex: 1,
-                                            drawerSelection: DrawerSelection.categories,
-                                            currentWidget: CategoriesWrapperWidget(
-                                                currentUser: currentUser),
-                                          ),
-                                        );
-                                  },
+                              ));
+                              break;
+                            case 2:
+                              context.read<ContainerBloc>().add(TabSelectedEvent(
+                                appBarTitle: 'Conversations'.tr(),
+                                currentTabIndex: 2,
+                                drawerSelection: DrawerSelection.conversations,
+                                currentWidget: ConversationsWrapperWidget(
+                                  user: currentUser,
                                 ),
-                                ListTile(
-                                  selected: _drawerSelection == DrawerSelection.conversations,
-                                  leading: const Icon(Icons.message),
-                                  title: Text('Conversations'.tr()),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    context.read<ContainerBloc>().add(
-                                          TabSelectedEvent(
-                                            appBarTitle: 'Conversations'.tr(),
-                                            currentTabIndex: 2,
-                                            drawerSelection: DrawerSelection.conversations,
-                                            currentWidget: ConversationsWrapperWidget(user: currentUser),
-                                          ),
-                                        );
-                                  },
-                                ),
-                                ListTile(
-                                  selected: _drawerSelection == DrawerSelection.search,
-                                  title: Text('Search'.tr()),
-                                  leading: const Icon(Icons.search),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    context.read<ContainerBloc>().add(
-                                          TabSelectedEvent(
-                                            appBarTitle: 'Search'.tr(),
-                                            currentTabIndex: 3,
-                                            drawerSelection: DrawerSelection.search,
-                                            currentWidget: SearchWrapperWidget(
-                                                currentUser: currentUser),
-                                          ),
-                                        );
-                                  },
-                                ),
-                                const Divider(height: 16),
-                                sectionLabel('Account'.tr()),
-                                ListTile(
-                                  selected: _drawerSelection == DrawerSelection.profile,
-                                  title: Text('Profile'.tr()),
-                                  leading: const Icon(Icons.account_circle),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    context.read<ContainerBloc>().add(
-                                          TabSelectedEvent(
-                                            appBarTitle: 'Profile'.tr(),
-                                            currentTabIndex: 3,
-                                            drawerSelection: DrawerSelection.profile,
-                                            currentWidget: ProfileScreen(currentUser: currentUser),
-                                          ),
-                                        );
-                                  },
-                                ),
-                                const Divider(height: 16),
-                                sectionLabel('Your Activity'.tr()),
-                                ListTile(
-                                  title: Text('My Listings'.tr()),
-                                  leading: Image.asset(
-                                    'assets/images/listings_welcome_image.png',
-                                    height: 22,
-                                    width: 22,
-                                    color: Color(colorPrimary),
-                                  ),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    push(
-                                      context,
-                                      MyListingsWrapperWidget(currentUser: currentUser),
-                                    );
-                                  },
-                                ),
-                                ListTile(
-                                  title: Text('Deals & Promotions'.tr()),
-                                  leading: Icon(Icons.local_offer, color: Color(colorPrimary)),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    push(
-                                      context,
-                                      DealsPromotionScreen(),
-                                    );
-                                  },
-                                ),
-                                ListTile(
-                                  title: Text('My Bookings'.tr()),
-                                  leading: Icon(
-                                    Icons.calendar_month,
-                                    color: Color(colorPrimary),
-                                  ),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    push(
-                                      context,
-                                      MyBookingsWrapperWidget(currentUser: currentUser),
-                                    );
-                                  },
-                                ),
-                                if (currentUser.isAdmin ||
-                                    const ['professional', 'premium']
-                                        .contains(currentUser.subscriptionTier.toLowerCase()))
-                                  ListTile(
-                                    title: Text('Booking Requests'.tr()),
-                                    leading: const Icon(Icons.event_note),
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      push(
-                                        context,
-                                        BookingManagementWrapperWidget(currentUser: currentUser),
-                                      );
-                                    },
-                                  ),
-                                if (currentUser.subscriptionTier.toLowerCase() != 'free')
-                                  ListTile(
-                                    title: Text('Manage Subscription'.tr()),
-                                    leading: const Icon(Icons.card_membership),
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      push(
-                                        context,
-                                        CustomerCenterScreen(currentUser: currentUser),
-                                      );
-                                    },
-                                  ),
-                                const Divider(height: 16),
-                                sectionLabel('Upgrades'.tr()),
-                                ExpansionTile(
-                                  tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-                                  title: Row(
-                                    children: [
-                                      Icon(Icons.star, color: Colors.amber, size: 20),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Professional'.tr(),
-                                        style: const TextStyle(fontWeight: FontWeight.w600),
-                                      ),
-                                    ],
-                                  ),
-                                  initiallyExpanded: _showProfessionalFeatures,
-                                  onExpansionChanged: (expanded) {
-                                    setState(() => _showProfessionalFeatures = expanded);
-                                  },
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          ListTile(
-                                            dense: true,
-                                            title: Row(
-                                              children: [
-                                                Text('Booking Services'.tr()),
-                                                if (!currentUser.hasBookingServices) ...[
-                                                  const SizedBox(width: 8),
-                                                  Icon(Icons.lock, size: 16, color: Colors.grey[600]),
-                                                ],
-                                              ],
-                                            ),
-                                            leading: const Icon(Icons.room_service, size: 20),
-                                            trailing: !currentUser.hasBookingServices
-                                                ? Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.amber,
-                                                      borderRadius: BorderRadius.circular(12),
-                                                    ),
-                                                    child: Text(
-                                                      'PRO'.tr(),
-                                                      style: const TextStyle(
-                                                        fontSize: 10,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: Colors.white,
-                                                      ),
-                                                    ),
-                                                  )
-                                                : null,
-                                            onTap: () {
-                                              if (currentUser.hasBookingServices) {
-                                                _navigateToListingServices(context);
-                                              } else {
-                                                Navigator.pop(context);
-                                                _showUpgradeDialog(context, 'Booking Services', 'Professional');
-                                              }
-                                            },
-                                          ),
-                                          ListTile(
-                                            dense: true,
-                                            title: Row(
-                                              children: [
-                                                Text('Analytics'.tr()),
-                                                if (!currentUser.hasBookingServices) ...[
-                                                  const SizedBox(width: 8),
-                                                  Icon(Icons.lock, size: 16, color: Colors.grey[600]),
-                                                ],
-                                              ],
-                                            ),
-                                            leading: const Icon(Icons.bar_chart, size: 20),
-                                            trailing: !currentUser.hasBookingServices
-                                                ? Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.amber,
-                                                      borderRadius: BorderRadius.circular(12),
-                                                    ),
-                                                    child: Text(
-                                                      'PRO'.tr(),
-                                                      style: const TextStyle(
-                                                        fontSize: 10,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: Colors.white,
-                                                      ),
-                                                    ),
-                                                  )
-                                                : null,
-                                            onTap: () {
-                                              if (currentUser.hasBookingServices) {
-                                                Navigator.pop(context);
-                                                push(context, AnalyticsScreen(currentUser: currentUser));
-                                              } else {
-                                                Navigator.pop(context);
-                                                _showUpgradeDialog(context, 'Analytics', 'Professional');
-                                              }
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                ExpansionTile(
-                                  tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-                                  title: Row(
-                                    children: [
-                                      Icon(Icons.diamond, color: Colors.purple, size: 20),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Premium'.tr(),
-                                        style: const TextStyle(fontWeight: FontWeight.w600),
-                                      ),
-                                    ],
-                                  ),
-                                  initiallyExpanded: _showPremiumFeatures,
-                                  onExpansionChanged: (expanded) {
-                                    setState(() => _showPremiumFeatures = expanded);
-                                  },
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          ListTile(
-                                            dense: true,
-                                            title: Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    'Chat Settings'.tr(),
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                                if (!currentUser.hasDirectMessaging)
-                                                  const SizedBox(width: 8),
-                                                if (!currentUser.hasDirectMessaging)
-                                                  Icon(Icons.lock, size: 16, color: Colors.grey[600]),
-                                              ],
-                                            ),
-                                            leading: const Icon(Icons.chat, size: 20),
-                                            trailing: currentUser.hasDirectMessaging
-                                                ? null
-                                                : Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.purple,
-                                                      borderRadius: BorderRadius.circular(12),
-                                                    ),
-                                                    child: Text(
-                                                      'PREMIUM'.tr(),
-                                                      style: const TextStyle(
-                                                        fontSize: 10,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: Colors.white,
-                                                      ),
-                                                    ),
-                                                  ),
-                                            onTap: () {
-                                              Navigator.pop(context);
-                                              if (currentUser.hasDirectMessaging) {
-                                                // Navigate to chat settings screen for managing listing chat toggles
-                                                push(
-                                                  context,
-                                                  ChatSettingsScreen(
-                                                    currentUser: currentUser,
-                                                    listingsRepository: listingApiManager,
-                                                  ),
-                                                );
-                                              } else {
-                                                _showUpgradeDialog(context, 'Chat Settings', 'Premium');
-                                              }
-                                            },
-                                          ),
-                                          ListTile(
-                                            dense: true,
-                                            title: Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    'Advanced Analytics'.tr(),
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                                if (!currentUser.isAdmin && !['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase()))
-                                                  const SizedBox(width: 8),
-                                                if (!currentUser.isAdmin && !['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase()))
-                                                  Icon(Icons.lock, size: 16, color: Colors.grey[600]),
-                                              ],
-                                            ),
-                                            leading: const Icon(Icons.analytics, size: 20),
-                                            trailing: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: Colors.purple,
-                                                borderRadius: BorderRadius.circular(12),
-                                              ),
-                                              child: Text(
-                                                'PREMIUM'.tr(),
-                                                style: const TextStyle(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ),
-                                            onTap: () {
-                                              Navigator.pop(context);
-                                              if (currentUser.isAdmin || ['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase())) {
-                                                push(context, AdvancedAnalyticsScreen(currentUser: currentUser));
-                                              } else {
-                                                _showUpgradeDialog(context, 'Advanced Analytics', 'Premium');
-                                              }
-                                            },
-                                          ),
-                                          ListTile(
-                                            dense: true,
-                                            title: Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    'Priority Support'.tr(),
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Icon(Icons.lock, size: 16, color: Colors.grey[600]),
-                                              ],
-                                            ),
-                                            leading: const Icon(Icons.support_agent, size: 20),
-                                            trailing: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: Colors.purple,
-                                                borderRadius: BorderRadius.circular(12),
-                                              ),
-                                              child: Text(
-                                                'PREMIUM'.tr(),
-                                                style: const TextStyle(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ),
-                                            onTap: () {
-                                              Navigator.pop(context);
-                                              _showUpgradeDialog(context, 'Priority Support', 'Premium');
-                                            },
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.all(16.0),
-                                            child: Text(
-                                              '...and more premium features!'.tr(),
-                                              style: TextStyle(
-                                                color: isDark ? Colors.grey[400] : Colors.grey[600],
-                                                fontSize: 11,
-                                                fontStyle: FontStyle.italic,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                  : null,
-              appBar: AppBar(
-                leading: Platform.isIOS
-                    ? Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: GestureDetector(
-                            onTap: () => push(context,
-                                ProfileScreen(currentUser: currentUser)),
-                            child: displayCircleImage(
-                                currentUser.profilePictureURL, 2, false)),
+                              ));
+                              break;
+                            case 3:
+                              context.read<ContainerBloc>().add(TabSelectedEvent(
+                                appBarTitle: 'Search'.tr(),
+                                currentTabIndex: 3,
+                                drawerSelection: DrawerSelection.search,
+                                currentWidget: SearchWrapperWidget(
+                                    currentUser: currentUser),
+                              ));
+                              break;
+                          }
+                        },
+                        unselectedItemColor: Colors.grey,
+                        selectedItemColor: Color(colorPrimary),
+                        items: [
+                          BottomNavigationBarItem(
+                              icon: const Icon(Icons.home), label: 'Home'.tr()),
+                          BottomNavigationBarItem(
+                              icon: const Icon(Icons.category),
+                              label: 'Categories'.tr()),
+                          BottomNavigationBarItem(
+                              icon: const Icon(Icons.message),
+                              label: 'Chats'.tr()),
+                          BottomNavigationBarItem(
+                              icon: const Icon(Icons.search),
+                              label: 'Search'.tr()),
+                        ],
                       )
                     : null,
-                actions: [
-                  if (_currentWidget is HomeWrapperWidget)
-                    IconButton(
-                      tooltip: 'Add Listing'.tr(),
-                      icon: const Icon(
-                        Icons.add,
-                      ),
-                      onPressed: () => push(
-                          context,
-                          AddListingWrappingWidget(currentUser: currentUser)),
+                drawer: _buildModernDrawer(context, currentUser, isDark),
+                appBar: AppBar(
+                  leading: Builder(
+                    builder: (context) => IconButton(
+                      icon: const Icon(Icons.menu),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
                     ),
-                  if (_currentWidget is HomeWrapperWidget)
-                    IconButton(
-                      tooltip: 'Map'.tr(),
-                      icon: const Icon(
-                        Icons.map,
+                  ),
+                  actions: [
+                    if (_currentWidget is HomeWrapperWidget)
+                      IconButton(
+                        tooltip: 'Add Listing'.tr(),
+                        icon: const Icon(
+                          Icons.add,
+                        ),
+                        onPressed: () => push(
+                            context,
+                            AddListingWrappingWidget(currentUser: currentUser)),
                       ),
-                      onPressed: () => push(
-                        context,
-                        MapViewScreen(
-                          listings: homeKey.currentState?.listings ?? [],
-                          fromHome: true,
-                          currentUser: currentUser,
+                    if (_currentWidget is HomeWrapperWidget)
+                      IconButton(
+                        tooltip: 'Map'.tr(),
+                        icon: const Icon(
+                          Icons.map,
+                        ),
+                        onPressed: () => push(
+                          context,
+                          MapViewScreen(
+                            listings: homeKey.currentState?.listings ?? [],
+                            fromHome: true,
+                            currentUser: currentUser,
+                          ),
                         ),
                       ),
+                  ],
+                  title: Text(
+                    _appBarTitle,
+                  ),
+                ),
+                body: _currentWidget,
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildModernDrawer(BuildContext context, ListingsUser currentUser, bool isDark) {
+    final primaryColorValue = Color(colorPrimary);
+    final selectedBgColor = primaryColorValue.withOpacity(0.1);
+
+    return Drawer(
+      width: MediaQuery.of(context).size.width * 0.85,
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
+      child: Column(
+        children: [
+          // Modern Header
+          _buildDrawerHeader(currentUser, isDark, primaryColorValue),
+
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _drawerSectionLabel('Account'.tr(), isDark),
+                  _drawerTile(
+                    title: 'Profile'.tr(),
+                    icon: Icons.person_rounded,
+                    isSelected: _drawerSelection == DrawerSelection.profile,
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.read<ContainerBloc>().add(TabSelectedEvent(
+                        appBarTitle: 'Profile'.tr(),
+                        currentTabIndex: 3,
+                        drawerSelection: DrawerSelection.profile,
+                        currentWidget: ProfileScreen(currentUser: currentUser),
+                      ));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+
+                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
+                  _drawerSectionLabel('Browse'.tr(), isDark),
+                  _drawerTile(
+                    title: 'Home'.tr(),
+                    icon: Icons.home_rounded,
+                    isSelected: _drawerSelection == DrawerSelection.home,
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.read<ContainerBloc>().add(TabSelectedEvent(
+                        appBarTitle: 'Home'.tr(),
+                        currentTabIndex: 0,
+                        drawerSelection: DrawerSelection.home,
+                        currentWidget: HomeWrapperWidget(homeKey: homeKey, currentUser: currentUser),
+                      ));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'Categories'.tr(),
+                    icon: Icons.category_rounded,
+                    isSelected: _drawerSelection == DrawerSelection.categories,
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.read<ContainerBloc>().add(TabSelectedEvent(
+                        appBarTitle: 'Categories'.tr(),
+                        currentTabIndex: 1,
+                        drawerSelection: DrawerSelection.categories,
+                        currentWidget: CategoriesWrapperWidget(currentUser: currentUser),
+                      ));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'Conversations'.tr(),
+                    icon: Icons.chat_bubble_rounded,
+                    isSelected: _drawerSelection == DrawerSelection.conversations,
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.read<ContainerBloc>().add(TabSelectedEvent(
+                        appBarTitle: 'Conversations'.tr(),
+                        currentTabIndex: 2,
+                        drawerSelection: DrawerSelection.conversations,
+                        currentWidget: ConversationsWrapperWidget(user: currentUser),
+                      ));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'Legacy Chat (To Delete)',
+                    icon: Icons.chat,
+                    isSelected: _drawerSelection == DrawerSelection.legacychat,
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.read<ContainerBloc>().add(TabSelectedEvent(
+                        appBarTitle: 'Legacy Chat',
+                        currentTabIndex: 4,
+                        drawerSelection: DrawerSelection.legacychat,
+                        currentWidget: const Placeholder(),
+                      ));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'Search'.tr(),
+                    icon: Icons.search_rounded,
+                    isSelected: _drawerSelection == DrawerSelection.search,
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.read<ContainerBloc>().add(TabSelectedEvent(
+                        appBarTitle: 'Search'.tr(),
+                        currentTabIndex: 3,
+                        drawerSelection: DrawerSelection.search,
+                        currentWidget: SearchWrapperWidget(currentUser: currentUser),
+                      ));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  
+                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
+                  _drawerSectionLabel('Your Activity'.tr(), isDark),
+                  _drawerTile(
+                    title: 'My Listings'.tr(),
+                    icon: Icons.list_alt_rounded,
+                    onTap: () {
+                      Navigator.pop(context);
+                      push(context, MyListingsWrapperWidget(currentUser: currentUser));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'Deals & Promotions'.tr(),
+                    icon: Icons.local_offer_rounded,
+                    onTap: () {
+                      Navigator.pop(context);
+                      push(context, DealsPromotionScreen());
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'My Bookings'.tr(),
+                    icon: Icons.calendar_today_rounded,
+                    onTap: () {
+                      Navigator.pop(context);
+                      push(context, MyBookingsWrapperWidget(currentUser: currentUser));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
                     ),
+                  if (currentUser.isAdmin || const ['professional', 'premium'].contains(currentUser.subscriptionTier.toLowerCase()))
+                    _drawerTile(
+                      title: 'Booking Requests'.tr(),
+                      icon: Icons.event_note_rounded,
+                      onTap: () {
+                        Navigator.pop(context);
+                        push(context, BookingManagementWrapperWidget(currentUser: currentUser));
+                      },
+                      isDark: isDark,
+                      primaryColor: primaryColorValue,
+                    ),
+                  
+                  if (currentUser.subscriptionTier.toLowerCase() != 'free')
+                    _drawerTile(
+                      title: 'Manage Subscription'.tr(),
+                      icon: Icons.card_membership_rounded,
+                      onTap: () {
+                        Navigator.pop(context);
+                        push(context, CustomerCenterScreen(currentUser: currentUser));
+                      },
+                      isDark: isDark,
+                      primaryColor: primaryColorValue,
+                    ),
+
+                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
+                  _drawerSectionLabel('Upgrades'.tr(), isDark),
+                  
+                  _expansionTile(
+                    title: 'Professional'.tr(),
+                    icon: Icons.star_rounded,
+                    iconColor: Colors.amber,
+                    isDark: isDark,
+                    children: [
+                      _drawerTile(
+                        title: 'Booking Services'.tr(),
+                        icon: Icons.room_service_rounded,
+                        isCompact: true,
+                        trailing: !currentUser.hasBookingServices ? _lockIcon() : _tierBadge('PRO', Colors.blue),
+                        onTap: () {
+                          if (currentUser.hasBookingServices) {
+                            _navigateToListingServices(context);
+                          } else {
+                            Navigator.pop(context);
+                            _showUpgradeDialog(context, 'Booking Services', 'Professional');
+                          }
+                        },
+                        isDark: isDark,
+                        primaryColor: primaryColorValue,
+                      ),
+                      _drawerTile(
+                        title: 'Analytics'.tr(),
+                        icon: Icons.bar_chart_rounded,
+                        isCompact: true,
+                        trailing: !currentUser.hasBookingServices ? _lockIcon() : _tierBadge('PRO', Colors.blue),
+                        onTap: () {
+                          if (currentUser.hasBookingServices) {
+                            Navigator.pop(context);
+                            push(context, AnalyticsScreen(currentUser: currentUser));
+                          } else {
+                            Navigator.pop(context);
+                            _showUpgradeDialog(context, 'Analytics', 'Professional');
+                          }
+                        },
+                        isDark: isDark,
+                        primaryColor: primaryColorValue,
+                      ),
+                    ],
+                  ),
+
+                  _expansionTile(
+                    title: 'Premium'.tr(),
+                    icon: Icons.diamond_rounded,
+                    iconColor: Colors.purple,
+                    isDark: isDark,
+                    children: [
+                      _drawerTile(
+                        title: 'Chat Settings'.tr(),
+                        icon: Icons.chat_rounded,
+                        isCompact: true,
+                        trailing: !currentUser.hasDirectMessaging ? _lockIcon() : _tierBadge('PREMIUM', Colors.purple),
+                        onTap: () {
+                          Navigator.pop(context);
+                          if (currentUser.hasDirectMessaging) {
+                            push(context, ChatSettingsScreen(currentUser: currentUser, listingsRepository: listingApiManager));
+                          } else {
+                            _showUpgradeDialog(context, 'Chat Settings', 'Premium');
+                          }
+                        },
+                        isDark: isDark,
+                        primaryColor: primaryColorValue,
+                      ),
+                      _drawerTile(
+                        title: 'Advanced Analytics'.tr(),
+                        icon: Icons.analytics_rounded,
+                        isCompact: true,
+                        trailing: (currentUser.isAdmin || ['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase())) ? _tierBadge('PREMIUM', Colors.purple) : _lockIcon(),
+                        onTap: () {
+                          Navigator.pop(context);
+                          if (currentUser.isAdmin || ['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase())) {
+                            push(context, AdvancedAnalyticsScreen(currentUser: currentUser));
+                          } else {
+                            _showUpgradeDialog(context, 'Advanced Analytics', 'Premium');
+                          }
+                        },
+                        isDark: isDark,
+                        primaryColor: primaryColorValue,
+                      ),
+                    ],
+                  ),
                 ],
-                title: Text(
-                  _appBarTitle,
+              ),
+            ),
+          ),
+
+          // Logout at the bottom
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: _drawerTile(
+              title: 'Log Out'.tr(),
+              icon: Icons.logout_rounded,
+              iconColor: Colors.redAccent,
+              textColor: Colors.redAccent,
+              onTap: () {
+                Navigator.pop(context);
+                context.read<AuthenticationBloc>().add(LogoutEvent(currentUser));
+              },
+              isDark: isDark,
+              primaryColor: primaryColorValue,
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Version 1.0.0',
+                style: TextStyle(color: isDark ? Colors.white38 : Colors.black38, fontSize: 10),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerHeader(ListingsUser user, bool isDark, Color primaryColor) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+      decoration: BoxDecoration(
+        color: primaryColor,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            primaryColor,
+            primaryColor.withBlue(primaryColor.blue + 30).withRed(primaryColor.red + 20),
+          ],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+            ),
+            child: displayCircleImage(user.profilePictureURL, 64, false),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            user.fullName(),
+            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  user.email,
+                  style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              body: _currentWidget,
-            );
-          },
+              if (user.isAdmin || user.subscriptionTier.toLowerCase() != 'free')
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    user.isAdmin ? 'ADMIN' : user.subscriptionTier.toUpperCase(),
+                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _drawerSectionLabel(String title, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          color: isDark ? Colors.white38 : Colors.black45,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
         ),
       ),
     );
+  }
+
+  Widget _drawerTile({
+    required String title,
+    required IconData icon,
+    required VoidCallback onTap,
+    bool isSelected = false,
+    bool isCompact = false,
+    bool isDark = false,
+    required Color primaryColor,
+    Color? iconColor,
+    Color? textColor,
+    Widget? trailing,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      decoration: BoxDecoration(
+        color: isSelected ? primaryColor.withOpacity(0.12) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        onTap: onTap,
+        dense: isCompact,
+        visualDensity: isCompact ? VisualDensity.compact : null,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        leading: Icon(
+          icon,
+          color: isSelected ? primaryColor : (iconColor ?? (isDark ? Colors.white70 : Colors.black54)),
+          size: 22,
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: isSelected ? primaryColor : (textColor ?? (isDark ? Colors.white : Colors.black87)),
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            fontSize: 15,
+          ),
+        ),
+        trailing: trailing,
+      ),
+    );
+  }
+
+  Widget _expansionTile({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+    required bool isDark,
+    Color? iconColor,
+  }) {
+    return Theme(
+      data: Theme.of(context).copyWith(
+        unselectedWidgetColor: isDark ? Colors.white : Colors.black54,
+        colorScheme: Theme.of(context).colorScheme.copyWith(
+          onSurface: isDark ? Colors.white : Colors.black54,
+        ),
+      ),
+      child: ExpansionTile(
+        leading: Icon(icon, color: iconColor ?? (isDark ? Colors.white70 : Colors.black54), size: 22),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.w500,
+            fontSize: 15,
+          ),
+        ),
+        shape: const RoundedRectangleBorder(),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+        childrenPadding: const EdgeInsets.only(left: 12),
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        iconColor: isDark ? Colors.white : Colors.black54,
+        collapsedIconColor: isDark ? Colors.white : Colors.black54,
+        children: children,
+      ),
+    );
+  }
+
+  Widget _tierBadge(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.5), width: 0.5),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _lockIcon() {
+    return const Icon(Icons.lock_outline_rounded, size: 16, color: Colors.grey);
   }
 }

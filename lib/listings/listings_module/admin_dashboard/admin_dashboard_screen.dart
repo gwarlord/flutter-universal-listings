@@ -14,6 +14,7 @@ import 'package:instaflutter/listings/listings_module/api/listings_api_manager.d
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:instaflutter/constants.dart';
 
 class AdminDashboardWrappingWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -56,6 +57,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   String listingSearchQuery = '';
   bool showOnlySuspendedUsers = false;
   bool showOnlySuspendedListings = false;
+  
   // Verification tab filters
   String verificationSearchQuery = '';
   bool vHasPhone = false;
@@ -95,22 +97,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   List<ListingsUser> get filteredUsers {
-    if (showOnlySuspendedUsers) {
-      return suspendedUsers
-          .where((user) =>
-              user.firstName.toLowerCase().contains(userSearchQuery.toLowerCase()) ||
-              user.lastName.toLowerCase().contains(userSearchQuery.toLowerCase()) ||
-              user.email.toLowerCase().contains(userSearchQuery.toLowerCase()))
-          .toList();
-    }
-    return allUsers;
-  }
-
-  List<ListingModel> get filteredListings {
-    if (showOnlySuspendedListings) {
-      return suspendedListings;
-    }
-    return allListings;
+    List<ListingsUser> list = showOnlySuspendedUsers ? suspendedUsers : allUsers;
+    if (userSearchQuery.isEmpty) return list;
+    
+    return list.where((user) =>
+        user.firstName.toLowerCase().contains(userSearchQuery.toLowerCase()) ||
+        user.lastName.toLowerCase().contains(userSearchQuery.toLowerCase()) ||
+        user.email.toLowerCase().contains(userSearchQuery.toLowerCase())
+    ).toList();
   }
 
   @override
@@ -121,16 +115,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
+    
     return Scaffold(
       appBar: AppBar(
-        title: Text('Admin Dashboard'.tr()),
+        title: Text('Admin Console'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+        centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: isDarkMode(context) ? Colors.white70 : Colors.black54,
+          indicatorColor: Platform.isIOS ? Color(colorPrimary) : Colors.white,
+          indicatorWeight: 3,
+          labelColor: Platform.isIOS ? Color(colorPrimary) : Colors.white,
+          unselectedLabelColor: Platform.isIOS
+              ? (isDark ? Colors.white70 : Colors.black54)
+              : Colors.white70,
           tabs: [
-            Tab(text: 'All Users'.tr()),
-            Tab(text: 'All Listings'.tr()),
+            Tab(text: 'Users'.tr()),
+            Tab(text: 'Listings'.tr()),
             Tab(text: 'Verification'.tr()),
           ],
         ),
@@ -141,30 +142,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             isLoading = false;
             allUsers = state.users;
             setState(() {});
-            Future.delayed(Duration.zero, () {
-              context.read<LoadingCubit>().hideLoading();
-            });
           } else if (state is SuspendedUsersState) {
             isLoading = false;
             suspendedUsers = state.suspendedUsers;
             setState(() {});
-            Future.delayed(Duration.zero, () {
-              context.read<LoadingCubit>().hideLoading();
-            });
           } else if (state is AllListingsState) {
             isLoading = false;
             allListings = state.listings;
             setState(() {});
-            Future.delayed(Duration.zero, () {
-              context.read<LoadingCubit>().hideLoading();
-            });
           } else if (state is SuspendedListingsState) {
             isLoading = false;
             suspendedListings = state.suspendedListings;
             setState(() {});
-            Future.delayed(Duration.zero, () {
-              context.read<LoadingCubit>().hideLoading();
-            });
           } else if (state is LoadingState) {
             isLoading = true;
             setState(() {});
@@ -184,6 +173,69 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
+  Widget _buildTabHeader({
+    required String title,
+    required String subtitle,
+    required TextEditingController controller,
+    required Function(String) onChanged,
+    required bool filterActive,
+    required Function(bool) onFilterChanged,
+    required String filterLabel,
+  }) {
+    final isDark = isDarkMode(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
+          const SizedBox(height: 4),
+          Text(subtitle, style: TextStyle(fontSize: 14, color: isDark ? Colors.grey[400] : Colors.grey[600])),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.grey[900] : Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TextField(
+                    onChanged: onChanged,
+                    style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                    decoration: InputDecoration(
+                      hintText: 'Search...'.tr(),
+                      hintStyle: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[400]),
+                      prefixIcon: Icon(Icons.search, size: 20, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              FilterChip(
+                label: Text(filterLabel),
+                labelStyle: TextStyle(
+                  color: filterActive 
+                    ? Colors.white 
+                    : (isDark ? Colors.white : Colors.black87),
+                  fontWeight: filterActive ? FontWeight.bold : FontWeight.normal,
+                ),
+                selected: filterActive,
+                onSelected: onFilterChanged,
+                selectedColor: Colors.red,
+                backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                checkmarkColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAllUsersTab() {
     return RefreshIndicator(
       onRefresh: () async {
@@ -191,97 +243,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       },
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 40,
-                    child: TextField(
-                      style: TextStyle(
-                        color: isDarkMode(context) ? Colors.white : Colors.black,
-                        fontSize: 14,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Search users...'.tr(),
-                        hintStyle: TextStyle(
-                          color: isDarkMode(context) ? Colors.grey.shade400 : Colors.grey.shade600,
-                          fontSize: 14,
-                        ),
-                        prefixIcon: Icon(
-                          Icons.search,
-                          color: isDarkMode(context) ? Colors.white : Colors.grey.shade600,
-                          size: 20,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        isDense: true,
-                      ),
-                      onChanged: _searchUsers,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                FilterChip(
-                  label: Text(
-                    'Suspended'.tr(),
-                    style: TextStyle(
-                      color: isDarkMode(context) ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  selected: showOnlySuspendedUsers,
-                  onSelected: (value) {
-                    setState(() {
-                      showOnlySuspendedUsers = value;
-                    });
-                  },
-                  selectedColor: Colors.red.shade100,
-                  checkmarkColor: Colors.red.shade900,
-                ),
-              ],
-            ),
+          _buildTabHeader(
+            title: 'User Management'.tr(),
+            subtitle: '${allUsers.length} total users registered'.tr(),
+            controller: TextEditingController(),
+            onChanged: _searchUsers,
+            filterActive: showOnlySuspendedUsers,
+            onFilterChanged: (v) => setState(() => showOnlySuspendedUsers = v),
+            filterLabel: 'Suspended'.tr(),
           ),
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator.adaptive())
                 : filteredUsers.isEmpty
-                    ? Stack(
-                        children: [
-                          ListView(),
-                          Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: showEmptyState(
-                                showOnlySuspendedUsers 
-                                    ? 'No Suspended Users'.tr()
-                                    : 'No Users Found'.tr(),
-                                showOnlySuspendedUsers
-                                    ? 'Suspended users will show up here.'.tr()
-                                    : 'Search for users to manage.'.tr()),
-                          ),
-                        ],
-                      )
+                    ? showEmptyState('No Users Found'.tr(), 'Try a different search query.'.tr())
                     : ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 24),
                         itemCount: filteredUsers.length,
-                        itemBuilder: (context, index) => showOnlySuspendedUsers
-                            ? SuspendedUserCard(
-                                user: filteredUsers[index],
-                                onUnsuspend: (user) {
-                                  context
-                                      .read<AdminBloc>()
-                                      .add(UnsuspendUserEvent(user: user));
-                                },
-                              )
-                            : AllUserCard(
-                                user: filteredUsers[index],
-                                onSuspend: (user) {
-                                  context
-                                      .read<AdminBloc>()
-                                      .add(SuspendUserEvent(user: user));
-                                },
-                              ),
+                        itemBuilder: (context, index) {
+                          final user = filteredUsers[index];
+                          return ModernUserCard(
+                            user: user,
+                            onSuspend: () => _showSuspendUserConfirmation(user),
+                            onUnsuspend: () => _showUnsuspendUserConfirmation(user),
+                          );
+                        },
                       ),
           ),
         ],
@@ -290,115 +276,39 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   Widget _buildAllListingsTab() {
+    final listings = _getFilteredListings();
     return RefreshIndicator(
       onRefresh: () async {
         _loadAllData();
       },
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 40,
-                    child: TextField(
-                      style: TextStyle(
-                        color: isDarkMode(context) ? Colors.white : Colors.black,
-                        fontSize: 14,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Search listings...'.tr(),
-                        hintStyle: TextStyle(
-                          color: isDarkMode(context) ? Colors.grey.shade400 : Colors.grey.shade600,
-                          fontSize: 14,
-                        ),
-                        prefixIcon: Icon(
-                          Icons.search,
-                          color: isDarkMode(context) ? Colors.white : Colors.grey.shade600,
-                          size: 20,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        isDense: true,
-                      ),
-                      onChanged: (value) {
-                        setState(() {
-                          listingSearchQuery = value;
-                        });
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                FilterChip(
-                  label: Text(
-                    'Suspended'.tr(),
-                    style: TextStyle(
-                      color: isDarkMode(context) ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  selected: showOnlySuspendedListings,
-                  onSelected: (value) {
-                    setState(() {
-                      showOnlySuspendedListings = value;
-                    });
-                  },
-                  selectedColor: Colors.red.shade100,
-                  checkmarkColor: Colors.red.shade900,
-                ),
-              ],
-            ),
+          _buildTabHeader(
+            title: 'Listing Management'.tr(),
+            subtitle: '${allListings.length} total listings available'.tr(),
+            controller: TextEditingController(),
+            onChanged: (v) => setState(() => listingSearchQuery = v),
+            filterActive: showOnlySuspendedListings,
+            onFilterChanged: (v) => setState(() => showOnlySuspendedListings = v),
+            filterLabel: 'Suspended'.tr(),
           ),
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator.adaptive())
-                : _getFilteredListings().isEmpty
-                    ? Stack(
-                        children: [
-                          ListView(),
-                          Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: showEmptyState(
-                                showOnlySuspendedListings
-                                    ? 'No Suspended Listings'.tr()
-                                    : 'No Listings Found'.tr(),
-                                showOnlySuspendedListings
-                                    ? 'Suspended listings will show up here.'.tr()
-                                    : 'All listings will show up here.'.tr()),
-                          ),
-                        ],
-                      )
+                : listings.isEmpty
+                    ? showEmptyState('No Listings Found'.tr(), 'Try a different search query.'.tr())
                     : ListView.builder(
-                        itemCount: _getFilteredListings().length,
+                        padding: const EdgeInsets.only(bottom: 24),
+                        itemCount: listings.length,
                         itemBuilder: (context, index) {
-                          final listing = _getFilteredListings()[index];
-                          return showOnlySuspendedListings
-                              ? SuspendedListingCard(
-                                  listing: listing,
-                                  onUnsuspend: (listing) {
-                                    context
-                                        .read<AdminBloc>()
-                                        .add(UnsuspendListingEvent(listing: listing));
-                                  },
-                                )
-                              : AllListingCard(
-                                  listing: listing,
-                                  onSuspend: (listing) {
-                                    context
-                                        .read<AdminBloc>()
-                                        .add(SuspendListingEvent(listing: listing));
-                                  },
-                                  onFeature: (listing) {
-                                    _featureListing(listing);
-                                  },
-                                  onUnfeature: (listing) {
-                                    _unfeatureListing(listing);
-                                  },
-                                );
+                          final listing = listings[index];
+                          return ModernListingCard(
+                            listing: listing,
+                            onSuspend: () => _showSuspendListingConfirmation(listing),
+                            onUnsuspend: () => _showUnsuspendListingConfirmation(listing),
+                            onFeature: () => _featureListing(listing),
+                            onUnfeature: () => _unfeatureListing(listing),
+                          );
                         },
                       ),
           ),
@@ -408,49 +318,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   List<ListingModel> _getFilteredListings() {
-    final listings = showOnlySuspendedListings ? suspendedListings : allListings;
-    if (listingSearchQuery.isEmpty) return listings;
+    final list = showOnlySuspendedListings ? suspendedListings : allListings;
+    if (listingSearchQuery.isEmpty) return list;
     
-    return listings
-        .where((listing) =>
-            listing.title.toLowerCase().contains(listingSearchQuery.toLowerCase()) ||
-            listing.place.toLowerCase().contains(listingSearchQuery.toLowerCase()) ||
-            listing.authorName.toLowerCase().contains(listingSearchQuery.toLowerCase()))
-        .toList();
-  }
-
-  List<ListingModel> _getFilteredUnverifiedListings() {
-    List<ListingModel> list = List<ListingModel>.from(unverifiedListings);
-
-    if (verificationSearchQuery.isNotEmpty) {
-      final q = verificationSearchQuery.toLowerCase();
-      list = list.where((l) =>
-          l.title.toLowerCase().contains(q) ||
-          l.place.toLowerCase().contains(q) ||
-          l.authorName.toLowerCase().contains(q)
-      ).toList();
-    }
-
-    if (vHasPhone) {
-      list = list.where((l) => l.phone.trim().isNotEmpty).toList();
-    }
-    if (vHasEmail) {
-      list = list.where((l) => l.email.trim().isNotEmpty).toList();
-    }
-    if (vHasVideo) {
-      list = list.where((l) => (l.videos).isNotEmpty).toList();
-    }
-    if (vHighRating) {
-      list = list.where((l) {
-        final avg = (l.reviewsCount > 0) ? (l.reviewsSum / l.reviewsCount) : 0.0;
-        return avg >= 4.0;
-      }).toList();
-    }
-    if (vCountryCode.isNotEmpty) {
-      list = list.where((l) => (l.countryCode == vCountryCode)).toList();
-    }
-
-    return list;
+    return list.where((l) =>
+        l.title.toLowerCase().contains(listingSearchQuery.toLowerCase()) ||
+        l.place.toLowerCase().contains(listingSearchQuery.toLowerCase()) ||
+        l.authorName.toLowerCase().contains(listingSearchQuery.toLowerCase())
+    ).toList();
   }
 
   Future<void> _loadUnverifiedListings() async {
@@ -463,163 +338,200 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   Widget _buildVerificationTab() {
+    final list = _getFilteredUnverifiedListings();
+    final isDark = isDarkMode(context);
+    
     return RefreshIndicator(
       onRefresh: () async {
         await _loadUnverifiedListings();
       },
-      child: unverifiedListings.isEmpty
-          ? Center(
-              child: Text('No unverified listings'.tr()),
-            )
-          : ListView(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SizedBox(
-                              height: 40,
-                              child: TextField(
-                                style: TextStyle(
-                                  color: isDarkMode(context) ? Colors.white : Colors.black,
-                                  fontSize: 14,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: 'Search unverified listings...'.tr(),
-                                  hintStyle: TextStyle(
-                                    color: isDarkMode(context) ? Colors.grey.shade400 : Colors.grey.shade600,
-                                    fontSize: 14,
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.search,
-                                    color: isDarkMode(context) ? Colors.white : Colors.grey.shade600,
-                                    size: 20,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  isDense: true,
-                                ),
-                                onChanged: (value) {
-                                  setState(() {
-                                    verificationSearchQuery = value;
-                                  });
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          FilterChip(
-                            label: Text('Phone'.tr(), style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black)),
-                            selected: vHasPhone,
-                            onSelected: (v) => setState(() => vHasPhone = v),
-                            selectedColor: Colors.blue.shade100,
-                            checkmarkColor: Colors.blue.shade900,
-                          ),
-                          FilterChip(
-                            label: Text('Email'.tr(), style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black)),
-                            selected: vHasEmail,
-                            onSelected: (v) => setState(() => vHasEmail = v),
-                            selectedColor: Colors.blue.shade100,
-                            checkmarkColor: Colors.blue.shade900,
-                          ),
-                          FilterChip(
-                            label: Text('Video'.tr(), style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black)),
-                            selected: vHasVideo,
-                            onSelected: (v) => setState(() => vHasVideo = v),
-                            selectedColor: Colors.purple.shade100,
-                            checkmarkColor: Colors.purple.shade900,
-                          ),
-                          FilterChip(
-                            label: Text('Rating 4+'.tr(), style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black)),
-                            selected: vHighRating,
-                            onSelected: (v) => setState(() => vHighRating = v),
-                            selectedColor: Colors.green.shade100,
-                            checkmarkColor: Colors.green.shade900,
-                          ),
-                          if (vCountryCode.isNotEmpty)
-                            InputChip(
-                              label: Text('Country: $vCountryCode'.tr()),
-                              onPressed: () {},
-                              onDeleted: () => setState(() => vCountryCode = ''),
-                            ),
-                        ],
-                      ),
-                    ],
+                Text('Verification Queue'.tr(), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
+                const SizedBox(height: 4),
+                Text('${unverifiedListings.length} listings pending review'.tr(), style: TextStyle(fontSize: 14, color: isDark ? Colors.grey[400] : Colors.grey[600])),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.grey[900] : Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TextField(
+                    onChanged: (v) => setState(() => verificationSearchQuery = v),
+                    style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                    decoration: InputDecoration(
+                      hintText: 'Search queue...'.tr(),
+                      hintStyle: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[400]),
+                      prefixIcon: Icon(Icons.search, size: 20, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
                   ),
                 ),
-                ..._getFilteredUnverifiedListings().map((listing) => Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: ExpansionTile(
-                    title: Text(
-                      listing.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      '${listing.authorName} • ${listing.place}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Reviews: ${listing.reviewsCount.toInt()} (${(listing.reviewsSum / (listing.reviewsCount > 0 ? listing.reviewsCount : 1)).toStringAsFixed(1)}/5)',
-                              style: TextStyle(fontSize: 12, color: isDarkMode(context) ? Colors.grey.shade300 : Colors.grey.shade600),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () => _verifyListing(listing),
-                                    icon: const Icon(Icons.check_circle, size: 18),
-                                    label: const Text('Verify'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
-                                      foregroundColor: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () => _rejectListing(listing),
-                                    icon: const Icon(Icons.cancel, size: 18),
-                                    label: const Text('Reject'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.red,
-                                      foregroundColor: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
               ],
             ),
+          ),
+          SizedBox(
+            height: 50,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                _buildFilterChip('Phone'.tr(), vHasPhone, (v) => setState(() => vHasPhone = v)),
+                const SizedBox(width: 8),
+                _buildFilterChip('Email'.tr(), vHasEmail, (v) => setState(() => vHasEmail = v)),
+                const SizedBox(width: 8),
+                _buildFilterChip('Video'.tr(), vHasVideo, (v) => setState(() => vHasVideo = v)),
+                const SizedBox(width: 8),
+                _buildFilterChip('4+ Star'.tr(), vHighRating, (v) => setState(() => vHighRating = v)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: list.isEmpty
+                ? Center(child: Text('All caught up! No pending verifications.'.tr(), style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)))
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    itemCount: list.length,
+                    itemBuilder: (context, index) {
+                      final listing = list[index];
+                      return ModernVerificationCard(
+                        listing: listing,
+                        onVerify: () => _verifyListing(listing),
+                        onReject: () => _rejectListing(listing),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
+
+  Widget _buildFilterChip(String label, bool selected, Function(bool) onSelected) {
+    final isDark = isDarkMode(context);
+    return FilterChip(
+      label: Text(label),
+      labelStyle: TextStyle(
+        color: selected 
+          ? Colors.white 
+          : (isDark ? Colors.white70 : Colors.black87),
+        fontSize: 12,
+        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+      ),
+      selected: selected,
+      onSelected: onSelected,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      selectedColor: Color(colorPrimary),
+      backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+      checkmarkColor: Colors.white,
+    );
+  }
+
+  List<ListingModel> _getFilteredUnverifiedListings() {
+    List<ListingModel> list = List<ListingModel>.from(unverifiedListings);
+    if (verificationSearchQuery.isNotEmpty) {
+      final q = verificationSearchQuery.toLowerCase();
+      list = list.where((l) => l.title.toLowerCase().contains(q) || l.authorName.toLowerCase().contains(q)).toList();
+    }
+    if (vHasPhone) list = list.where((l) => l.phone.isNotEmpty).toList();
+    if (vHasEmail) list = list.where((l) => l.email.isNotEmpty).toList();
+    if (vHasVideo) list = list.where((l) => l.videos.isNotEmpty).toList();
+    if (vHighRating) {
+      list = list.where((l) => (l.reviewsSum / (l.reviewsCount > 0 ? l.reviewsCount : 1)) >= 4.0).toList();
+    }
+    return list;
+  }
+
+  // --- Confirmation Dialogs ---
+
+  void _showSuspendUserConfirmation(ListingsUser user) async {
+    final result = await _showModernActionDialog(
+      context,
+      title: 'Suspend User?'.tr(),
+      content: 'Are you sure you want to suspend ${user.fullName()}? They will no longer be able to log in.'.tr(),
+      isDestructive: true,
+      actionLabel: 'Suspend'.tr(),
+    );
+    if (result == true) {
+      if (!mounted) return;
+      context.read<AdminBloc>().add(SuspendUserEvent(user: user));
+    }
+  }
+
+  void _showUnsuspendUserConfirmation(ListingsUser user) async {
+    final result = await _showModernActionDialog(
+      context,
+      title: 'Unsuspend User?'.tr(),
+      content: 'Restore access for ${user.fullName()}?'.tr(),
+      isDestructive: false,
+      actionLabel: 'Unsuspend'.tr(),
+    );
+    if (result == true) {
+      if (!mounted) return;
+      context.read<AdminBloc>().add(UnsuspendUserEvent(user: user));
+    }
+  }
+
+  void _showSuspendListingConfirmation(ListingModel listing) async {
+    final result = await _showModernActionDialog(
+      context,
+      title: 'Suspend Listing?'.tr(),
+      content: 'Are you sure you want to suspend "${listing.title}"? It will be hidden from all users.'.tr(),
+      isDestructive: true,
+      actionLabel: 'Suspend'.tr(),
+    );
+    if (result == true) {
+      if (!mounted) return;
+      context.read<AdminBloc>().add(SuspendListingEvent(listing: listing));
+    }
+  }
+
+  void _showUnsuspendListingConfirmation(ListingModel listing) async {
+    final result = await _showModernActionDialog(
+      context,
+      title: 'Unsuspend Listing?'.tr(),
+      content: 'Restore "${listing.title}" to the public directory?'.tr(),
+      isDestructive: false,
+      actionLabel: 'Unsuspend'.tr(),
+    );
+    if (result == true) {
+      if (!mounted) return;
+      context.read<AdminBloc>().add(UnsuspendListingEvent(listing: listing));
+    }
+  }
+
+  Future<bool?> _showModernActionDialog(BuildContext context, {required String title, required String content, required bool isDestructive, required String actionLabel}) {
+    final isDark = isDarkMode(context);
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
+        content: Text(content, style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Cancel'.tr(), style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDestructive ? Colors.red : Colors.green,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(actionLabel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Existing Logic Handlers ---
 
   Future<void> _verifyListing(ListingModel listing) async {
     final reason = await showDialog<String>(
@@ -734,308 +646,133 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 }
 
-class AllUserCard extends StatelessWidget {
+// --- Modern Card Widgets ---
+
+class ModernUserCard extends StatelessWidget {
   final ListingsUser user;
-  final Function(ListingsUser) onSuspend;
+  final VoidCallback onSuspend;
+  final VoidCallback onUnsuspend;
 
-  const AllUserCard({
-    super.key,
-    required this.user,
-    required this.onSuspend,
-  });
+  const ModernUserCard({super.key, required this.user, required this.onSuspend, required this.onUnsuspend});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        dense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        leading: CircleAvatar(
-          radius: 16,
-          backgroundImage: user.profilePictureURL.isNotEmpty
-              ? NetworkImage(user.profilePictureURL)
-              : null,
-          child: user.profilePictureURL.isEmpty
-              ? const Icon(Icons.person, size: 16)
-              : null,
-        ),
-        title: Text(
-          '${user.firstName} ${user.lastName}',
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-        ),
-        subtitle: Row(
-          children: [
-            Expanded(
-              child: Text(
-                user.email,
-                style: const TextStyle(fontSize: 11),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (user.isAdmin)
-              Container(
-                margin: const EdgeInsets.only(left: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade100,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: Text(
-                  'ADMIN'.tr(),
-                  style: TextStyle(
-                    color: Colors.green.shade900,
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        trailing: IconButton(
-          iconSize: 20,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(),
-          icon: const Icon(Icons.block),
-          onPressed: () => _showSuspendConfirmation(context, user),
-        ),
+    final isDark = isDarkMode(context);
+    final isSuspended = user.suspended;
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[900] : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
       ),
-    );
-  }
-  void _showSuspendConfirmation(BuildContext context, ListingsUser user) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode(context) ? Colors.grey.shade900 : Colors.white,
-        title: Text(
-          'Suspend Account?'.tr(),
-          style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black),
-        ),
-        content: Text(
-          'Are you sure you want to suspend ${user.firstName} ${user.lastName}?'.tr(),
-          style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'.tr()),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              onSuspend(user);
-            },
-            child: Text(
-              'Suspend'.tr(),
-              style: const TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-
-class SuspendedUserCard extends StatelessWidget {
-  final ListingsUser user;
-  final Function(ListingsUser) onUnsuspend;
-
-  const SuspendedUserCard({
-    super.key,
-    required this.user,
-    required this.onUnsuspend,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        dense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        leading: CircleAvatar(
-          radius: 16,
-          backgroundImage: user.profilePictureURL.isNotEmpty
-              ? NetworkImage(user.profilePictureURL)
-              : null,
-          child: user.profilePictureURL.isEmpty
-              ? const Icon(Icons.person, size: 16)
-              : null,
-        ),
-        title: Text(
-          '${user.firstName} ${user.lastName}',
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-        ),
-        subtitle: Row(
-          children: [
-            Expanded(
-              child: Text(
-                user.email,
-                style: const TextStyle(fontSize: 11),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.only(left: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.red.shade100,
-                borderRadius: BorderRadius.circular(3),
-              ),
-              child: Text(
-                'Suspended'.tr(),
-                style: TextStyle(
-                  color: Colors.red.shade900,
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-        trailing: IconButton(
-          iconSize: 20,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(),
-          icon: const Icon(Icons.check_circle),
-          color: Colors.green,
-          onPressed: () => _showUnsuspendConfirmation(context, user),
-        ),
-      ),
-    );
-  }
-
-  void _showUnsuspendConfirmation(BuildContext context, ListingsUser user) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode(context) ? Colors.grey.shade900 : Colors.white,
-        title: Text(
-          'Unsuspend Account?'.tr(),
-          style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black),
-        ),
-        content: Text(
-          'Are you sure you want to unsuspend ${user.firstName} ${user.lastName}?'
-              .tr(),
-          style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'.tr()),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              onUnsuspend(user);
-            },
-            child: Text(
-              'Unsuspend'.tr(),
-              style: const TextStyle(color: Colors.green),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class SuspendedListingCard extends StatelessWidget {
-  final ListingModel listing;
-  final Function(ListingModel) onUnsuspend;
-
-  const SuspendedListingCard({
-    super.key,
-    required this.listing,
-    required this.onUnsuspend,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(4),
-                ),
-                child: Image.network(
-                  listing.photo,
-                  height: 50,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 50,
-                    color: Colors.grey.shade300,
-                    child: const Icon(Icons.image_not_supported, size: 16),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 4,
-                right: 4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade100,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: Text(
-                    'Suspended'.tr(),
-                    style: TextStyle(
-                      color: Colors.red.shade900,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          CircleAvatar(
+            radius: 24,
+            backgroundImage: user.profilePictureURL.isNotEmpty ? NetworkImage(user.profilePictureURL) : null,
+            child: user.profilePictureURL.isEmpty ? const Icon(Icons.person) : null,
           ),
-          Padding(
-            padding: const EdgeInsets.all(8),
+          const SizedBox(width: 16),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  listing.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  listing.place,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'By: ${listing.authorName}',
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 9),
-                ),
-                const SizedBox(height: 6),
+                Text(user.fullName(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : Colors.black87)),
+                Text(user.email, style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600], fontSize: 13)),
+                const SizedBox(height: 4),
                 Row(
                   children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _showUnsuspendConfirmation(context),
-                        icon: const Icon(Icons.check_circle, size: 14),
-                        label: Text('Unsuspend'.tr(), style: const TextStyle(fontSize: 11)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          minimumSize: const Size(0, 28),
-                        ),
-                      ),
-                    ),
+                    if (user.isAdmin)
+                      _buildBadge('ADMIN', Colors.green, isDark),
+                    if (isSuspended)
+                      _buildBadge('SUSPENDED', Colors.red, isDark),
+                    if (!user.isAdmin && !isSuspended)
+                      _buildBadge(user.subscriptionTier.toUpperCase(), Color(colorPrimary), isDark),
                   ],
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(isSuspended ? Icons.check_circle_outline : Icons.block, color: isSuspended ? Colors.green : Colors.red),
+            onPressed: isSuspended ? onUnsuspend : onSuspend,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBadge(String label, Color color, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+      child: Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+    );
+  }
+}
+
+class ModernListingCard extends StatelessWidget {
+  final ListingModel listing;
+  final VoidCallback onSuspend;
+  final VoidCallback onUnsuspend;
+  final VoidCallback onFeature;
+  final VoidCallback onUnfeature;
+
+  const ModernListingCard({super.key, required this.listing, required this.onSuspend, required this.onUnsuspend, required this.onFeature, required this.onUnfeature});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
+    final isSuspended = listing.suspended;
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[900] : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+      ),
+      child: Column(
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: Stack(
+              children: [
+                Image.network(listing.photo, height: 120, width: double.infinity, fit: BoxFit.cover),
+                if (isSuspended)
+                  Positioned.fill(child: Container(color: Colors.black.withOpacity(0.6), child: const Center(child: Text('SUSPENDED', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))))),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: IconButton(
+                    icon: Icon(listing.isFeatured ? Icons.star : Icons.star_border, color: Colors.amber),
+                    onPressed: listing.isFeatured ? onUnfeature : onFeature,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(listing.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : Colors.black87), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text('by ${listing.authorName} • ${listing.place}', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600], fontSize: 13)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(isSuspended ? Icons.check_circle_outline : Icons.block, color: isSuspended ? Colors.green : Colors.red),
+                  onPressed: isSuspended ? onUnsuspend : onSuspend,
                 ),
               ],
             ),
@@ -1044,186 +781,76 @@ class SuspendedListingCard extends StatelessWidget {
       ),
     );
   }
-
-  void _showUnsuspendConfirmation(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode(context) ? Colors.grey.shade900 : Colors.white,
-        title: Text(
-          'Unsuspend Listing?'.tr(),
-          style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black),
-        ),
-        content: Text(
-          'Are you sure you want to unsuspend "${listing.title}"?'.tr(),
-          style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'.tr()),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              onUnsuspend(listing);
-            },
-            child: Text(
-              'Unsuspend'.tr(),
-              style: const TextStyle(color: Colors.green),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-class AllListingCard extends StatelessWidget {
+class ModernVerificationCard extends StatelessWidget {
   final ListingModel listing;
-  final Function(ListingModel) onSuspend;
-  final Function(ListingModel)? onFeature;
-  final Function(ListingModel)? onUnfeature;
+  final VoidCallback onVerify;
+  final VoidCallback onReject;
 
-  const AllListingCard({
-    super.key,
-    required this.listing,
-    required this.onSuspend,
-    this.onFeature,
-    this.onUnfeature,
-  });
+  const ModernVerificationCard({super.key, required this.listing, required this.onVerify, required this.onReject});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    final isDark = isDarkMode(context);
+    final avgRating = (listing.reviewsCount > 0) ? (listing.reviewsSum / listing.reviewsCount) : 0.0;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[900] : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Stack(
+          Row(
             children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(4),
-                ),
-                child: Image.network(
-                  listing.photo,
-                  height: 50,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 50,
-                    color: Colors.grey.shade300,
-                    child: const Icon(Icons.image_not_supported, size: 16),
-                  ),
+              ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(listing.photo, height: 60, width: 60, fit: BoxFit.cover)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(listing.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : Colors.black87), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text('by ${listing.authorName}', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600], fontSize: 13)),
+                    Row(
+                      children: [
+                        const Icon(Icons.star, size: 14, color: Colors.amber),
+                        const SizedBox(width: 4),
+                        Text(avgRating.toStringAsFixed(1), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
+                        const SizedBox(width: 8),
+                        Text('(${listing.reviewsCount.toInt()} reviews)', style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey[600])),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  listing.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onReject,
+                  icon: const Icon(Icons.cancel_outlined, size: 18),
+                  label: const Text('Reject'),
+                  style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  listing.place,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: onVerify,
+                  icon: const Icon(Icons.check_circle_outline, size: 18),
+                  label: const Text('Verify'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'By: ${listing.authorName}',
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 9),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _showSuspendConfirmation(context),
-                        icon: const Icon(Icons.block, size: 14),
-                        label: Text('Suspend'.tr(), style: const TextStyle(fontSize: 11)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          minimumSize: const Size(0, 28),
-                        ),
-                      ),
-                    ),
-                    if (onFeature != null || onUnfeature != null) const SizedBox(width: 8),
-                    if (listing.isFeatured && onUnfeature != null)
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => onUnfeature!(listing),
-                          icon: const Icon(Icons.star_border, size: 14),
-                          label: Text('Unfeature'.tr(), style: const TextStyle(fontSize: 11)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            minimumSize: const Size(0, 28),
-                          ),
-                        ),
-                      ),
-                    if (!listing.isFeatured && onFeature != null)
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => onFeature!(listing),
-                          icon: const Icon(Icons.star, size: 14),
-                          label: Text('Feature'.tr(), style: const TextStyle(fontSize: 11)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.amber,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            minimumSize: const Size(0, 28),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSuspendConfirmation(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode(context) ? Colors.grey.shade900 : Colors.white,
-        title: Text(
-          'Suspend Listing?'.tr(),
-          style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black),
-        ),
-        content: Text(
-          'Are you sure you want to suspend "${listing.title}"?'.tr(),
-          style: TextStyle(color: isDarkMode(context) ? Colors.white : Colors.black),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'.tr()),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              onSuspend(listing);
-            },
-            child: Text(
-              'Suspend'.tr(),
-              style: const TextStyle(color: Colors.red),
-            ),
+              ),
+            ],
           ),
         ],
       ),

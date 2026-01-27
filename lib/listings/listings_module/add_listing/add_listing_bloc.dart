@@ -141,13 +141,7 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
         return;
       }
 
-      if (event.placeDetails == null) {
-        emit(AddListingErrorState(
-          errorTitle: 'Missing Place'.tr(),
-          errorMessage: 'You need to set a place for the listing.'.tr(),
-        ));
-        return;
-      }
+      // Place is now optional. Do not require placeDetails.
 
       // Caribbean-only country validation
       final String countryCode = event.countryCode.trim().toUpperCase();
@@ -231,9 +225,9 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
         description: event.description.trim(),
         price: event.price.toString(),
         currencyCode: event.currencyCode,
-        latitude: event.placeDetails!.geometry!.location.lat,
-        longitude: event.placeDetails!.geometry!.location.lng,
-        place: event.placeDetails!.formattedAddress ?? '',
+        latitude: event.placeDetails?.geometry?.location.lat ?? 0.0,
+        longitude: event.placeDetails?.geometry?.location.lng ?? 0.0,
+        place: event.placeDetails?.formattedAddress ?? '',
         phone: event.phone.trim(),
         email: event.email.trim(),
         website: event.website.trim(),

@@ -1,5 +1,8 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+// Removed chat-related imports for migration to flutter_chat_ui
 const facebookButtonColor = 0xFF415893;
 const usersCollection = 'users';
 const socialFeedsCollection = 'social_feeds';

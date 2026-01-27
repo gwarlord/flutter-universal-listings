@@ -46,47 +46,53 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     required this.channelDataModel,
     required this.userReportRepository,
   }) : super(ChatInitial()) {
+    
+    // 1. HANDLE REAL-TIME STREAM SEPARATELY (NON-BLOCKING)
+    on<StartLiveMessagesListenerEvent>((event, emit) async {
+      if (channelDataModel.channelID.isEmpty) return;
+      
+      await messagesStreamSub?.cancel();
+      
+      await emit.forEach<List<ChatFeedContent>>(
+        chatRepository.listenToMessages(channelID: channelDataModel.channelID),
+        onData: (listOfLiveMessages) {
+          actualMessages = listOfLiveMessages;
+          return UpdateLiveMessagesState(liveMessages: listOfLiveMessages);
+        },
+        onError: (error, stackTrace) {
+          debugPrint('ChatBloc Stream Error: $error');
+          return MessagesPageErrorState(error: error);
+        },
+      );
+    });
+
     on<FetchMessagesPageEvent>((event, emit) async {
       try {
-        if (event.page == -1) {
-          if (channelDataModel.channelID.isNotEmpty) {
-            // Cancel existing subscription to prevent duplicates
-            await messagesStreamSub?.cancel();
-            messagesStreamSub = chatRepository
-                .listenToMessages(channelID: channelDataModel.channelID)
-                .listen((listOfLiveMessages) {
-              updateLiveMessages(listOfLiveMessages);
-            });
-          } else {
-            emit(UpdateLiveMessagesState(liveMessages: []));
-          }
-          // Complete empty list just in case
+        // Guard against empty channelID before fetching old messages
+        if (channelDataModel.channelID.isEmpty) {
           event.completer.complete([]);
-        } else {
-          // Guard against empty channelID before fetching old messages
-          if (channelDataModel.channelID.isEmpty) {
-            event.completer.complete([]);
-            return;
-          }
-          
-          final newMessagesPage = await chatRepository.fetchOldMessages(
-            channelID: channelDataModel.channelID,
-            page: event.page,
-            size: event.size,
-          );
-
-          emit(NewMessagesPageState(
-            newPage: newMessagesPage,
-            oldPageKey: event.page,
-          ));
-
-          event.completer.complete(newMessagesPage);
+          return;
         }
+        
+        final newMessagesPage = await chatRepository.fetchOldMessages(
+          channelID: channelDataModel.channelID,
+          page: event.page,
+          size: event.size,
+        );
+
+        emit(NewMessagesPageState(
+          newPage: newMessagesPage,
+          oldPageKey: event.page,
+        ));
+
+        event.completer.complete(newMessagesPage);
       } catch (e, s) {
         debugPrint('ChatBloc.ChatBloc $e $s');
         emit(MessagesPageErrorState(error: e));
 
-        event.completer.completeError(e);
+        if (!event.completer.isCompleted) {
+          event.completer.completeError(e);
+        }
       }
     });
 
@@ -258,6 +264,24 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       await _createChatChannel();
     }
 
+    // Ensure both users are present in participants before sending
+    final ids = channelDataModel.participants.map((u) => u.userID).toSet();
+    if (!ids.contains(currentUser.userID)) {
+      channelDataModel.participants.add(currentUser);
+    }
+    // Remove duplicates and ensure only two participants for private chat
+    channelDataModel.participants = channelDataModel.participants
+        .where((u) => u.userID.isNotEmpty)
+        .toSet()
+        .toList();
+    if (channelDataModel.participants.length > 2 && !channelDataModel.isGroupChat) {
+      channelDataModel.participants = channelDataModel.participants.take(2).toList();
+    }
+    if (channelDataModel.participants.length < 2) {
+      // Cannot send a message with less than 2 participants
+      return;
+    }
+
     ChatFeedContent message = ChatFeedContent(
       content: content,
       createdAt: Timestamp.now().seconds,
@@ -276,13 +300,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           .toList(),
       chatMedia: mediaContainer,
     );
-    if (!channelDataModel.isGroupChat) {
+    if (!channelDataModel.isGroupChat && channelDataModel.participants.isNotEmpty) {
       message.recipientID = channelDataModel.participants.first.userID;
-      message.recipientFirstName =
-          channelDataModel.participants.first.firstName;
+      message.recipientFirstName = channelDataModel.participants.first.firstName;
       message.recipientLastName = channelDataModel.participants.first.lastName;
-      message.recipientProfilePictureURL =
-          channelDataModel.participants.first.profilePictureURL;
+      message.recipientProfilePictureURL = channelDataModel.participants.first.profilePictureURL;
     }
     // Don't add optimistically - let the stream update handle it to avoid duplicates
     await chatRepository.sendMessage(
@@ -293,16 +315,41 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   _createChatChannel() async {
+    if (channelDataModel.participants.isEmpty) {
+      return;
+    }
+    // Ensure both sender and recipient are present in participants
+    final ids = channelDataModel.participants.map((u) => u.userID).toSet();
+    if (!ids.contains(currentUser.userID)) {
+      channelDataModel.participants.add(currentUser);
+    }
+    // Remove duplicates and ensure only two participants for private chat
+    channelDataModel.participants = channelDataModel.participants
+        .where((u) => u.userID.isNotEmpty)
+        .toSet()
+        .toList();
+    if (channelDataModel.participants.length > 2 && !channelDataModel.isGroupChat) {
+      channelDataModel.participants = channelDataModel.participants.take(2).toList();
+    }
+    if (channelDataModel.participants.length < 2) {
+      // Cannot create a channel with less than 2 participants
+      return;
+    }
+
+    // Always generate channelID with listingId if present
     String channelID;
-    User friend = channelDataModel.participants.first;
-    if (friend.userID.compareTo(currentUser.userID) < 0) {
-      channelID = friend.userID + currentUser.userID;
+    User friend = channelDataModel.participants.firstWhere((u) => u.userID != currentUser.userID, orElse: () => currentUser);
+    List<String> idsForChannel = [currentUser.userID, friend.userID];
+    idsForChannel.sort();
+    if (channelDataModel.listingId != null && channelDataModel.listingId!.isNotEmpty) {
+      channelID = idsForChannel.join() + '_' + channelDataModel.listingId!;
     } else {
-      channelID = currentUser.userID + friend.userID;
+      channelID = idsForChannel.join();
     }
     channelDataModel.channelID = channelID;
     channelDataModel.creatorID = currentUser.userID;
     channelDataModel.id = channelID;
+
     await chatRepository.createChannel(
       channelDataModel: channelDataModel,
       currentUser: currentUser,
@@ -311,8 +358,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   updateLiveMessages(List<ChatFeedContent> listOfLiveMessages) {
-    actualMessages = listOfLiveMessages;
-    emit(UpdateLiveMessagesState(liveMessages: listOfLiveMessages));
+    // Handled via event
   }
 
   updateParticipants(User updatedUser) =>

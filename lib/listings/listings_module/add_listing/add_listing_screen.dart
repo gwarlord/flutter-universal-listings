@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:instaflutter/listings/utils/caribbean_countries.dart';
+import 'package:instaflutter/listings/utils/country_search_dialog.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -542,10 +543,35 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 final s = _services[index];
                 return ListTile(
                   title: Text(s.name, style: TextStyle(fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black)),
-                  subtitle: Text('${s.duration} • ${s.price} $_selectedCurrencyCode', style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade700)),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    onPressed: () => setState(() => _services.removeAt(index)),
+                  subtitle: Text(
+                    s.duration.isNotEmpty && (s.price != 0.0 && s.price.toString().isNotEmpty)
+                        ? '${s.duration} • ${s.price} $_selectedCurrencyCode'
+                        : s.duration.isNotEmpty
+                            ? s.duration
+                            : (s.price != 0.0 && s.price.toString().isNotEmpty)
+                                ? '${s.price} $_selectedCurrencyCode'
+                                : '',
+                    style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade700),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        onPressed: () async {
+                          _serviceNameController.text = s.name;
+                          _servicePriceController.text = s.price != 0.0 ? s.price.toString() : '';
+                          _serviceDurationController.text = s.duration;
+                          setState(() {
+                            _services.removeAt(index);
+                          });
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        onPressed: () => setState(() => _services.removeAt(index)),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -574,7 +600,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       controller: _servicePriceController,
                       keyboardType: TextInputType.number,
                       style: TextStyle(color: dark ? Colors.white : Colors.black),
-                      decoration: _getInputDecoration(label: 'Price', hint: '0.00'),
+                      decoration: _getInputDecoration(label: 'Price (optional)', hint: '0.00'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -592,7 +618,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    if (_serviceNameController.text.isEmpty || _servicePriceController.text.isEmpty) return;
+                    if (_serviceNameController.text.isEmpty) return;
                     setState(() {
                       _services.add(ServiceItem(
                         name: _serviceNameController.text.trim(),
@@ -777,12 +803,16 @@ class _AddListingScreenState extends State<AddListingScreen> {
     showModalBottomSheet(
       context: context,
       builder: (context) {
+        final dark = isDarkMode(context);
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.photo_library),
+                leading: Icon(
+                  Icons.photo_library,
+                  color: dark ? Color(colorPrimary) : null,
+                ),
                 title: Text('Choose from gallery'.tr()),
                 onTap: () {
                   Navigator.pop(context);
@@ -790,7 +820,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.camera_alt),
+                leading: Icon(
+                  Icons.camera_alt,
+                  color: dark ? Color(colorPrimary) : null,
+                ),
                 title: Text('Take a photo'.tr()),
                 onTap: () {
                   Navigator.pop(context);
@@ -924,22 +957,27 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: _countryCode,
-                      isExpanded: true,
-                      decoration: _getInputDecoration(
-                        label: 'Country'.tr(),
-                        icon: Icons.public,
-                        isRequired: true,
+                    child: GestureDetector(
+                      onTap: () async {
+                        final selected = await showCountrySearchDialog(context, _countryCode);
+                        if (selected != null) setState(() => _countryCode = selected);
+                      },
+                      child: AbsorbPointer(
+                        child: TextFormField(
+                          controller: TextEditingController(
+                            text: CaribbeanCountries.all.firstWhere(
+                              (c) => c.code == _countryCode,
+                              orElse: () => CaribbeanCountry(code: '', name: ''),
+                            ).name,
+                          ),
+                          decoration: _getInputDecoration(
+                            label: 'Country'.tr(),
+                            icon: Icons.public,
+                            isRequired: true,
+                          ),
+                          readOnly: true,
+                        ),
                       ),
-                      dropdownColor: dark ? Colors.grey[900] : Colors.white,
-                      items: CaribbeanCountries.all
-                          .map((c) => DropdownMenuItem<String>(
-                                value: c.code,
-                                child: Text(c.name, overflow: TextOverflow.ellipsis),
-                              ))
-                          .toList(),
-                      onChanged: (value) => setState(() => _countryCode = value),
                     ),
                   ),
                 ],
@@ -1046,7 +1084,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   decoration: _getInputDecoration(
                     label: 'Location'.tr(),
                     icon: Icons.location_on,
-                    isRequired: true,
+                    isRequired: false,
                   ),
                   child: Text(
                     _isFetchingPlaceDetails
@@ -2409,7 +2447,7 @@ class _AIDescriptionSheetState extends State<_AIDescriptionSheet> {
                           )
                         : SingleChildScrollView(
                             controller: scrollController,
-                            padding: const EdgeInsets.all(20),
+                            padding: EdgeInsets.fromLTRB(20, 20, 20, 40 + MediaQuery.of(context).viewPadding.bottom),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [

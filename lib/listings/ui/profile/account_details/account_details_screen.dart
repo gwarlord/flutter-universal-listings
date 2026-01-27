@@ -54,17 +54,18 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
+    final cardColor = isDark ? Colors.grey[900] : Colors.white;
+    final titleStyle = TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.bold,
+      color: isDark ? Colors.grey[400] : Colors.grey[600],
+      letterSpacing: 1.2,
+    );
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color(colorPrimary),
-        iconTheme: IconThemeData(
-            color: isDarkMode(context) ? Colors.grey.shade200 : Colors.white),
-        title: Text(
-          'Account details',
-          style: TextStyle(
-              color: isDarkMode(context) ? Colors.grey.shade200 : Colors.white,
-              fontWeight: FontWeight.bold),
-        ).tr(),
+        title: Text('Account Details'.tr()),
         centerTitle: true,
       ),
       body: BlocConsumer<AccountDetailsBloc, AccountDetailsState>(
@@ -97,7 +98,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
               ),
             );
 
-            if (result) {
+            if (result == true) {
               if (!mounted) return;
               context.read<LoadingCubit>().showLoading(
                     context,
@@ -128,217 +129,216 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
         },
         builder: (context, state) {
           return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
             child: Form(
               key: _key,
               autovalidateMode: _validate,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(
-                        left: 16.0, right: 16, bottom: 8, top: 24),
-                    child: const Text(
-                      'PUBLIC INFO',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ).tr(),
-                  ),
-                  Material(
-                      elevation: 2,
-                      color:
-                          isDarkMode(context) ? Colors.black54 : Colors.white,
-                      child: ListView(
-                          physics: const NeverScrollableScrollPhysics(),
-                          shrinkWrap: true,
-                          children:
-                              ListTile.divideTiles(context: context, tiles: [
-                            ListTile(
-                              title: Text(
-                                'First name',
-                                style: TextStyle(
-                                  color: isDarkMode(context)
-                                      ? Colors.white
-                                      : Colors.black,
-                                ),
-                              ).tr(),
-                              trailing: ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(maxWidth: 100),
-                                child: TextFormField(
-                                  onSaved: (String? val) {
-                                    firstName = val;
-                                  },
-                                  initialValue: user.firstName,
-                                  validator: validateName,
-                                  textAlign: TextAlign.end,
-                                  style: TextStyle(
-                                      fontSize: 18,
-                                      color: isDarkMode(context)
-                                          ? Colors.white
-                                          : Colors.black),
-                                  cursorColor: Color(colorAccent),
-                                  textCapitalization: TextCapitalization.words,
-                                  keyboardType: TextInputType.text,
-                                  decoration: InputDecoration(
-                                      border: InputBorder.none,
-                                      hintText: 'First name'.tr(),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                              vertical: 5)),
-                                ),
-                              ),
-                            ),
-                            ListTile(
-                              title: Text(
-                                'Last name',
-                                style: TextStyle(
-                                    color: isDarkMode(context)
-                                        ? Colors.white
-                                        : Colors.black),
-                              ).tr(),
-                              trailing: ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(maxWidth: 100),
-                                child: TextFormField(
-                                  onSaved: (String? val) {
-                                    lastName = val;
-                                  },
-                                  initialValue: user.lastName,
-                                  validator: validateName,
-                                  textAlign: TextAlign.end,
-                                  style: TextStyle(
-                                      fontSize: 18,
-                                      color: isDarkMode(context)
-                                          ? Colors.white
-                                          : Colors.black),
-                                  cursorColor: Color(colorAccent),
-                                  textCapitalization: TextCapitalization.words,
-                                  keyboardType: TextInputType.text,
-                                  decoration: InputDecoration(
-                                      border: InputBorder.none,
-                                      hintText: 'Last name'.tr(),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                              vertical: 5)),
-                                ),
-                              ),
-                            )
-                          ]).toList())),
-                  Padding(
-                    padding: const EdgeInsets.only(
-                        left: 16.0, right: 16, bottom: 8, top: 24),
-                    child: const Text(
-                      'PRIVATE DETAILS',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ).tr(),
-                  ),
-                  Material(
-                    elevation: 2,
-                    color: isDarkMode(context) ? Colors.black54 : Colors.white,
-                    child: ListView(
-                        physics: const NeverScrollableScrollPhysics(),
-                        shrinkWrap: true,
-                        children: ListTile.divideTiles(
-                          context: context,
-                          tiles: [
-                            ListTile(
-                              title: Text(
-                                'Email Address',
-                                style: TextStyle(
-                                    color: isDarkMode(context)
-                                        ? Colors.white
-                                        : Colors.black),
-                              ).tr(),
-                              trailing: ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(maxWidth: 200),
-                                child: TextFormField(
-                                  onSaved: (String? val) {
-                                    email = val;
-                                  },
-                                  initialValue: user.email,
-                                  validator: validateEmail,
-                                  textAlign: TextAlign.end,
-                                  style: TextStyle(
-                                      fontSize: 18,
-                                      color: isDarkMode(context)
-                                          ? Colors.white
-                                          : Colors.black),
-                                  cursorColor: Color(colorAccent),
-                                  keyboardType: TextInputType.emailAddress,
-                                  decoration: InputDecoration(
-                                      border: InputBorder.none,
-                                      hintText: 'Email Address'.tr(),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                              vertical: 5)),
-                                ),
-                              ),
-                            ),
-                            ListTile(
-                              title: Text(
-                                'Phone Number',
-                                style: TextStyle(
-                                    color: isDarkMode(context)
-                                        ? Colors.white
-                                        : Colors.black),
-                              ).tr(),
-                              trailing: ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(maxWidth: 150),
-                                child: TextFormField(
-                                  onSaved: (String? val) {
-                                    mobile = val;
-                                  },
-                                  initialValue: user.phoneNumber,
-                                  validator: validateMobile,
-                                  textAlign: TextAlign.end,
-                                  style: TextStyle(
-                                      fontSize: 18,
-                                      color: isDarkMode(context)
-                                          ? Colors.white
-                                          : Colors.black),
-                                  cursorColor: Color(colorAccent),
-                                  keyboardType: TextInputType.phone,
-                                  decoration: InputDecoration(
-                                      border: InputBorder.none,
-                                      hintText: 'Phone Number'.tr(),
-                                      contentPadding:
-                                          const EdgeInsets.only(bottom: 2)),
-                                ),
-                              ),
+                  Text('SUBSCRIPTION'.tr(), style: titleStyle),
+                  const SizedBox(height: 12),
+                  Card(
+                    color: cardColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          _buildDetailRow(
+                            context,
+                            'Current Tier'.tr(),
+                            user.isAdmin ? 'ADMIN' : user.subscriptionTier.toUpperCase(),
+                            icon: Icons.star_border,
+                            valueColor: user.isAdmin ? Colors.green : Color(colorPrimary),
+                          ),
+                          const Divider(height: 24),
+                          _buildDetailRow(
+                            context,
+                            'Status'.tr(),
+                            user.isSubscriptionActive ? 'Active'.tr() : 'Expired'.tr(),
+                            icon: Icons.check_circle_outline,
+                            valueColor: user.isSubscriptionActive ? Colors.green : Colors.red,
+                          ),
+                          if (user.subscriptionExpiresAt != null) ...[
+                            const Divider(height: 24),
+                            _buildDetailRow(
+                              context,
+                              'Renews / Expires'.tr(),
+                              DateFormat.yMMMMd().format(user.subscriptionExpiresAt!),
+                              icon: Icons.calendar_today,
                             ),
                           ],
-                        ).toList()),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 32.0, bottom: 16),
-                    child: ConstrainedBox(
-                      constraints:
-                          const BoxConstraints(minWidth: double.infinity),
-                      child: Material(
-                        elevation: 2,
-                        color:
-                            isDarkMode(context) ? Colors.black54 : Colors.white,
-                        child: CupertinoButton(
-                          padding: const EdgeInsets.all(12.0),
-                          onPressed: () => context
-                              .read<AccountDetailsBloc>()
-                              .add(ValidateFieldsEvent(_key)),
-                          child: Text(
-                            'Save',
-                            style: TextStyle(
-                                fontSize: 18, color: Color(colorPrimary)),
-                          ).tr(),
-                        ),
+                        ],
                       ),
                     ),
                   ),
+                  const SizedBox(height: 32),
+                  Text('PUBLIC INFORMATION'.tr(), style: titleStyle),
+                  const SizedBox(height: 12),
+                  Card(
+                    color: cardColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          _buildTextField(
+                            context,
+                            label: 'First Name'.tr(),
+                            initialValue: user.firstName,
+                            onSaved: (val) => firstName = val,
+                            validator: validateName,
+                            icon: Icons.person_outline,
+                          ),
+                          const Divider(height: 24),
+                          _buildTextField(
+                            context,
+                            label: 'Last Name'.tr(),
+                            initialValue: user.lastName,
+                            onSaved: (val) => lastName = val,
+                            validator: validateName,
+                            icon: Icons.person_outline,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Text('PRIVATE DETAILS'.tr(), style: titleStyle),
+                  const SizedBox(height: 12),
+                  Card(
+                    color: cardColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          _buildTextField(
+                            context,
+                            label: 'Email Address'.tr(),
+                            initialValue: user.email,
+                            onSaved: (val) => email = val,
+                            validator: validateEmail,
+                            icon: Icons.email_outlined,
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          const Divider(height: 24),
+                          _buildTextField(
+                            context,
+                            label: 'Phone Number'.tr(),
+                            initialValue: user.phoneNumber,
+                            onSaved: (val) => mobile = val,
+                            validator: validateMobile,
+                            icon: Icons.phone_outlined,
+                            keyboardType: TextInputType.phone,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(colorPrimary),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      onPressed: () => context
+                          .read<AccountDetailsBloc>()
+                          .add(ValidateFieldsEvent(_key)),
+                      child: Text(
+                        'Save Changes'.tr(),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _buildDetailRow(BuildContext context, String label, String value, {required IconData icon, Color? valueColor}) {
+    final isDark = isDarkMode(context);
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: isDark ? Colors.white70 : Colors.black54),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 15,
+              color: isDark ? Colors.white70 : Colors.black54,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: valueColor ?? (isDark ? Colors.white : Colors.black),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextField(
+    BuildContext context, {
+    required String label,
+    required String initialValue,
+    required FormFieldSetter<String> onSaved,
+    required FormFieldValidator<String> validator,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    final isDark = isDarkMode(context);
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: isDark ? Colors.white70 : Colors.black54),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+              TextFormField(
+                initialValue: initialValue,
+                onSaved: onSaved,
+                validator: validator,
+                keyboardType: keyboardType,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: isDark ? Colors.white : Colors.black,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 4),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

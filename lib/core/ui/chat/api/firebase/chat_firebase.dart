@@ -24,6 +24,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:video_compress/video_compress.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:rxdart/rxdart.dart';
 
 class ChatFireStoreUtils extends ChatRepository {
   FirebaseFirestore firestore = FirebaseFirestore.instance;
@@ -117,45 +118,85 @@ class ChatFireStoreUtils extends ChatRepository {
   }
 
   @override
-  Stream<List<ChatFeedModel>> listenToConversations(
-      {required String userID}) async* {
-    StreamController<List<ChatFeedModel>> conversationsStream =
-        StreamController<List<ChatFeedModel>>();
-    var liveConversationsStreamSub = firestore
+  Stream<List<ChatFeedModel>> listenToConversations({required String userID}) {
+    debugPrint('[ChatDebug] listenToConversations started for: $userID');
+    
+    // Create individual streams
+    final liveStream = firestore
         .collection(socialFeedsCollection)
         .doc(userID)
         .collection(chatFeedLiveCollection)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .listen((snapshots) {
-      List<ChatFeedModel> chatConversations = [];
-      for (var channel in snapshots.docs) {
-        try {
-          ChatFeedModel conversation =
-              ChatFeedModel.fromJson(channel.data(), userID);
-          chatConversations.add(conversation);
-        } catch (e, s) {
-          debugPrint('ChatFireStoreUtils.listenToConversations $e, $s');
+        .snapshots();
+
+    final historicalStream = firestore
+        .collection(socialFeedsCollection)
+        .doc(userID)
+        .collection('chat_feed')
+        .snapshots();
+
+    final chatChannelsStream = firestore
+      .collection(chatChannelsCollection)
+      .where('participantIds', arrayContains: userID)
+      .snapshots();
+
+    // Use combineLatest with explicit error handling and default values to prevent blocking
+    return Rx.combineLatest3<QuerySnapshot<Map<String, dynamic>>, QuerySnapshot<Map<String, dynamic>>, QuerySnapshot<Map<String, dynamic>>, List<ChatFeedModel>>(
+      liveStream.onErrorReturnWith((e, s) {
+        debugPrint('[ChatDebug] LiveStream Error: $e');
+        return emptySnapshot();
+      }),
+      historicalStream.onErrorReturnWith((e, s) {
+         debugPrint('[ChatDebug] HistoricalStream Error: $e');
+         return emptySnapshot();
+      }),
+      chatChannelsStream.onErrorReturnWith((e, s) {
+         debugPrint('[ChatDebug] ChannelsStream Error: $e');
+         return emptySnapshot();
+      }),
+      (live, historical, channels) {
+        final Map<String, ChatFeedModel> conversationsMap = {};
+
+        debugPrint('[ChatDebug] Streams Update - Live: ${live.docs.length}, Hist: ${historical.docs.length}, Chan: ${channels.docs.length}');
+
+        void processDocs(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs, String source) {
+          for (var doc in docs) {
+            try {
+              final data = doc.data();
+              final model = ChatFeedModel.fromJson(data, userID);
+              if (model.id.isEmpty) model.id = doc.id;
+              
+              // Only add if it has some content or listing info
+              if (model.id.isNotEmpty && (model.chatFeedContent.content.trim().isNotEmpty || model.listingTitle.isNotEmpty)) {
+                  conversationsMap[model.id] = model;
+              }
+            } catch (e) {
+              debugPrint('[ChatDebug] Error parsing $source doc ${doc.id}: $e');
+            }
+          }
         }
-      }
-      conversationsStream.add(chatConversations);
-    });
-    conversationsStreamSubs.add(liveConversationsStreamSub);
-    yield* conversationsStream.stream;
+
+        processDocs(live.docs, 'LIVE');
+        processDocs(historical.docs, 'HIST');
+        processDocs(channels.docs, 'CHAN');
+
+        final sortedList = conversationsMap.values.toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+        debugPrint('[ChatDebug] Emitting ${sortedList.length} conversations');
+        return sortedList;
+      },
+    ).startWith([]); // Ensure it starts with something immediately
+  }
+
+  // Helper to provide an empty snapshot for error cases
+  QuerySnapshot<Map<String, dynamic>> emptySnapshot() {
+    return _EmptyQuerySnapshot();
   }
 
   @override
   Future<List<ChatFeedModel>> fetchConversations(
       {required String userID, required int page, required int size}) async {
-    try {
-      // Direct Firestore query instead of cloud function
-      // This returns empty as we rely on listenToConversations for live updates
-      // Pagination would require more complex Firestore queries
-      return [];
-    } catch (e, s) {
-      debugPrint('ChatFireStoreUtils.fetchConversations error: $e $s');
-      return [];
-    }
+    return [];
   }
 
   @override
@@ -174,64 +215,51 @@ class ChatFireStoreUtils extends ChatRepository {
         await firestore.collection(chatChannelsCollection).doc(channelID).get();
     if (channel.exists && channel.data() != null) {
       channelModel = ChannelDataModel.fromJson(channel.data()!, currentUserID);
-      // Set participants from the provided list since Firestore stores only IDs
       channelModel.participants = channelParticipants;
     } else {
       channelModel = ChannelDataModel(
         participants: channelParticipants,
-        name: channelParticipants.first.fullName(),
+        name: channelParticipants.isNotEmpty ? channelParticipants.first.fullName() : '',
         participantProfilePictureURLs: [
-          ChatFeedParticipantProfilePictureURL(
-            participantId: channelParticipants.first.userID,
-            profilePictureURL: channelParticipants.first.profilePictureURL,
-          ),
+          if (channelParticipants.isNotEmpty)
+            ChatFeedParticipantProfilePictureURL(
+              participantId: channelParticipants.first.userID,
+              profilePictureURL: channelParticipants.first.profilePictureURL,
+            ),
         ],
       );
     }
-    channelModel.name = channelParticipants.first.fullName();
+    if (channelParticipants.isNotEmpty) {
+      channelModel.name = channelParticipants.first.fullName();
+    }
     return channelModel;
   }
 
   @override
-  Stream<List<ChatFeedContent>> listenToMessages(
-      {required String channelID}) async* {
-    StreamController<List<ChatFeedContent>> messagesStream = StreamController();
-    var messagesStreamSub = firestore
+  Stream<List<ChatFeedContent>> listenToMessages({required String channelID}) {
+    return firestore
         .collection(chatChannelsCollection)
         .doc(channelID)
         .collection('thread')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .listen((messagesSnapshot) {
+        .map((messagesSnapshot) {
       List<ChatFeedContent> messages = [];
       for (var messageDoc in messagesSnapshot.docs) {
         try {
-          ChatFeedContent message = ChatFeedContent.fromJson(messageDoc.data());
-          messages.add(message);
+          messages.add(ChatFeedContent.fromJson(messageDoc.data()));
         } catch (e, s) {
           debugPrint('ChatFireStoreUtils.listenToMessages $e, $s');
         }
       }
-      if (!messagesStream.isClosed) {
-        messagesStream.add(messages);
-      }
-    }, onDone: () {
-      messagesStream.close();
-    }, onError: (error) {
-      if (!messagesStream.isClosed) {
-        messagesStream.addError(error);
-      }
-      messagesStream.close();
+      return messages;
     });
-    chatStreamSubs.add(messagesStreamSub);
-    yield* messagesStream.stream;
   }
 
   @override
   Future<List<ChatFeedContent>> fetchOldMessages(
       {required String channelID, required int page, required int size}) async {
     try {
-      // Direct Firestore query instead of cloud function
       QuerySnapshot<Map<String, dynamic>> snapshot = await firestore
           .collection(chatChannelsCollection)
           .doc(channelID)
@@ -243,8 +271,7 @@ class ChatFireStoreUtils extends ChatRepository {
       List<ChatFeedContent> messages = [];
       for (var messageDoc in snapshot.docs) {
         try {
-          ChatFeedContent message = ChatFeedContent.fromJson(messageDoc.data());
-          messages.add(message);
+          messages.add(ChatFeedContent.fromJson(messageDoc.data()));
         } catch (e, s) {
           debugPrint('ChatFireStoreUtils.fetchOldMessages $e $s');
         }
@@ -259,49 +286,37 @@ class ChatFireStoreUtils extends ChatRepository {
   @override
   Stream<ChannelDataModel> listenToChannelChanges(
       {required ChannelDataModel channelDataModel,
-      required String currentUserID}) async* {
-    StreamController<ChannelDataModel> channelChangeStreamController =
-        StreamController();
-    var channelStreamSub = firestore
+      required String currentUserID}) {
+    return firestore
         .collection(chatChannelsCollection)
         .doc(channelDataModel.channelID)
         .snapshots()
-        .listen((newChannel) {
+        .map((newChannel) {
       try {
-        ChannelDataModel newChannelDataModel =
-            ChannelDataModel.fromJson(newChannel.data() ?? {}, currentUserID);
-        channelChangeStreamController.add(newChannelDataModel);
+        if (newChannel.exists) {
+          return ChannelDataModel.fromJson(newChannel.data() ?? {}, currentUserID);
+        }
+        return channelDataModel;
       } catch (e, s) {
         debugPrint('ChatFireStoreUtils.listenToChannelChanges $e $s');
+        return channelDataModel;
       }
     });
-    chatStreamSubs.add(channelStreamSub);
-    yield* channelChangeStreamController.stream;
   }
 
   @override
   Stream<User> listenToChatParticipants(
       {required ChannelDataModel channelDataModel,
       required String currentUserID}) async* {
-    StreamController<User> participantsStreamController = StreamController();
     for (var user in channelDataModel.participants) {
       if (user.userID != currentUserID) {
-        var participantStreamSub = firestore
+        yield* firestore
             .collection(usersCollection)
             .doc(user.userID)
             .snapshots()
-            .listen((newUser) {
-          try {
-            participantsStreamController
-                .add(User.fromJson(newUser.data() ?? {}));
-          } catch (e, s) {
-            debugPrint('ChatFireStoreUtils.listenToChatParticipants $e $s');
-          }
-        });
-        chatStreamSubs.add(participantStreamSub);
+            .map((newUser) => User.fromJson(newUser.data() ?? {}));
       }
     }
-    yield* participantsStreamController.stream;
   }
 
   @override
@@ -319,23 +334,19 @@ class ChatFireStoreUtils extends ChatRepository {
           required String messageID,
           required List<String> readUserIDs}) async {
     try {
-      // Guard against empty channelID
-      if (channelID.isEmpty) {
-        debugPrint('ChatFireStoreUtils.markAsRead: channelID is empty, skipping');
-        return;
+      if (channelID.isEmpty) return;
+      
+      if (messageID.isNotEmpty) {
+        await firestore
+            .collection(chatChannelsCollection)
+            .doc(channelID)
+            .collection('thread')
+            .doc(messageID)
+            .update({
+          'readUserIDs': readUserIDs,
+        });
       }
       
-      // Direct Firestore update instead of cloud function
-      await firestore
-          .collection(chatChannelsCollection)
-          .doc(channelID)
-          .collection('thread')
-          .doc(messageID)
-          .update({
-        'readUserIDs': readUserIDs,
-      });
-      
-      // Update channel last read
       await firestore
           .collection(chatChannelsCollection)
           .doc(channelID)
@@ -354,76 +365,70 @@ class ChatFireStoreUtils extends ChatRepository {
     required User currentUser,
   }) async {
     try {
-      // Direct Firestore write instead of cloud function
       final channelID = channelDataModel.channelID;
+      if (channelID.isEmpty) return false;
+
+      // Batch write for atomicity
+      WriteBatch batch = firestore.batch();
       
-      // Add message to thread collection (single source of truth)
-      await firestore
+      DocumentReference msgRef = firestore
           .collection(chatChannelsCollection)
           .doc(channelID)
           .collection('thread')
-          .doc(message.id)
-          .set(message.toJson());
+          .doc(message.id);
+      batch.set(msgRef, message.toJson());
       
-      // Update channel with last message
-      await firestore
-          .collection(chatChannelsCollection)
-          .doc(channelID)
-          .set({
+      DocumentReference channelRef = firestore.collection(chatChannelsCollection).doc(channelID);
+      batch.set(channelRef, {
         'lastMessage': message.content,
-        'lastMessageDate': message.createdAt,
-        'participants': channelDataModel.participants.map((p) => p.userID).toList(),
+        'lastMessageDate': FieldValue.serverTimestamp(), // Use server timestamp
+        'participants': channelDataModel.participants.map((p) => p.toJson()).toList(),
+         'participantIds': channelDataModel.participants.map((p) => p.userID).toList(),
       }, SetOptions(merge: true));
 
-      // Update conversation feed for each participant
-      for (var participant in channelDataModel.participants) {
-        await firestore
+      // Update conversation feed for EACH participant
+      List<User> allParticipants = List.from(channelDataModel.participants);
+      if (!allParticipants.any((p) => p.userID == currentUser.userID)) {
+        allParticipants.add(currentUser);
+      }
+
+      for (var participant in allParticipants) {
+        DocumentReference feedRef = firestore
             .collection(socialFeedsCollection)
             .doc(participant.userID)
             .collection(chatFeedLiveCollection)
-            .doc(channelID)
-            .set({
+            .doc(channelID);
+        debugPrint('[ChatDebug] Writing chatFeedLive for user: \\${participant.userID}, channel: \\${channelID}');
+        batch.set(feedRef, {
           'id': channelID,
-          'participants': channelDataModel.participants
+          'participants': allParticipants
               .where((p) => p.userID != participant.userID)
               .map((p) => p.toJson())
               .toList(),
-          'createdAt': message.createdAt,
+          'createdAt': FieldValue.serverTimestamp(),
           'markedAsRead': participant.userID == message.senderID,
-          'content': message.toJson(),
+          'content': message.content, // Summary text
+          'lastMessage': message.toJson(), // Full last message model
+          'listingId': channelDataModel.listingId ?? '',
+          'listingTitle': channelDataModel.listingTitle ?? '',
+          'listingImage': channelDataModel.listingImage ?? '',
         }, SetOptions(merge: true));
       }
 
-      // Send push notifications
-      if (channelDataModel.channelID.contains(message.senderID)) {
-        if (channelDataModel
-            .participants.first.settings.allowPushNotifications) {
-          await sendNotification(
-            channelDataModel.participants.first.pushToken,
-            channelDataModel.name,
-            message.content,
-            <String, dynamic>{
-              'click_action': 'FLUTTER_NOTIFICATION_CLICK',
-              'id': '1',
-              'status': 'done',
-              'channelID': channelDataModel.channelID,
-              'senderID': message.senderID,
-            },
-          );
-        }
-      } else {
-        for (var friend in channelDataModel.participants) {
-          if (friend.settings.allowPushNotifications) {
+      await batch.commit();
+
+      // Notifications logic
+      for (var participant in channelDataModel.participants) {
+        if (participant.userID != message.senderID) {
+          if (participant.settings.allowPushNotifications) {
             await sendNotification(
-              friend.pushToken,
+              participant.pushToken,
               channelDataModel.name,
               message.content,
               <String, dynamic>{
                 'click_action': 'FLUTTER_NOTIFICATION_CLICK',
-                'id': '1',
-                'status': 'done',
+                'type': 'chat',
                 'channelID': channelDataModel.channelID,
-                'senderID': message.senderID,
               },
             );
           }
@@ -447,14 +452,13 @@ class ChatFireStoreUtils extends ChatRepository {
         channelDataModel.admins = null;
       }
       
-      // Ensure both participants are in the list (sender and recipient)
       bool hasCurrentUser = channelDataModel.participants.any((p) => p.userID == currentUser.userID);
       if (!hasCurrentUser) {
         channelDataModel.participants.add(currentUser);
       }
       
-      // Direct Firestore write instead of cloud function
-      await firestore
+        debugPrint('[ChatDebug] Creating chat channel: \\${channelDataModel.channelID}');
+        await firestore
           .collection(chatChannelsCollection)
           .doc(channelDataModel.channelID)
           .set({
@@ -462,19 +466,23 @@ class ChatFireStoreUtils extends ChatRepository {
         'channelID': channelDataModel.channelID,
         'name': channelDataModel.name,
         'creatorID': channelDataModel.creatorID,
-        'participants': channelDataModel.participants.map((p) => p.userID).toList(),
+        'participants': channelDataModel.participants.map((p) => p.toJson()).toList(),
+           'participantIds': channelDataModel.participants.map((p) => p.userID).toList(),
         'participantProfilePictureURLs': channelDataModel.participantProfilePictureURLs
             .map((p) => {'profilePictureURL': p.profilePictureURL, 'participantId': p.participantId})
             .toList(),
         'lastMessage': channelDataModel.lastMessage,
-        'lastMessageDate': channelDataModel.lastMessageDate,
+        'lastMessageDate': FieldValue.serverTimestamp(),
         'readUserIDs': channelDataModel.readUserIDs,
-        'createdAt': Timestamp.now().seconds,
+        'createdAt': FieldValue.serverTimestamp(),
         'admins': channelDataModel.admins,
+        'listingId': channelDataModel.listingId ?? '',
+        'listingTitle': channelDataModel.listingTitle ?? '',
+        'listingImage': channelDataModel.listingImage ?? '',
       });
       
-      // Create chat feed entries for each participant
       for (var participant in channelDataModel.participants) {
+        debugPrint('[ChatDebug] Creating chatFeedLive for user: \\${participant.userID}, channel: \\${channelDataModel.channelID}');
         await firestore
             .collection(socialFeedsCollection)
             .doc(participant.userID)
@@ -486,12 +494,12 @@ class ChatFireStoreUtils extends ChatRepository {
               .where((p) => p.userID != participant.userID)
               .map((p) => p.toJson())
               .toList(),
-          'createdAt': Timestamp.now().seconds,
-          'markedAsRead': false,
-          'content': {
-            'content': '',
-            'createdAt': Timestamp.now().seconds,
-          },
+          'createdAt': FieldValue.serverTimestamp(),
+          'markedAsRead': participant.userID == currentUser.userID,
+          'content': '',
+          'listingId': channelDataModel.listingId ?? '',
+          'listingTitle': channelDataModel.listingTitle ?? '',
+          'listingImage': channelDataModel.listingImage ?? '',
         });
       }
     } catch (e, s) {
@@ -509,11 +517,6 @@ class ChatFireStoreUtils extends ChatRepository {
     return downloadUrl.toString();
   }
 
-  /// compress image file to make it load faster but with lower quality,
-  /// change the quality parameter to control the quality of the image after
-  /// being compressed(100 = max quality - 0 = low quality)
-  /// @param file the image file that will be compressed
-  /// @return File a new compressed file with smaller size
   Future<File> _compressImage(File file) async {
     File compressedImage = await FlutterNativeImage.compressImage(
       file.path,
@@ -522,11 +525,6 @@ class ChatFireStoreUtils extends ChatRepository {
     return compressedImage;
   }
 
-  /// compress video file to make it load faster but with lower quality,
-  /// change the quality parameter to control the quality of the video after
-  /// being compressed
-  /// @param file the video file that will be compressed
-  /// @return File a new compressed file with smaller size
   Future<File> _compressVideo(File file) async {
     MediaInfo? info = await VideoCompress.compressVideo(file.path,
         quality: VideoQuality.DefaultQuality,
@@ -542,21 +540,62 @@ class ChatFireStoreUtils extends ChatRepository {
   }
 }
 
+// Mock class to satisfy return types for empty streams
+class _EmptyQuerySnapshot implements QuerySnapshot<Map<String, dynamic>> {
+  @override
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> get docs => [];
+  @override
+  List<DocumentChange<Map<String, dynamic>>> get docChanges => [];
+  @override
+  SnapshotMetadata get metadata => _MockMetadata();
+  @override
+  int get size => 0;
+}
+
+class _MockMetadata implements SnapshotMetadata {
+  @override
+  bool get hasPendingWrites => false;
+  @override
+  bool get isFromCache => false;
+}
+
 sendNotification(String token, String title, String body,
     Map<String, dynamic>? payload) async {
-  await http.post(
-    Uri.parse('https://fcm.googleapis.com/fcm/send'),
-    headers: <String, String>{
-      'Content-Type': 'application/json',
-      'Authorization': 'key=$serverKey',
-    },
-    body: jsonEncode(
-      <String, dynamic>{
-        'notification': <String, dynamic>{'body': body, 'title': title},
-        'priority': 'high',
-        'data': payload ?? <String, dynamic>{},
-        'to': token
+  if (token.isEmpty) {
+    debugPrint('🔔 [DEBUG] No push token provided.');
+    return;
+  }
+  final cleanKey = serverKey.trim();
+  if (cleanKey.isEmpty) {
+    debugPrint('🔔 [DEBUG] No FCM server key provided.');
+    return;
+  }
+
+  debugPrint('🔔 [DEBUG] Sending push notification');
+  debugPrint('🔔 [DEBUG] Push token: $token');
+  debugPrint('🔔 [DEBUG] Notification title: $title');
+  debugPrint('🔔 [DEBUG] Notification body: $body');
+  debugPrint('🔔 [DEBUG] Payload: ${payload?.toString() ?? '{}'}');
+
+  try {
+    final response = await http.post(
+      Uri.parse('https://fcm.googleapis.com/fcm/send'),
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+        'Authorization': 'key=$cleanKey',
       },
-    ),
-  );
+      body: jsonEncode(
+        <String, dynamic>{
+          'notification': <String, dynamic>{'body': body, 'title': title},
+          'priority': 'high',
+          'data': payload ?? <String, dynamic>{},
+          'to': token
+        },
+      ),
+    );
+    
+    debugPrint('🔔 FCM Response: ${response.statusCode} ${response.body}');
+  } catch (e) {
+    debugPrint('🔔 FCM Exception: $e');
+  }
 }

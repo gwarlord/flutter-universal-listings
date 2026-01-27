@@ -7,12 +7,12 @@ import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:instaflutter/core/ui/chat/chat/chat_screen.dart';
+import 'package:instaflutter/core/ui/chat/player_widget.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:instaflutter/core/model/channel_data_model.dart';
-import 'package:instaflutter/core/ui/chat/chat/chat_screen.dart';
-import 'package:instaflutter/core/ui/chat/player_widget.dart';
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
 import 'package:instaflutter/core/ui/theme/theme_cubit.dart';
 import 'package:instaflutter/listings/listings_app_config.dart';
@@ -20,6 +20,7 @@ import 'package:instaflutter/listings/ui/auth/api/auth_api_manager.dart';
 import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 import 'package:instaflutter/listings/ui/auth/launcher/launcher_screen.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
+import 'package:instaflutter/main.dart' as entry;
 
 runListings() {
   appName = 'Flutter Universal Listings';
@@ -31,7 +32,6 @@ runListings() {
   reviewCollection = 'reviews';
   filtersCollection = 'filters';
 
-  // NEW: Google Maps Places API Key
   googleMapsApiKey = 'AIzaSyAmBTqCgeWA_-F9Dz5eHoYdGURT_YiAwWI';
 
   return EasyLocalization(
@@ -62,37 +62,29 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late StreamSubscription tokenStream;
-
-  /// this key is used to navigate to the appropriate screen when the
-  /// notification is clicked from the system tray
-  final GlobalKey<NavigatorState> navigatorKey =
-      GlobalKey(debugLabel: 'Main Navigator');
-
-  // Set default `_initialized` and `_error` state to false
   bool _initialized = false;
   bool _error = false;
 
-  // Define an async function to initialize FlutterFire
   initializeFlutterFire() async {
     try {
+      // Use the entry-level navigatorKey
+      final navKey = entry.navigatorKey;
+
       RemoteMessage? initialMessage =
           await FirebaseMessaging.instance.getInitialMessage();
       if (initialMessage != null) {
         if (!mounted) return;
-        _handleNotification(initialMessage.data, navigatorKey, context);
+        _handleNotification(initialMessage.data, navKey, context);
       }
       FirebaseMessaging.onMessageOpenedApp
           .listen((RemoteMessage? remoteMessage) {
         if (remoteMessage != null) {
-          _handleNotification(remoteMessage.data, navigatorKey, context);
+          _handleNotification(remoteMessage.data, navKey, context);
         }
       });
-      if (!Platform.isIOS) {
-        FirebaseMessaging.onBackgroundMessage(backgroundMessageHandler);
-      }
+      
       tokenStream = FirebaseMessaging.instance.onTokenRefresh.listen((event) {
         if (BlocProvider.of<AuthenticationBloc>(context).user != null) {
-          debugPrint('token $event');
           BlocProvider.of<AuthenticationBloc>(context).user!.pushToken = event;
           profileApiManager.updateCurrentUser(
               BlocProvider.of<AuthenticationBloc>(context).user!);
@@ -102,7 +94,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         _initialized = true;
       });
     } catch (e) {
-      // Set `_error` state to true if Firebase initialization fails
       setState(() {
         _error = true;
       });
@@ -120,42 +111,31 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    // Show error message if initialization failed
     if (_error) {
       return Container(
         color: Colors.white,
         child: const Center(
             child: Column(
           children: [
-            Icon(
-              Icons.error_outline,
-              color: Colors.red,
-              size: 25,
-            ),
+            Icon(Icons.error_outline, color: Colors.red, size: 25),
             SizedBox(height: 16),
-            Text(
-              'Failed to initialise firebase!',
-              style: TextStyle(color: Colors.red, fontSize: 25),
-            ),
+            Text('Failed to initialise firebase!', style: TextStyle(color: Colors.red, fontSize: 25)),
           ],
         )),
       );
     }
 
-    // Show a loader until FlutterFire is initialized
     if (!_initialized) {
       return Container(
         color: Colors.white,
-        child: const Center(
-          child: CircularProgressIndicator.adaptive(),
-        ),
+        child: const Center(child: CircularProgressIndicator.adaptive()),
       );
     }
 
     return BlocBuilder<ThemeCubit, ThemeState>(
       builder: (context, themeState) {
         return MaterialApp(
-            navigatorKey: navigatorKey,
+            navigatorKey: entry.navigatorKey, // Use global entry key
             localizationsDelegates: context.localizationDelegates,
             supportedLocales: context.supportedLocales,
             locale: context.locale,
@@ -163,14 +143,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         builder: EasyLoading.init(),
         title: appName.tr(),
         theme: ThemeData(
-          snackBarTheme: const SnackBarThemeData(
-              contentTextStyle: TextStyle(color: Colors.white)),
-          sliderTheme: SliderThemeData(
-              trackShape: CustomTrackShape(),
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5)),
+          snackBarTheme: const SnackBarThemeData(contentTextStyle: TextStyle(color: Colors.white)),
+          sliderTheme: SliderThemeData(trackShape: CustomTrackShape(), thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5)),
           brightness: Brightness.light,
-          textSelectionTheme:
-              TextSelectionThemeData(cursorColor: Color(colorPrimaryDark)),
+          textSelectionTheme: TextSelectionThemeData(cursorColor: Color(colorPrimaryDark)),
           primaryColor: Color(colorPrimary),
           colorScheme: ColorScheme.fromSwatch().copyWith(
               primary: Color(colorPrimary),
@@ -183,37 +159,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             centerTitle: true,
             color: Platform.isIOS ? Colors.transparent : Color(colorPrimary),
             elevation: Platform.isIOS ? 0 : null,
-            actionsIconTheme: Platform.isIOS
-                ? IconThemeData(color: Color(colorPrimary))
-                : null,
-            iconTheme: Platform.isIOS
-                ? IconThemeData(color: Color(colorPrimary))
-                : const IconThemeData(color: Colors.white),
-            titleTextStyle: TextStyle(
-                color: Platform.isIOS ? Color(colorPrimary) : Colors.white,
-                fontSize: 20.0,
-                letterSpacing: 0,
-                fontWeight: FontWeight.w500),
-            systemOverlayStyle: Platform.isAndroid
-                ? SystemUiOverlayStyle.light
-                : SystemUiOverlayStyle.dark,
+            iconTheme: const IconThemeData(color: Colors.white),
+            titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20.0, fontWeight: FontWeight.w500),
+            systemOverlayStyle: SystemUiOverlayStyle.light,
           ),
-          popupMenuTheme: const PopupMenuThemeData(
-            color: Colors.white,
-            textStyle: TextStyle(color: Colors.black),
-          ),
-          drawerTheme: const DrawerThemeData(
-            backgroundColor: Colors.white,
-          ),
-          bottomSheetTheme:
-              const BottomSheetThemeData(backgroundColor: Colors.white),
         ),
         darkTheme: ThemeData(
-          snackBarTheme: const SnackBarThemeData(
-              contentTextStyle: TextStyle(color: Colors.white)),
           primaryColor: Color(colorPrimary),
-          textSelectionTheme:
-              TextSelectionThemeData(cursorColor: Color(colorPrimaryDark)),
           brightness: Brightness.dark,
           scaffoldBackgroundColor: const Color(0xFF121212),
           colorScheme: ColorScheme.fromSwatch().copyWith(
@@ -223,31 +175,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             onSurface: Colors.white,
             brightness: Brightness.dark,
           ),
-          sliderTheme: SliderThemeData(
-              trackShape: CustomTrackShape(),
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5)),
           appBarTheme: AppBarTheme(
             centerTitle: true,
-            color: Platform.isIOS ? Colors.transparent : Color(colorPrimary),
-            elevation: Platform.isIOS ? 0 : null,
-            actionsIconTheme: const IconThemeData(color: Colors.white),
-            iconTheme: const IconThemeData(color: Colors.white),
-            titleTextStyle: const TextStyle(
-                color: Colors.white,
-                fontSize: 20.0,
-                letterSpacing: 0,
-                fontWeight: FontWeight.w500),
+            color: Color(colorPrimary),
+            titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20.0, fontWeight: FontWeight.w500),
             systemOverlayStyle: SystemUiOverlayStyle.light,
           ),
-          popupMenuTheme: const PopupMenuThemeData(
-            color: Color(0xFF1E1E1E),
-            textStyle: TextStyle(color: Colors.white),
-          ),
-          drawerTheme: const DrawerThemeData(
-            backgroundColor: Color(0xFF1E1E1E),
-          ),
-          bottomSheetTheme:
-              BottomSheetThemeData(backgroundColor: Colors.grey[900]),
         ),
         debugShowCheckedModeBanner: false,
             color: Color(colorPrimary),
@@ -268,62 +201,44 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     if (auth.FirebaseAuth.instance.currentUser != null &&
         BlocProvider.of<AuthenticationBloc>(context).user != null) {
       if (state == AppLifecycleState.paused) {
-        //user offline
         tokenStream.pause();
         BlocProvider.of<AuthenticationBloc>(context).user!.active = false;
-        BlocProvider.of<AuthenticationBloc>(context).user!.lastOnlineTimestamp =
-            Timestamp.now().seconds;
-        profileApiManager.updateCurrentUser(
-            BlocProvider.of<AuthenticationBloc>(context).user!);
+        profileApiManager.updateCurrentUser(BlocProvider.of<AuthenticationBloc>(context).user!);
       } else if (state == AppLifecycleState.resumed) {
-        //user online
         tokenStream.resume();
         BlocProvider.of<AuthenticationBloc>(context).user!.active = true;
-        profileApiManager.updateCurrentUser(
-            BlocProvider.of<AuthenticationBloc>(context).user!);
+        profileApiManager.updateCurrentUser(BlocProvider.of<AuthenticationBloc>(context).user!);
       }
     }
   }
 }
 
-/// this faction is called when the notification is clicked from system tray
-/// when the app is in the background or completely killed
-  void _handleNotification(Map<String, dynamic> message,
-    GlobalKey<NavigatorState> navigatorKey, BuildContext context) {
-  /// right now we only handle click actions on chat messages only
+void _handleNotification(Map<String, dynamic> data, GlobalKey<NavigatorState> navigatorKey, BuildContext context) async {
   try {
-    if (message.containsKey('channelDataModel')) {
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(
-          builder: (_) => ChatWrapperWidget(
-            channelDataModel: ChannelDataModel.fromJson(
-                jsonDecode(message['channelDataModel']),
-                navigatorKey.currentContext
-                        ?.read<AuthenticationBloc>()
-                        .user!
-                        .userID ??
-                    ''),
-            currentUser: context.read<AuthenticationBloc>().user!,
-            colorAccent: Color(colorAccent),
-            colorPrimary: Color(colorPrimary),
-          ),
+    String? channelID = data['channelID'];
+    if (channelID == null) return;
+
+    // Get current user from Bloc
+    final user = BlocProvider.of<AuthenticationBloc>(navigatorKey.currentContext!).user;
+    if (user == null) return;
+
+    // Fetch channel details to populate the screen
+    final channelSnap = await FirebaseFirestore.instance.collection('channels').doc(channelID).get();
+    if (!channelSnap.exists) return;
+
+    final channelData = ChannelDataModel.fromJson(channelSnap.data()!, user.userID);
+
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (_) => ChatWrapperWidget(
+          channelDataModel: channelData,
+          currentUser: user,
+          colorPrimary: Color(colorPrimary),
+          colorAccent: Color(colorAccent),
         ),
-      );
-    }
+      ),
+    );
   } catch (e, s) {
     debugPrint('MyAppState._handleNotification $e $s');
   }
-}
-
-Future<dynamic> backgroundMessageHandler(RemoteMessage remoteMessage) async {
-  await Firebase.initializeApp();
-  Map<dynamic, dynamic> message = remoteMessage.data;
-
-  if (message.containsKey('notification')) {
-    // Handle notification message
-    // final dynamic notification = message['notification'];
-    debugPrint('backgroundMessageHandler message.containsKey(notification)');
-  }
-
-  // Or do other work.
 }

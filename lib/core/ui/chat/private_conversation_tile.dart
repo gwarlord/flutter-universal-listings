@@ -138,3 +138,4 @@ class _PrivateConversationTileState extends State<PrivateConversationTile> {
     );
   }
 }
+// Removed for flutter_chat_ui migration

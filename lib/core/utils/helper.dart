@@ -414,6 +414,7 @@ InputDecoration getInputDecoration(
     contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
     fillColor: darkMode ? Colors.black54 : Colors.white,
     hintText: hint,
+    hintStyle: TextStyle(color: darkMode ? Colors.grey[400] : Colors.grey[600]),
     focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(25.0),
         borderSide: BorderSide(color: colorPrimary, width: 2.0)),

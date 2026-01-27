@@ -16,6 +16,9 @@ class ChannelDataModel {
   List<String> readUserIDs;
   List<String>? admins;
   bool isGroupChat;
+  String? listingId;
+  String? listingTitle;
+  String? listingImage;
 
   ChannelDataModel({
     this.channelID = '',
@@ -25,72 +28,83 @@ class ChannelDataModel {
     this.lastMessageDate = 0,
     this.lastMessageSenderId = '',
     this.lastThreadMessageId = '',
-    name,
+    String? name,
     this.participantProfilePictureURLs = const [],
     this.participants = const [],
-    readUserIDs,
+    List<String>? readUserIDs,
     this.admins,
+    this.listingId,
+    this.listingTitle,
+    this.listingImage,
   })  : readUserIDs = readUserIDs ?? [],
-        name = !channelID.contains(creatorID) || channelID.isNotEmpty
-            ? name ?? ''
-            : participants.first.fullName(),
+        name = name ?? (participants.isNotEmpty ? participants.first.fullName() : ''),
         isGroupChat = (participants).length > 1;
 
   factory ChannelDataModel.fromJson(
       Map<String, dynamic> parsedJson, String currentUserID) {
-    return ChannelDataModel(
-      channelID: parsedJson['id'] ?? '',
-      creatorID: parsedJson['creatorID'] ?? '',
-      id: parsedJson['id'] ?? '',
-      lastMessage: (parsedJson['lastMessage'] ?? '') is String
-          ? parsedJson['lastMessage'] ?? ''
-          : ChatFeedContent.fromJson(parsedJson['lastMessage'] ?? {}),
-      lastMessageDate: (parsedJson['lastMessageDate'] ?? 0) is Timestamp
-          ? (parsedJson['lastMessageDate'] as Timestamp).seconds
-          : 0,
-      lastMessageSenderId: parsedJson['lastMessageSenderId'] ?? '',
-      lastThreadMessageId: parsedJson['lastThreadMessageId'] ?? '',
-      name: parsedJson['name'] ?? '',
-      participantProfilePictureURLs:
-          ((parsedJson['participantProfilePictureURLs'] ?? []) as Iterable)
-              .map((e) => ChatFeedParticipantProfilePictureURL.fromJson(e))
-              .toList(),
-      participants: ((parsedJson['participants'] ?? []) as Iterable)
+    
+    // Parse ALL participants first
+    final List<User> allParticipants = ((parsedJson['participants'] ?? []) as Iterable)
           .where((e) => e is Map<String, dynamic>)
           .map((e) => User.fromJson(e))
-          .toList()
-        ..removeWhere((element) => element.userID == currentUserID),
+          .toList();
+
+    // Create a filtered list for the UI (excluding current user)
+    final List<User> uiParticipants = List<User>.from(allParticipants)
+        ..removeWhere((element) => element.userID == currentUserID);
+
+    return ChannelDataModel(
+      channelID: parsedJson['id'] ?? parsedJson['channelID'] ?? '',
+      creatorID: parsedJson['creatorID'] ?? '',
+      id: parsedJson['id'] ?? parsedJson['channelID'] ?? '',
+      lastMessage: (parsedJson['lastMessage'] ?? '') is String
+        ? parsedJson['lastMessage'] ?? ''
+        : ChatFeedContent.fromJson(parsedJson['lastMessage'] ?? {}),
+      lastMessageDate: (parsedJson['lastMessageDate'] ?? 0) is Timestamp
+        ? (parsedJson['lastMessageDate'] as Timestamp).seconds
+        : parsedJson['lastMessageDate'] ?? 0,
+      lastMessageSenderId: parsedJson['lastMessageSenderId'] ?? '',
+      lastThreadMessageId: parsedJson['lastThreadMessageId'] ?? '',
+      name: parsedJson['name'] ?? (uiParticipants.isNotEmpty ? uiParticipants.first.fullName() : ''),
+      participantProfilePictureURLs:
+        ((parsedJson['participantProfilePictureURLs'] ?? []) as Iterable)
+          .map((e) => ChatFeedParticipantProfilePictureURL.fromJson(e))
+          .toList(),
+      participants: uiParticipants,
       readUserIDs: List<String>.from(parsedJson['readUserIDs'] ?? []),
       admins: parsedJson.containsKey('admins') && parsedJson['admins'] != null
-          ? List<String>.from(parsedJson['admins'])
-          : null,
+        ? List<String>.from(parsedJson['admins'])
+        : null,
+      listingId: parsedJson['listingId'],
+      listingTitle: parsedJson['listingTitle'],
+      listingImage: parsedJson['listingImage'],
     );
   }
 
   Map<String, dynamic> toJson(User currentUser) {
-    List<User>? fullParticipants;
-    if (participants
-        .where((element) => element.userID == currentUser.userID)
-        .isEmpty) {
-      fullParticipants = [...participants, currentUser];
+    List<User> fullParticipants = List.from(participants);
+    if (fullParticipants.where((element) => element.userID == currentUser.userID).isEmpty) {
+      fullParticipants.add(currentUser);
     }
     return {
       'channelID': channelID,
       'creatorID': creatorID,
       'id': id,
       'lastMessage': lastMessage is ChatFeedContent
-          ? (lastMessage as ChatFeedContent).toJson()
-          : lastMessage,
+        ? (lastMessage as ChatFeedContent).toJson()
+        : lastMessage,
       'lastMessageDate': lastMessageDate,
       'lastMessageSenderId': lastMessageSenderId,
       'lastThreadMessageId': lastThreadMessageId,
       'name': name,
       'participantProfilePictureURLs':
-          participantProfilePictureURLs.map((e) => e.toJson()).toList(),
-      'participants': fullParticipants?.map((e) => e.toJson()).toList() ??
-          participants.map((e) => e.toJson()).toList(),
+        participantProfilePictureURLs.map((e) => e.toJson()).toList(),
+      'participants': fullParticipants.map((e) => e.toJson()).toList(),
       'readUserIDs': readUserIDs,
       'admins': admins,
+      'listingId': listingId,
+      'listingTitle': listingTitle,
+      'listingImage': listingImage,
     };
   }
 }

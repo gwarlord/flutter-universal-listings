@@ -11,6 +11,7 @@ class AdaptiveVideoPlayer extends StatelessWidget {
   final VoidCallback? onTogglePlay;
   final VoidCallback? onToggleMute;
   final VoidCallback? onToggleFullScreen;
+  final IconData? fullScreenIcon;
 
   const AdaptiveVideoPlayer({
     super.key,
@@ -23,6 +24,7 @@ class AdaptiveVideoPlayer extends StatelessWidget {
     this.onTogglePlay,
     this.onToggleMute,
     this.onToggleFullScreen,
+    this.fullScreenIcon,
   });
 
   @override
@@ -34,9 +36,7 @@ class AdaptiveVideoPlayer extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final aspectRatio = controller.value.aspectRatio;
-        final isPortrait = aspectRatio < 1.0;
         
-        // Calculate video dimensions based on aspect ratio for proper scaling
         final videoWidth = controller.value.size.width > 0
             ? controller.value.size.width
             : constraints.maxWidth;
@@ -44,28 +44,33 @@ class AdaptiveVideoPlayer extends StatelessWidget {
             ? controller.value.size.height
             : (videoWidth / aspectRatio);
         
-        // Container takes available space; FittedBox scales/crops the video to match desired fit.
         return Stack(
           fit: StackFit.expand,
           children: [
-            ClipRect(
-              child: FittedBox(
-                fit: fit,
-                alignment: Alignment.center,
-                child: SizedBox(
-                  width: videoWidth,
-                  height: videoHeight,
-                  child: VideoPlayer(controller),
+            // 1. Video Surface & Main Tap Layer
+            GestureDetector(
+              onTap: onTogglePlay,
+              behavior: HitTestBehavior.opaque,
+              child: ClipRect(
+                child: FittedBox(
+                  fit: fit,
+                  alignment: Alignment.center,
+                  child: SizedBox(
+                    width: videoWidth,
+                    height: videoHeight,
+                    child: VideoPlayer(controller),
+                  ),
                 ),
               ),
             ),
+            
+            // 2. Play/Pause Overlay (Center)
             if (showPlayOverlay && !controller.value.isPlaying)
-              Container(
-                color: Colors.black.withOpacity(0.2),
-                child: Center(
-                  child: GestureDetector(
-                    onTap: onTogglePlay,
-                    child: const Icon(
+              IgnorePointer(
+                child: Container(
+                  color: Colors.black.withOpacity(0.2),
+                  child: const Center(
+                    child: Icon(
                       Icons.play_circle_fill,
                       size: 64,
                       color: Colors.white70,
@@ -73,49 +78,64 @@ class AdaptiveVideoPlayer extends StatelessWidget {
                   ),
                 ),
               ),
-            if (showMuteToggle)
-              Positioned(
-                top: 12,
-                right: 12,
-                child: GestureDetector(
-                  onTap: onToggleMute,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      isMuted ? Icons.volume_off : Icons.volume_up,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
+              
+            // 3. Controls Layer
+            // Positioned higher (bottom: 100) to clear system bars and floating buttons
+            Positioned(
+              bottom: 100,
+              left: 20,
+              child: SafeArea(
+                top: false,
+                bottom: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (showMuteToggle)
+                      _VideoControlButton(
+                        icon: isMuted ? Icons.volume_off : Icons.volume_up,
+                        onTap: onToggleMute,
+                      ),
+                    if (showMuteToggle && showFullScreenButton) const SizedBox(height: 16),
+                    if (showFullScreenButton)
+                      _VideoControlButton(
+                        icon: fullScreenIcon ?? Icons.fullscreen,
+                        onTap: onToggleFullScreen,
+                      ),
+                  ],
                 ),
               ),
-            if (showFullScreenButton)
-              Positioned(
-                bottom: 12,
-                right: 12,
-                child: GestureDetector(
-                  onTap: onToggleFullScreen,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.fullscreen,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ),
+            ),
           ],
         );
       },
+    );
+  }
+}
+
+class _VideoControlButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  const _VideoControlButton({required this.icon, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withOpacity(0.6),
+      shape: const CircleBorder(),
+      elevation: 4,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Icon(
+            icon,
+            color: Colors.white,
+            size: 26,
+          ),
+        ),
+      ),
     );
   }
 }
