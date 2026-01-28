@@ -8,6 +8,9 @@ class DealAdService {
     await _adsRef.doc(ad.id).set(ad.toMap());
   }
 
+  Future<void> deleteAd(String adId) async {
+    await _adsRef.doc(adId).delete();
+  }
 
   Stream<List<DealAdModel>> getPendingAds() {
     return _adsRef.where('status', isEqualTo: 'pending').snapshots().map(

@@ -63,6 +63,7 @@ dependencies:
   video_thumbnail: ^0.5.6
   flutter_google_places_hoc081098: ^2.0.0
   flutter_staggered_grid_view: ^0.7.0
+  share_plus: ^10.1.0
 
 
   characters: ^1.4.0

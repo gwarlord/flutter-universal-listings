@@ -6,6 +6,7 @@ class DealAdModel {
   final String listingId;
   final String mediaUrl;
   final String mediaType; // 'image' or 'video'
+  final String? thumbnailUrl;
   final String caption;
   final int durationDays;
   final double pricePaid;
@@ -16,6 +17,7 @@ class DealAdModel {
   final DateTime? approvedAt;
   final String? reviewerId;
   final String authorID;
+  final String adType; // 'advert' or 'promo'
 
   DealAdModel({
     required this.id,
@@ -23,6 +25,7 @@ class DealAdModel {
     required this.listingId,
     required this.mediaUrl,
     required this.mediaType,
+    this.thumbnailUrl,
     required this.caption,
     required this.durationDays,
     required this.pricePaid,
@@ -33,6 +36,7 @@ class DealAdModel {
     this.approvedAt,
     this.reviewerId,
     required this.authorID,
+    this.adType = 'promo',
   });
 
   Map<String, dynamic> toMap() => {
@@ -41,6 +45,7 @@ class DealAdModel {
     'listingId': listingId,
     'mediaUrl': mediaUrl,
     'mediaType': mediaType,
+    'thumbnailUrl': thumbnailUrl,
     'caption': caption,
     'durationDays': durationDays,
     'pricePaid': pricePaid,
@@ -51,26 +56,29 @@ class DealAdModel {
     'approvedAt': approvedAt,
     'reviewerId': reviewerId,
     'authorID': authorID,
+    'adType': adType,
   };
 
   factory DealAdModel.fromDoc(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return DealAdModel(
       id: doc.id,
-      listerId: data['listerId'],
-      listingId: data['listingId'],
-      mediaUrl: data['mediaUrl'],
-      mediaType: data['mediaType'],
-      caption: data['caption'],
-      durationDays: data['durationDays'],
-      pricePaid: (data['pricePaid'] as num).toDouble(),
-      startDate: (data['startDate'] as Timestamp).toDate(),
-      endDate: (data['endDate'] as Timestamp).toDate(),
-      status: data['status'],
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      listerId: data['listerId'] ?? '',
+      listingId: data['listingId'] ?? '',
+      mediaUrl: data['mediaUrl'] ?? '',
+      mediaType: data['mediaType'] ?? 'image',
+      thumbnailUrl: data['thumbnailUrl'],
+      caption: data['caption'] ?? '',
+      durationDays: data['durationDays'] ?? 0,
+      pricePaid: (data['pricePaid'] as num?)?.toDouble() ?? 0.0,
+      startDate: (data['startDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      endDate: (data['endDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      status: data['status'] ?? 'pending',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       approvedAt: data['approvedAt'] != null ? (data['approvedAt'] as Timestamp).toDate() : null,
       reviewerId: data['reviewerId'],
-      authorID: data['authorID'],
+      authorID: data['authorID'] ?? '',
+      adType: data['adType'] ?? 'promo',
     );
   }
 }

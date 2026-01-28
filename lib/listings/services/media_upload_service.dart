@@ -10,4 +10,10 @@ class MediaUploadService {
     final uploadTask = await ref.putFile(file);
     return await uploadTask.ref.getDownloadURL();
   }
+
+  Future<String> uploadAdThumbnail(File file, String listerId, String adId) async {
+    final ref = _storage.ref().child('deal_ads/$listerId/${adId}_thumb.jpg');
+    final uploadTask = await ref.putFile(file);
+    return await uploadTask.ref.getDownloadURL();
+  }
 }

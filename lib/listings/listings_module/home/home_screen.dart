@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/cupertino.dart';
@@ -20,6 +21,10 @@ import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:instaflutter/listings/utils/caribbean_countries.dart';
+import 'package:instaflutter/listings/model/deal_ad_model.dart';
+import 'package:instaflutter/listings/services/deal_ad_service.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
+import '../../ui/deals/deals_feed_screen.dart';
 
 class HomeWrapperWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -61,11 +66,13 @@ class HomeScreenState extends State<HomeScreen> {
   List<ListingModel?> listingsWithAds = [];
   List<CategoriesModel> _categories = [];
   List<ListingModel> _featuredListings = [];
+  List<DealAdModel> _dealAds = [];
 
   bool _showAll = false;
   bool loadingCategories = true;
   bool loadingListings = true;
   bool loadingFeatured = true;
+  bool loadingDeals = true;
 
   late ListingsUser currentUser;
   
@@ -82,6 +89,7 @@ class HomeScreenState extends State<HomeScreen> {
     context.read<HomeBloc>().add(GetCategoriesEvent());
     context.read<HomeBloc>().add(GetListingsEvent());
     _loadFeaturedListings();
+    _loadDeals();
   }
 
   Future<void> _loadFeaturedListings() async {
@@ -96,6 +104,23 @@ class HomeScreenState extends State<HomeScreen> {
         loadingFeatured = false;
       });
     }
+  }
+
+  Future<void> _loadDeals() async {
+    DealAdService().getApprovedAds().listen((ads) {
+      if (mounted) {
+        setState(() {
+          _dealAds = ads;
+          loadingDeals = false;
+        });
+      }
+    }, onError: (e) {
+      if (mounted) {
+        setState(() {
+          loadingDeals = false;
+        });
+      }
+    });
   }
 
   @override
@@ -257,6 +282,7 @@ class HomeScreenState extends State<HomeScreen> {
           context.read<HomeBloc>().add(GetCategoriesEvent());
           context.read<HomeBloc>().add(GetListingsEvent());
           await _loadFeaturedListings();
+          await _loadDeals();
         },
         child: BlocConsumer<HomeBloc, HomeState>(
           listener: (context, state) {
@@ -306,6 +332,42 @@ class HomeScreenState extends State<HomeScreen> {
               child: CustomScrollView(
                 slivers: [
                   
+                  // Deals & Promotions Section (Moved to the top and smaller)
+                  if (_dealAds.isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Deals & Promotions'.tr(),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18, // Smaller title
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => push(context, DealsFeedScreen(currentUser: currentUser)),
+                            child: Text('View All'.tr(), style: const TextStyle(fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 4)),
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 120, // Smaller height
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _dealAds.length,
+                          itemBuilder: (context, index) {
+                            final ad = _dealAds[index];
+                            return DealAdCarouselItem(ad: ad, index: index, isDark: dark, currentUser: currentUser);
+                          },
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                  ],
 
                   SliverToBoxAdapter(
                     child: Text(
@@ -726,6 +788,145 @@ class HomeScreenState extends State<HomeScreen> {
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class DealAdCarouselItem extends StatefulWidget {
+  final DealAdModel ad;
+  final int index;
+  final bool isDark;
+  final ListingsUser currentUser;
+
+  const DealAdCarouselItem({
+    Key? key,
+    required this.ad,
+    required this.index,
+    required this.isDark,
+    required this.currentUser,
+  }) : super(key: key);
+
+  @override
+  State<DealAdCarouselItem> createState() => _DealAdCarouselItemState();
+}
+
+class _DealAdCarouselItemState extends State<DealAdCarouselItem> {
+  Uint8List? _generatedThumbnail;
+  bool _isGenerating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.ad.mediaType == 'video' && (widget.ad.thumbnailUrl == null || widget.ad.thumbnailUrl!.isEmpty)) {
+      _generateLocalThumbnail();
+    }
+  }
+
+  Future<void> _generateLocalThumbnail() async {
+    if (_isGenerating) return;
+    setState(() => _isGenerating = true);
+    try {
+      final uint8list = await VideoThumbnail.thumbnailData(
+        video: widget.ad.mediaUrl,
+        imageFormat: ImageFormat.JPEG,
+        maxWidth: 256,
+        quality: 50,
+      );
+      if (mounted) setState(() => _generatedThumbnail = uint8list);
+    } catch (e) {
+      debugPrint('Error generating carousel thumbnail: $e');
+    } finally {
+      if (mounted) setState(() => _isGenerating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ad = widget.ad;
+    final thumbUrl = (ad.mediaType == 'image' ? ad.mediaUrl : ad.thumbnailUrl) ?? '';
+
+    return GestureDetector(
+      onTap: () => push(context, DealsFeedScreen(initialIndex: widget.index, currentUser: widget.currentUser)),
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: widget.isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Media Content
+              if (ad.mediaType == 'image')
+                displayImage(ad.mediaUrl)
+              else if (thumbUrl.isNotEmpty)
+                Image.network(thumbUrl, fit: BoxFit.cover)
+              else if (_generatedThumbnail != null)
+                Image.memory(_generatedThumbnail!, fit: BoxFit.cover)
+              else
+                Container(
+                  color: Colors.black87,
+                  child: const Center(child: Icon(Icons.videocam, color: Colors.white24, size: 40)),
+                ),
+
+              // Overlay Elements
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                      stops: const [0.6, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+
+              if (ad.mediaType == 'video')
+                const Center(child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 36)),
+
+              Positioned(
+                bottom: 8,
+                left: 10,
+                right: 10,
+                child: Text(
+                  ad.caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              ),
+
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Color(colorPrimary),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    ad.adType.toUpperCase(),
+                    style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

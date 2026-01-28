@@ -2,21 +2,28 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:instaflutter/core/utils/helper.dart';
+import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/listings/ui/deals/ad_format_guidance_screen.dart';
 import 'package:instaflutter/listings/ui/deals/ad_terms_and_conditions_screen.dart';
 import 'package:instaflutter/listings/ui/deals/ad_pricing_selector.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:instaflutter/listings/services/media_upload_service.dart';
 import 'package:instaflutter/listings/services/deal_ad_service.dart';
 import 'package:instaflutter/listings/model/deal_ad_model.dart';
+import 'package:instaflutter/listings/services/gemini_ai_service.dart';
 import 'package:instaflutter/listings/utils/ad_seasonality_helper.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:intl/intl.dart';
 
 // Video preview widget for local file
 class _VideoPreviewWidget extends StatefulWidget {
-  final File file;
-  const _VideoPreviewWidget({required this.file});
+  final File? file;
+  final String? url;
+  const _VideoPreviewWidget({this.file, this.url});
 
   @override
   State<_VideoPreviewWidget> createState() => _VideoPreviewWidgetState();
@@ -29,13 +36,19 @@ class _VideoPreviewWidgetState extends State<_VideoPreviewWidget> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.file(widget.file)
-      ..initialize().then((_) {
-        setState(() {
-          _initialized = true;
-        });
-        _controller.setLooping(true);
-        _controller.play();
+    _controller = widget.file != null 
+        ? VideoPlayerController.file(widget.file!)
+        : VideoPlayerController.networkUrl(Uri.parse(widget.url!));
+        
+    _controller.initialize().then((_) {
+        if (mounted) {
+          setState(() {
+            _initialized = true;
+          });
+          _controller.setLooping(true);
+          _controller.setVolume(0); // Preview muted
+          _controller.play();
+        }
       });
   }
 
@@ -50,30 +63,58 @@ class _VideoPreviewWidgetState extends State<_VideoPreviewWidget> {
     if (!_initialized) {
       return const Center(child: CircularProgressIndicator());
     }
-    return AspectRatio(
-      aspectRatio: _controller.value.aspectRatio,
-      child: VideoPlayer(_controller),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: AspectRatio(
+        aspectRatio: _controller.value.aspectRatio,
+        child: VideoPlayer(_controller),
+      ),
     );
   }
 }
 
 class AdUploadScreen extends StatefulWidget {
   final VoidCallback? onAdSubmitted;
-  const AdUploadScreen({Key? key, this.onAdSubmitted}) : super(key: key);
+  final DealAdModel? adToEdit;
+  const AdUploadScreen({Key? key, this.onAdSubmitted, this.adToEdit}) : super(key: key);
 
   @override
   State<AdUploadScreen> createState() => _AdUploadScreenState();
 }
 
 class _AdUploadScreenState extends State<AdUploadScreen> {
-    double get _seasonalMultiplier => AdSeasonalityHelper.getSeasonalMultiplier(DateTime.now());
-    String get _seasonLabel => AdSeasonalityHelper.getSeasonLabel(DateTime.now());
+  double get _seasonalMultiplier => AdSeasonalityHelper.getSeasonalMultiplier(DateTime.now());
+  String get _seasonLabel => AdSeasonalityHelper.getSeasonLabel(DateTime.now());
+  
   File? _mediaFile;
+  String? _existingMediaUrl;
   String? _mediaType; // 'image' or 'video'
   final TextEditingController _captionController = TextEditingController();
   int _adDays = 1;
   bool _acceptedTerms = false;
-  bool _showTerms = false;
+  
+  // Promo Period variables
+  DateTime? _promoStartDate;
+  DateTime? _promoEndDate;
+
+  // Ad Type variable
+  String _adType = 'promo'; // 'advert' or 'promo'
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.adToEdit != null) {
+      final ad = widget.adToEdit!;
+      _captionController.text = ad.caption;
+      _adDays = ad.durationDays;
+      _adType = ad.adType;
+      _mediaType = ad.mediaType;
+      _existingMediaUrl = ad.mediaUrl;
+      _promoStartDate = ad.startDate;
+      _promoEndDate = ad.endDate;
+      _acceptedTerms = true; // Already accepted for existing ad
+    }
+  }
 
   Future<void> _pickMedia() async {
     final picker = ImagePicker();
@@ -103,6 +144,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
       if (pickedFile != null) {
         setState(() {
           _mediaFile = File(pickedFile.path);
+          _existingMediaUrl = null;
           _mediaType = 'image';
         });
       }
@@ -111,9 +153,47 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
       if (pickedVideo != null) {
         setState(() {
           _mediaFile = File(pickedVideo.path);
+          _existingMediaUrl = null;
           _mediaType = 'video';
         });
       }
+    }
+  }
+
+  Future<void> _selectPromoDates() async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDateRange: _promoStartDate != null && _promoEndDate != null
+          ? DateTimeRange(start: _promoStartDate!, end: _promoEndDate!)
+          : null,
+      builder: (context, child) {
+        final dark = isDarkMode(context);
+        return Theme(
+          data: dark ? ThemeData.dark().copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: Color(colorPrimary),
+              onPrimary: Colors.white,
+              surface: const Color(0xFF1E1E1E),
+              onSurface: Colors.white,
+            ),
+          ) : ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Color(colorPrimary),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _promoStartDate = picked.start;
+        _promoEndDate = picked.end;
+        _adDays = picked.duration.inDays + 1;
+      });
     }
   }
 
@@ -124,8 +204,60 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
     );
   }
 
+  void _showTypeInfo() {
+    final dark = isDarkMode(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: dark ? const Color(0xFF1E1E1E) : Colors.white,
+        title: Text('Ad Types', style: TextStyle(color: dark ? Colors.white : Colors.black)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Promotion:', style: TextStyle(fontWeight: FontWeight.bold, color: Color(colorPrimary))),
+            const SizedBox(height: 4),
+            Text('Time-limited offers. Requires a specific start and end date (e.g., 20% off for 1 week).', 
+              style: TextStyle(color: dark ? Colors.white70 : Colors.black87)),
+            const SizedBox(height: 16),
+            Text('Advert:', style: TextStyle(fontWeight: FontWeight.bold, color: Color(colorPrimary))),
+            const SizedBox(height: 4),
+            Text('General business awareness. Runs indefinitely without a specific offer period.', 
+              style: TextStyle(color: dark ? Colors.white70 : Colors.black87)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Got it', style: TextStyle(color: Color(colorPrimary))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPeriodInfo() {
+    final dark = isDarkMode(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: dark ? const Color(0xFF1E1E1E) : Colors.white,
+        title: Text('Promo Period', style: TextStyle(color: dark ? Colors.white : Colors.black)),
+        content: Text(
+          'A promo period ensures customers know exactly when your offer begins and ends. It creates urgency and helps them plan their purchase before the deal expires.',
+          style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Got it', style: TextStyle(color: Color(colorPrimary))),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showTermsAndConditions() {
-    setState(() => _showTerms = true);
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -133,7 +265,6 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
           onAccepted: () {
             setState(() {
               _acceptedTerms = true;
-              _showTerms = false;
             });
             Navigator.pop(context);
           },
@@ -145,44 +276,68 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
   bool _isSubmitting = false;
 
   Future<void> _submitAd() async {
-    if (_mediaFile == null || !_acceptedTerms) return;
+    if ((_mediaFile == null && _existingMediaUrl == null) || !_acceptedTerms) return;
     setState(() => _isSubmitting = true);
     try {
-      // TODO: Replace with actual listerId and listingId from user context
-      final listerId = 'demoListerId';
-      final listingId = 'demoListingId';
-      final adId = const Uuid().v4();
+      final listerId = widget.adToEdit?.listerId ?? 'demoListerId';
+      final listingId = widget.adToEdit?.listingId ?? 'demoListingId';
+      final adId = widget.adToEdit?.id ?? const Uuid().v4();
       final mediaService = MediaUploadService();
-      final mediaUrl = await mediaService.uploadAdMedia(_mediaFile!, listerId, adId);
+      
+      String? mediaUrl = _existingMediaUrl;
+      String? thumbnailUrl = widget.adToEdit?.thumbnailUrl;
+
+      // Handle new media upload
+      if (_mediaFile != null) {
+        if (_mediaType == 'video') {
+          final thumbPath = await VideoThumbnail.thumbnailFile(
+            video: _mediaFile!.path,
+            thumbnailPath: (await getTemporaryDirectory()).path,
+            imageFormat: ImageFormat.JPEG,
+            maxHeight: 300,
+            quality: 75,
+          );
+          if (thumbPath != null) {
+            thumbnailUrl = await mediaService.uploadAdThumbnail(File(thumbPath), listerId, adId);
+          }
+        }
+        mediaUrl = await mediaService.uploadAdMedia(_mediaFile!, listerId, adId);
+      }
+
       final now = DateTime.now();
       final pricePerDay = 10.0;
+      
+      final startDate = _adType == 'promo' && _promoStartDate != null ? _promoStartDate! : now;
+      final endDate = _adType == 'promo' && _promoEndDate != null ? _promoEndDate! : now.add(Duration(days: _adDays));
+
       final ad = DealAdModel(
         id: adId,
         listerId: listerId,
         listingId: listingId,
-        mediaUrl: mediaUrl,
+        mediaUrl: mediaUrl!,
         mediaType: _mediaType ?? 'image',
+        thumbnailUrl: thumbnailUrl,
         caption: _captionController.text.trim(),
         durationDays: _adDays,
         pricePaid: pricePerDay * _adDays * _seasonalMultiplier,
-        startDate: now,
-        endDate: now.add(Duration(days: _adDays)),
-        status: 'pending',
-        createdAt: now,
-        approvedAt: null,
-        reviewerId: null,
+        startDate: startDate,
+        endDate: endDate,
+        status: widget.adToEdit?.status ?? 'pending',
+        createdAt: widget.adToEdit?.createdAt ?? now,
+        approvedAt: widget.adToEdit?.approvedAt,
+        reviewerId: widget.adToEdit?.reviewerId,
         authorID: listerId,
+        adType: _adType,
       );
+      
       await DealAdService().submitAd(ad);
       if (widget.onAdSubmitted != null) widget.onAdSubmitted!();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ad submitted for review!')),
+        SnackBar(content: Text(widget.adToEdit != null ? 'Ad updated successfully!' : 'Ad submitted for review!')),
       );
       Navigator.pop(context);
     } catch (e, stack) {
-      // Print error and stack trace for debugging
       debugPrint('Failed to submit ad: $e');
-      debugPrintStack(stackTrace: stack);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to submit ad: $e')),
       );
@@ -193,13 +348,17 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final borderColor = isDark ? Colors.grey[700]! : Colors.grey;
-    final bgColor = isDark ? Colors.grey[900]! : Colors.grey[100]!;
-    final textColor = isDark ? Colors.white : Colors.black87;
+    final isDark = isDarkMode(context);
+    final primaryColor = Color(colorPrimary);
+    final adaptiveTextColor = isDark ? Colors.white : Colors.black87;
+    
     return Scaffold(
+      backgroundColor: isDark ? Colors.black : Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Upload Deal/Promotion'),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        title: Text(widget.adToEdit != null ? 'Edit Promotion' : 'Upload Promotion', style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold)),
+        iconTheme: IconThemeData(color: adaptiveTextColor),
         actions: [
           IconButton(
             icon: const Icon(Icons.info_outline),
@@ -208,108 +367,297 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: 100), // Increased bottom padding for floating buttons
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Media Picker Section
             GestureDetector(
               onTap: _pickMedia,
               child: Container(
-                height: 180,
+                height: 240,
+                width: double.infinity,
                 decoration: BoxDecoration(
-                  border: Border.all(color: borderColor),
-                  borderRadius: BorderRadius.circular(12),
-                  color: bgColor,
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(color: primaryColor.withOpacity(0.1)),
                 ),
-                child: _mediaFile == null
-                    ? Center(child: Text('Tap to select image or video', style: TextStyle(color: textColor)))
+                child: (_mediaFile == null && _existingMediaUrl == null)
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_a_photo_outlined, size: 48, color: primaryColor),
+                          const SizedBox(height: 12),
+                          Text('Add Image or Video', style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 4),
+                          Text('High quality media gets more engagement', 
+                            style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 12)),
+                        ],
+                      )
                     : _mediaType == 'image'
-                        ? Image.file(_mediaFile!, fit: BoxFit.cover)
-                        : _VideoPreviewWidget(file: _mediaFile!),
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: _mediaFile != null 
+                                ? Image.file(_mediaFile!, fit: BoxFit.cover)
+                                : Image.network(_existingMediaUrl!, fit: BoxFit.cover),
+                          )
+                        : _VideoPreviewWidget(file: _mediaFile, url: _existingMediaUrl),
               ),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _captionController,
-              style: TextStyle(color: textColor),
-              decoration: InputDecoration(
-                labelText: 'Caption (optional)',
-                labelStyle: TextStyle(color: isDark ? Colors.grey[300] : Colors.grey[700]),
-                border: const OutlineInputBorder(),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: borderColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
-                ),
-              ),
-              maxLines: 2,
-            ),
-            const SizedBox(height: 16),
-            Theme(
-              data: Theme.of(context).copyWith(
-                cardColor: bgColor,
-                textTheme: Theme.of(context).textTheme.apply(
-                  bodyColor: textColor,
-                  displayColor: textColor,
-                ),
-              ),
-              child: AdPricingSelector(
-                selectedDays: _adDays,
-                onDaysChanged: (days) => setState(() => _adDays = days),
-                pricePerDay: 10.0,
-                seasonalMultiplier: _seasonalMultiplier,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(left: 16, bottom: 8),
-              child: Text(
-                'Current: $_seasonLabel',
-                style: TextStyle(
-                  color: isDark ? Colors.amberAccent : Colors.orange,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
+            
+            const SizedBox(height: 24),
+
+            // Ad Type Toggle
             Row(
               children: [
-                Checkbox(
-                  value: _acceptedTerms,
-                  onChanged: (val) {
-                    if (!_acceptedTerms) _showTermsAndConditions();
-                  },
-                  checkColor: isDark ? Colors.black : null,
-                  fillColor: MaterialStateProperty.resolveWith<Color>((states) {
-                    if (isDark) {
-                      if (states.contains(MaterialState.selected)) {
-                        return Colors.white;
+                Text('Type', style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: _showTypeInfo,
+                  child: Icon(Icons.info_outline, size: 18, color: primaryColor),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.grey[200],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() {
+                        _adType = 'promo';
+                      }),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: _adType == 'promo' ? primaryColor : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Promotion',
+                            style: TextStyle(
+                              color: _adType == 'promo' ? Colors.white : adaptiveTextColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() {
+                        _adType = 'advert';
+                      }),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: _adType == 'advert' ? primaryColor : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Advert',
+                            style: TextStyle(
+                              color: _adType == 'advert' ? Colors.white : adaptiveTextColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+            
+            // Caption Section
+            Text('Describe your deal', style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _captionController,
+              style: TextStyle(color: adaptiveTextColor),
+              decoration: InputDecoration(
+                hintText: 'Ex: 20% off all summer items...',
+                hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.all(16),
+              ),
+              maxLines: 3,
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Promo Period Section (Only shown for Promotion type)
+            if (_adType == 'promo')
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_today_outlined, color: primaryColor, size: 20),
+                            const SizedBox(width: 12),
+                            Text('Set Promo Period', style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.w600)),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: _showPeriodInfo,
+                              child: Icon(Icons.info_outline, size: 18, color: primaryColor),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 24),
+                    GestureDetector(
+                      onTap: _selectPromoDates,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Starts', style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 12)),
+                                  const SizedBox(height: 4),
+                                  Text(_promoStartDate != null ? DateFormat('MMM dd, yyyy').format(_promoStartDate!) : 'Select Date',
+                                    style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.arrow_forward, size: 16, color: isDark ? Colors.white24 : Colors.black26),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text('Ends', style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 12)),
+                                  const SizedBox(height: 4),
+                                  Text(_promoEndDate != null ? DateFormat('MMM dd, yyyy').format(_promoEndDate!) : 'Select Date',
+                                    style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            
+            const SizedBox(height: 24),
+            
+            // Pricing Section
+            AdPricingSelector(
+              selectedDays: _adDays,
+              // Logic already implemented to disable interaction
+              onDaysChanged: (days) => setState(() => _adDays = days),
+              pricePerDay: 10.0,
+              seasonalMultiplier: _seasonalMultiplier,
+            ),
+            
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                '$_seasonLabel Pricing Active',
+                style: TextStyle(
+                  color: Colors.orange,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Terms and Conditions
+            Row(
+              children: [
+                Theme(
+                  data: ThemeData(
+                    unselectedWidgetColor: isDark ? Colors.white : Colors.grey,
+                  ),
+                  child: Checkbox(
+                    value: _acceptedTerms,
+                    activeColor: primaryColor,
+                    checkColor: Colors.white,
+                    onChanged: (val) {
+                      if (!_acceptedTerms) {
+                        _showTermsAndConditions();
+                      } else {
+                        setState(() => _acceptedTerms = false);
                       }
-                      return Colors.white54;
-                    }
-                    return Theme.of(context).colorScheme.primary;
-                  }),
+                    },
+                  ),
                 ),
                 Expanded(
                   child: GestureDetector(
                     onTap: _showTermsAndConditions,
-                    child: Text('I accept the Terms & Conditions', style: TextStyle(color: textColor)),
+                    child: RichText(
+                      text: TextSpan(
+                        text: 'I accept the ',
+                        style: TextStyle(color: adaptiveTextColor),
+                        children: [
+                          TextSpan(
+                            text: 'Terms & Conditions',
+                            style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _isSubmitting || _mediaFile == null || !_acceptedTerms ? null : _submitAd,
-              child: _isSubmitting
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Submit for Review'),
+            
+            const SizedBox(height: 32),
+            
+            // Submit Button
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: _isSubmitting || (_mediaFile == null && _existingMediaUrl == null) || !_acceptedTerms ? null : _submitAd,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                child: _isSubmitting
+                    ? const CupertinoActivityIndicator(color: Colors.white)
+                    : Text(widget.adToEdit != null ? 'Save Changes' : 'Submit for Review', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
             ),
+            const SizedBox(height: 40),
           ],
         ),
       ),

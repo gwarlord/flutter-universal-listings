@@ -29,8 +29,7 @@ import 'package:instaflutter/listings/listings_module/api/listings_api_manager.d
 import 'package:provider/provider.dart';
 import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 
-// Add legacy chat for later deletion
-enum DrawerSelection { home, conversations, categories, search, profile, legacychat }
+enum DrawerSelection { home, conversations, categories, search, profile }
 
 class ContainerWrapperWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -56,6 +55,7 @@ class ContainerScreen extends StatefulWidget {
   const ContainerScreen({super.key, required this.user});
 
   @override
+
   State<ContainerScreen> createState() {
     return _ContainerState();
   }
@@ -378,22 +378,6 @@ class _ContainerState extends State<ContainerScreen> {
                         currentTabIndex: 2,
                         drawerSelection: DrawerSelection.conversations,
                         currentWidget: ConversationsWrapperWidget(user: currentUser),
-                      ));
-                    },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
-                  ),
-                  _drawerTile(
-                    title: 'Legacy Chat (To Delete)',
-                    icon: Icons.chat,
-                    isSelected: _drawerSelection == DrawerSelection.legacychat,
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.read<ContainerBloc>().add(TabSelectedEvent(
-                        appBarTitle: 'Legacy Chat',
-                        currentTabIndex: 4,
-                        drawerSelection: DrawerSelection.legacychat,
-                        currentWidget: const Placeholder(),
                       ));
                     },
                     isDark: isDark,
