@@ -251,10 +251,35 @@ class _ContainerState extends State<ContainerScreen> {
                     : null,
                 drawer: _buildModernDrawer(context, currentUser, isDark),
                 appBar: AppBar(
-                  leading: Builder(
-                    builder: (context) => IconButton(
-                      icon: const Icon(Icons.menu),
-                      onPressed: () => Scaffold.of(context).openDrawer(),
+                  leadingWidth: 96,
+                  leading: SizedBox(
+                    width: 96,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Builder(
+                          builder: (context) => IconButton(
+                            icon: const Icon(Icons.menu),
+                            onPressed: () => Scaffold.of(context).openDrawer(),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => push(context, ProfileScreen(currentUser: currentUser)),
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 8, right: 4),
+                            child: CircleAvatar(
+                              radius: 18,
+                              backgroundImage: currentUser.profilePictureURL.isNotEmpty
+                                  ? NetworkImage(currentUser.profilePictureURL)
+                                  : null,
+                              backgroundColor: Colors.grey[300],
+                              child: currentUser.profilePictureURL.isEmpty
+                                  ? Icon(Icons.person, color: Colors.grey[700])
+                                  : null,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   actions: [
@@ -315,25 +340,6 @@ class _ContainerState extends State<ContainerScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _drawerSectionLabel('Account'.tr(), isDark),
-                  _drawerTile(
-                    title: 'Profile'.tr(),
-                    icon: Icons.person_rounded,
-                    isSelected: _drawerSelection == DrawerSelection.profile,
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.read<ContainerBloc>().add(TabSelectedEvent(
-                        appBarTitle: 'Profile'.tr(),
-                        currentTabIndex: 3,
-                        drawerSelection: DrawerSelection.profile,
-                        currentWidget: ProfileScreen(currentUser: currentUser),
-                      ));
-                    },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
-                  ),
-
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
                   _drawerSectionLabel('Browse'.tr(), isDark),
                   _drawerTile(
                     title: 'Home'.tr(),
@@ -399,7 +405,26 @@ class _ContainerState extends State<ContainerScreen> {
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
-                  
+
+                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
+                  _drawerSectionLabel('Account'.tr(), isDark),
+                  _drawerTile(
+                    title: 'Profile'.tr(),
+                    icon: Icons.person_rounded,
+                    isSelected: _drawerSelection == DrawerSelection.profile,
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.read<ContainerBloc>().add(TabSelectedEvent(
+                        appBarTitle: 'Profile'.tr(),
+                        currentTabIndex: 3,
+                        drawerSelection: DrawerSelection.profile,
+                        currentWidget: ProfileScreen(currentUser: currentUser),
+                      ));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+
                   const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
                   _drawerSectionLabel('Your Activity'.tr(), isDark),
                   _drawerTile(

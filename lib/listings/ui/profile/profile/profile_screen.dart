@@ -307,13 +307,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               const Divider(height: 32, indent: 32, endIndent: 32),
                             ],
-                            _modernListTile(
-                              context,
-                              icon: Icons.verified_outlined,
-                              iconColor: Theme.of(context).colorScheme.primary,
-                              title: 'Ad Approval'.tr(),
-                              onTap: () => push(context, AdApprovalScreen(currentUser: currentUser)),
-                            ),
+                            if (currentUser.isAdmin)
+                              _modernListTile(
+                                context,
+                                icon: Icons.verified_outlined,
+                                iconColor: Theme.of(context).colorScheme.primary,
+                                title: 'Ad Approval'.tr(),
+                                onTap: () => push(context, AdApprovalScreen(currentUser: currentUser)),
+                              ),
                             _modernListTile(
                               context,
                               icon: Icons.list_alt_outlined,

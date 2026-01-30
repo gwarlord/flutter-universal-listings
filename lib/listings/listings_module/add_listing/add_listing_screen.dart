@@ -829,40 +829,31 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
 
   Future<void> _showLogoUploadOptions() async {
-    showModalBottomSheet(
+    showCupertinoModalPopup(
       context: context,
-      builder: (context) {
-        final dark = isDarkMode(context);
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(
-                  Icons.photo_library,
-                  color: dark ? Color(colorPrimary) : null,
-                ),
-                title: Text('Choose from gallery'.tr()),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickLogo(fromGallery: true);
-                },
-              ),
-              ListTile(
-                leading: Icon(
-                  Icons.camera_alt,
-                  color: dark ? Color(colorPrimary) : null,
-                ),
-                title: Text('Take a photo'.tr()),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickLogo(fromGallery: false);
-                },
-              ),
-            ],
+      builder: (context) => CupertinoActionSheet(
+        message: Text('Add logo'.tr()),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _pickLogo(fromGallery: true);
+            },
+            child: Text('Choose from gallery'.tr()),
           ),
-        );
-      },
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _pickLogo(fromGallery: false);
+            },
+            child: Text('Take a picture'.tr()),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancel'.tr()),
+        ),
+      ),
     );
   }
 
@@ -1526,7 +1517,33 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
   // Add missing _postListing stub if not present
   void _postListing() {
-    // TODO: Implement listing post logic
+    // Validate required fields before posting
+    if (_titleController.text.trim().isEmpty || _categoryValue == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please fill in all required fields'.tr())),
+      );
+      return;
+    }
+
+    context.read<AddListingBloc>().add(
+      AddListingEvent(
+        title: _titleController.text.trim(),
+        description: _descController.text.trim(),
+        category: _categoryValue!,
+        price: double.tryParse(_priceController.text.trim()) ?? 0.0,
+        phone: _phoneController.text.trim(),
+        email: _emailController.text.trim(),
+        website: _websiteController.text.trim(),
+        instagram: _instagramController.text.trim(),
+        facebook: _facebookController.text.trim(),
+        tiktok: _tiktokController.text.trim(),
+        whatsapp: _whatsappController.text.trim(),
+        youtube: _youtubeController.text.trim(),
+        x: _xController.text.trim(),
+        currency: _selectedCurrencyCode,
+        // Add other fields as needed
+      ),
+    );
   }
 
   void _showAddTimeBlockDialog(bool dark) async {
