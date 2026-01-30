@@ -7,14 +7,16 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/core/model/chat_feed_model.dart';
 import 'package:instaflutter/core/model/channel_data_model.dart';
+import 'package:instaflutter/core/model/user.dart';
 import 'package:instaflutter/core/ui/chat/chat/chat_screen.dart';
 import 'package:instaflutter/core/ui/chat/api/chat_api_manager.dart';
 import 'package:instaflutter/core/ui/chat/api/conversations_data_factory.dart';
 import 'package:instaflutter/core/ui/chat/conversation/conversation_bloc.dart';
-import 'package:instaflutter/core/ui/chat/group_conversation_tile.dart';
-import 'package:instaflutter/core/ui/chat/private_conversation_tile.dart';
+import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:collection/collection.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ConversationsWrapperWidget extends StatelessWidget {
   const ConversationsWrapperWidget({super.key, required this.user});
@@ -42,50 +44,43 @@ class ConversationsScreen extends StatefulWidget {
 
 class _ConversationsState extends State<ConversationsScreen> {
   late ListingsUser user;
-  // FIX 1: Use late final for modern PagingController initialization
   late final PagingController<int, ChatFeedModel> _conversationsController;
-  ConversationsDataFactory conversationsDataFactory =
-      ConversationsDataFactory();
+  ConversationsDataFactory conversationsDataFactory = ConversationsDataFactory();
   int pageSize = pageSizeLimit;
 
   @override
   void initState() {
     super.initState();
     user = widget.user;
-    // Start live conversation listener
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ConversationsBloc>().add(InitConversationsEvent());
     });
-    // FIX 1: UPGRADED PagingController INITIALIZATION with fetchPage
+    
     _conversationsController = PagingController<int, ChatFeedModel>(
       fetchPage: (pageKey) {
         final completer = Completer<List<ChatFeedModel>>();
-        // Call the Bloc event, using the Completer to signal when data is ready
         context.read<ConversationsBloc>().add(FetchConversationsPageEvent(
           page: pageKey,
           size: pageSize,
-          completer: completer, // Assuming the event/bloc handles this
+          completer: completer,
         ));
         return completer.future;
       },
-      getNextPageKey: (state) =>
-          state.lastPageIsEmpty ? null : state.nextIntPageKey,
+      getNextPageKey: (state) => state.lastPageIsEmpty ? null : state.nextIntPageKey,
     );
-    // FIX 2: Removed addPageRequestListener
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return BlocConsumer<ConversationsBloc, ConversationsState>(
       listener: (context, state) {
         if (state is UpdateLiveConversationsState) {
-          conversationsDataFactory.newLiveConversations =
-              state.liveConversations;
-              
-          // FIX 3: Replaced _conversationsController.itemList = ... with copyWith
-            final allConversations =
-              conversationsDataFactory.getAllConversations()
-                .where((c) => c.id != null && c.id.isNotEmpty && (c.chatFeedContent.content != null && c.chatFeedContent.content.trim().isNotEmpty))
+          conversationsDataFactory.newLiveConversations = state.liveConversations;
+          final allConversations = conversationsDataFactory.getAllConversations()
+                .where((c) => c.id.isNotEmpty && (c.chatFeedContent.content.trim().isNotEmpty || c.listingTitle.isNotEmpty))
                 .toList();
           _conversationsController.value = _conversationsController.value.copyWith(
             pages: [allConversations],
@@ -96,25 +91,15 @@ class _ConversationsState extends State<ConversationsScreen> {
           );
         } else if (state is NewConversationsPageState) {
           final isLastPage = state.newPage.length < pageSize;
-          
-          // FIX 3: Replaced direct manipulation with state copy
           final existingPages = _conversationsController.value.pages ?? [];
           final newPageIds = Set.from(state.newPage.map((c) => c.id));
           
-          // 1. Remove duplicates from existing pages
           final List<List<ChatFeedModel>> updatedPages = existingPages
-              .map((page) =>
-                  page.where((c) => !newPageIds.contains(c.id)).toList())
+              .map((page) => page.where((c) => !newPageIds.contains(c.id)).toList())
               .toList();
               
-          // 2. Add the new page
           updatedPages.add(state.newPage);
-
-          // 3. Update keys 
-          final newKeys = [
-            ...?_conversationsController.value.keys,
-            state.oldPageKey
-          ];
+          final newKeys = [...?_conversationsController.value.keys, state.oldPageKey];
 
           _conversationsController.value = _conversationsController.value.copyWith(
             pages: updatedPages,
@@ -123,10 +108,8 @@ class _ConversationsState extends State<ConversationsScreen> {
             error: null,
             isLoading: false,
           );
-          
           conversationsDataFactory.appendHistoricalConversations(state.newPage);
         } else if (state is ConversationsPageErrorState) {
-          // FIX 3: Replaced _conversationsController.error = ... with copyWith
           _conversationsController.value = _conversationsController.value.copyWith(
             error: state.error,
             isLoading: false,
@@ -134,75 +117,37 @@ class _ConversationsState extends State<ConversationsScreen> {
         }
       },
       builder: (context, state) {
-        return GestureDetector(
-          onTap: () {
-            final FocusScopeNode currentScope = FocusScope.of(context);
-            if (!currentScope.hasPrimaryFocus && currentScope.hasFocus) {
-              FocusManager.instance.primaryFocus!.unfocus();
-            }
-          },
-          child: RefreshIndicator(
+        return Scaffold(
+          backgroundColor: isDark ? Colors.black : Colors.white,
+          body: RefreshIndicator(
+            color: Color(colorPrimary),
             onRefresh: () async {
               _conversationsController.refresh();
-              // Also restart the live conversation listener
               context.read<ConversationsBloc>().add(InitConversationsEvent());
             },
-            child: CustomScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              slivers: [
-                // FIX 4: Wrap PagedSliverList in PagingListener
-                PagingListener(
-                  controller: _conversationsController,
-                  builder: (context, state, fetchNextPage) =>
-                      PagedSliverList<int, ChatFeedModel>.separated(
-                    state: state,
-                    fetchNextPage: fetchNextPage,
-                    builderDelegate: PagedChildBuilderDelegate(
-                      invisibleItemsThreshold: 5,
-                      animateTransitions: true,
-                      noItemsFoundIndicatorBuilder: (context) => Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.chat_bubble_outline,
-                                size: 80,
-                                color: Colors.grey.withOpacity(0.3),
-                              ),
-                              const SizedBox(height: 24),
-                              Text(
-                                'No Conversations Yet',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[600],
-                                ),
-                              ).tr(),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Start chatting with sellers and buyers by visiting listings',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[500],
-                                ),
-                                textAlign: TextAlign.center,
-                              ).tr(),
-                            ],
-                          ),
-                        ),
-                      ),
-                      firstPageProgressIndicatorBuilder: (context) =>
-                          const Center(
-                        child: CircularProgressIndicator.adaptive(),
-                      ),
-                      itemBuilder: (context, conversation, index) =>
-                          _buildConversationRow(conversation),
-                    ),
-                    separatorBuilder: (context, index) => const Divider()),
+            child: PagingListener(
+              controller: _conversationsController,
+              builder: (context, state, fetchNextPage) => PagedListView<int, ChatFeedModel>.separated(
+                padding: const EdgeInsets.only(top: 8),
+                state: state,
+                fetchNextPage: fetchNextPage,
+                builderDelegate: PagedChildBuilderDelegate(
+                  animateTransitions: true,
+                  noItemsFoundIndicatorBuilder: (context) => _buildEmptyState(isDark),
+                  firstPageProgressIndicatorBuilder: (context) => const Center(child: CircularProgressIndicator.adaptive()),
+                  itemBuilder: (context, conversation, index) => _ConversationItem(
+                    key: ValueKey(conversation.id + (conversation.markedAsRead ? 'read' : 'unread') + conversation.chatFeedContent.content),
+                    conversation: conversation,
+                    currentUserId: user.userID,
+                  ),
                 ),
-              ],
+                separatorBuilder: (context, index) => Divider(
+                  height: 1, 
+                  indent: 84, 
+                  endIndent: 16, 
+                  color: isDark ? Colors.white12 : Colors.black.withOpacity(0.05)
+                ),
+              ),
             ),
           ),
         );
@@ -210,134 +155,263 @@ class _ConversationsState extends State<ConversationsScreen> {
     );
   }
 
-  Widget _buildConversationRow(ChatFeedModel chatFeedModel) {
-    final hasListing = chatFeedModel.listingTitle.isNotEmpty || chatFeedModel.listingImage.isNotEmpty;
-    final listingTitle = chatFeedModel.listingTitle.isNotEmpty
-      ? chatFeedModel.listingTitle
-      : 'Listing';
-    final listingImage = chatFeedModel.listingImage;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final cardColor = isDark ? theme.colorScheme.surface : Colors.white;
-    final dividerColor = isDark ? Colors.grey[800] : Colors.grey[200];
-    final shadowColor = isDark ? Colors.black26 : Colors.grey.withOpacity(0.15);
-    final lastMessage = chatFeedModel.chatFeedContent.content;
-    final lastMessageDate = chatFeedModel.createdAt;
-    final dateTime = lastMessageDate > 0
-      ? DateTime.fromMillisecondsSinceEpoch(lastMessageDate)
-      : null;
-    final dateStr = dateTime != null ? DateFormat('E, MMM-dd, yyyy').format(dateTime) : '';
-    final timeStr = dateTime != null ? DateFormat('hh:mm a').format(dateTime) : '';
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-      child: Card(
-        color: cardColor,
-        elevation: 2,
-        shadowColor: shadowColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            // Open chat conversation on tap
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ChatWrapperWidget(
-                  channelDataModel: ChannelDataModel(
-                    id: chatFeedModel.id,
-                    participants: chatFeedModel.participants,
-                    participantProfilePictureURLs: chatFeedModel.chatFeedContent.participantProfilePictureURLs,
-                    name: chatFeedModel.title,
-                    channelID: chatFeedModel.id,
-                    lastMessage: chatFeedModel.chatFeedContent,
-                    lastMessageDate: chatFeedModel.chatFeedContent.createdAt,
-                    lastThreadMessageId: chatFeedModel.chatFeedContent.id,
-                    listingId: chatFeedModel.listingId,
-                    listingTitle: chatFeedModel.listingTitle,
-                    listingImage: chatFeedModel.listingImage,
-                  ),
-                  currentUser: user,
-                  colorPrimary: Color(colorPrimary),
-                  colorAccent: Color(colorAccent),
-                ),
-              ),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundImage: (listingImage.isNotEmpty)
-                      ? NetworkImage(listingImage)
-                      : null,
-                  backgroundColor: Colors.grey[200],
-                  child: listingImage.isEmpty
-                      ? Icon(Icons.image, color: Colors.grey[400], size: 32)
-                      : null,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        hasListing && listingTitle.isNotEmpty ? listingTitle : 'Listing',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 17,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        lastMessage,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: isDark ? Colors.grey[400] : Colors.grey[700],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      dateStr,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: isDark ? Colors.grey[500] : Colors.grey[500],
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      timeStr,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: isDark ? Colors.grey[500] : Colors.grey[500],
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
+  Widget _buildEmptyState(bool isDark) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.chat_bubble_outline, size: 80, color: Colors.grey.withOpacity(0.3)),
+          const SizedBox(height: 24),
+          Text(
+            'No Conversations Yet',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[600]),
+          ).tr(),
+        ],
       ),
     );
+  }
+}
+
+class _ConversationItem extends StatefulWidget {
+  final ChatFeedModel conversation;
+  final String currentUserId;
+
+  const _ConversationItem({
+    super.key,
+    required this.conversation,
+    required this.currentUserId,
+  });
+
+  @override
+  State<_ConversationItem> createState() => _ConversationItemState();
+}
+
+class _ConversationItemState extends State<_ConversationItem> {
+  User? _otherUser;
+  StreamSubscription? _userSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _initUserListener();
+  }
+
+  void _initUserListener() {
+    final otherUserFromModel = widget.conversation.participants.firstWhereOrNull((p) => p.userID != widget.currentUserId);
+    if (otherUserFromModel != null && otherUserFromModel.profilePictureURL.isNotEmpty) {
+       _otherUser = otherUserFromModel;
+    }
+
+    final otherUserId = otherUserFromModel?.userID;
+    if (otherUserId != null) {
+      _userSub = FirebaseFirestore.instance
+          .collection(usersCollection)
+          .doc(otherUserId)
+          .snapshots()
+          .listen((snap) {
+        if (snap.exists && mounted) {
+          setState(() {
+            _otherUser = User.fromJson(snap.data()!);
+          });
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
-    _conversationsController.dispose();
+    _userSub?.cancel();
     super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final isUnread = !widget.conversation.markedAsRead;
+    
+    final displayName = widget.conversation.title;
+    final lastMsg = widget.conversation.chatFeedContent.content;
+    final lastMsgDate = (widget.conversation.chatFeedContent.createdAt > widget.conversation.createdAt)
+        ? widget.conversation.chatFeedContent.createdAt
+        : widget.conversation.createdAt;
+    final timeStr = lastMsgDate > 0 
+        ? DateFormat('h:mm a').format(DateTime.fromMillisecondsSinceEpoch(lastMsgDate))
+        : '';
+
+    final isActive = _otherUser?.active ?? false;
+    final profilePic = _otherUser?.profilePictureURL ?? '';
+    final listingLogo = widget.conversation.listingImage;
+
+    return InkWell(
+      onTap: () {
+        push(
+          context,
+          ChatWrapperWidget(
+            channelDataModel: ChannelDataModel(
+              id: widget.conversation.id,
+              participants: widget.conversation.participants,
+              participantProfilePictureURLs: widget.conversation.chatFeedContent.participantProfilePictureURLs,
+              name: widget.conversation.title,
+              channelID: widget.conversation.id,
+              lastMessage: widget.conversation.chatFeedContent,
+              lastMessageDate: widget.conversation.chatFeedContent.createdAt,
+              lastThreadMessageId: widget.conversation.chatFeedContent.id,
+              listingId: widget.conversation.listingId,
+              listingTitle: widget.conversation.listingTitle,
+              listingImage: widget.conversation.listingImage,
+            ),
+            currentUser: ListingsUser(userID: widget.currentUserId),
+            colorPrimary: Color(colorPrimary),
+            colorAccent: Color(colorAccent),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: isUnread 
+              ? (isDark ? Color(colorPrimary).withOpacity(0.12) : Color(colorPrimary).withOpacity(0.07)) 
+              : Colors.transparent,
+          border: isUnread 
+              ? Border(left: BorderSide(color: Color(colorPrimary), width: 4))
+              : null,
+        ),
+        child: Row(
+          children: [
+            // Branded Avatar
+            SizedBox(
+              width: 60,
+              height: 60,
+              child: Stack(
+                children: [
+                  // Profile Image
+                  Center(
+                    child: Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isUnread ? Color(colorPrimary).withOpacity(0.5) : Colors.transparent, 
+                          width: 2
+                        ),
+                      ),
+                      child: displayCircleImage(profilePic, 50, false),
+                    ),
+                  ),
+                  // Active Status Indicator (RED DOT)
+                  if (isActive)
+                    Positioned(
+                      right: 4,
+                      bottom: 4,
+                      child: Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: isDark ? Colors.black : Colors.white, width: 2.5),
+                        ),
+                      ),
+                    ),
+                  // LISTING LOGO Overlay (Top Right)
+                  if (listingLogo.isNotEmpty)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: isDark ? Colors.black : Colors.white, width: 1.5),
+                          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+                        ),
+                        child: ClipOval(
+                          child: Image.network(
+                            listingLogo,
+                            width: 18,
+                            height: 18,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 14),
+            // Text Area
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          displayName,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: isUnread ? FontWeight.w900 : FontWeight.w600,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        timeStr,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isUnread ? Color(colorPrimary) : Colors.grey,
+                          fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  if (widget.conversation.listingTitle.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Text(
+                        widget.conversation.listingTitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(colorPrimary).withOpacity(0.9),
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          lastMsg,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isUnread 
+                                ? (isDark ? Colors.white : Colors.black87) 
+                                : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                            fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

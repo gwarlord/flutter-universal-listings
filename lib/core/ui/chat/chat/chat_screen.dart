@@ -419,46 +419,57 @@ class _ChatScreenState extends State<ChatScreen> {
                                 const Center(
                                   child: CircularProgressIndicator.adaptive(),
                                 ),
-                                newPageProgressIndicatorBuilder: (_) =>
-                                const Center(
-                                  child: CircularProgressIndicator.adaptive(),
-                                ),
                                 itemBuilder: (context, message, index) {
                                   // Use the local _loadedMessages for day separator logic
                                   final messages = _loadedMessages;
                                   bool showDaySeparator = false;
                                   String? dayString;
-                                  if (index == messages.length - 1) {
+                                  
+                                  final currDate = DateTime.fromMillisecondsSinceEpoch(message.createdAt);
+                                  
+                                  if (index == 0) {
                                     showDaySeparator = true;
-                                  } else if (index < messages.length - 1) {
-                                    final nextMsg = messages[index + 1];
-                                    final currDate = DateTime.fromMillisecondsSinceEpoch(message.createdAt);
-                                    final nextDate = DateTime.fromMillisecondsSinceEpoch(nextMsg.createdAt);
-                                    if (currDate.year != nextDate.year || currDate.month != nextDate.month || currDate.day != nextDate.day) {
+                                  } else {
+                                    final prevMsg = messages[index - 1];
+                                    final prevDate = DateTime.fromMillisecondsSinceEpoch(prevMsg.createdAt);
+                                    if (currDate.year != prevDate.year || currDate.month != prevDate.month || currDate.day != prevDate.day) {
                                       showDaySeparator = true;
                                     }
                                   }
+                                  
                                   if (showDaySeparator) {
-                                    final currDate = DateTime.fromMillisecondsSinceEpoch(message.createdAt);
-                                    dayString = DateFormat('MMM d, h:mma').format(currDate).toLowerCase();
+                                    final now = DateTime.now();
+                                    if (currDate.year == now.year && currDate.month == now.month && currDate.day == now.day) {
+                                      dayString = 'Today'.tr();
+                                    } else if (currDate.year == now.year && currDate.month == now.month && currDate.day == now.day - 1) {
+                                      dayString = 'Yesterday'.tr();
+                                    } else {
+                                      dayString = DateFormat('MMMM d, yyyy').format(currDate);
+                                    }
                                   }
+                                  
                                   return Column(
                                     children: [
                                       if (showDaySeparator && dayString != null)
                                         Padding(
-                                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                          padding: const EdgeInsets.symmetric(vertical: 16.0),
                                           child: Row(
                                             mainAxisAlignment: MainAxisAlignment.center,
                                             children: [
                                               Container(
-                                                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+                                                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
                                                 decoration: BoxDecoration(
-                                                  color: Colors.grey.shade300,
-                                                  borderRadius: BorderRadius.circular(16),
+                                                  color: isDarkMode(context) ? Colors.white10 : Colors.grey.shade200,
+                                                  borderRadius: BorderRadius.circular(20),
                                                 ),
                                                 child: Text(
                                                   dayString,
-                                                  style: const TextStyle(fontSize: 13, color: Colors.black54, fontWeight: FontWeight.w500),
+                                                  style: TextStyle(
+                                                    fontSize: 12, 
+                                                    color: isDarkMode(context) ? Colors.white70 : Colors.black54, 
+                                                    fontWeight: FontWeight.bold,
+                                                    letterSpacing: 0.5,
+                                                  ),
                                                 ),
                                               ),
                                             ],
@@ -472,7 +483,6 @@ class _ChatScreenState extends State<ChatScreen> {
                                     ],
                                   );
                                 },
-                                // reverse: true, // Removed invalid parameter
                               ),
                             ),
                       ),
@@ -852,7 +862,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
     if (!showTime) return messageWidget;
     final msgDate = DateTime.fromMillisecondsSinceEpoch(messageData.createdAt);
-    final msgTimeString = DateFormat('MMM d, h:mma').format(msgDate).toLowerCase();
+    final msgTimeString = DateFormat('h:mma').format(msgDate).toLowerCase();
     return Column(
       crossAxisAlignment: messageData.senderID == currentUser.userID
           ? CrossAxisAlignment.end
@@ -863,7 +873,7 @@ class _ChatScreenState extends State<ChatScreen> {
           padding: const EdgeInsets.only(left: 12.0, right: 12.0, top: 2, bottom: 2),
           child: Text(
             msgTimeString,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
           ),
         ),
       ],
@@ -871,6 +881,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget myMessageView(ChatFeedContent messageData) {
+    // Show the profile/avatar in the small circle, and the logo in the bubble
     return Padding(
       padding: const EdgeInsets.only(top: 8.0),
       child: Row(
@@ -879,7 +890,7 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Padding(
             padding: const EdgeInsetsDirectional.only(end: 12.0),
-            child: _myMessageContentWidget(messageData),
+            child: _myMessageContentWidgetWithLogo(messageData),
           ),
           displayCircleImage(messageData.senderProfilePictureURL, 35, false),
         ],
@@ -887,7 +898,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _myMessageContentWidget(ChatFeedContent messageData) {
+  Widget _myMessageContentWidgetWithLogo(ChatFeedContent messageData) {
     var mediaUrl = '';
     if (messageData.chatMedia != null) {
       if (messageData.chatMedia!.mime.contains('video')) {
@@ -896,6 +907,9 @@ class _ChatScreenState extends State<ChatScreen> {
         mediaUrl = messageData.chatMedia!.url;
       }
     }
+
+    // Get the listing logo from the channelDataModel
+    final listingLogo = channelDataModel.listingImage ?? '';
 
     // NOTE: We intentionally avoid using TextDirection.ltr/rtl in this file.
     // Directional widgets handle LTR/RTL automatically.
@@ -922,14 +936,32 @@ class _ChatScreenState extends State<ChatScreen> {
                 shape: BoxShape.rectangle,
                 borderRadius: const BorderRadius.all(Radius.circular(8)),
               ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                child: PlayerWidget(
-                  url: messageData.chatMedia!.url,
-                  color: isDarkMode(context)
-                      ? Colors.grey.shade800
-                      : Colors.grey.shade200,
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (listingLogo.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          listingLogo,
+                          height: 60,
+                          width: 60,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                    child: PlayerWidget(
+                      url: messageData.chatMedia!.url,
+                      color: isDarkMode(context)
+                          ? Colors.grey.shade800
+                          : Colors.grey.shade200,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -960,6 +992,20 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
               ),
+              if (listingLogo.isNotEmpty)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      listingLogo,
+                      height: 40,
+                      width: 40,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
               if (messageData.chatMedia?.thumbnailURL != null)
                 FloatingActionButton(
                   mini: true,
@@ -1005,16 +1051,34 @@ class _ChatScreenState extends State<ChatScreen> {
                 shape: BoxShape.rectangle,
                 borderRadius: const BorderRadius.all(Radius.circular(8)),
               ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                child: Text(
-                  messageData.content,
-                  textAlign: TextAlign.start,
-                  style: TextStyle(
-                    color: isDarkMode(context) ? Colors.black : Colors.white,
-                    fontSize: 16,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (listingLogo.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          listingLogo,
+                          height: 60,
+                          width: 60,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                    child: Text(
+                      messageData.content,
+                      textAlign: TextAlign.start,
+                      style: TextStyle(
+                        color: isDarkMode(context) ? Colors.black : Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
@@ -1032,6 +1096,7 @@ class _ChatScreenState extends State<ChatScreen> {
       return const SizedBox();
     }
 
+    // Show the profile/avatar in the small circle, and the logo in the bubble
     return Padding(
       padding: const EdgeInsets.only(top: 8.0),
       child: Row(
@@ -1064,14 +1129,14 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           Padding(
             padding: const EdgeInsetsDirectional.only(start: 12.0),
-            child: _remoteMessageContentWidget(messageData),
+            child: _remoteMessageContentWidgetWithLogo(messageData),
           ),
         ],
       ),
     );
   }
 
-  Widget _remoteMessageContentWidget(ChatFeedContent messageData) {
+  Widget _remoteMessageContentWidgetWithLogo(ChatFeedContent messageData) {
     var mediaUrl = '';
     if (messageData.chatMedia != null) {
       if (messageData.chatMedia!.mime.contains('video')) {
@@ -1080,6 +1145,9 @@ class _ChatScreenState extends State<ChatScreen> {
         mediaUrl = messageData.chatMedia?.url ?? '';
       }
     }
+
+    // Get the listing logo from the channelDataModel
+    final listingLogo = channelDataModel.listingImage ?? '';
 
     if (mediaUrl.contains('audio')) {
       return Stack(
@@ -1105,14 +1173,32 @@ class _ChatScreenState extends State<ChatScreen> {
                 shape: BoxShape.rectangle,
                 borderRadius: const BorderRadius.all(Radius.circular(8)),
               ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                child: PlayerWidget(
-                  url: messageData.chatMedia!.url,
-                  color: isDarkMode(context)
-                      ? widget.colorAccent
-                      : widget.colorPrimary,
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (listingLogo.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          listingLogo,
+                          height: 60,
+                          width: 60,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                    child: PlayerWidget(
+                      url: messageData.chatMedia!.url,
+                      color: isDarkMode(context)
+                          ? widget.colorAccent
+                          : widget.colorPrimary,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -1143,6 +1229,20 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
               ),
+              if (listingLogo.isNotEmpty)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      listingLogo,
+                      height: 40,
+                      width: 40,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
               if (messageData.chatMedia?.thumbnailURL != null)
                 FloatingActionButton(
                   mini: true,
@@ -1188,16 +1288,34 @@ class _ChatScreenState extends State<ChatScreen> {
                 shape: BoxShape.rectangle,
                 borderRadius: const BorderRadius.all(Radius.circular(8)),
               ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                child: Text(
-                  messageData.content,
-                  textAlign: TextAlign.start,
-                  style: TextStyle(
-                    color: isDarkMode(context) ? Colors.white : Colors.black,
-                    fontSize: 16,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (listingLogo.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          listingLogo,
+                          height: 60,
+                          width: 60,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                    child: Text(
+                      messageData.content,
+                      textAlign: TextAlign.start,
+                      style: TextStyle(
+                        color: isDarkMode(context) ? Colors.white : Colors.black,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ),

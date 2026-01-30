@@ -13,12 +13,15 @@ class TryToSubmitDataEvent extends AccountDetailsEvent {
   String lastName;
   String emailAddress;
   String phoneNumber;
+  String countryCode;
 
-  TryToSubmitDataEvent(
-      {required this.firstName,
-      required this.lastName,
-      required this.emailAddress,
-      required this.phoneNumber});
+  TryToSubmitDataEvent({
+    required this.firstName,
+    required this.lastName,
+    required this.emailAddress,
+    required this.phoneNumber,
+    required this.countryCode,
+  });
 }
 
 class UpdateUserDataEvent extends AccountDetailsEvent {
@@ -26,10 +29,13 @@ class UpdateUserDataEvent extends AccountDetailsEvent {
   String lastName;
   String emailAddress;
   String phoneNumber;
+  String countryCode;
 
-  UpdateUserDataEvent(
-      {required this.firstName,
-      required this.lastName,
-      required this.emailAddress,
-      required this.phoneNumber});
+  UpdateUserDataEvent({
+    required this.firstName,
+    required this.lastName,
+    required this.emailAddress,
+    required this.phoneNumber,
+    required this.countryCode,
+  });
 }

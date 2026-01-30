@@ -18,6 +18,7 @@ class DealAdModel {
   final String? reviewerId;
   final String authorID;
   final String adType; // 'advert' or 'promo'
+  final List<String> visibilityCountries; // List of country codes, empty = all
 
   DealAdModel({
     required this.id,
@@ -37,6 +38,7 @@ class DealAdModel {
     this.reviewerId,
     required this.authorID,
     this.adType = 'promo',
+    this.visibilityCountries = const [],
   });
 
   Map<String, dynamic> toMap() => {
@@ -57,6 +59,7 @@ class DealAdModel {
     'reviewerId': reviewerId,
     'authorID': authorID,
     'adType': adType,
+    'visibilityCountries': visibilityCountries,
   };
 
   factory DealAdModel.fromDoc(DocumentSnapshot doc) {
@@ -79,6 +82,7 @@ class DealAdModel {
       reviewerId: data['reviewerId'],
       authorID: data['authorID'] ?? '',
       adType: data['adType'] ?? 'promo',
+      visibilityCountries: List<String>.from(data['visibilityCountries'] ?? []),
     );
   }
 }

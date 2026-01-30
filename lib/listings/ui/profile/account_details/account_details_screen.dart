@@ -1,3 +1,5 @@
+import 'package:instaflutter/listings/utils/caribbean_countries.dart';
+import 'package:instaflutter/listings/utils/country_search_dialog.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -45,11 +47,19 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
   final GlobalKey<FormState> _key = GlobalKey();
   AutovalidateMode _validate = AutovalidateMode.disabled;
   String? firstName, email, mobile, lastName;
+  String? _countryCode;
+  String? validateCountry(String? code) {
+    if (code == null || code.trim().isEmpty) {
+      return 'Country is required';
+    }
+    return null;
+  }
 
   @override
   void initState() {
     super.initState();
     user = widget.user;
+    _countryCode = user.countryCode.isEmpty ? null : user.countryCode;
   }
 
   @override
@@ -79,6 +89,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                   lastName: lastName!,
                   emailAddress: email!,
                   phoneNumber: mobile!,
+                  countryCode: _countryCode ?? '',
                 ));
           } else if (state is ReauthRequiredState) {
             bool result = await showDialog(
@@ -111,6 +122,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                     lastName: lastName!,
                     emailAddress: email!,
                     phoneNumber: mobile!,
+                    countryCode: _countryCode ?? '',
                   ));
             }
           } else if (state is UpdatingDataState) {
@@ -183,6 +195,47 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         children: [
+                          // Country select
+                          GestureDetector(
+                            onTap: () async {
+                              final selected = await showCountrySearchDialog(context, _countryCode);
+                              if (selected != null) setState(() => _countryCode = selected);
+                            },
+                            child: AbsorbPointer(
+                              child: TextFormField(
+                                controller: TextEditingController(
+                                  text: CaribbeanCountries.all.firstWhere(
+                                    (c) => c.code == _countryCode,
+                                    orElse: () => CaribbeanCountry(code: '', name: ''),
+                                  ).name,
+                                ),
+                                validator: (_) => validateCountry(_countryCode),
+                                decoration: InputDecoration(
+                                  labelText: 'Country'.tr(),
+                                  prefixIcon: Icon(Icons.public, color: Color(colorPrimary)),
+                                  filled: true,
+                                  fillColor: isDark ? Colors.grey[900] : Colors.white,
+                                  hintStyle: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[600]),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: isDark ? Colors.grey.shade800 : Colors.grey.shade300),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: isDark ? Colors.grey.shade800 : Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: Color(colorPrimary), width: 2),
+                                  ),
+                                  labelStyle: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+                                ),
+                                readOnly: true,
+                              ),
+                            ),
+                          ),
+                          const Divider(height: 24),
                           _buildTextField(
                             context,
                             label: 'First Name'.tr(),

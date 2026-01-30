@@ -43,10 +43,38 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
         .collection(chatChannelsCollection)
         .doc(widget.channelId)
         .collection('thread');
+    
+    // Mark as read when entering the chat
+    _markAsRead();
+
     _messagesSubscription = _messagesRef
         .orderBy('createdAt', descending: true)
         .snapshots()
         .listen(_onMessageSnapshot);
+  }
+
+  void _markAsRead() async {
+    try {
+      final feedRef = FirebaseFirestore.instance
+          .collection(socialFeedsCollection)
+          .doc(widget.currentUserId)
+          .collection(chatFeedLiveCollection)
+          .doc(widget.channelId);
+      
+      await feedRef.set({
+        'markedAsRead': true,
+      }, SetOptions(merge: true));
+
+      // Also update the channel's readUserIDs for broader tracking
+      await FirebaseFirestore.instance
+          .collection(chatChannelsCollection)
+          .doc(widget.channelId)
+          .update({
+        'readUserIDs': FieldValue.arrayUnion([widget.currentUserId]),
+      });
+    } catch (e) {
+      debugPrint('Error marking as read: $e');
+    }
   }
 
   void _onMessageSnapshot(QuerySnapshot snapshot) {
@@ -81,6 +109,7 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
         'content': text,
         'createdAt': serverTimestamp,
         'senderID': widget.currentUserId,
+        'readUserIDs': [widget.currentUserId],
         });
 
         Set<String> participantIdsSet = {widget.currentUserId};
@@ -93,6 +122,7 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
         'content': text,
         'senderID': widget.currentUserId,
         'createdAt': serverTimestamp,
+        'readUserIDs': [widget.currentUserId],
         };
 
         final channelDocRef = FirebaseFirestore.instance
@@ -111,6 +141,7 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
             ..add(User(userID: widget.currentUserId).toJson()), 
         'listingTitle': widget.listingTitle,
         'listingImage': widget.listingImage,
+        'readUserIDs': [widget.currentUserId],
         'createdAt': channelSnap.exists ? (channelSnap.data()?['createdAt'] ?? serverTimestamp) : serverTimestamp,
         }, SetOptions(merge: true));
 

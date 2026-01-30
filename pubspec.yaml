@@ -74,6 +74,8 @@ dependencies:
   purchases_flutter: ^9.10.7
   purchases_ui_flutter: ^9.10.7
   google_generative_ai: ^0.4.6
+  google_fonts: ^6.2.1
+  metadata_fetch: ^0.4.2
 
 #dependency_overrides:
   #rxdart: 0.28.0

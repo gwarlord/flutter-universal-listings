@@ -26,6 +26,7 @@ import 'package:instaflutter/listings/ui/profile/contact_us/contact_us_screen.da
 import 'package:instaflutter/listings/ui/profile/settings/settings_screen.dart';
 import 'package:instaflutter/listings/ui/profile/profile/profile_bloc.dart';
 import 'package:instaflutter/core/ui/theme/theme_cubit.dart';
+import 'package:instaflutter/listings/utils/populate_test_data.dart';
 
 class ProfileScreen extends StatefulWidget {
   final ListingsUser currentUser;
@@ -238,6 +239,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         padding: const EdgeInsets.only(top: 8),
                         child: Column(
                           children: [
+                            if (currentUser.isAdmin) ...[
+                              _modernListTile(
+                                context,
+                                icon: Icons.playlist_add_rounded,
+                                iconColor: Colors.orange,
+                                title: 'Populate Test Data'.tr(),
+                                onTap: () async {
+                                  context.read<LoadingCubit>().showLoading(
+                                    context,
+                                    'Generating test content...'.tr(),
+                                    false,
+                                    Color(colorPrimary),
+                                  );
+                                  try {
+                                    await TestDataPopulator.populateAll();
+                                    if (context.mounted) {
+                                      context.read<LoadingCubit>().hideLoading();
+                                      showSnackBar(context, 'Test data generated successfully!'.tr());
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      context.read<LoadingCubit>().hideLoading();
+                                      showSnackBar(context, 'Error populating data. Check Firestore rules.'.tr());
+                                    }
+                                  }
+                                },
+                              ),
+                              _modernListTile(
+                                context,
+                                icon: Icons.delete_sweep_rounded,
+                                iconColor: Colors.redAccent,
+                                title: 'Purge Test Data'.tr(),
+                                onTap: () async {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: Text('Purge Data?'.tr()),
+                                      content: Text('Are you sure you want to remove all test data?'.tr()),
+                                      actions: [
+                                        TextButton(onPressed: () => Navigator.pop(context, false), child: Text('No'.tr())),
+                                        TextButton(onPressed: () => Navigator.pop(context, true), child: Text('Yes'.tr())),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirm == true && context.mounted) {
+                                    context.read<LoadingCubit>().showLoading(
+                                      context,
+                                      'Purging test content...'.tr(),
+                                      false,
+                                      Color(colorPrimary),
+                                    );
+                                    try {
+                                      await TestDataPopulator.purgeTestData();
+                                      if (context.mounted) {
+                                        context.read<LoadingCubit>().hideLoading();
+                                        showSnackBar(context, 'Test data purged successfully!'.tr());
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        context.read<LoadingCubit>().hideLoading();
+                                        showSnackBar(context, 'Error purging data. Check Firestore rules.'.tr());
+                                      }
+                                    }
+                                  }
+                                },
+                              ),
+                              const Divider(height: 32, indent: 32, endIndent: 32),
+                            ],
                             _modernListTile(
                               context,
                               icon: Icons.verified_outlined,
@@ -405,8 +474,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
         content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Are you absolutely sure?'.tr(),

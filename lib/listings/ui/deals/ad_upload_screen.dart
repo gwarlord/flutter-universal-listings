@@ -1,23 +1,26 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/listings_app_config.dart';
+import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 import 'package:instaflutter/listings/ui/deals/ad_format_guidance_screen.dart';
 import 'package:instaflutter/listings/ui/deals/ad_terms_and_conditions_screen.dart';
 import 'package:instaflutter/listings/ui/deals/ad_pricing_selector.dart';
+import 'package:instaflutter/listings/utils/caribbean_countries.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:instaflutter/listings/services/media_upload_service.dart';
 import 'package:instaflutter/listings/services/deal_ad_service.dart';
 import 'package:instaflutter/listings/model/deal_ad_model.dart';
-import 'package:instaflutter/listings/services/gemini_ai_service.dart';
 import 'package:instaflutter/listings/utils/ad_seasonality_helper.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:intl/intl.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 // Video preview widget for local file
 class _VideoPreviewWidget extends StatefulWidget {
@@ -100,6 +103,9 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
   // Ad Type variable
   String _adType = 'promo'; // 'advert' or 'promo'
 
+  // Visibility Filter variables
+  List<String> _selectedCountryCodes = [];
+
   @override
   void initState() {
     super.initState();
@@ -113,6 +119,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
       _promoStartDate = ad.startDate;
       _promoEndDate = ad.endDate;
       _acceptedTerms = true; // Already accepted for existing ad
+      _selectedCountryCodes = List<String>.from(ad.visibilityCountries);
     }
   }
 
@@ -273,13 +280,137 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
     );
   }
 
+  void _showCountrySelectionDialog() {
+    final user = context.read<AuthenticationBloc>().user;
+    final String? userCountryCode = user?.countryCode; 
+    
+    List<String> tempSelectedCountries = [..._selectedCountryCodes];
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final isDark = isDarkMode(context);
+            
+            // Prepare countries list
+            final allCountries = List<CaribbeanCountry>.from(CaribbeanCountries.all);
+            allCountries.sort((a, b) => a.name.compareTo(b.name));
+            
+            // Bring user's country to top if it exists
+            if (userCountryCode != null && userCountryCode.isNotEmpty) {
+              final userIdx = allCountries.indexWhere((c) => c.code == userCountryCode);
+              if (userIdx != -1) {
+                final userCountry = allCountries.removeAt(userIdx);
+                allCountries.insert(0, userCountry);
+              }
+            }
+
+            return AlertDialog(
+              backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Target Countries'.tr(),
+                    style: TextStyle(
+                      fontSize: 18, 
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      setDialogState(() {
+                        if (tempSelectedCountries.length == allCountries.length) {
+                          tempSelectedCountries.clear();
+                        } else {
+                          tempSelectedCountries = allCountries.map((c) => c.code).toList();
+                        }
+                      });
+                    },
+                    child: Text(
+                      tempSelectedCountries.length == allCountries.length ? 'Deselect All'.tr() : 'Select All'.tr(),
+                      style: TextStyle(color: Color(colorPrimary), fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: allCountries.length,
+                  itemBuilder: (context, index) {
+                    final country = allCountries[index];
+                    final isSelected = tempSelectedCountries.contains(country.code);
+
+                    return Theme(
+                      data: Theme.of(context).copyWith(
+                        unselectedWidgetColor: isDark ? Colors.white : null,
+                      ),
+                      child: CheckboxListTile(
+                        title: Text(
+                          country.name,
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 14),
+                        ),
+                        activeColor: Color(colorPrimary),
+                        checkColor: Colors.white,
+                        // No fillColor, use default
+                        side: isDark ? BorderSide(color: Colors.white, width: 2) : null,
+                        value: isSelected,
+                        onChanged: (bool? newValue) {
+                          setDialogState(() {
+                            if (newValue == true) {
+                              tempSelectedCountries.add(country.code);
+                            } else {
+                              tempSelectedCountries.remove(country.code);
+                            }
+                          });
+                        },
+                        controlAffinity: ListTileControlAffinity.leading,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('Cancel'.tr(), style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(colorPrimary),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _selectedCountryCodes = tempSelectedCountries;
+                    });
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(
+                    'Confirm'.tr(),
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   bool _isSubmitting = false;
 
   Future<void> _submitAd() async {
     if ((_mediaFile == null && _existingMediaUrl == null) || !_acceptedTerms) return;
     setState(() => _isSubmitting = true);
     try {
-      final listerId = widget.adToEdit?.listerId ?? 'demoListerId';
+      final listerId = widget.adToEdit?.listerId ?? context.read<AuthenticationBloc>().user?.userID ?? 'demoListerId';
       final listingId = widget.adToEdit?.listingId ?? 'demoListingId';
       final adId = widget.adToEdit?.id ?? const Uuid().v4();
       final mediaService = MediaUploadService();
@@ -328,6 +459,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
         reviewerId: widget.adToEdit?.reviewerId,
         authorID: listerId,
         adType: _adType,
+        visibilityCountries: _selectedCountryCodes,
       );
       
       await DealAdService().submitAd(ad);
@@ -484,6 +616,61 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                 ],
               ),
             ),
+
+            const SizedBox(height: 24),
+
+            // Visibility Filter Section
+            Text('Visibility', style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: _showCountrySelectionDialog,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Target Countries', style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 12)),
+                          const SizedBox(height: 4),
+                          Text(
+                            _selectedCountryCodes.isEmpty 
+                                ? 'All Countries (Default)'.tr() 
+                                : '${_selectedCountryCodes.length} Countries Selected'.tr(),
+                            style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.public, color: primaryColor),
+                  ],
+                ),
+              ),
+            ),
+            if (_selectedCountryCodes.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _selectedCountryCodes.map((code) {
+                  final country = CaribbeanCountries.byCode(code);
+                  return Chip(
+                    label: Text(country?.name ?? code, style: const TextStyle(fontSize: 12)),
+                    backgroundColor: primaryColor.withOpacity(0.1),
+                    deleteIconColor: primaryColor,
+                    onDeleted: () => setState(() => _selectedCountryCodes.remove(code)),
+                    side: BorderSide.none,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  );
+                }).toList(),
+              ),
+            ],
 
             const SizedBox(height: 24),
             

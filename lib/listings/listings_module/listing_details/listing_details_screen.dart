@@ -39,6 +39,8 @@ import 'package:instaflutter/core/ui/full_screen_video_viewer/full_screen_video_
 import 'package:instaflutter/core/model/channel_data_model.dart';
 import 'package:instaflutter/core/model/user.dart' as core_user;
 
+import 'package:metadata_fetch/metadata_fetch.dart';
+
 class ListingDetailsWrappingWidget extends StatelessWidget {
   final ListingModel listing;
   final ListingsUser currentUser;
@@ -78,7 +80,42 @@ class ListingDetailsScreen extends StatefulWidget {
 }
 
 class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
+
+    @override
+    void didUpdateWidget(covariant ListingDetailsScreen oldWidget) {
+      super.didUpdateWidget(oldWidget);
+      // If the listing or storeUrl changes, refetch the preview
+      if (widget.listing.storeUrl != oldWidget.listing.storeUrl) {
+        if (widget.listing.storeEnabled && widget.listing.storeUrl.isNotEmpty) {
+          _fetchStorePreview(widget.listing.storeUrl);
+        } else {
+          setState(() => _storePreview = null);
+        }
+      }
+    }
+  Map<String, dynamic>? _storePreview;
+
+  Future<void> _fetchStorePreview(String url) async {
+    try {
+      print('**** [StorePreview] Fetching metadata for: $url ****');
+      final data = await MetadataFetch.extract(url);
+      print('**** [StorePreview] Metadata result: '
+          'title: \'${data?.title}\', desc: \'${data?.description}\', image: \'${data?.image}\' ****');
+      if (data != null) {
+        setState(() {
+          _storePreview = {
+            'title': data.title,
+            'description': data.description,
+            'image': data.image,
+          };
+        });
+      }
+    } catch (e) {
+      print('**** [StorePreview] Error fetching metadata: $e ****');
+    }
+  }
   late ListingModel listing;
+  Stream<DocumentSnapshot<Map<String, dynamic>>>? _listingStream;
   int _pageIndex = 0;
   final PageController _pagerController = PageController(initialPage: 0);
   Timer? _autoScroll;
@@ -108,6 +145,13 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     super.initState();
     currentUser = widget.currentUser;
     listing = widget.listing;
+    _listingStream = FirebaseFirestore.instance
+        .collection(cfg.listingsCollection)
+        .doc(listing.id)
+        .snapshots();
+    if (listing.storeEnabled && listing.storeUrl.isNotEmpty) {
+      _fetchStorePreview(listing.storeUrl);
+    }
     if (listing.latitude != 0.0 && listing.longitude != 0.0) {
       _placeLocation = LatLng(listing.latitude, listing.longitude);
     }
@@ -254,228 +298,376 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     final primaryColor = Color(cfg.colorPrimary);
     final dividerColor = dark ? Colors.white12 : Colors.grey.shade300;
 
-    return MultiBlocListener(
-      listeners: [
-        BlocListener<ListingDetailsBloc, ListingDetailsState>(
-          listener: (context, state) async {
-            if (state is DeletedListingState) {
-              context.read<LoadingCubit>().hideLoading();
-              if (!mounted) return;
-              Navigator.pop(context, true);
-            }
-          },
-        ),
-      ],
-      child: Scaffold(
-        body: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            // Immersive Header (Airbnb/Spotify Style)
-            SliverAppBar(
-              expandedHeight: 350,
-              pinned: true,
-              elevation: 0,
-              stretch: true,
-              backgroundColor: dark ? Colors.black : Colors.white,
-              leading: _buildHeaderCircleButton(
-                icon: Icons.arrow_back,
-                onTap: () => Navigator.pop(context),
-                isDark: dark,
-              ),
-              actions: [
-                BlocConsumer<ListingDetailsBloc, ListingDetailsState>(
-                  listener: (context, state) {
-                    if (state is ListingFavToggleState) {
-                      setState(() {
-                        listing = state.listing;
-                        context.read<AuthenticationBloc>().user = state.updatedUser;
-                        currentUser = state.updatedUser;
-                      });
-                    }
-                  },
-                  buildWhen: (old, current) =>
-                      old != current && current is ListingFavToggleState,
-                  builder: (context, state) {
-                    return _buildHeaderCircleButton(
-                      icon: listing.isFav ? Icons.favorite : Icons.favorite_border,
-                      iconColor: listing.isFav ? Colors.red : null,
-                      onTap: () {
-                        context.read<ListingDetailsBloc>().add(ListingFavUpdatedEvent());
-                      },
-                      isDark: dark,
-                      margin: const EdgeInsets.only(right: 8),
-                    );
-                  },
-                ),
-                _buildHeaderCircleMenu(dark, adaptiveTextColor),
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                stretchModes: const [
-                  StretchMode.zoomBackground,
-                  StretchMode.blurBackground,
-                ],
-                background: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    _buildMediaGallery(),
-                    // Bottom gradient for title visibility when collapsed
-                    IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.3),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: _listingStream,
+      builder: (context, snapshot) {
+        if (snapshot.hasData && snapshot.data != null && snapshot.data!.exists) {
+          final data = snapshot.data!.data()!;
+          listing = ListingModel.fromJson(data);
+          // Refetch preview if storeUrl changed
+          if (listing.storeEnabled && listing.storeUrl.isNotEmpty) {
+            _fetchStorePreview(listing.storeUrl);
+          } else {
+            _storePreview = null;
+          }
+        }
+        return MultiBlocListener(
+          listeners: [
+            BlocListener<ListingDetailsBloc, ListingDetailsState>(
+              listener: (context, state) async {
+                if (state is DeletedListingState) {
+                  context.read<LoadingCubit>().hideLoading();
+                  if (!mounted) return;
+                  Navigator.pop(context, true);
+                }
+              },
             ),
-
-            // Main Content
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 24, 16, 120),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Title and Verified Badge
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          ],
+          child: Scaffold(
+            body: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                // Immersive Header (Airbnb/Spotify Style)
+                SliverAppBar(
+                  expandedHeight: 350,
+                  pinned: true,
+                  elevation: 0,
+                  stretch: true,
+                  backgroundColor: dark ? Colors.black : Colors.white,
+                  leading: _buildHeaderCircleButton(
+                    icon: Icons.arrow_back,
+                    onTap: () => Navigator.pop(context),
+                    isDark: dark,
+                  ),
+                  actions: [
+                    BlocConsumer<ListingDetailsBloc, ListingDetailsState>(
+                      listener: (context, state) {
+                        if (state is ListingFavToggleState) {
+                          setState(() {
+                            listing = state.listing;
+                            context.read<AuthenticationBloc>().user = state.updatedUser;
+                            currentUser = state.updatedUser;
+                          });
+                        }
+                      },
+                      buildWhen: (old, current) =>
+                          old != current && current is ListingFavToggleState,
+                      builder: (context, state) {
+                        return _buildHeaderCircleButton(
+                          icon: listing.isFav ? Icons.favorite : Icons.favorite_border,
+                          iconColor: listing.isFav ? Colors.red : null,
+                          onTap: () {
+                            context.read<ListingDetailsBloc>().add(ListingFavUpdatedEvent());
+                          },
+                          isDark: dark,
+                          margin: const EdgeInsets.only(right: 8),
+                        );
+                      },
+                    ),
+                    _buildHeaderCircleMenu(dark, adaptiveTextColor),
+                  ],
+                  flexibleSpace: FlexibleSpaceBar(
+                    stretchModes: const [
+                      StretchMode.zoomBackground,
+                      StretchMode.blurBackground,
+                    ],
+                    background: Stack(
+                      fit: StackFit.expand,
                       children: [
-                        Expanded(
-                          child: Text(
-                            listing.title,
-                            style: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: -0.5,
+                        _buildMediaGallery(),
+                        // Bottom gradient for title visibility when collapsed
+                        IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.3),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                        if (listing.verified) ...[
-                          const SizedBox(width: 8),
-                          Icon(Icons.verified, color: primaryColor, size: 24),
-                        ],
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    
-                    // Rating Summary
-                    Row(
-                      children: [
-                        Icon(Icons.star, size: 16, color: primaryColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          reviews.isEmpty ? 'New'.tr() : _calculateAverageRating(),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        if (reviews.isNotEmpty) ...[
-                          const SizedBox(width: 4),
-                          Text('(${reviews.length})', style: TextStyle(color: dark ? Colors.grey : Colors.grey.shade600)),
-                        ],
-                      ],
-                    ),
-
-                    Divider(height: 48, thickness: 1, color: dividerColor),
-
-                    // Author Info (only show if there's content to display)
-                    if (listing.logo.isNotEmpty || _authorIsPremium == true) ...[
-                      _buildAuthorSection(dark),
-                      Divider(height: 48, thickness: 1, color: dividerColor),
-                    ],
-
-                    // Description
-                    Text(
-                      'About'.tr(),
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      listing.description,
-                      style: TextStyle(
-                        fontSize: 16,
-                        height: 1.5,
-                        color: dark ? Colors.grey.shade300 : Colors.grey.shade800,
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Price Section (if not in bottom bar)
-                    if (listing.price.trim().isNotEmpty)
-                      _buildPriceCard(dark, primaryColor),
-
-                    // Services Section
-                    if (listing.services.isNotEmpty) _buildServicesSection(dark, primaryColor),
-
-                    // Contact & Hours
-                    if (_hasContactOrHours(listing)) ...[
-                      const SizedBox(height: 32),
-                      Text(
-                        'Contact & Hours'.tr(),
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 16),
-                      _ContactHoursCard(
-                        listing: listing,
-                        colorPrimary: primaryColor,
-                        isDark: dark,
-                        onCall: () => _launchPhone(listing.phone),
-                        onEmail: () => _launchEmail(listing.email),
-                        onWebsite: () => _launchWebsite(listing.website),
-                        onInstagram: () => _launchUrl(listing.instagram),
-                        onFacebook: () => _launchUrl(listing.facebook),
-                        onTiktok: () => _launchUrl(listing.tiktok),
-                        onWhatsapp: () => _launchWhatsApp(listing.whatsapp),
-                        onYoutube: () => _launchUrl(listing.youtube),
-                        onX: () => _launchUrl(listing.x),
-                      ),
-                    ],
-
-                    // Location Map
-                    if (listing.latitude != 0.0 && listing.longitude != 0.0) ...[
-                      const SizedBox(height: 32),
-                      Text(
-                        "Where we're located".tr(),
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildMapSection(dark),
-                    ],
-
-                    // Filters/Details
-                    if (listing.filters.isNotEmpty) ...[
-                      const SizedBox(height: 32),
-                      Text(
-                        'Details'.tr(),
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDetailsList(dark, primaryColor),
-                    ],
-
-                    // Reviews
-                    const SizedBox(height: 32),
-                    _buildReviewsSection(dark, primaryColor),
-                  ],
+                  ),
                 ),
-              ),
+                // Main Content
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 24, 16, 120),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title and Verified Badge
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                listing.title,
+                                style: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            ),
+                            if (listing.verified) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: primaryColor.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: primaryColor, width: 1.2),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.verified, color: primaryColor, size: 18),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Verified',
+                                      style: TextStyle(
+                                        color: primaryColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        // Rating Summary
+                        Row(
+                          children: [
+                            Icon(Icons.star, size: 16, color: primaryColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              reviews.isEmpty ? 'New'.tr() : _calculateAverageRating(),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            if (reviews.isNotEmpty) ...[
+                              const SizedBox(width: 4),
+                              Text('(${reviews.length})', style: TextStyle(color: dark ? Colors.grey : Colors.grey.shade600)),
+                            ],
+                          ],
+                        ),
+                        Divider(height: 48, thickness: 1, color: dividerColor),
+                        // Author Info (only show if there's content to display)
+                        if (listing.logo.isNotEmpty || _authorIsPremium == true) ...[
+                          _buildAuthorSection(dark),
+                          Divider(height: 48, thickness: 1, color: dividerColor),
+                        ],
+                        // Description
+                        Text(
+                          'About'.tr(),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          listing.description,
+                          style: TextStyle(
+                            fontSize: 16,
+                            height: 1.5,
+                            color: dark ? Colors.grey.shade300 : Colors.grey.shade800,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        // Store Section
+                        if (listing.storeEnabled && listing.storeUrl.isNotEmpty) ...[
+                          Text(
+                            'Visit My Store'.tr(),
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 12),
+                          if (_storePreview != null) ...[
+                            InkWell(
+                              onTap: () => _launchWebsite(listing.storeUrl),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: primaryColor.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: primaryColor.withOpacity(0.25)),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (_storePreview!['image'] != null && _storePreview!['image'].toString().isNotEmpty)
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          _storePreview!['image'],
+                                          width: 56,
+                                          height: 56,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => const SizedBox(width: 56, height: 56),
+                                        ),
+                                      ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          if (_storePreview!['title'] != null)
+                                            Text(
+                                              _storePreview!['title'],
+                                              style: TextStyle(
+                                                color: primaryColor,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 16,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          if (_storePreview!['description'] != null)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 4.0),
+                                              child: Text(
+                                                _storePreview!['description'],
+                                                style: TextStyle(
+                                                  color: dark ? Colors.grey.shade300 : Colors.grey.shade800,
+                                                  fontSize: 13,
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 6.0),
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.shopping_cart_outlined, color: primaryColor, size: 18),
+                                                const SizedBox(width: 6),
+                                                Flexible(
+                                                  child: Text(
+                                                    listing.storeUrl,
+                                                    style: TextStyle(
+                                                      color: primaryColor,
+                                                      fontWeight: FontWeight.w600,
+                                                      decoration: TextDecoration.underline,
+                                                    ),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Icon(Icons.open_in_new, size: 16, color: primaryColor),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ] else ...[
+                            InkWell(
+                              onTap: () => _launchWebsite(listing.storeUrl),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: primaryColor.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: primaryColor.withOpacity(0.25)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.shopping_cart_outlined, color: primaryColor),
+                                    const SizedBox(width: 10),
+                                    Flexible(
+                                      child: Text(
+                                        listing.storeUrl,
+                                        style: TextStyle(
+                                          color: primaryColor,
+                                          fontWeight: FontWeight.w600,
+                                          decoration: TextDecoration.underline,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Icon(Icons.open_in_new, size: 18, color: primaryColor),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 32),
+                        ],
+                        // Price Section (if not in bottom bar)
+                        if (listing.price.trim().isNotEmpty)
+                          _buildPriceCard(dark, primaryColor),
+                        // Services Section
+                        if (listing.services.isNotEmpty) _buildServicesSection(dark, primaryColor),
+                        // Contact & Hours
+                        if (_hasContactOrHours(listing)) ...[
+                          const SizedBox(height: 32),
+                          Text(
+                            'Contact & Hours'.tr(),
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 16),
+                          _ContactHoursCard(
+                            listing: listing,
+                            colorPrimary: primaryColor,
+                            isDark: dark,
+                            onCall: () => _launchPhone(listing.phone),
+                            onEmail: () => _launchEmail(listing.email),
+                            onWebsite: () => _launchWebsite(listing.website),
+                            onInstagram: () => _launchUrl(listing.instagram),
+                            onFacebook: () => _launchUrl(listing.facebook),
+                            onTiktok: () => _launchUrl(listing.tiktok),
+                            onWhatsapp: () => _launchWhatsApp(listing.whatsapp),
+                            onYoutube: () => _launchUrl(listing.youtube),
+                            onX: () => _launchUrl(listing.x),
+                          ),
+                        ],
+                        // Location Map
+                        if (listing.latitude != 0.0 && listing.longitude != 0.0) ...[
+                          const SizedBox(height: 32),
+                          Text(
+                            "Where we're located".tr(),
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildMapSection(dark),
+                        ],
+                        // Filters/Details
+                        if (listing.filters.isNotEmpty) ...[
+                          const SizedBox(height: 32),
+                          Text(
+                            'Details'.tr(),
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildDetailsList(dark, primaryColor),
+                        ],
+                        // Reviews
+                        const SizedBox(height: 32),
+                        _buildReviewsSection(dark, primaryColor),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        // Sticky Bottom Action Bar (Airbnb Style)
-        bottomSheet: _buildStickyBottomBar(dark, primaryColor),
-      ),
+            bottomSheet: _buildStickyBottomBar(dark, primaryColor),
+          ),
+        );
+      },
     );
   }
 
@@ -515,8 +707,16 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                 child: ListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.edit),
-                  title: Text('Edit Listing'.tr()),
+                  leading: Icon(Icons.edit, color: Color(cfg.colorPrimary)),
+                  title: Text(
+                    'Edit Listing'.tr(),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                      fontFamily: 'Roboto',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   onTap: () async {
                     Navigator.pop(context);
                     final updated = await push(
@@ -536,7 +736,15 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.star_outline),
-                  title: Text('Add Review'.tr()),
+                  title: Text(
+                    'Add Review'.tr(),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: isDark ? Colors.black : Colors.black,
+                      fontFamily: 'Roboto',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   onTap: () async {
                     Navigator.pop(context);
                     bool? reviewPublished = await push(
@@ -559,7 +767,15 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.delete, color: Colors.red),
-                  title: Text('Delete Listing'.tr(), style: const TextStyle(color: Colors.red)),
+                  title: Text(
+                    'Delete Listing'.tr(),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                      fontFamily: 'Roboto',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   onTap: () => deleteListing(context),
                 ),
               ),
@@ -658,9 +874,29 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (_authorIsPremium == true)
-                Text(
-                  'Premium Seller'.tr(),
-                  style: TextStyle(color: isDark ? Colors.grey : Colors.grey.shade600, fontSize: 14, fontWeight: FontWeight.w600),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.amber.withOpacity(0.35), width: 1.0),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.star, color: Colors.amber.shade400, size: 18),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Premium Listing'.tr(),
+                        style: TextStyle(
+                          color: Colors.amber.shade700.withOpacity(0.7),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
             ],
           ),
@@ -699,7 +935,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 32),
+        const SizedBox(height: 14), // Reduced again
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -720,7 +956,13 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.check_circle_outline, color: primaryColor),
               title: Text(service.name),
-              trailing: Text('${service.price} ${listing.currencyCode}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              trailing: Text(
+                '${service.price} ${listing.currencyCode}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
             );
           },
         ),
@@ -930,12 +1172,16 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     );
   }
 
-  void _handleBooking() {
+  Future<void> _handleBooking() async {
+    // Fetch the latest listing from Firestore to ensure custom questions are up to date
+    final latest = await listingApiManager.getListing(listingID: listing.id);
+    final latestListing = latest ?? listing;
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (dialogContext) => BlocProvider(
-        create: (context) => BookingBloc(bookingRepository: bookingApiManager)..add(GetBookedDatesEvent(listingId: listing.id)),
-        child: BookingRequestDialog(listing: listing, currentUser: currentUser),
+        create: (context) => BookingBloc(bookingRepository: bookingApiManager)..add(GetBookedDatesEvent(listingId: latestListing.id)),
+        child: BookingRequestDialog(listing: latestListing, currentUser: currentUser),
       ),
     );
   }

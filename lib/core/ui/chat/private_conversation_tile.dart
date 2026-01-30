@@ -30,6 +30,10 @@ class PrivateConversationTile extends StatefulWidget {
 class _PrivateConversationTileState extends State<PrivateConversationTile> {
   @override
   Widget build(BuildContext context) {
+    final bool isUnread = !widget.chatFeedModel.markedAsRead;
+    final bool isActive = widget.chatFeedModel.participants.isNotEmpty && 
+                         widget.chatFeedModel.participants.first.active;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8.0),
       child: InkWell(
@@ -60,7 +64,9 @@ class _PrivateConversationTileState extends State<PrivateConversationTile> {
               alignment: Alignment.bottomRight,
               children: [
                 displayCircleImage(
-                    widget.chatFeedModel.participants.first.profilePictureURL,
+                    widget.chatFeedModel.participants.isNotEmpty 
+                        ? widget.chatFeedModel.participants.first.profilePictureURL
+                        : '',
                     60,
                     false),
                 Positioned.directional(
@@ -68,18 +74,16 @@ class _PrivateConversationTileState extends State<PrivateConversationTile> {
                   end: 2.4,
                   bottom: 2.4,
                   child: Container(
-                    width: 12,
-                    height: 12,
+                    width: 14,
+                    height: 14,
                     decoration: BoxDecoration(
-                        color: widget.chatFeedModel.participants.first.active
-                            ? Colors.green
-                            : Colors.grey,
+                        color: isActive ? Colors.red : Colors.grey,
                         borderRadius: BorderRadius.circular(100),
                         border: Border.all(
                             color: isDarkMode(context)
                                 ? const Color(0xFF303030)
                                 : Colors.white,
-                            width: 1.6)),
+                            width: 2)),
                   ),
                 )
               ],
@@ -92,16 +96,28 @@ class _PrivateConversationTileState extends State<PrivateConversationTile> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    Text(
-                      widget.chatFeedModel.title,
-                      style: TextStyle(
-                          fontWeight: widget.chatFeedModel.markedAsRead
-                              ? FontWeight.normal
-                              : FontWeight.bold,
-                          fontSize: 17,
-                          color:
-                              isDarkMode(context) ? Colors.white : Colors.black,
-                          fontFamily: Platform.isIOS ? 'sanFran' : 'Roboto'),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            widget.chatFeedModel.title,
+                            style: TextStyle(
+                                fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
+                                fontSize: 17,
+                                color: isDarkMode(context) ? Colors.white : Colors.black,
+                                fontFamily: Platform.isIOS ? 'sanFran' : 'Roboto'),
+                          ),
+                        ),
+                        if (isUnread)
+                          Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: widget.colorPrimary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                      ],
                     ),
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
@@ -113,17 +129,19 @@ class _PrivateConversationTileState extends State<PrivateConversationTile> {
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                               style: TextStyle(
-                                  fontWeight: widget.chatFeedModel.markedAsRead
-                                      ? FontWeight.normal
-                                      : FontWeight.bold,
+                                  fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
                                   fontSize: 14,
-                                  color: Colors.grey),
+                                  color: isUnread 
+                                      ? (isDarkMode(context) ? Colors.white : Colors.black87)
+                                      : Colors.grey),
                             ),
                           ),
                           Text(
-                            '• ${formatTimestamp(widget.chatFeedModel.createdAt)}',
-                            style: const TextStyle(
-                                fontSize: 14, color: Colors.grey),
+                            ' • ${formatTimestamp(widget.chatFeedModel.createdAt)}',
+                            style: TextStyle(
+                                fontSize: 14, 
+                                color: isUnread ? widget.colorPrimary : Colors.grey,
+                                fontWeight: isUnread ? FontWeight.bold : FontWeight.normal),
                           ),
                         ],
                       ),
@@ -138,4 +156,3 @@ class _PrivateConversationTileState extends State<PrivateConversationTile> {
     );
   }
 }
-// Removed for flutter_chat_ui migration

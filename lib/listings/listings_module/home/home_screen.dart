@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -81,15 +82,65 @@ class HomeScreenState extends State<HomeScreen> {
   List<String> _selectedCountryCodes = [];
   late TextEditingController _searchController;
 
+  // Cycling controllers
+  late ScrollController _categoryScrollController;
+  late ScrollController _dealsScrollController;
+  Timer? _categoryCycleTimer;
+  Timer? _dealsCycleTimer;
+
   @override
   void initState() {
     super.initState();
     currentUser = widget.currentUser;
     _searchController = TextEditingController();
+    _categoryScrollController = ScrollController();
+    _dealsScrollController = ScrollController();
     context.read<HomeBloc>().add(GetCategoriesEvent());
     context.read<HomeBloc>().add(GetListingsEvent());
     _loadFeaturedListings();
     _loadDeals();
+    _startCategoryCycling();
+    _startDealsCycling();
+  }
+
+  void _startCategoryCycling() {
+    _categoryCycleTimer?.cancel();
+    _categoryCycleTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (_categoryScrollController.hasClients && _categories.isNotEmpty) {
+        final maxScroll = _categoryScrollController.position.maxScrollExtent;
+        double nextOffset = _categoryScrollController.offset + 150.0;
+
+        if (nextOffset > maxScroll + 50) {
+          nextOffset = 0.0;
+        }
+
+        _categoryScrollController.animateTo(
+          nextOffset,
+          duration: const Duration(milliseconds: 1000),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
+
+  void _startDealsCycling() {
+    _dealsCycleTimer?.cancel();
+    _dealsCycleTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (_dealsScrollController.hasClients && _dealAds.isNotEmpty) {
+        final maxScroll = _dealsScrollController.position.maxScrollExtent;
+        double nextOffset = _dealsScrollController.offset + 192.0; // 180 width + 12 margin
+
+        if (nextOffset > maxScroll + 50) {
+          nextOffset = 0.0;
+        }
+
+        _dealsScrollController.animateTo(
+          nextOffset,
+          duration: const Duration(milliseconds: 1200),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   Future<void> _loadFeaturedListings() async {
@@ -110,15 +161,25 @@ class HomeScreenState extends State<HomeScreen> {
     DealAdService().getApprovedAds().listen((ads) {
       if (mounted) {
         setState(() {
-          _dealAds = ads;
+          // Prioritize ads based on user country and visibility settings
+          final userCountry = currentUser.countryCode;
+          
+          // 1. Target User's Country
+          final targetedAds = ads.where((ad) => ad.visibilityCountries.contains(userCountry)).toList()..shuffle();
+          
+          // 2. Global Ads (visible to everyone)
+          final globalAds = ads.where((ad) => ad.visibilityCountries.isEmpty).toList()..shuffle();
+          
+          // 3. Other Targeted Ads (fallback)
+          final otherAds = ads.where((ad) => ad.visibilityCountries.isNotEmpty && !ad.visibilityCountries.contains(userCountry)).toList()..shuffle();
+
+          _dealAds = [...targetedAds, ...globalAds, ...otherAds];
           loadingDeals = false;
         });
       }
     }, onError: (e) {
       if (mounted) {
-        setState(() {
-          loadingDeals = false;
-        });
+        loadingDeals = false;
       }
     });
   }
@@ -126,6 +187,10 @@ class HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _categoryScrollController.dispose();
+    _dealsScrollController.dispose();
+    _categoryCycleTimer?.cancel();
+    _dealsCycleTimer?.cancel();
     super.dispose();
   }
 
@@ -164,28 +229,42 @@ class HomeScreenState extends State<HomeScreen> {
     return result;
   }
 
-  String _getCurrencySymbol(String code) {
-    switch (code) {
-      case 'USD':
-      case 'XCD':
-      case 'JMD':
-      case 'TTD':
-      case 'BSD':
-      case 'BBD':
-      case 'GYD':
-      case 'DOP':
-      case 'KYD':
-      case 'SRD':
-        return '\$';
-      case 'ANG':
-        return 'ƒ';
-      case 'XOF':
-        return 'CFA';
-      case 'HTG':
-        return 'G';
-      default:
-        return '\$';
-    }
+  Widget _buildSectionHeader({
+    required String title,
+    VoidCallback? onSeeAll,
+    bool isDark = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0, top: 24.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+                color: isDark ? Colors.white : Colors.black87,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          if (onSeeAll != null)
+            TextButton(
+              onPressed: onSeeAll,
+              child: Text(
+                'View All'.tr(),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(colorPrimary),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   void _showCountrySelectionDialog(BuildContext context) {
@@ -275,7 +354,10 @@ class HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool dark = isDarkMode(context);
+
     return Scaffold(
+      backgroundColor: dark ? Colors.black : Colors.grey[50],
       body: RefreshIndicator(
         onRefresh: () async {
           context.read<HomeBloc>().add(LoadingEvent());
@@ -325,38 +407,27 @@ class HomeScreenState extends State<HomeScreen> {
               return const Center(child: CircularProgressIndicator.adaptive());
             }
 
-            final bool dark = isDarkMode(context);
-
             return Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
+                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
                   
-                  // Deals & Promotions Section (Moved to the top and smaller)
+                  // 1. Deals & Promotions Section
                   if (_dealAds.isNotEmpty) ...[
                     SliverToBoxAdapter(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Deals & Promotions'.tr(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18, // Smaller title
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () => push(context, DealsFeedScreen(currentUser: currentUser)),
-                            child: Text('View All'.tr(), style: const TextStyle(fontSize: 12)),
-                          ),
-                        ],
+                      child: _buildSectionHeader(
+                        title: 'Deals & Promotions'.tr(),
+                        onSeeAll: () => push(context, DealsFeedScreen(currentUser: currentUser)),
+                        isDark: dark,
                       ),
                     ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 4)),
                     SliverToBoxAdapter(
                       child: SizedBox(
-                        height: 120, // Smaller height
+                        height: 150,
                         child: ListView.builder(
+                          controller: _dealsScrollController,
                           scrollDirection: Axis.horizontal,
                           itemCount: _dealAds.length,
                           itemBuilder: (context, index) {
@@ -366,43 +437,32 @@ class HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
                   ],
 
+                  // 2. Categories Section
                   SliverToBoxAdapter(
-                    child: Text(
-                      'Categories'.tr(),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 22,
-                      ),
-                    ),
+                    child: _buildSectionHeader(title: 'Categories'.tr(), isDark: dark),
                   ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 8)),
-
                   if (loadingCategories)
                     const SliverToBoxAdapter(
                       child: Padding(
                         padding: EdgeInsets.all(16.0),
                         child: Center(child: CircularProgressIndicator.adaptive()),
                       ),
-                    ),
-
-                  if (_categories.isEmpty)
+                    )
+                  else if (_categories.isEmpty)
                     SliverToBoxAdapter(
-                      child: Center(
-                        child: showEmptyState(
-                          'No Categories'.tr(),
-                          'All Categories will be shown here once added by the admin.'.tr(),
-                        ),
+                      child: showEmptyState(
+                        'No Categories'.tr(),
+                        'All Categories will be shown here once added by the admin.'.tr(),
                       ),
-                    ),
-
-                  if (_categories.isNotEmpty)
+                    )
+                  else
                     SliverToBoxAdapter(
                       child: SizedBox(
-                        height: 100,
+                        height: 120,
                         child: ListView.builder(
+                          controller: _categoryScrollController,
                           scrollDirection: Axis.horizontal,
                           itemCount: _categories.length,
                           itemBuilder: (context, index) => CategoryHomeCardWidget(
@@ -413,320 +473,165 @@ class HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
 
-                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
+                  // 3. Search & Filter Block
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
                   SliverToBoxAdapter(
-                    child: Text(
-                      'Listings'.tr(),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 22,
-                      ),
-                    ),
-                  ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 12)),
-
-                  // Search Bar
-                  SliverToBoxAdapter(
-                    child: TextField(
-                      controller: _searchController,
-                      style: TextStyle(color: dark ? Colors.white : Colors.black),
-                      onChanged: (value) {
-                        setState(() {
-                          _searchQuery = value.toLowerCase();
-                        });
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Search listings...'.tr(),
-                        hintStyle: TextStyle(color: dark ? Colors.grey[400] : Colors.grey[600]),
-                        prefixIcon: Icon(Icons.search, color: dark ? Colors.grey[400] : Colors.grey[600]),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? GestureDetector(
-                                onTap: () {
-                                  _searchController.clear();
-                                  setState(() {
-                                    _searchQuery = '';
-                                  });
-                                },
-                                child: Icon(Icons.clear, color: dark ? Colors.grey[400] : Colors.grey[600]),
-                              )
-                            : null,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Color(colorPrimary).withOpacity(0.5)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Color(colorPrimary), width: 2),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      ),
-                    ),
-                  ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 12)),
-
-                  // Country Filter Dropdown (Multi-select)
-                  SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (_selectedCountryCodes.isNotEmpty) ...[
-                          Text(
-                            'Selected Countries (${_selectedCountryCodes.length}/5)'.tr(),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: dark ? Colors.grey[900] : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            children: _selectedCountryCodes.map((code) {
-                              final country = CaribbeanCountries.all.firstWhere(
-                                (c) => c.code == code,
-                                orElse: () => CaribbeanCountry(code: code, name: code),
-                              );
-                              return Chip(
-                                label: Text(country.name),
-                                onDeleted: () {
-                                  setState(() {
-                                    _selectedCountryCodes.remove(code);
-                                  });
-                                },
-                                backgroundColor: Color(colorPrimary).withOpacity(0.2),
-                              );
-                            }).toList(),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Find what you need'.tr(),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: dark ? Colors.white : Colors.black87,
+                            ),
                           ),
                           const SizedBox(height: 12),
-                        ],
-                        GestureDetector(
-                          onTap: () => _showCountrySelectionDialog(context),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Color(colorPrimary).withOpacity(0.5)),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  _selectedCountryCodes.isEmpty
-                                      ? 'Filter Countries'.tr()
-                                      : '${_selectedCountryCodes.length} Selected'.tr(),
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    color: _selectedCountryCodes.isEmpty
-                                        ? Color(colorPrimary)
-                                        : (dark ? Colors.white : Colors.black),
-                                  ),
-                                ),
-                                Icon(
-                                  Icons.arrow_drop_down,
-                                  color: Color(colorPrimary),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        if (_selectedCountryCodes.length >= 5)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(
-                              'Maximum 5 countries selected'.tr(),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.orange.shade700,
-                                fontWeight: FontWeight.w500,
+                          TextField(
+                            controller: _searchController,
+                            style: TextStyle(color: dark ? Colors.white : Colors.black),
+                            onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+                            decoration: InputDecoration(
+                              hintText: 'Search listings...'.tr(),
+                              hintStyle: TextStyle(color: dark ? Colors.grey[400] : Colors.grey[600]),
+                              prefixIcon: Icon(Icons.search, color: dark ? Colors.grey[400] : Colors.grey[600]),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _searchQuery = '');
+                                      },
+                                    )
+                                  : null,
+                              filled: true,
+                              fillColor: dark ? Colors.black : Colors.grey[50],
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
                               ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                             ),
                           ),
-                      ],
-                    ),
-                  ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-                  // Featured Section moved below Filter Countries
-                  if (_featuredListings.isNotEmpty) ...[
-                    SliverToBoxAdapter(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Colors.amber.withOpacity(0.15),
-                              Colors.orange.withOpacity(0.1),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        margin: const EdgeInsets.only(left: 16, right: 16, top: 4, bottom: 4),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
+                          const SizedBox(height: 12),
+                          GestureDetector(
+                            onTap: () => _showCountrySelectionDialog(context),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                               decoration: BoxDecoration(
-                                color: Colors.amber,
-                                borderRadius: BorderRadius.circular(6),
+                                color: dark ? Colors.black : Colors.grey[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Color(colorPrimary).withOpacity(0.1)),
                               ),
-                              child: const Icon(Icons.star, color: Colors.white, size: 16),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _selectedCountryCodes.isEmpty
+                                          ? 'Filter by Country'.tr()
+                                          : '${_selectedCountryCodes.length} Countries Selected'.tr(),
+                                      style: TextStyle(
+                                        color: _selectedCountryCodes.isEmpty ? Colors.grey : (dark ? Colors.white : Colors.black),
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(Icons.tune, color: Color(colorPrimary), size: 20),
+                                ],
+                              ),
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Featured'.tr(),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: Colors.amber,
-                              ),
+                          ),
+                          if (_selectedCountryCodes.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _selectedCountryCodes.map((code) {
+                                final country = CaribbeanCountries.all.firstWhere(
+                                  (c) => c.code == code,
+                                  orElse: () => CaribbeanCountry(code: code, name: code),
+                                );
+                                return Chip(
+                                  label: Text(country.name, style: const TextStyle(fontSize: 12)),
+                                  onDeleted: () => setState(() => _selectedCountryCodes.remove(code)),
+                                  backgroundColor: Color(colorPrimary).withOpacity(0.1),
+                                  deleteIconColor: Color(colorPrimary),
+                                  side: BorderSide.none,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                );
+                              }).toList(),
                             ),
                           ],
-                        ),
+                        ],
                       ),
                     ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 4)),
+                  ),
+
+                  // 4. Featured Listings Section
+                  if (_featuredListings.isNotEmpty) ...[
                     SliverToBoxAdapter(
-                      child: SizedBox(
-                        height: 240,
+                      child: _buildSectionHeader(title: 'Featured Listings'.tr(), isDark: dark),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Container(
+                        height: 260,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: Color(colorPrimary).withOpacity(dark ? 0.05 : 0.03),
+                        ),
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.all(12),
                           itemCount: _featuredListings.length,
                           itemBuilder: (context, index) {
                             final listing = _featuredListings[index];
-                            return GestureDetector(
-                              onTap: () => push(
-                                context,
-                                ListingDetailsWrappingWidget(
-                                  listing: listing,
-                                  currentUser: currentUser,
-                                ),
-                              ),
-                              child: Container(
-                                width: 200,
-                                margin: const EdgeInsets.only(right: 12),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.15),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                  border: Border.all(
-                                    color: Colors.amber.withOpacity(0.3),
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Stack(
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius: const BorderRadius.only(
-                                            topLeft: Radius.circular(10),
-                                            topRight: Radius.circular(10),
-                                          ),
-                                          child: Image.network(
-                                            listing.photo,
-                                            height: 140,
-                                            width: 200,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (ctx, err, st) => Container(
-                                              height: 140,
-                                              width: 200,
-                                              color: Colors.grey.shade300,
-                                              child: const Icon(Icons.image_not_supported),
-                                            ),
-                                          ),
-                                        ),
-                                        Positioned(
-                                          top: 8,
-                                          left: 8,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                            decoration: BoxDecoration(
-                                              color: Colors.amber,
-                                              borderRadius: BorderRadius.circular(4),
-                                            ),
-                                            child: const Icon(Icons.star, size: 10, color: Colors.white),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(10),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              listing.title,
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              listing.place,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey.shade600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
+                            return _buildFeaturedCard(listing, dark);
                           },
                         ),
                       ),
                     ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
                   ],
 
+                  // 5. Main Listings Grid
+                  SliverToBoxAdapter(
+                    child: _buildSectionHeader(title: 'All Listings'.tr(), isDark: dark),
+                  ),
+                  
                   if (loadingListings)
-                    const SliverToBoxAdapter(
-                      child: Center(child: CircularProgressIndicator.adaptive()),
-                    ),
-
-                  if (!loadingListings)
+                    const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator.adaptive()))
+                  else
                     Builder(
                       builder: (context) {
                         final filteredListingsWithAds = _getFilteredListingsWithAds();
-                        if (filteredListingsWithAds.isEmpty && !loadingListings) {
+                        if (filteredListingsWithAds.isEmpty) {
                           return SliverToBoxAdapter(
                             child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Center(
-                                child: showEmptyState(
-                                  'No Listings'.tr(),
-                                  'No listings match your search or filter criteria.'.tr(),
-                                  buttonTitle: 'Clear Filters'.tr(),
-                                  isDarkMode: dark,
-                                  action: () {
-                                    setState(() {
-                                      _searchQuery = '';
-                                      _selectedCountryCodes = [];
-                                      _searchController.clear();
-                                    });
-                                  },
-                                  colorPrimary: Color(colorPrimary),
-                                ),
+                              padding: const EdgeInsets.symmetric(vertical: 40.0),
+                              child: showEmptyState(
+                                'No Listings'.tr(),
+                                'No listings match your criteria.'.tr(),
+                                buttonTitle: 'Clear Filters'.tr(),
+                                isDarkMode: dark,
+                                action: () => setState(() {
+                                  _searchQuery = '';
+                                  _selectedCountryCodes = [];
+                                  _searchController.clear();
+                                }),
+                                colorPrimary: Color(colorPrimary),
                               ),
                             ),
                           );
@@ -734,14 +639,11 @@ class HomeScreenState extends State<HomeScreen> {
                         
                         return SliverGrid(
                           delegate: SliverChildBuilderDelegate(
-                                (context, index) {
+                            (context, index) {
                               final item = filteredListingsWithAds[index];
                               return item == null
                                   ? AdsUtils.adsContainer()
-                                  : ListingHomeCardWidget(
-                                currentUser: currentUser,
-                                listing: item,
-                              );
+                                  : ListingHomeCardWidget(currentUser: currentUser, listing: item);
                             },
                             childCount: filteredListingsWithAds.length > 4
                                 ? (_showAll ? filteredListingsWithAds.length : 4)
@@ -749,45 +651,140 @@ class HomeScreenState extends State<HomeScreen> {
                           ),
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
-                            mainAxisSpacing: 20,
+                            mainAxisSpacing: 16,
                             crossAxisSpacing: 16,
-                            childAspectRatio: 0.72,
+                            childAspectRatio: 0.64, // Increased height
                           ),
                         );
                       },
                     ),
 
+                  // Show All Button
                   Builder(
                     builder: (context) {
                       final filteredListingsWithAds = _getFilteredListingsWithAds();
                       return SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 32),
+                          padding: const EdgeInsets.symmetric(vertical: 32),
                           child: Visibility(
                             visible: !_showAll && filteredListingsWithAds.length > 4,
-                            child: TextButton(
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  side: BorderSide(color: Color(colorPrimary)),
+                            child: Center(
+                              child: SizedBox(
+                                width: 200,
+                                child: OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    side: BorderSide(color: Color(colorPrimary)),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  child: Text(
+                                    'Show All'.tr() + ' (${filteredListingsWithAds.length - 4})',
+                                    style: TextStyle(color: Color(colorPrimary), fontWeight: FontWeight.bold),
+                                  ),
+                                  onPressed: () => context.read<HomeBloc>().add(ToggleShowAllEvent()),
                                 ),
                               ),
-                              child: Text(
-                                'Show All (${(filteredListingsWithAds.length - 4) < 0 ? 0 : filteredListingsWithAds.length - 4})'.tr(),
-                                style: TextStyle(color: Color(colorPrimary)),
-                              ),
-                              onPressed: () => context.read<HomeBloc>().add(ToggleShowAllEvent()),
                             ),
                           ),
                         ),
                       );
                     },
                   ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 40)),
                 ],
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeaturedCard(ListingModel listing, bool dark) {
+    return GestureDetector(
+      onTap: () => push(context, ListingDetailsWrappingWidget(listing: listing, currentUser: currentUser)),
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.only(right: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: dark ? const Color(0xFF1E1E1E) : Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  child: Image.network(
+                    listing.photo,
+                    height: 130,
+                    width: 200,
+                    fit: BoxFit.cover,
+                    errorBuilder: (ctx, err, st) => Container(
+                      height: 130, width: 200, color: Colors.grey.shade300,
+                      child: const Icon(Icons.image_not_supported),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(color: Colors.amber, shape: BoxShape.circle),
+                    child: const Icon(Icons.star, size: 12, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    listing.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, size: 12, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          listing.place,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    listing.categoryTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Color(colorPrimary), fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -850,14 +847,14 @@ class _DealAdCarouselItemState extends State<DealAdCarouselItem> {
     return GestureDetector(
       onTap: () => push(context, DealsFeedScreen(initialIndex: widget.index, currentUser: widget.currentUser)),
       child: Container(
-        width: 200,
+        width: 180,
         margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           color: widget.isDark ? const Color(0xFF1E1E1E) : Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withOpacity(0.05),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -947,7 +944,7 @@ class CategoryHomeCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool dark = isDarkMode(context);
     return Padding(
-      padding: const EdgeInsets.only(left: 2.0, right: 2),
+      padding: const EdgeInsets.only(right: 12),
       child: GestureDetector(
         onTap: () => push(
           context,
@@ -957,47 +954,39 @@ class CategoryHomeCardWidget extends StatelessWidget {
             currentUser: currentUser,
           ),
         ),
-        child: SizedBox(
-          width: 120,
-          height: 120,
-          child: Card(
-            color: dark ? Colors.grey.shade900 : Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-              side: BorderSide.none,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: dark ? Colors.grey[900] : Colors.white,
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+                ],
+              ),
+              child: ClipOval(
+                child: displayImage(category.photo),
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                Expanded(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minWidth: 120),
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(8),
-                        topRight: Radius.circular(8),
-                      ),
-                      child: displayImage(category.photo),
-                    ),
-                  ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: 80,
+              child: Text(
+                category.title,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: dark ? Colors.white70 : Colors.black87,
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8),
-                  child: Center(
-                    child: Text(
-                      category.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: dark ? Colors.white : Colors.black,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -1076,92 +1065,26 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              blurRadius: 18,
-              offset: const Offset(0, 10),
-              color: Colors.black.withOpacity(dark ? 0.35 : 0.10),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+              color: Colors.black.withOpacity(dark ? 0.3 : 0.05),
             ),
           ],
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AspectRatio(
-              aspectRatio: 16 / 10,
+              aspectRatio: 1,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
                   displayImage(listing.photo),
                   Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      height: 70,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Colors.black.withOpacity(0.55)],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 10,
-                    bottom: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.55),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: Colors.white.withOpacity(0.18)),
-                      ),
-                      child: Text(
-                        (listing.categoryTitle.isNotEmpty) ? listing.categoryTitle : 'Listing'.tr(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Logo in top-left
-                  if (listing.logo.isNotEmpty)
-                    Positioned(
-                      top: 6,
-                      left: 6,
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image.network(
-                            listing.logo,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stack) => const SizedBox.shrink(),
-                          ),
-                        ),
-                      ),
-                    ),
-                  Positioned(
-                    top: 6,
-                    right: 6,
+                    top: 8,
+                    right: 8,
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -1170,15 +1093,14 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
                           ListingFavUpdated(listing: listing),
                         ),
                         child: Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.35),
+                            color: Colors.black.withOpacity(0.3),
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white.withOpacity(0.20)),
                           ),
                           child: Icon(
                             listing.isFav ? Icons.favorite : Icons.favorite_border,
-                            size: 18,
+                            size: 16,
                             color: listing.isFav ? Color(colorPrimary) : Colors.white,
                           ),
                         ),
@@ -1189,8 +1111,9 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              padding: const EdgeInsets.all(10),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -1198,96 +1121,52 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w700,
-                      color: dark ? Colors.white : const Color(0xFF1B1B1B),
-                      height: 1.1,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: dark ? Colors.white : Colors.black87,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(
-                        Icons.place_outlined,
-                        size: 16,
-                        color: dark ? Colors.white70 : Colors.black54,
-                      ),
+                      const Icon(Icons.place, size: 10, color: Colors.grey),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           listing.place,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: dark ? Colors.white70 : Colors.black54,
-                          ),
+                          style: const TextStyle(fontSize: 10, color: Colors.grey),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-
-                  // Rating row + optional price (NO overflow)
+                  const SizedBox(height: 6),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      RatingBar.builder(
-                        ignoreGestures: true,
-                        minRating: 0,
-                        initialRating: safeRating,
-                        allowHalfRating: true,
-                        itemSize: 12,
-                        glow: false,
-                        unratedColor: Color(colorPrimary).withOpacity(0.18),
-                        itemBuilder: (context, index) => Icon(
-                          Icons.star,
-                          color: Color(colorPrimary),
-                        ),
-                        itemCount: 5,
-                        onRatingUpdate: (_) {},
-                      ),
-                      const SizedBox(width: 6),
-
-                      Expanded(
-                        child: Text(
-                          '${safeRating > 0 ? safeRating.toStringAsFixed(1) : '0.0'} (${listing.reviewsCount})',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: dark ? Colors.white : Colors.black87,
+                      Row(
+                        children: [
+                          Icon(Icons.star, size: 12, color: Color(colorPrimary)),
+                          const SizedBox(width: 2),
+                          Text(
+                            safeRating.toStringAsFixed(1),
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                           ),
-                        ),
+                        ],
                       ),
-
-                      if (listing.price.trim().isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 70, maxHeight: 28),
-                          child: Container(
-                            alignment: Alignment.center,
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: Color(colorPrimary).withOpacity(0.10),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: Color(colorPrimary).withOpacity(0.25),
-                              ),
-                            ),
-                            child: Text(
-                              '${_getCurrencySymbol(listing.currencyCode)} ${listing.price} ${listing.currencyCode}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Color(colorPrimary),
-                                fontWeight: FontWeight.w700,
-                                fontSize: 10,
-                              ),
+                      if (listing.price.trim().isNotEmpty)
+                        Flexible(
+                          child: Text(
+                            '${_getCurrencySymbol(listing.currencyCode)}${listing.price}',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Color(colorPrimary),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
                             ),
                           ),
                         ),
-                      ],
                     ],
                   ),
                 ],

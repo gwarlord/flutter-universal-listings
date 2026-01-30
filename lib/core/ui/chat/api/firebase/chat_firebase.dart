@@ -353,6 +353,17 @@ class ChatFireStoreUtils extends ChatRepository {
           .update({
         'readUserIDs': FieldValue.arrayUnion([currentUserID]),
       });
+
+      // ALSO update the chat feed live entry so the unread indicator goes away
+      await firestore
+          .collection(socialFeedsCollection)
+          .doc(currentUserID)
+          .collection(chatFeedLiveCollection)
+          .doc(channelID)
+          .update({
+        'markedAsRead': true,
+      });
+      
     } catch (e, s) {
       debugPrint('ChatFireStoreUtils.markAsRead error: $e $s');
     }

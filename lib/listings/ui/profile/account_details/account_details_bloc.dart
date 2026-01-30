@@ -49,6 +49,7 @@ class AccountDetailsBloc
             lastName: event.lastName,
             emailAddress: event.emailAddress,
             phoneNumber: event.phoneNumber,
+            countryCode: event.countryCode,
           ));
         }
       } else {
@@ -58,6 +59,7 @@ class AccountDetailsBloc
           lastName: event.lastName,
           emailAddress: event.emailAddress,
           phoneNumber: event.phoneNumber,
+          countryCode: event.countryCode,
         ));
       }
     });
@@ -66,6 +68,7 @@ class AccountDetailsBloc
       currentUser.lastName = event.lastName;
       currentUser.email = event.emailAddress;
       currentUser.phoneNumber = event.phoneNumber;
+      currentUser.countryCode = event.countryCode;
       await profileRepository.updateCurrentUser(currentUser);
       emit(UserDataUpdatedState(updatedUser: currentUser));
     });

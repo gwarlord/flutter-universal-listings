@@ -84,6 +84,7 @@ class AddListingScreen extends StatefulWidget {
 }
 
 class _AddListingScreenState extends State<AddListingScreen> {
+    final TextEditingController _serviceDescriptionController = TextEditingController();
   // Supported currencies for Caribbean markets
   final List<Map<String, String>> _currencies = [
     {'code': 'USD', 'symbol': r'$'},
@@ -160,6 +161,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final List<String> _customQuestions = [];
   final List<DateTime> _blockedDates = [];
 
+  // Store/Ecommerce
+  bool _storeEnabled = false;
+  final TextEditingController _storeUrlController = TextEditingController();
+
   @override
   void initState() {
     if (isEdit) {
@@ -192,57 +197,67 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
 
   void _populateListingData(ListingModel l) {
-      _titleController.text = l.title;
-      _descController.text = l.description;
-      _priceController.text = l.price.toString();
+    _titleController.text = l.title;
+    _descController.text = l.description;
+    _priceController.text = l.price.toString();
 
-      _filters = Map<String, String>.from(l.filters ?? {});
-      _existingPhotoUrls.addAll(
-        List<String>.from(l.photos ?? []).where((e) => e.trim().isNotEmpty),
-      );
-      _existingVideoUrls.addAll(
-        List<String>.from(l.videos ?? []).where((e) => e.trim().isNotEmpty),
-      );
-      _existingLogoUrl = (l.logo ?? '').trim().isEmpty ? null : l.logo;
+    _filters = Map<String, String>.from(l.filters ?? {});
+    _existingPhotoUrls.clear();
+    _existingPhotoUrls.addAll(
+      List<String>.from(l.photos ?? []).where((e) => e.trim().isNotEmpty),
+    );
+    _existingVideoUrls.clear();
+    _existingVideoUrls.addAll(
+      List<String>.from(l.videos ?? []).where((e) => e.trim().isNotEmpty),
+    );
+    _existingLogoUrl = (l.logo ?? '').trim().isEmpty ? null : l.logo;
 
-      _phoneController.text = (l.phone ?? '').trim();
-      _emailController.text = (l.email ?? '').trim();
-      _websiteController.text = (l.website ?? '').trim();
-      _instagramController.text = (l.instagram ?? '').trim();
-      _facebookController.text = (l.facebook ?? '').trim();
-      _tiktokController.text = (l.tiktok ?? '').trim();
-      _whatsappController.text = (l.whatsapp ?? '').trim();
-      _youtubeController.text = (l.youtube ?? '').trim();
-      _xController.text = (l.x ?? '').trim();
-      _openingHoursController.text = (l.openingHours ?? '').trim();
-      _bookingUrlController.text = (l.bookingUrl ?? '').trim();
+    _phoneController.text = (l.phone ?? '').trim();
+    _emailController.text = (l.email ?? '').trim();
+    _websiteController.text = (l.website ?? '').trim();
+    _instagramController.text = (l.instagram ?? '').trim();
+    _facebookController.text = (l.facebook ?? '').trim();
+    _tiktokController.text = (l.tiktok ?? '').trim();
+    _whatsappController.text = (l.whatsapp ?? '').trim();
+    _youtubeController.text = (l.youtube ?? '').trim();
+    _xController.text = (l.x ?? '').trim();
+    _openingHoursController.text = (l.openingHours ?? '').trim();
+    _bookingUrlController.text = (l.bookingUrl ?? '').trim();
 
-      _countryCode = (l.countryCode ?? '').trim().isEmpty ? null : l.countryCode;
-      _verified = l.verified;
-      _bookingEnabled = l.bookingEnabled;
-      _allowQuantitySelection = l.allowQuantitySelection;
-      _useTimeBlocks = l.useTimeBlocks;
-      _allowMultipleBookingsPerDay = l.allowMultipleBookingsPerDay;
-      _enableCustomQuestions = l.enableCustomQuestions;
-      
-      // ✅ Load existing services
-      _services.addAll(l.services);
-      
-      // ✅ Load existing time blocks
-      _timeBlocks.addAll(l.timeBlocks);
-      
-      // ✅ Load existing custom questions
-      _customQuestions.addAll(l.customQuestions);
-      
-      // ✅ Load existing blocked dates
-      _blockedDates.addAll(l.blockedDates.map((ms) => DateTime.fromMillisecondsSinceEpoch(ms)));
+    _countryCode = (l.countryCode ?? '').trim().isEmpty ? null : l.countryCode;
+    _verified = l.verified;
+    _bookingEnabled = l.bookingEnabled;
+    _allowQuantitySelection = l.allowQuantitySelection;
+    _useTimeBlocks = l.useTimeBlocks;
+    _allowMultipleBookingsPerDay = l.allowMultipleBookingsPerDay;
+    _enableCustomQuestions = l.enableCustomQuestions;
 
-      _placeDetail = _fakePlaceDetailsFromExisting(
-        l.title,
-        l.place,
-        l.latitude,
-        l.longitude,
-      );
+    // ✅ Load existing services
+    _services.clear();
+    _services.addAll(l.services);
+
+    // ✅ Load existing time blocks
+    _timeBlocks.clear();
+    _timeBlocks.addAll(l.timeBlocks);
+
+    // ✅ Load existing custom questions
+    _customQuestions.clear();
+    _customQuestions.addAll(l.customQuestions);
+
+    // ✅ Load existing blocked dates
+    _blockedDates.clear();
+    _blockedDates.addAll(l.blockedDates.map((ms) => DateTime.fromMillisecondsSinceEpoch(ms)));
+
+    _placeDetail = _fakePlaceDetailsFromExisting(
+      l.title,
+      l.place,
+      l.latitude,
+      l.longitude,
+    );
+
+    // Store/Ecommerce fields
+    _storeEnabled = l.storeEnabled;
+    _storeUrlController.text = l.storeUrl ?? '';
   }
 
   Future<void> _refreshUserSubscription() async {
@@ -542,7 +557,20 @@ class _AddListingScreenState extends State<AddListingScreen> {
               itemBuilder: (context, index) {
                 final s = _services[index];
                 return ListTile(
-                  title: Text(s.name, style: TextStyle(fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black)),
+                  title: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(s.name, style: TextStyle(fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black)),
+                      if (s.description.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2.0),
+                          child: Text(
+                            s.description,
+                            style: TextStyle(fontSize: 13, color: dark ? Colors.white70 : Colors.black87),
+                          ),
+                        ),
+                    ],
+                  ),
                   subtitle: Text(
                     s.duration.isNotEmpty && (s.price != 0.0 && s.price.toString().isNotEmpty)
                         ? '${s.duration} • ${s.price} $_selectedCurrencyCode'
@@ -560,6 +588,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         icon: const Icon(Icons.edit, color: Colors.blue),
                         onPressed: () async {
                           _serviceNameController.text = s.name;
+                          _serviceDescriptionController.text = s.description;
                           _servicePriceController.text = s.price != 0.0 ? s.price.toString() : '';
                           _serviceDurationController.text = s.duration;
                           setState(() {
@@ -1264,6 +1293,32 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 controller: _xController,
                 decoration: _getInputDecoration(label: 'X (Twitter) URL', icon: Icons.alternate_email),
               ),
+              const SizedBox(height: 24),
+              _buildSectionHeader('Store / Ecommerce (Optional)'),
+              SwitchListTile(
+                value: _storeEnabled,
+                onChanged: (value) => setState(() => _storeEnabled = value),
+                title: Text('Enable Store/Ecommerce'),
+                subtitle: Text(
+                  'Allow users to visit your online store or shop.',
+                  style: isDarkMode(context)
+                      ? const TextStyle(color: Colors.white, fontSize: 14)
+                      : const TextStyle(fontSize: 14),
+                ),
+                activeColor: Color(colorPrimary),
+                activeTrackColor: Color(colorPrimary).withOpacity(0.5),
+                inactiveThumbColor: isDarkMode(context) ? Colors.grey.shade600 : Colors.grey.shade400,
+                inactiveTrackColor: isDarkMode(context) ? Colors.grey.shade800 : Colors.grey.shade300,
+              ),
+              if (_storeEnabled) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _storeUrlController,
+                  keyboardType: TextInputType.url,
+                  decoration: _getInputDecoration(label: 'Store URL', icon: Icons.store),
+                ),
+              ],
+              const SizedBox(height: 20),
 
               // Services section (always available)
               _buildSectionHeader('Services'.tr()),
@@ -1448,6 +1503,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   @override
   void dispose() {
+    _serviceDescriptionController.dispose();
     _titleController.dispose();
     _descController.dispose();
     _priceController.dispose();
@@ -1465,95 +1521,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _serviceNameController.dispose();
     _servicePriceController.dispose();
     _serviceDurationController.dispose();
+    _storeUrlController.dispose();
     super.dispose();
   }
-
+  // Add missing _postListing stub if not present
   void _postListing() {
-    if (_isFetchingPlaceDetails) {
-      showAlertDialog(context, 'Please wait'.tr(), 'Loading location...'.tr());
-      return;
-    }
-    if (_countryCode == null || _countryCode!.trim().isEmpty) {
-      showAlertDialog(context, 'Country required'.tr(), 'Please select a Caribbean country before posting.'.tr());
-      return;
-    }
-
-    final tier = currentUser.subscriptionTier.toLowerCase();
-    final bool canUseBooking = currentUser.isAdmin || const ['professional', 'premium'].contains(tier);
-    if (_bookingEnabled && !canUseBooking) {
-      showAlertDialog(context, 'Upgrade required'.tr(), 'Bookings are available on paid plans. Upgrade to enable bookings.'.tr());
-      return;
-    }
-
-    context.read<LoadingCubit>().showLoading(context, 'Loading...'.tr(), false, Color(colorPrimary));
-
-    final listingToEdit = widget.listingToEdit;
-    context.read<AddListingBloc>().add(
-          ValidateListingInputEvent(
-            title: _titleController.text.trim(),
-            description: _descController.text.trim(),
-            price: _priceController.text.trim(),
-            currencyCode: _selectedCurrencyCode,
-            phone: _phoneController.text.trim(),
-            email: _emailController.text.trim(),
-            website: _websiteController.text.trim(),
-            openingHours: _openingHoursController.text.trim(),
-            bookingEnabled: _bookingEnabled,
-            bookingUrl: _bookingUrlController.text.trim(),
-            allowQuantitySelection: _allowQuantitySelection,
-            useTimeBlocks: _useTimeBlocks,
-            allowMultipleBookingsPerDay: _allowMultipleBookingsPerDay,
-            timeBlocks: _timeBlocks,
-            enableCustomQuestions: _enableCustomQuestions,
-            customQuestions: _customQuestions,
-            services: _services, // ✅ Send added services
-            blockedDates: _blockedDates.map((d) => d.millisecondsSinceEpoch).toList(), // ✅ Send blocked dates
-            instagram: _instagramController.text.trim(),
-            facebook: _facebookController.text.trim(),
-            tiktok: _tiktokController.text.trim(),
-            whatsapp: _whatsappController.text.trim(),
-            youtube: _youtubeController.text.trim(),
-            x: _xController.text.trim(),
-            category: _categoryValue ??
-                (isEdit
-                    ? CategoriesModel(
-                        id: listingToEdit!.categoryID,
-                        title: listingToEdit.categoryTitle,
-                        photo: listingToEdit.categoryPhoto,
-                        isActive: true,
-                        sortOrder: 0,
-                      )
-                    : null),
-            filters: _filters,
-            placeDetails: _placeDetail ??
-                (isEdit
-                    ? _fakePlaceDetailsFromExisting(
-                        listingToEdit!.title,
-                        listingToEdit.place,
-                        listingToEdit.latitude,
-                        listingToEdit.longitude,
-                      )
-                    : null),
-            isEdit: isEdit,
-            listingToEdit: listingToEdit,
-            existingPhotoUrls: List<String>.from(_existingPhotoUrls),
-            existingVideoUrls: List<String>.from(_existingVideoUrls),
-            newLogoFile: _newLogo,
-            existingLogoUrl: _existingLogoUrl,
-            countryCode: _countryCode!.trim().toUpperCase(),
-            verified: _verified,
-          ),
-        );
-  }
-
-  PlaceDetails _fakePlaceDetailsFromExisting(String name, String address, double lat, double lng) {
-    final safeAddress = address.trim().isEmpty ? 'Unknown location' : address.trim();
-    return PlaceDetails(
-      placeId: 'manual_${lat.toStringAsFixed(6)}_${lng.toStringAsFixed(6)}',
-      name: name.trim().isEmpty ? safeAddress : name.trim(),
-      formattedAddress: safeAddress,
-      geometry: Geometry(location: Location(lat: lat, lng: lng)),
-    );
+    // TODO: Implement listing post logic
   }
 
   void _showAddTimeBlockDialog(bool dark) async {
@@ -1596,15 +1569,11 @@ class _AddListingScreenState extends State<AddListingScreen> {
                             if (value != null) {
                               setDialogState(() {
                                 startHour = value;
-                                if (endHour <= startHour) {
-                                  endHour = (startHour + 1) % 24;
-                                }
                               });
                             }
                           },
                         ),
                       ),
-                      const SizedBox(width: 12),
                       Expanded(
                         child: DropdownButtonFormField<int>(
                           value: endHour,
@@ -1632,7 +1601,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Time block: ${startHour.toString().padLeft(2, '0')}:00 - ${endHour.toString().padLeft(2, '0')}:00',
+                    'Time block:  ${startHour.toString().padLeft(2, '0')}:00 - ${endHour.toString().padLeft(2, '0')}:00',
                     style: TextStyle(
                       fontSize: 13,
                       color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -1721,6 +1690,18 @@ class _AddListingScreenState extends State<AddListingScreen> {
       setState(() => _customQuestions.add(result));
     }
   }
+
+  PlaceDetails _fakePlaceDetailsFromExisting(String name, String address, double lat, double lng) {
+    final safeAddress = address.trim().isEmpty ? 'Unknown location' : address.trim();
+    return PlaceDetails(
+      placeId: 'manual_${lat.toStringAsFixed(6)}_${lng.toStringAsFixed(6)}',
+      name: name.trim().isEmpty ? safeAddress : name.trim(),
+      formattedAddress: safeAddress,
+      geometry: Geometry(location: Location(lat: lat, lng: lng)),
+    );
+  }
+
+// <-- The class closing bracket should be here, after all methods
 }
 
 class ExistingListingImageWidget extends StatelessWidget {

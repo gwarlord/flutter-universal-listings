@@ -78,6 +78,9 @@ class ValidateListingInputEvent extends AddListingEvent {
   final List<ServiceItem> services; // ✅ Added
   final List<int> blockedDates; // ✅ Added (milliseconds since epoch)
 
+  final bool storeEnabled; // ✅ Added
+  final String storeUrl; // ✅ Added
+
   final String instagram;
   final String facebook;
   final String tiktok;
@@ -124,6 +127,8 @@ class ValidateListingInputEvent extends AddListingEvent {
     required this.customQuestions, // ✅ Added
     required this.services, // ✅ Added
     required this.blockedDates, // ✅ Added
+    required this.storeEnabled, // ✅ Added
+    required this.storeUrl, // ✅ Added
     required this.instagram,
     required this.facebook,
     required this.tiktok,

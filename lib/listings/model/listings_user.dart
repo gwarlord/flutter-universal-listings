@@ -10,6 +10,7 @@ class ListingsUser extends User {
   bool suspended;
   DateTime? subscriptionExpiresAt;
   String? revenueCatCustomerId;
+  String countryCode;
 
   List<String> likedListingsIDs;
 
@@ -29,6 +30,7 @@ class ListingsUser extends User {
     this.suspended = false,
     this.subscriptionExpiresAt,
     this.revenueCatCustomerId,
+    this.countryCode = '',
     this.likedListingsIDs = const [],
   }) : super(
           firstName: firstName,
@@ -71,6 +73,7 @@ class ListingsUser extends User {
               : DateTime.tryParse(parsedJson['subscriptionExpiresAt'].toString()))
           : null,
       revenueCatCustomerId: parsedJson['revenueCatCustomerId']?.toString(),
+      countryCode: parsedJson['countryCode'] ?? '',
       likedListingsIDs:
           List<String>.from(parsedJson['likedListingsIDs'] ?? const []),
     );
@@ -97,6 +100,7 @@ class ListingsUser extends User {
       'isAdmin': isAdmin,
       'subscriptionTier': subscriptionTier,
       'suspended': suspended,
+      'countryCode': countryCode,
       'likedListingsIDs': likedListingsIDs,
     };
   }

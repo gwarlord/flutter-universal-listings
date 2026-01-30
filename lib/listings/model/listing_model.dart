@@ -55,6 +55,10 @@ class ListingModel {
   /// Chat
   bool chatEnabled;
 
+  /// Store (Premium Feature)
+  bool storeEnabled;
+  String storeUrl;
+
   /// Social Media
   String instagram;
   String facebook;
@@ -126,6 +130,8 @@ class ListingModel {
     this.services = const [],
     this.blockedDates = const [],
     this.chatEnabled = true,
+    this.storeEnabled = false,
+    this.storeUrl = '',
     this.instagram = '',
     this.facebook = '',
     this.tiktok = '',
@@ -189,6 +195,8 @@ class ListingModel {
           .toList(),
       blockedDates: List<int>.from(json['blockedDates'] ?? []),
       chatEnabled: json['chatEnabled'] ?? true,
+      storeEnabled: json['storeEnabled'] ?? false,
+      storeUrl: json['storeUrl'] ?? '',
       instagram: json['instagram'] ?? '',
       facebook: json['facebook'] ?? '',
       tiktok: json['tiktok'] ?? '',
@@ -249,6 +257,8 @@ class ListingModel {
       'services': services.map((e) => e.toJson()).toList(),
       'blockedDates': blockedDates,
       'chatEnabled': chatEnabled,
+      'storeEnabled': storeEnabled,
+      'storeUrl': storeUrl,
       'instagram': instagram,
       'facebook': facebook,
       'tiktok': tiktok,
@@ -308,6 +318,8 @@ class ListingModel {
     List<ServiceItem>? services,
     List<int>? blockedDates,
     bool? chatEnabled,
+    bool? storeEnabled,
+    String? storeUrl,
     String? instagram,
     String? facebook,
     String? tiktok,
@@ -357,6 +369,8 @@ class ListingModel {
       services: services ?? this.services,
       blockedDates: blockedDates ?? this.blockedDates,
       chatEnabled: chatEnabled ?? this.chatEnabled,
+      storeEnabled: storeEnabled ?? this.storeEnabled,
+      storeUrl: storeUrl ?? this.storeUrl,
       instagram: instagram ?? this.instagram,
       facebook: facebook ?? this.facebook,
       tiktok: tiktok ?? this.tiktok,
@@ -376,12 +390,14 @@ class ListingModel {
 
 class ServiceItem {
   String name;
+  String description; // ✅ Added short description
   double price;
   String duration; // e.g. "30 mins", "1 hour"
   int quantity;
 
   ServiceItem({
     required this.name,
+    this.description = '',
     required this.price,
     this.duration = '',
     this.quantity = 1,
@@ -390,6 +406,7 @@ class ServiceItem {
   factory ServiceItem.fromJson(Map<String, dynamic> json) {
     return ServiceItem(
       name: json['name'] ?? '',
+      description: json['description'] ?? '',
       price: (json['price'] ?? 0.0).toDouble(),
       duration: json['duration'] ?? '',
       quantity: json['quantity'] ?? 1,
@@ -399,6 +416,7 @@ class ServiceItem {
   Map<String, dynamic> toJson() {
     return {
       'name': name,
+      'description': description,
       'price': price,
       'duration': duration,
       'quantity': quantity,

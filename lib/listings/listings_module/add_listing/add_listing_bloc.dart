@@ -18,6 +18,7 @@ const Set<String> kCaribbeanCountryCodes = {
 };
 
 const Set<String> kBookingEligibleTiers = {'professional', 'premium'};
+const Set<String> kStoreEligibleTiers = {'premium'};
 
 class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
   final ListingsUser currentUser;
@@ -160,44 +161,18 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
         return;
       }
 
-      // Subscription gating for bookings - fetch fresh data from Firestore
-      print('🔍 DEBUG: Checking booking eligibility...');
-      print('🔍 DEBUG: event.bookingEnabled = ${event.bookingEnabled}');
-      print('🔍 DEBUG: currentUser.subscriptionTier (cached) = ${currentUser.subscriptionTier}');
-      print('🔍 DEBUG: kBookingEligibleTiers = $kBookingEligibleTiers');
-      
-      if (event.bookingEnabled) {
-        try {
-          print('🔍 DEBUG: Fetching fresh subscription data from Firestore...');
-          final userDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(currentUser.userID)
-              .get();
-          
-          print('🔍 DEBUG: User doc exists = ${userDoc.exists}');
-          print('🔍 DEBUG: User doc data = ${userDoc.data()}');
-          
-          final String tier = (userDoc.data()?['subscriptionTier'] as String? ?? 'free').toLowerCase();
-          print('🔍 DEBUG: Fresh subscription tier from Firestore = $tier');
-          
-          final bool canUseBooking = kBookingEligibleTiers.contains(tier);
-          print('🔍 DEBUG: canUseBooking = $canUseBooking');
-          
-          if (!canUseBooking) {
-            print('❌ DEBUG: Blocking save - user does not have eligible tier');
-            emit(AddListingErrorState(
-              errorTitle: 'Upgrade required'.tr(),
-              errorMessage: 'Bookings are available on paid plans. Upgrade to enable bookings.'.tr(),
-            ));
-            return;
-          }
-          print('✅ DEBUG: Subscription check passed, proceeding with save');
-        } catch (e) {
-          print('❌ DEBUG: Error checking subscription: $e');
-          // If error checking subscription, fall back to currentUser data
-          final String tier = currentUser.subscriptionTier.toLowerCase();
-          final bool canUseBooking = kBookingEligibleTiers.contains(tier);
-          if (!canUseBooking) {
+      // Subscription gating check
+      try {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUser.userID)
+            .get();
+        final String tier = (userDoc.data()?['subscriptionTier'] as String? ?? 'free').toLowerCase();
+        final bool isAdmin = userDoc.data()?['isAdmin'] as bool? ?? false;
+
+        // Gating for bookings
+        if (event.bookingEnabled && !isAdmin) {
+          if (!kBookingEligibleTiers.contains(tier)) {
             emit(AddListingErrorState(
               errorTitle: 'Upgrade required'.tr(),
               errorMessage: 'Bookings are available on paid plans. Upgrade to enable bookings.'.tr(),
@@ -205,8 +180,34 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
             return;
           }
         }
-      } else {
-        print('🔍 DEBUG: Bookings not enabled, skipping subscription check');
+
+        // Gating for store
+        if (event.storeEnabled && !isAdmin) {
+          if (!kStoreEligibleTiers.contains(tier)) {
+            emit(AddListingErrorState(
+              errorTitle: 'Premium required'.tr(),
+              errorMessage: 'Store integration is available on Premium plans. Upgrade to enable.'.tr(),
+            ));
+            return;
+          }
+        }
+      } catch (e) {
+        // Fallback to cached data if Firestore fetch fails
+        final String tier = currentUser.subscriptionTier.toLowerCase();
+        if (event.bookingEnabled && !currentUser.isAdmin && !kBookingEligibleTiers.contains(tier)) {
+          emit(AddListingErrorState(
+            errorTitle: 'Upgrade required'.tr(),
+            errorMessage: 'Bookings are available on paid plans. Upgrade to enable bookings.'.tr(),
+          ));
+          return;
+        }
+        if (event.storeEnabled && !currentUser.isAdmin && !kStoreEligibleTiers.contains(tier)) {
+          emit(AddListingErrorState(
+            errorTitle: 'Premium required'.tr(),
+            errorMessage: 'Store integration is available on Premium plans. Upgrade to enable.'.tr(),
+          ));
+          return;
+        }
       }
 
       // Require at least one photo overall (existing + new)
@@ -242,6 +243,8 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
         customQuestions: event.customQuestions,
         services: event.services,
         blockedDates: event.blockedDates,
+        storeEnabled: event.storeEnabled,
+        storeUrl: event.storeUrl.trim(),
         instagram: event.instagram.trim(),
         facebook: event.facebook.trim(),
         tiktok: event.tiktok.trim(),
@@ -399,6 +402,8 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
 
       emit(AddListingProgressState(progressMessage: 'Updating Listing...'.tr()));
       try {
+        // DEBUG: Log storeEnabled and storeUrl before updating Firestore
+        print('DEBUG: Firestore update storeEnabled = \\${event.listingModel.storeEnabled}, storeUrl = \\${event.listingModel.storeUrl}');
         final updateData = <String, dynamic>{
           'title': event.listingModel.title,
           'description': event.listingModel.description,
@@ -422,6 +427,8 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           'timeBlocks': event.listingModel.timeBlocks,
           'services': event.listingModel.services.map((e) => e.toJson()).toList(),
           'blockedDates': event.listingModel.blockedDates,
+          'storeEnabled': event.listingModel.storeEnabled,
+          'storeUrl': event.listingModel.storeUrl,
           'instagram': event.listingModel.instagram,
           'facebook': event.listingModel.facebook,
           'tiktok': event.listingModel.tiktok,
@@ -429,11 +436,15 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           'youtube': event.listingModel.youtube,
           'x': event.listingModel.x,
           'photo': event.listingModel.photo,
-          'photos': event.listingModel.photos,          'videos': allVideos,
+          'photos': event.listingModel.photos,
+          'videos': allVideos,
           'logo': event.listingModel.logo,
-          'price': event.listingModel.price,
-          'currencyCode': event.listingModel.currencyCode,          'countryCode': (event.listingModel.countryCode).toUpperCase(),
+          'currencyCode': event.listingModel.currencyCode,
+          'countryCode': (event.listingModel.countryCode).toUpperCase(),
           'verified': event.listingModel.verified,
+          // Ensure custom booking questions are updated
+          'enableCustomQuestions': event.listingModel.enableCustomQuestions,
+          'customQuestions': event.listingModel.customQuestions,
         };
 
         // Include videos only if present in your model/schema

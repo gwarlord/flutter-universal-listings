@@ -33,7 +33,6 @@ class ChatFeedModel {
     int createdAtValue = 0;
     if (parsedJson['createdAt'] is int) {
       createdAtValue = parsedJson['createdAt'];
-      // Heuristic: if less than 10^11, it's likely in seconds
       if (createdAtValue < 100000000000) {
         createdAtValue *= 1000;
       }
@@ -43,7 +42,7 @@ class ChatFeedModel {
       createdAtValue = (parsedJson['lastMessageDate'] as Timestamp).millisecondsSinceEpoch;
     }
 
-    // Handle participants as List<String> or List<Map>
+    // Handle participants
     List<User> participantsList = [];
     if (parsedJson['participants'] is List) {
       var rawList = parsedJson['participants'] as List;
@@ -59,7 +58,7 @@ class ChatFeedModel {
     
     participantsList.removeWhere((element) => element.userID == currentUserID);
 
-    // Handle content parsing from both legacy 'content' and new 'lastMessage' structures
+    // Handle content
     ChatFeedContent chatContent;
     if (parsedJson.containsKey('lastMessage') && parsedJson['lastMessage'] is Map) {
       chatContent = ChatFeedContent.fromJson(Map<String, dynamic>.from(parsedJson['lastMessage']));
@@ -77,11 +76,20 @@ class ChatFeedModel {
       title = participantsList.first.fullName();
     }
 
+    // ROBUST UNREAD LOGIC: Check both the flag and the readUserIDs list
+    bool isRead = parsedJson['markedAsRead'] ?? false;
+    
+    // If the local flag is false, double check the global channel read list
+    final List<dynamic> readIds = parsedJson['readUserIDs'] ?? chatContent.readUserIDs;
+    if (readIds.contains(currentUserID)) {
+      isRead = true;
+    }
+
     return ChatFeedModel(
       chatFeedContent: chatContent,
       createdAt: createdAtValue,
       id: parsedJson['id'] ?? parsedJson['channelID'] ?? '',
-      markedAsRead: parsedJson['markedAsRead'] ?? false,
+      markedAsRead: isRead,
       participants: participantsList,
       title: title,
       listingId: parsedJson['listingId'] ?? '',
@@ -155,11 +163,9 @@ class ChatFeedContent {
       }
     }
 
-    // Handle createdAt as int or Timestamp
     int createdAtValue = 0;
     if (parsedJson['createdAt'] is int) {
       createdAtValue = parsedJson['createdAt'];
-      // Heuristic: if less than 10^11, it's likely in seconds
       if (createdAtValue < 100000000000) {
         createdAtValue *= 1000;
       }

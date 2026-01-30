@@ -14,6 +14,8 @@ import 'package:instaflutter/listings/ui/container/container_screen.dart';
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:instaflutter/constants.dart';
+import 'package:instaflutter/listings/utils/caribbean_countries.dart';
+import 'package:instaflutter/listings/utils/country_search_dialog.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -28,10 +30,21 @@ class _SignUpState extends State<SignUpScreen> {
   final TextEditingController _confirmPasswordController = TextEditingController();
   final GlobalKey<FormState> _key = GlobalKey();
   String? firstName, lastName, email, password, confirmPassword;
+  String? _countryCode;
   AutovalidateMode _validate = AutovalidateMode.disabled;
   bool acceptEULA = true;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  String? validateCountry(String? code) {
+    if (code == null || code.trim().isEmpty) {
+      return 'Country is required';
+    }
+    // Optionally, validate against allowed codes
+    // if (!CaribbeanCountries.isAllowedCode(code)) {
+    //   return 'Please select a valid Caribbean country';
+    // }
+    return null;
+  }
 
   InputDecoration _inputDecoration(BuildContext context, String hint,
       {IconData? icon, bool required = false}) {
@@ -102,12 +115,12 @@ class _SignUpState extends State<SignUpScreen> {
                           Color(colorPrimary),
                         );
                     context.read<AuthenticationBloc>().add(
-                        SignupWithEmailAndPasswordEvent(
-                            emailAddress: email!,
-                            password: password!,
-                            image: _image,
-                            lastName: lastName,
-                            firstName: firstName));
+                      SignupWithEmailAndPasswordEvent(
+                        emailAddress: email!,
+                        password: password!,
+                        image: _image,
+                        lastName: lastName,
+                        firstName: firstName));
                   } else if (state is SignUpFailureState) {
                     showSnackBar(context, state.errorMessage);
                   }
@@ -215,36 +228,29 @@ class _SignUpState extends State<SignUpScreen> {
                                 padding: const EdgeInsets.all(16.0),
                                 child: Column(
                                   children: [
-                                    TextFormField(
-                                      textCapitalization: TextCapitalization.words,
-                                      validator: validateName,
-                                      onSaved: (String? val) {
-                                        firstName = val;
-                                      },
-                                      textInputAction: TextInputAction.next,
-                                      style: TextStyle(
-                                          color: isDarkMode(context)
-                                              ? Colors.white
-                                              : Colors.grey.shade900),
-                                      decoration: _inputDecoration(
-                                          context, 'First Name'.tr(),
-                                          icon: Icons.person_outline),
-                                    ),
-                                    const SizedBox(height: 14),
-                                    TextFormField(
-                                      textCapitalization: TextCapitalization.words,
-                                      validator: validateName,
-                                      onSaved: (String? val) {
-                                        lastName = val;
-                                      },
-                                      textInputAction: TextInputAction.next,
-                                      style: TextStyle(
-                                          color: isDarkMode(context)
-                                              ? Colors.white
-                                              : Colors.grey.shade900),
-                                      decoration: _inputDecoration(
-                                          context, 'Last Name'.tr(),
-                                          icon: Icons.person_outline),
+                                    // Country select
+                                    GestureDetector(
+                                      onTap: () async {
+                                          final selected = await showCountrySearchDialog(context, _countryCode);
+                                          if (selected != null) setState(() => _countryCode = selected);
+                                        },
+                                      child: AbsorbPointer(
+                                        child: TextFormField(
+                                          controller: TextEditingController(
+                                            text: CaribbeanCountries.all.firstWhere(
+                                              (c) => c.code == _countryCode,
+                                              orElse: () => CaribbeanCountry(code: '', name: ''),
+                                            ).name,
+                                          ),
+                                          validator: (_) => validateCountry(_countryCode),
+                                          decoration: _inputDecoration(
+                                            context, 'Country'.tr(),
+                                            icon: Icons.public,
+                                            required: true,
+                                          ),
+                                          readOnly: true,
+                                        ),
+                                      ),
                                     ),
                                     const SizedBox(height: 14),
                                     TextFormField(

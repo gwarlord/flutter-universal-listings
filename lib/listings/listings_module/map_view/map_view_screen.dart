@@ -213,7 +213,12 @@ class _MapViewScreenState extends State<MapViewScreen> {
                                 hintText: _showFavoritesOnly
                                     ? 'Search favorite locations...'.tr()
                                     : 'Search all locations...'.tr(),
-                                prefixIcon: const Icon(Icons.search),
+                                prefixIcon: Icon(
+                                  Icons.search,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : Colors.grey.shade600,
+                                ),
                                 border: InputBorder.none,
                                 hintStyle: TextStyle(
                                   color: Theme.of(context).brightness == Brightness.dark
