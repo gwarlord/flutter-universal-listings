@@ -50,38 +50,12 @@ String extractSocialHandle(String url, String domain) {
     if (uri.host.contains(domain)) {
       final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
       if (segments.isNotEmpty) {
-        return '@' + segments.first;
+        return segments.last;
       }
     }
-  } catch (_) {}
-  // fallback: if not a url, or can't parse, just show as is
-  if (url.startsWith('http')) {
     return url;
-  }
-  return '@' + url.replaceAll('@', '');
-}
-
-class ListingDetailsWrappingWidget extends StatelessWidget {
-  final ListingModel listing;
-  final ListingsUser currentUser;
-
-  const ListingDetailsWrappingWidget({
-    super.key,
-    required this.listing,
-    required this.currentUser,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => ListingDetailsBloc(
-        listing: listing,
-        listingsRepository: listingApiManager,
-        profileRepository: profileApiManager,
-        currentUser: currentUser,
-      ),
-      child: ListingDetailsScreen(currentUser: currentUser, listing: listing),
-    );
+  } catch (e) {
+    return url;
   }
 }
 
@@ -89,30 +63,13 @@ class ListingDetailsScreen extends StatefulWidget {
   final ListingModel listing;
   final ListingsUser currentUser;
 
-  const ListingDetailsScreen({
-    Key? key,
-    required this.listing,
-    required this.currentUser,
-  }) : super(key: key);
+  const ListingDetailsScreen({Key? key, required this.listing, required this.currentUser}) : super(key: key);
 
   @override
   State<ListingDetailsScreen> createState() => _ListingDetailsScreenState();
 }
 
 class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
-
-    @override
-    void didUpdateWidget(covariant ListingDetailsScreen oldWidget) {
-      super.didUpdateWidget(oldWidget);
-      // If the listing or storeUrl changes, refetch the preview
-      if (widget.listing.storeUrl != oldWidget.listing.storeUrl) {
-        if (widget.listing.storeEnabled && widget.listing.storeUrl.isNotEmpty) {
-          _fetchStorePreview(widget.listing.storeUrl);
-        } else {
-          setState(() => _storePreview = null);
-        }
-      }
-    }
   Map<String, dynamic>? _storePreview;
 
   Future<void> _fetchStorePreview(String url) async {
@@ -147,12 +104,12 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   bool isLoadingReviews = true;
   bool? _authorIsPremium;
 
-  List<ListingReviewModel> reviews = [];
   List<MediaItem> _mediaList = [];
   VideoPlayerController? _videoController;
   bool _videoReady = false;
   bool _videoMuted = true;
   bool _servicesExpanded = false;
+  List<ListingReviewModel> reviews = []; // Explicitly declared here
 
   bool get _canEditOrDelete =>
       currentUser.userID == listing.authorID || currentUser.isAdmin;
@@ -336,6 +293,10 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   context.read<LoadingCubit>().hideLoading();
                   if (!mounted) return;
                   Navigator.pop(context, true);
+                } else if (state is ReviewsFetchedState) { // Add listener for ReviewsFetchedState
+                  setState(() {
+                    reviews = state.reviews;
+                  });
                 }
               },
             ),
@@ -1082,8 +1043,8 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     return BlocBuilder<ListingDetailsBloc, ListingDetailsState>(
       builder: (context, state) {
         if (state is ReviewsFetchedState) {
-          reviews = state.reviews;
-          if (reviews.isEmpty) return const SizedBox.shrink();
+          final currentReviews = state.reviews; // Use a local variable to avoid setState
+          if (currentReviews.isEmpty) return const SizedBox.shrink();
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1095,11 +1056,11 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
               ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: reviews.length > 5 ? 5 : reviews.length,
+                itemCount: currentReviews.length > 5 ? 5 : currentReviews.length,
                 separatorBuilder: (context, index) => const Divider(height: 32),
-                itemBuilder: (context, index) => ReviewWidget(review: reviews[index]),
+                itemBuilder: (context, index) => ReviewWidget(review: currentReviews[index]),
               ),
-              if (reviews.length > 5)
+              if (currentReviews.length > 5)
                 Padding(
                   padding: const EdgeInsets.only(top: 16),
                   child: OutlinedButton(
@@ -1333,7 +1294,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
   Future<void> _launchWhatsApp(String phone) async {
     if (phone.isEmpty) return;
-    await _safeLaunch(Uri.parse('whatsapp://send?phone=${phone.replaceAll(RegExp(r'[^\d+]'), '')}'));
+    await _safeLaunch(Uri.parse('whatsapp://send?phone=${phone.replaceAll(RegExp(r'[^\\d+]'), '')}'));
   }
 
   Future<void> _safeLaunch(Uri uri) async {
@@ -1343,6 +1304,19 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   }
 }
 
+enum MediaType { photo, video }
+
+class MediaItem {
+  final String url;
+  final MediaType type;
+  bool get isVideo => type == MediaType.video;
+
+  const MediaItem({required this.url, required this.type});
+
+  factory MediaItem.photo(String url) => MediaItem(url: url, type: MediaType.photo);
+  factory MediaItem.video(String url) => MediaItem(url: url, type: MediaType.video);
+}
+
 class _ContactHoursCard extends StatelessWidget {
   final ListingModel listing;
   final Color colorPrimary;
@@ -1350,11 +1324,12 @@ class _ContactHoursCard extends StatelessWidget {
   final VoidCallback onCall, onEmail, onWebsite, onInstagram, onFacebook, onTiktok, onWhatsapp, onYoutube, onX;
 
   const _ContactHoursCard({
+    Key? key, // Added Key parameter
     required this.listing, required this.colorPrimary, required this.isDark,
     required this.onCall, required this.onEmail, required this.onWebsite,
     required this.onInstagram, required this.onFacebook, required this.onTiktok,
     required this.onWhatsapp, required this.onYoutube, required this.onX,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -1412,7 +1387,7 @@ class _OpeningHoursRow extends StatefulWidget {
   final Color accent;
   final bool isDark;
 
-  const _OpeningHoursRow({required this.value, required this.accent, required this.isDark});
+  const _OpeningHoursRow({Key? key, required this.value, required this.accent, required this.isDark}) : super(key: key);
 
   @override
   State<_OpeningHoursRow> createState() => _OpeningHoursRowState();
@@ -1420,6 +1395,25 @@ class _OpeningHoursRow extends StatefulWidget {
 
 class _OpeningHoursRowState extends State<_OpeningHoursRow> {
   bool _isExpanded = false;
+
+  bool _isTimeBetween(DateTime now, DateTime open, DateTime close) {
+    final nowTime = TimeOfDay.fromDateTime(now);
+    final openTime = TimeOfDay.fromDateTime(open);
+    final closeTime = TimeOfDay.fromDateTime(close);
+
+    if (openTime.hour < closeTime.hour ||
+        (openTime.hour == closeTime.hour && openTime.minute < closeTime.minute)) {
+      return (nowTime.hour > openTime.hour ||
+              (nowTime.hour == openTime.hour && nowTime.minute >= openTime.minute)) &&
+          (nowTime.hour < closeTime.hour ||
+              (nowTime.hour == closeTime.hour && nowTime.minute < closeTime.minute));
+    } else {
+      return (nowTime.hour > openTime.hour ||
+              (nowTime.hour == openTime.hour && nowTime.minute >= openTime.minute)) ||
+          (nowTime.hour < closeTime.hour ||
+              (nowTime.hour == closeTime.hour && nowTime.minute < closeTime.minute));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1510,4 +1504,236 @@ class _OpeningHoursRowState extends State<_OpeningHoursRow> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(day.tr(), styl
+                      Text(
+                        day.tr(),
+                        style: TextStyle(fontWeight: isToday ? FontWeight.bold : FontWeight.normal),
+                      ),
+                      Text(
+                        hours,
+                        style: TextStyle(fontWeight: isToday ? FontWeight.bold : FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ActionRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final VoidCallback onTap;
+  final Color accent;
+  final bool isDark;
+
+  const _ActionRow({
+    Key? key, // Added Key parameter
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.onTap,
+    required this.accent,
+    required this.isDark,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(icon, color: accent),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontSize: 12, color: isDark ? Colors.grey : Colors.grey.shade600)),
+                  const SizedBox(height: 4),
+                  Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, size: 20, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+// Placeholder for _InfoRow, assuming its existence
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final Color accent;
+  final bool isDark;
+
+  const _InfoRow({
+    Key? key, // Added Key parameter
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.accent,
+    required this.isDark,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Icon(icon, color: accent),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(fontSize: 12, color: isDark ? Colors.grey : Colors.grey.shade600)),
+                const SizedBox(height: 4),
+                Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class FilterDetailsWidget extends StatelessWidget {
+  final MapEntry<String, dynamic> filter;
+  final bool isDark;
+  final Color colorPrimary;
+  final bool isLast;
+
+  const FilterDetailsWidget({
+    Key? key, // Added Key parameter
+    required this.filter,
+    required this.isDark,
+    required this.colorPrimary,
+    required this.isLast,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Icon(Icons.check_circle_outline, color: colorPrimary),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  filter.key.tr(),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+              ),
+              Text(
+                filter.value.toString().tr(),
+                style: TextStyle(
+                  color: isDark ? Colors.grey : Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (!isLast) Divider(indent: 56, height: 1, color: isDark ? Colors.white10 : Colors.black12),
+      ],
+    );
+  }
+}
+
+class ReviewWidget extends StatelessWidget {
+  final ListingReviewModel review;
+
+  const ReviewWidget({Key? key, required this.review}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            if (review.profilePictureURL.isNotEmpty)
+              CircleAvatar(
+                radius: 20,
+                backgroundImage: NetworkImage(review.profilePictureURL),
+              ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                review.fullName(), // Corrected from review.reviewerName
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+            Text(
+              DateFormat('MMM d, yyyy').format(DateTime.fromMillisecondsSinceEpoch(review.createdAt * 1000)), // Corrected .toDate()
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        RatingBarIndicator(
+          rating: review.starCount.toDouble(),
+          itemBuilder: (context, index) => Icon(
+            Icons.star,
+            color: Colors.amber,
+          ),
+          itemCount: 5,
+          itemSize: 20.0,
+          direction: Axis.horizontal,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          review.content, // Corrected from review.review
+          style: TextStyle(fontSize: 15, height: 1.4, color: isDarkMode(context) ? Colors.grey.shade300 : Colors.grey.shade800),
+        ),
+      ],
+    );
+  }
+}
+
+// Wrapper for ListingDetailsScreen, as it's used in other files.
+class ListingDetailsWrappingWidget extends StatelessWidget {
+  final ListingModel listing;
+  final ListingsUser currentUser;
+
+  const ListingDetailsWrappingWidget({
+    Key? key,
+    required this.listing,
+    required this.currentUser,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider<ListingDetailsBloc>(
+      create: (context) => ListingDetailsBloc(
+        listingsRepository: listingApiManager,
+        profileRepository: profileApiManager,
+        listing: listing,
+        currentUser: currentUser,
+      )..add(GetListingReviewsEvent()),
+      child: ListingDetailsScreen(
+        listing: listing,
+        currentUser: currentUser,
+      ),
+    );
+  }
+}
