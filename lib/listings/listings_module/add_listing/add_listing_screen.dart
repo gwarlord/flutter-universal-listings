@@ -129,9 +129,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   Map<String, String>? _filters = {};
   PlaceDetails? _placeDetail;
-
   Prediction? _selectedPrediction;
   bool _isFetchingPlaceDetails = false;
+  // *** DEBUG: Track place selection and persistence ***
+  bool _placeManuallySelected = false;
 
   final List<String> _existingPhotoUrls = [];
   final List<String> _existingVideoUrls = [];
@@ -197,6 +198,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
 
   void _populateListingData(ListingModel l) {
+    debugPrint('*** DEBUG: _populateListingData called. _placeManuallySelected=[0m$_placeManuallySelected');
     _titleController.text = l.title;
     _descController.text = l.description;
     _priceController.text = l.price.toString();
@@ -248,13 +250,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _blockedDates.clear();
     _blockedDates.addAll(l.blockedDates.map((ms) => DateTime.fromMillisecondsSinceEpoch(ms)));
 
-    _placeDetail = _fakePlaceDetailsFromExisting(
-      l.title,
-      l.place,
-      l.latitude,
-      l.longitude,
-    );
-
+    if (!_placeManuallySelected) {
+      _placeDetail = _fakePlaceDetailsFromExisting(
+        l.title,
+        l.place,
+        l.latitude,
+        l.longitude,
+      );
+    }
     // Store/Ecommerce fields
     _storeEnabled = l.storeEnabled;
     _storeUrlController.text = l.storeUrl ?? '';
@@ -916,10 +919,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
           if (!mounted) return;
           showAlertDialog(listenerContext, state.errorTitle, state.errorMessage);
         } else if (state is PlaceDetailsState) {
+          debugPrint('*** DEBUG: PlaceDetailsState received: '
+              '${state.placeDetails?.formattedAddress ?? state.placeDetails?.toString()}');
           setState(() {
             _isFetchingPlaceDetails = false;
             if (state.placeDetails != null) {
               _placeDetail = state.placeDetails;
+              _placeManuallySelected = true;
             }
           });
         } else if (state is ListingPublishedState) {
@@ -1091,10 +1097,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     mode: Mode.fullscreen,
                     language: 'en',
                   );
+                  debugPrint('*** DEBUG: Place selected from autocomplete: '
+                      '${prediction?.description ?? prediction?.toString()}');
                   if (prediction != null) {
                     setState(() {
                       _selectedPrediction = prediction;
                       _isFetchingPlaceDetails = true;
+                      _placeManuallySelected = true;
                     });
                     if (!mounted) return;
                     context.read<AddListingBloc>().add(GetPlaceDetailsEvent(prediction: prediction));
@@ -1106,22 +1115,28 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     icon: Icons.location_on,
                     isRequired: false,
                   ),
-                  child: Text(
-                    _isFetchingPlaceDetails
-                        ? 'Loading...'.tr()
-                        : (_placeDetail?.formattedAddress?.trim().isNotEmpty ?? false)
-                            ? _placeDetail!.formattedAddress!
-                            : (_selectedPrediction?.description?.trim().isNotEmpty ?? false)
-                                ? _selectedPrediction!.description!
-                                : (isEdit
-                                    ? (widget.listingToEdit?.place ?? 'Select Place'.tr())
-                                    : 'Select Place'.tr()),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Builder(
+                    builder: (context) {
+                      final displayText = _isFetchingPlaceDetails
+                          ? 'Loading...'.tr()
+                          : (_placeDetail?.formattedAddress?.trim().isNotEmpty ?? false)
+                              ? _placeDetail!.formattedAddress!
+                              : (_selectedPrediction?.description?.trim().isNotEmpty ?? false)
+                                  ? _selectedPrediction!.description!
+                                  : (isEdit
+                                      ? (widget.listingToEdit?.place ?? 'Select Place'.tr())
+                                      : 'Select Place'.tr());
+                      debugPrint('*** DEBUG: Location field display: $displayText');
+                      return Text(
+                        displayText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      );
+                    },
                   ),
                 ),
               ),
-
+              const SizedBox(height: 16),
               _buildSectionHeader('About'.tr()),
               TextField(
                 controller: _descController,
@@ -1525,23 +1540,70 @@ class _AddListingScreenState extends State<AddListingScreen> {
       return;
     }
 
+    // Show loading overlay
+    context.read<LoadingCubit>().showLoading(
+      context,
+      isEdit ? 'Saving listing...'.tr() : 'Posting listing...'.tr(),
+      false,
+      Color(colorPrimary),
+    );
+
+    final place = _placeDetail?.formattedAddress ?? (isEdit ? widget.listingToEdit?.place ?? '' : '');
+    final latitude = _placeDetail?.geometry?.location.lat ?? (isEdit ? widget.listingToEdit?.latitude ?? 0 : 0);
+    final longitude = _placeDetail?.geometry?.location.lng ?? (isEdit ? widget.listingToEdit?.longitude ?? 0 : 0);
+    debugPrint('*** DEBUG: _postListing called. place="$place" lat=$latitude lng=$longitude');
+
+    final listingModel = ListingModel(
+      title: _titleController.text.trim(),
+      description: _descController.text.trim(),
+      categoryID: _categoryValue!.id,
+      categoryTitle: _categoryValue!.title,
+      categoryPhoto: _categoryValue!.photo,
+      price: _priceController.text.trim(),
+      currencyCode: _selectedCurrencyCode,
+      phone: _phoneController.text.trim(),
+      email: _emailController.text.trim(),
+      website: _websiteController.text.trim(),
+      openingHours: _openingHoursController.text.trim(),
+      bookingEnabled: _bookingEnabled,
+      bookingUrl: _bookingUrlController.text.trim(),
+      allowQuantitySelection: _allowQuantitySelection,
+      useTimeBlocks: _useTimeBlocks,
+      allowMultipleBookingsPerDay: _allowMultipleBookingsPerDay,
+      timeBlocks: _timeBlocks,
+      enableCustomQuestions: _enableCustomQuestions,
+      customQuestions: _customQuestions,
+      services: _services,
+      blockedDates: _blockedDates.map((d) => d.millisecondsSinceEpoch).toList(),
+      storeEnabled: _storeEnabled,
+      storeUrl: _storeUrlController.text.trim(),
+      instagram: _instagramController.text.trim(),
+      facebook: _facebookController.text.trim(),
+      tiktok: _tiktokController.text.trim(),
+      whatsapp: _whatsappController.text.trim(),
+      youtube: _youtubeController.text.trim(),
+      x: _xController.text.trim(),
+      filters: _filters ?? {},
+      countryCode: _countryCode ?? '',
+      verified: _verified,
+      authorID: currentUser.userID,
+      photo: '', // Will be set by backend
+      id: '', // Will be set by backend
+      createdAt: DateTime.now().millisecondsSinceEpoch,
+      place: place,
+      latitude: latitude,
+      longitude: longitude,
+    );
+
     context.read<AddListingBloc>().add(
-      AddListingEvent(
-        title: _titleController.text.trim(),
-        description: _descController.text.trim(),
-        category: _categoryValue!,
-        price: double.tryParse(_priceController.text.trim()) ?? 0.0,
-        phone: _phoneController.text.trim(),
-        email: _emailController.text.trim(),
-        website: _websiteController.text.trim(),
-        instagram: _instagramController.text.trim(),
-        facebook: _facebookController.text.trim(),
-        tiktok: _tiktokController.text.trim(),
-        whatsapp: _whatsappController.text.trim(),
-        youtube: _youtubeController.text.trim(),
-        x: _xController.text.trim(),
-        currency: _selectedCurrencyCode,
-        // Add other fields as needed
+      PublishListingEvent(
+        listingModel: listingModel,
+        isEdit: isEdit,
+        listingIdToUpdate: isEdit ? widget.listingToEdit?.id : null,
+        existingPhotoUrls: _existingPhotoUrls,
+        existingVideoUrls: _existingVideoUrls,
+        newLogoFile: _newLogo,
+        existingLogoUrl: _existingLogoUrl,
       ),
     );
   }

@@ -285,7 +285,7 @@ class _ConversationItemState extends State<_ConversationItem> {
               height: 60,
               child: Stack(
                 children: [
-                  // Profile Image
+                  // Main: Listing Logo
                   Center(
                     child: Container(
                       width: 54,
@@ -293,18 +293,47 @@ class _ConversationItemState extends State<_ConversationItem> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isUnread ? Color(colorPrimary).withOpacity(0.5) : Colors.transparent, 
+                          color: isUnread ? Color(colorPrimary).withOpacity(0.5) : Colors.transparent,
                           width: 2
                         ),
+                        color: Colors.white,
                       ),
-                      child: displayCircleImage(profilePic, 50, false),
+                      child: listingLogo.isNotEmpty
+                          ? ClipOval(
+                              child: Image.network(
+                                listingLogo,
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                              ),
+                            )
+                          : Icon(Icons.store, size: 32, color: Colors.grey[400]),
                     ),
                   ),
+                  // Overlay: Profile Picture (bottom right)
+                  if (profilePic.isNotEmpty)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))],
+                        ),
+                        child: ClipOval(
+                          child: displayCircleImage(profilePic, 22, false),
+                        ),
+                      ),
+                    ),
                   // Active Status Indicator (RED DOT)
                   if (isActive)
                     Positioned(
                       right: 4,
-                      bottom: 4,
+                      top: 4,
                       child: Container(
                         width: 14,
                         height: 14,
@@ -312,30 +341,6 @@ class _ConversationItemState extends State<_ConversationItem> {
                           color: Colors.red,
                           shape: BoxShape.circle,
                           border: Border.all(color: isDark ? Colors.black : Colors.white, width: 2.5),
-                        ),
-                      ),
-                    ),
-                  // LISTING LOGO Overlay (Top Right)
-                  if (listingLogo.isNotEmpty)
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: isDark ? Colors.black : Colors.white, width: 1.5),
-                          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
-                        ),
-                        child: ClipOval(
-                          child: Image.network(
-                            listingLogo,
-                            width: 18,
-                            height: 18,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-                          ),
                         ),
                       ),
                     ),

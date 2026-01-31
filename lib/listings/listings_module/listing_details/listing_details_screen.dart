@@ -40,6 +40,26 @@ import 'package:instaflutter/core/model/channel_data_model.dart';
 import 'package:instaflutter/core/model/user.dart' as core_user;
 
 import 'package:metadata_fetch/metadata_fetch.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:intl/intl.dart';
+
+// Extracts the username/handle from a social URL or returns a prettified version
+String extractSocialHandle(String url, String domain) {
+  try {
+    final uri = Uri.parse(url);
+    if (uri.host.contains(domain)) {
+      final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+      if (segments.isNotEmpty) {
+        return '@' + segments.first;
+      }
+    }
+  } catch (_) {}
+  // fallback: if not a url, or can't parse, just show as is
+  if (url.startsWith('http')) {
+    return url;
+  }
+  return '@' + url.replaceAll('@', '');
+}
 
 class ListingDetailsWrappingWidget extends StatelessWidget {
   final ListingModel listing;
@@ -97,10 +117,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
   Future<void> _fetchStorePreview(String url) async {
     try {
-      print('**** [StorePreview] Fetching metadata for: $url ****');
       final data = await MetadataFetch.extract(url);
-      print('**** [StorePreview] Metadata result: '
-          'title: \'${data?.title}\', desc: \'${data?.description}\', image: \'${data?.image}\' ****');
       if (data != null) {
         setState(() {
           _storePreview = {
@@ -111,7 +128,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
         });
       }
     } catch (e) {
-      print('**** [StorePreview] Error fetching metadata: $e ****');
+      // Optionally handle error silently or log minimally
     }
   }
   late ListingModel listing;
@@ -863,9 +880,19 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     return Row(
       children: [
         if (listing.logo.isNotEmpty) ...[
-          CircleAvatar(
-            radius: 43,
-            backgroundImage: NetworkImage(listing.logo),
+          GestureDetector(
+            onTap: () => push(context, FullScreenImageViewer(
+              galleryImagesList: [listing.logo],
+              index: 0,
+              imageUrl: '',
+            )),
+            child: Hero(
+              tag: listing.logo,
+              child: CircleAvatar(
+                radius: 43,
+                backgroundImage: NetworkImage(listing.logo),
+              ),
+            ),
           ),
           const SizedBox(width: 24),
         ],
@@ -1272,7 +1299,16 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   }
 
   static bool _hasContactOrHours(ListingModel l) {
-    return l.phone.trim().isNotEmpty || l.email.trim().isNotEmpty || l.website.trim().isNotEmpty || l.openingHours.trim().isNotEmpty;
+    return l.phone.trim().isNotEmpty ||
+      l.email.trim().isNotEmpty ||
+      l.website.trim().isNotEmpty ||
+      l.openingHours.trim().isNotEmpty ||
+      l.instagram.trim().isNotEmpty ||
+      l.facebook.trim().isNotEmpty ||
+      l.tiktok.trim().isNotEmpty ||
+      l.whatsapp.trim().isNotEmpty ||
+      l.youtube.trim().isNotEmpty ||
+      l.x.trim().isNotEmpty;
   }
 
   Future<void> _launchPhone(String phone) async {
@@ -1323,126 +1359,155 @@ class _ContactHoursCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = isDark ? Colors.grey.shade900 : Colors.grey.shade50;
+    final rows = <Widget>[];
+
+    void addRow(Widget row) {
+      if (rows.isNotEmpty) {
+        rows.add(Divider(height: 1, indent: 56, color: isDark ? Colors.white10 : Colors.black12));
+      }
+      rows.add(row);
+    }
+
+    if (listing.phone.isNotEmpty) addRow(_ActionRow(icon: Icons.call, title: 'Phone'.tr(), value: listing.phone, onTap: onCall, accent: colorPrimary, isDark: isDark));
+    if (listing.email.isNotEmpty) addRow(_ActionRow(icon: Icons.email, title: 'Email'.tr(), value: listing.email, onTap: onEmail, accent: colorPrimary, isDark: isDark));
+    if (listing.website.isNotEmpty) addRow(_ActionRow(icon: FontAwesomeIcons.globe, title: 'Website'.tr(), value: listing.website, onTap: onWebsite, accent: colorPrimary, isDark: isDark));
+    
+    if (listing.instagram.isNotEmpty) {
+      final igHandle = extractSocialHandle(listing.instagram, 'instagram.com');
+      addRow(_ActionRow(icon: FontAwesomeIcons.instagram, title: 'Instagram'.tr(), value: igHandle, onTap: onInstagram, accent: colorPrimary, isDark: isDark));
+    }
+    if (listing.facebook.isNotEmpty) {
+      final fbHandle = extractSocialHandle(listing.facebook, 'facebook.com');
+      addRow(_ActionRow(icon: FontAwesomeIcons.facebook, title: 'Facebook'.tr(), value: fbHandle, onTap: onFacebook, accent: colorPrimary, isDark: isDark));
+    }
+    if (listing.tiktok.isNotEmpty) {
+      final ttHandle = extractSocialHandle(listing.tiktok, 'tiktok.com');
+      addRow(_ActionRow(icon: FontAwesomeIcons.tiktok, title: 'TikTok'.tr(), value: ttHandle, onTap: onTiktok, accent: colorPrimary, isDark: isDark));
+    }
+    if (listing.whatsapp.isNotEmpty) addRow(_ActionRow(icon: FontAwesomeIcons.whatsapp, title: 'WhatsApp'.tr(), value: listing.whatsapp, onTap: onWhatsapp, accent: colorPrimary, isDark: isDark));
+    if (listing.youtube.isNotEmpty) {
+      final ytHandle = extractSocialHandle(listing.youtube, 'youtube.com');
+      addRow(_ActionRow(icon: Icons.ondemand_video, title: 'YouTube'.tr(), value: ytHandle, onTap: onYoutube, accent: colorPrimary, isDark: isDark));
+    }
+    if (listing.x.isNotEmpty) {
+      final xHandle = extractSocialHandle(listing.x, 'x.com');
+      addRow(_ActionRow(icon: FontAwesomeIcons.xTwitter, title: 'X'.tr(), value: xHandle, onTap: onX, accent: colorPrimary, isDark: isDark));
+    }
+    
+    if (listing.openingHours.isNotEmpty) {
+      addRow(_OpeningHoursRow(value: listing.openingHours, accent: colorPrimary, isDark: isDark));
+    }
+
     return Container(
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(16), border: Border.all(color: isDark ? Colors.white10 : Colors.black12)),
       child: Column(
-        children: [
-          if (listing.phone.isNotEmpty) _ActionRow(icon: Icons.call, title: 'Phone'.tr(), value: listing.phone, onTap: onCall, accent: colorPrimary, isDark: isDark, showDivider: true),
-          if (listing.email.isNotEmpty) _ActionRow(icon: Icons.email, title: 'Email'.tr(), value: listing.email, onTap: onEmail, accent: colorPrimary, isDark: isDark, showDivider: true),
-          if (listing.website.isNotEmpty) _ActionRow(icon: Icons.language, title: 'Website'.tr(), value: listing.website, onTap: onWebsite, accent: colorPrimary, isDark: isDark, showDivider: true),
-          if (listing.openingHours.isNotEmpty) _InfoRow(icon: Icons.access_time, title: 'Opening Hours'.tr(), value: listing.openingHours, accent: colorPrimary, isDark: isDark),
-        ],
+        children: rows,
       ),
     );
   }
 }
 
-class _ActionRow extends StatelessWidget {
-  final IconData icon; final String title, value; final VoidCallback onTap; final Color accent; final bool isDark, showDivider;
-  const _ActionRow({required this.icon, required this.title, required this.value, required this.onTap, required this.accent, required this.isDark, this.showDivider = false});
+class _OpeningHoursRow extends StatefulWidget {
+  final String value;
+  final Color accent;
+  final bool isDark;
+
+  const _OpeningHoursRow({required this.value, required this.accent, required this.isDark});
+
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(icon, color: accent),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: TextStyle(fontSize: 12, color: isDark ? Colors.grey : Colors.grey.shade600)),
-                Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-              ]),
-            ),
-            const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
-          ],
-        ),
-      ),
-    );
-  }
+  State<_OpeningHoursRow> createState() => _OpeningHoursRowState();
 }
 
-class _InfoRow extends StatelessWidget {
-  final IconData icon; final String title, value; final Color accent; final bool isDark;
-  const _InfoRow({required this.icon, required this.title, required this.value, required this.accent, required this.isDark});
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Icon(icon, color: accent),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: TextStyle(fontSize: 12, color: isDark ? Colors.grey : Colors.grey.shade600)),
-              Text(value),
-            ]),
-          ),
-        ],
-      ),
-    );
-  }
-}
+class _OpeningHoursRowState extends State<_OpeningHoursRow> {
+  bool _isExpanded = false;
 
-class ReviewWidget extends StatelessWidget {
-  final ListingReviewModel review;
-  const ReviewWidget({Key? key, required this.review}) : super(key: key);
   @override
   Widget build(BuildContext context) {
+    final lines = widget.value.split('\n').where((l) => l.trim().isNotEmpty).toList();
+    final isStructured = widget.value.contains(':') && widget.value.contains('→');
+
+    if (!isStructured) {
+      return _InfoRow(icon: Icons.access_time, title: 'Opening Hours'.tr(), value: widget.value, accent: widget.accent, isDark: widget.isDark);
+    }
+
+    final now = DateTime.now();
+    final todayDayName = DateFormat('EEEE').format(now);
+    String todayHours = 'Closed'.tr();
+    bool isOpen = false;
+
+    for (var line in lines) {
+      if (line.trim().startsWith(todayDayName)) {
+        final parts = line.split(':');
+        if (parts.length >= 2) {
+          todayHours = parts[1].trim();
+          if (todayHours.toLowerCase() != 'closed' && todayHours.contains('→')) {
+            final timeParts = todayHours.split('→');
+            try {
+              final format = DateFormat.jm();
+              final openTime = format.parse(timeParts[0].trim());
+              final closeTime = format.parse(timeParts[1].trim());
+              isOpen = _isTimeBetween(now, openTime, closeTime);
+            } catch (_) {}
+          }
+        }
+        break;
+      }
+    }
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            displayCircleImage(review.profilePictureURL, 40, false),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(review.fullName(), style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(formatReviewTimestamp(review.createdAt), style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              ]),
+        InkWell(
+          onTap: () => setState(() => _isExpanded = !_isExpanded),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(Icons.access_time, color: widget.accent),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Opening Hours'.tr(), style: TextStyle(fontSize: 12, color: widget.isDark ? Colors.grey : Colors.grey.shade600)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isOpen ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              isOpen ? 'Open Now'.tr() : 'Closed'.tr(),
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isOpen ? Colors.green : Colors.red),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(todayHours.tr(), style: const TextStyle(fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(_isExpanded ? Icons.expand_less : Icons.expand_more, size: 20, color: Colors.grey),
+              ],
             ),
-            RatingBarIndicator(
-              rating: review.starCount,
-              itemBuilder: (context, index) => const Icon(Icons.star, color: Colors.amber),
-              itemCount: 5,
-              itemSize: 14,
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 12),
-        Text(review.content, style: const TextStyle(height: 1.4)),
-      ],
-    );
-  }
-}
-
-class FilterDetailsWidget extends StatelessWidget {
-  final MapEntry<String, dynamic> filter; final bool isDark; final Color colorPrimary; final bool isLast;
-  const FilterDetailsWidget({super.key, required this.filter, required this.isDark, required this.colorPrimary, this.isLast = false});
-  @override
-  Widget build(BuildContext context) {
-    String val = filter.value.toString();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(border: isLast ? null : Border(bottom: BorderSide(color: isDark ? Colors.white10 : Colors.black12))),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(filter.key, style: TextStyle(color: isDark ? Colors.grey : Colors.grey.shade700)),
-          Text(val, style: const TextStyle(fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-}
-
-class MediaItem {
-  final String url; final bool isVideo;
-  MediaItem({required this.url, required this.isVideo});
-  factory MediaItem.photo(String url) => MediaItem(url: url, isVideo: false);
-  factory MediaItem.video(String url) => MediaItem(url: url, isVideo: true);
-}
+        if (_isExpanded)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(56, 0, 16, 16),
+            child: Column(
+              children: lines.map((line) {
+                final parts = line.split(':');
+                if (parts.length < 2) return const SizedBox.shrink();
+                final day = parts[0].trim();
+                final hours = parts[1].trim();
+                final isToday = day == todayDayName;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(day.tr(), styl

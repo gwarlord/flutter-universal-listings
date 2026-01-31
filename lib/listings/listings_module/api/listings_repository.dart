@@ -30,6 +30,7 @@ abstract class ListingsRepository {
   Future<List<String>> uploadListingVideos({required List<File> videos});
 
   Future<File?> getListingImage({required bool fromGallery});
+  Future<List<File>> getListingImages();
   Future<File?> getListingVideo({required bool fromGallery});
 
   Future<bool> publishListing(ListingModel listingModel);

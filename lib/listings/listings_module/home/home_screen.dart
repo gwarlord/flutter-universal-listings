@@ -745,6 +745,30 @@ class HomeScreenState extends State<HomeScreen> {
                     child: const Icon(Icons.star, size: 12, color: Colors.white),
                   ),
                 ),
+                if (listing.logo.isNotEmpty)
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: Container(
+                      height: 30,
+                      width: 30,
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: dark ? Colors.grey[900] : Colors.white,
+                        borderRadius: BorderRadius.circular(6),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: displayImage(listing.logo),
+                      ),
+                    ),
+                  ),
               ],
             ),
             Padding(
@@ -1082,6 +1106,30 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
                 fit: StackFit.expand,
                 children: [
                   displayImage(listing.photo),
+                  if (listing.logo.isNotEmpty)
+                    Positioned(
+                      bottom: 8,
+                      left: 8,
+                      child: Container(
+                        height: 35,
+                        width: 35,
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: dark ? Colors.grey[900] : Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: displayImage(listing.logo),
+                        ),
+                      ),
+                    ),
                   Positioned(
                     top: 8,
                     right: 8,

@@ -387,6 +387,20 @@ class ListingsFirebaseUtils extends ListingsRepository {
     }
   }
 
+  @override
+  Future<List<File>> getListingImages() async {
+    try {
+      final List<XFile> picked = await _picker.pickMultiImage(
+        imageQuality: 95,
+      );
+      return picked.map((xFile) => File(xFile.path)).toList();
+    } catch (e, st) {
+      debugPrint('getListingImages() ERROR: $e');
+      debugPrint('$st');
+      return [];
+    }
+  }
+
   // ---------------------------
   // Videos (NEW)
   // ---------------------------
@@ -449,6 +463,7 @@ class ListingsFirebaseUtils extends ListingsRepository {
   @override
   Future<PlaceDetails?> getPlaceDetails(Prediction prediction) async {
     final placeId = prediction.placeId;
+    debugPrint('*** DEBUG: getPlaceDetails called with placeId: $placeId');
     if (placeId == null || placeId.trim().isEmpty) {
       debugPrint('getPlaceDetails(): prediction.placeId is null/empty');
       return null;
@@ -467,11 +482,13 @@ class ListingsFirebaseUtils extends ListingsRepository {
           'language': 'en',
         },
       );
-
+      debugPrint('*** DEBUG: getPlaceDetails HTTP URI: $uri');
       final res = await http.get(uri);
+      debugPrint('*** DEBUG: getPlaceDetails HTTP status: ${res.statusCode} body: ${res.body}');
       final decoded = jsonDecode(res.body);
       if (decoded is Map<String, dynamic>) {
         final status = (decoded['status'] ?? '').toString();
+        debugPrint('*** DEBUG: getPlaceDetails HTTP decoded status: $status');
         if (status != 'OK') return null;
 
         final result = decoded['result'];
@@ -508,16 +525,16 @@ class ListingsFirebaseUtils extends ListingsRepository {
 
     // 2) Plugin fallback (guarded so it cannot crash)
     try {
+      debugPrint('*** DEBUG: getPlaceDetails plugin fallback for placeId: $placeId');
       final response = await _places.getDetailsByPlaceId(
         placeId,
         fields: const <String>['place_id', 'name', 'formatted_address', 'geometry'],
         language: 'en',
       );
-
+      debugPrint('*** DEBUG: getPlaceDetails plugin response: status=${response.status} isOkay=${response.isOkay} errorMessage=${response.errorMessage}');
       if (response.isOkay) {
         return response.result;
       }
-
       debugPrint(
         'getPlaceDetails(): plugin response NOT OK: status=${response.status} message=${response.errorMessage}',
       );

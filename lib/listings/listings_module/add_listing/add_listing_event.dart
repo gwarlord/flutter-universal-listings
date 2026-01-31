@@ -34,6 +34,11 @@ class AddImageToListingEvent extends AddListingEvent {
   AddImageToListingEvent({required this.fromGallery});
 }
 
+class AddImagesToListingEvent extends AddListingEvent {
+  final List<File> images;
+  AddImagesToListingEvent({required this.images});
+}
+
 class RemoveListingImageEvent extends AddListingEvent {
   final File image;
   RemoveListingImageEvent({required this.image});

@@ -12,6 +12,11 @@ class ListingsLocalData extends ListingsRepository {
   Future<List<String>> uploadListingImages({required List<File> images}) async => [];
 
   @override
+  Future<List<File>> getListingImages() async {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<List<String>> uploadListingVideos({required List<File> videos}) async => [];
 
   @override

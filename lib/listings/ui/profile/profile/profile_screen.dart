@@ -272,14 +272,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 iconColor: Colors.redAccent,
                                 title: 'Purge Test Data'.tr(),
                                 onTap: () async {
+                                  final isDark = isDarkMode(context);
                                   final confirm = await showDialog<bool>(
                                     context: context,
                                     builder: (context) => AlertDialog(
-                                      title: Text('Purge Data?'.tr()),
-                                      content: Text('Are you sure you want to remove all test data?'.tr()),
+                                      backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                      title: Row(
+                                        children: [
+                                          const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+                                          const SizedBox(width: 12),
+                                          Text(
+                                            'Purge Data?'.tr(),
+                                            style: TextStyle(
+                                              color: isDark ? Colors.white : Colors.black,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Are you sure you want to remove all test data?'.tr(),
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: isDark ? Colors.white : Colors.black87,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Text(
+                                            'This will permanently delete all demo/test data from the database.'.tr(),
+                                            style: TextStyle(
+                                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                       actions: [
-                                        TextButton(onPressed: () => Navigator.pop(context, false), child: Text('No'.tr())),
-                                        TextButton(onPressed: () => Navigator.pop(context, true), child: Text('Yes'.tr())),
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context, false),
+                                          child: Text('No'.tr(), style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context, true),
+                                          child: Text('Yes'.tr(), style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                                        ),
                                       ],
                                     ),
                                   );

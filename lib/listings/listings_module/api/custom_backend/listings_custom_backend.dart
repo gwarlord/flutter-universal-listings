@@ -14,6 +14,11 @@ class ListingsCustomBackendUtils extends ListingsRepository {
   }
 
   @override
+  Future<List<File>> getListingImages() async {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<List<String>> uploadListingVideos({required List<File> videos}) async {
     return <String>[];
   }

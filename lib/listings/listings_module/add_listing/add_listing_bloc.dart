@@ -67,6 +67,11 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
       }
     });
 
+    on<AddImagesToListingEvent>((event, emit) {
+      listingImages.addAll(event.images);
+      emit(ListingImagesUpdatedState(images: List<File>.from(listingImages)));
+    });
+
     on<RemoveListingImageEvent>((event, emit) {
       listingImages.remove(event.image);
       emit(ListingImagesUpdatedState(images: List<File>.from(listingImages)));
