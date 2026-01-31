@@ -911,7 +911,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            '${_getCurrencySymbol(listing.currencyCode)} ${listing.price} ${listing.currencyCode}',
+            '\$${_getCurrencySymbol(listing.currencyCode)} ${listing.price} ${listing.currencyCode}',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: primaryColor),
           ),
         ],
@@ -945,7 +945,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
               leading: Icon(Icons.check_circle_outline, color: primaryColor),
               title: Text(service.name),
               trailing: Text(
-                '${service.price} ${listing.currencyCode}',
+                '\$${service.price} ${listing.currencyCode}',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: isDark ? Colors.white : Colors.black,
@@ -1100,7 +1100,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${_getCurrencySymbol(listing.currencyCode)}${listing.price}',
+                      '\$${_getCurrencySymbol(listing.currencyCode)}${listing.price}',
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     Text(listing.currencyCode, style: const TextStyle(fontSize: 12, color: Colors.grey)),
@@ -1132,7 +1132,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   onPressed: _handleBooking,
                   child: Text(
                     'Book Now'.tr(),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -1150,7 +1150,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   onPressed: showBooking ? _handleBooking : (showChat ? _handleMessage : null),
                   child: Text(
                     showBooking ? 'Book Now'.tr() : 'Message Seller'.tr(),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -1324,12 +1324,12 @@ class _ContactHoursCard extends StatelessWidget {
   final VoidCallback onCall, onEmail, onWebsite, onInstagram, onFacebook, onTiktok, onWhatsapp, onYoutube, onX;
 
   const _ContactHoursCard({
-    Key? key, // Added Key parameter
+    super.key,
     required this.listing, required this.colorPrimary, required this.isDark,
     required this.onCall, required this.onEmail, required this.onWebsite,
     required this.onInstagram, required this.onFacebook, required this.onTiktok,
     required this.onWhatsapp, required this.onYoutube, required this.onX,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1387,7 +1387,7 @@ class _OpeningHoursRow extends StatefulWidget {
   final Color accent;
   final bool isDark;
 
-  const _OpeningHoursRow({Key? key, required this.value, required this.accent, required this.isDark}) : super(key: key);
+  const _OpeningHoursRow({super.key, required this.value, required this.accent, required this.isDark});
 
   @override
   State<_OpeningHoursRow> createState() => _OpeningHoursRowState();
@@ -1396,57 +1396,186 @@ class _OpeningHoursRow extends StatefulWidget {
 class _OpeningHoursRowState extends State<_OpeningHoursRow> {
   bool _isExpanded = false;
 
+  final List<String> daysOfWeek = [
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+  ];
+
+  DateTime? _parseTimeOfDayStringToDateTime(String timeStr, DateTime now) {
+    timeStr = timeStr.trim();
+    if (timeStr.isEmpty) return null;
+
+    // Preprocess "H:am" to "H:00 AM" and "H:pm" to "H:00 PM"
+    timeStr = timeStr.replaceAllMapped(RegExp(r'(\d+):am'), (match) => '${match.group(1)}:00 AM');
+    timeStr = timeStr.replaceAllMapped(RegExp(r'(\d+):pm'), (match) => '${match.group(1)}:00 PM');
+
+    final format12hr = DateFormat.jm(); // e.g., 10:00 AM
+    final format24hr = DateFormat('HH:mm'); // e.g., 10:00
+
+    try {
+      // Try parsing as HH:mm AM/PM (12-hour)
+      return format12hr.parse(timeStr);
+    } catch (_) {
+      try {
+        // Try parsing as HH:mm (24-hour)
+        return format24hr.parse(timeStr);
+      } catch (_) {
+        // Try parsing as just an hour number (e.g., "7" -> 7:00)
+        final int? hour = int.tryParse(timeStr);
+        if (hour != null && hour >= 0 && hour <= 23) {
+          return DateTime(now.year, now.month, now.day, hour, 0);
+        }
+      }
+    }
+    return null;
+  }
+
+  // Formats the raw hours string (e.g., "07", "09:00→17:00", "Closed") for display
+  String _formatDisplayHours(String rawHours, DateFormat formatter, DateTime now) {
+    rawHours = rawHours.trim();
+    if (rawHours.isEmpty) return rawHours;
+
+    if (rawHours.toLowerCase() == 'closed') {
+      return 'Closed'.tr();
+    }
+
+    final timeParts = rawHours.split('→');
+    if (timeParts.length == 2) {
+      // It's an explicit time range
+      final open = _parseTimeOfDayStringToDateTime(timeParts[0], now);
+      final close = _parseTimeOfDayStringToDateTime(timeParts[1], now);
+      if (open != null && close != null) {
+        return '${formatter.format(open)} - ${formatter.format(close)}';
+      }
+    } else if (timeParts.length == 1 && rawHours.isNotEmpty) {
+      // It's a single time (e.g., "07", "10:00 AM")
+      final open = _parseTimeOfDayStringToDateTime(rawHours, now);
+      if (open != null) {
+        return '${'Opens at'.tr()} ${formatter.format(open)}';
+      }
+    }
+    return rawHours; // Fallback if no specific pattern is matched
+  }
+
   bool _isTimeBetween(DateTime now, DateTime open, DateTime close) {
     final nowTime = TimeOfDay.fromDateTime(now);
     final openTime = TimeOfDay.fromDateTime(open);
     final closeTime = TimeOfDay.fromDateTime(close);
 
-    if (openTime.hour < closeTime.hour ||
-        (openTime.hour == closeTime.hour && openTime.minute < closeTime.minute)) {
-      return (nowTime.hour > openTime.hour ||
-              (nowTime.hour == openTime.hour && nowTime.minute >= openTime.minute)) &&
-          (nowTime.hour < closeTime.hour ||
-              (nowTime.hour == closeTime.hour && nowTime.minute < closeTime.minute));
+    // Convert to minutes since midnight for easier comparison
+    final nowInMinutes = nowTime.hour * 60 + nowTime.minute;
+    final openInMinutes = openTime.hour * 60 + openTime.minute;
+    final closeInMinutes = closeTime.hour * 60 + closeTime.minute;
+
+    if (openInMinutes < closeInMinutes) {
+      // Case 1: Open and close times are in the same day (e.g., 9 AM to 5 PM)
+      return nowInMinutes >= openInMinutes && nowInMinutes < closeInMinutes;
     } else {
-      return (nowTime.hour > openTime.hour ||
-              (nowTime.hour == openTime.hour && nowTime.minute >= openTime.minute)) ||
-          (nowTime.hour < closeTime.hour ||
-              (nowTime.hour == closeTime.hour && nowTime.minute < closeTime.minute));
+      // Case 2: Overnight hours (e.g., 10 PM to 6 AM)
+      // This means closing time is on the next day.
+      // So if now is after opening or before closing (next day)
+      return nowInMinutes >= openInMinutes || nowInMinutes < closeInMinutes;
     }
   }
 
+  // Helper to parse the single-line openingHours string into a map
+  Map<String, String> _parseOpeningHoursString(String openingHoursString) {
+    final Map<String, String> parsedHours = {};
+
+    String remainingString = openingHoursString;
+
+    for (int i = 0; i < daysOfWeek.length; i++) {
+      final currentDay = daysOfWeek[i];
+      final dayPrefix = '$currentDay:';
+
+      int startIndex = remainingString.indexOf(dayPrefix);
+      if (startIndex == -1 && i == 0) {
+        // If the very first day isn't found, then the format is unexpected.
+        // For now, if currentDay not found, assume closed.
+        parsedHours[currentDay] = 'Closed';
+        continue;
+      } else if (startIndex == -1) {
+        // If a subsequent day is not found, it means the previous day's hours extend to the end
+        // or this day is implicitly closed. We'll default to closed.
+        parsedHours[currentDay] = 'Closed';
+        continue;
+      }
+      
+      // Advance past the day prefix
+      int hoursStartIndex = startIndex + dayPrefix.length;
+
+      // Find the start of the next day's entry in the *original* string
+      int nextDayEntryIndex = -1;
+      for (int j = i + 1; j < daysOfWeek.length; j++) {
+        final nextDayPrefix = '${daysOfWeek[j]}:';
+        nextDayEntryIndex = openingHoursString.indexOf(nextDayPrefix, hoursStartIndex);
+        if (nextDayEntryIndex != -1) {
+          break; // Found the next day's marker
+        }
+      }
+      
+      String rawHours;
+      if (nextDayEntryIndex != -1) {
+        // Extract hours up to the next day's prefix from the original string
+        rawHours = openingHoursString.substring(hoursStartIndex, nextDayEntryIndex).trim();
+      } else {
+        // This is the last day, extract hours until the end of the string
+        rawHours = openingHoursString.substring(hoursStartIndex).trim();
+      }
+      parsedHours[currentDay] = rawHours;
+    }
+    
+    // Fallback for any days not explicitly found (e.g., if the string is malformed or incomplete)
+    for (final day in daysOfWeek) {
+      parsedHours.putIfAbsent(day, () => 'Closed');
+    }
+
+    return parsedHours;
+  }
+
+
   @override
   Widget build(BuildContext context) {
-    final lines = widget.value.split('\n').where((l) => l.trim().isNotEmpty).toList();
-    final isStructured = widget.value.contains(':') && widget.value.contains('→');
-
-    if (!isStructured) {
-      return _InfoRow(icon: Icons.access_time, title: 'Opening Hours'.tr(), value: widget.value, accent: widget.accent, isDark: widget.isDark);
-    }
+    final parsedHours = _parseOpeningHoursString(widget.value);
 
     final now = DateTime.now();
     final todayDayName = DateFormat('EEEE').format(now);
-    String todayHours = 'Closed'.tr();
+    String rawTodayHours = parsedHours[todayDayName] ?? 'Closed'; // Get today's raw hours from the parsed map
     bool isOpen = false;
 
-    for (var line in lines) {
-      if (line.trim().startsWith(todayDayName)) {
-        final parts = line.split(':');
-        if (parts.length >= 2) {
-          todayHours = parts[1].trim();
-          if (todayHours.toLowerCase() != 'closed' && todayHours.contains('→')) {
-            final timeParts = todayHours.split('→');
-            try {
-              final format = DateFormat.jm();
-              final openTime = format.parse(timeParts[0].trim());
-              final closeTime = format.parse(timeParts[1].trim());
-              isOpen = _isTimeBetween(now, openTime, closeTime);
-            } catch (_) {}
+    if (rawTodayHours.toLowerCase() != 'closed') {
+      final format = DateFormat.jm();
+      if (rawTodayHours.contains('→')) {
+        try {
+          final timeParts = rawTodayHours.split('→');
+          final openTime = _parseTimeOfDayStringToDateTime(timeParts[0], now);
+          final closeTime = _parseTimeOfDayStringToDateTime(timeParts[1], now);
+
+          if (openTime != null && closeTime != null) {
+            isOpen = _isTimeBetween(now, openTime, closeTime);
           }
-        }
-        break;
+        } catch (_) {} 
+      } else {
+        // If only one time is provided (e.g., "10:am"), assume it's an opening time and it's open if after this time.
+        // A more complex app might assume a default closing time (e.g., end of day or 8 hours later).
+        try {
+          final openTime = _parseTimeOfDayStringToDateTime(rawTodayHours, now);
+          if (openTime != null) {
+            final nowTimeOfDay = TimeOfDay.fromDateTime(now);
+            final openTimeOfDay = TimeOfDay.fromDateTime(openTime);
+
+            // Check if current time is after the opening time.
+            // Since no closing time is specified, we assume it's "open from this time onwards"
+            // for the purpose of the "Open Now" status.
+            if (nowTimeOfDay.hour > openTimeOfDay.hour ||
+                (nowTimeOfDay.hour == openTimeOfDay.hour && nowTimeOfDay.minute >= openTimeOfDay.minute)) {
+              isOpen = true;
+            }
+          }
+        } catch (_) {}
       }
     }
+
+    final displayTodayHours = _formatDisplayHours(rawTodayHours, DateFormat.jm(), now);
 
     return Column(
       children: [
@@ -1478,7 +1607,7 @@ class _OpeningHoursRowState extends State<_OpeningHoursRow> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(todayHours.tr(), style: const TextStyle(fontWeight: FontWeight.w600)),
+                          Text(displayTodayHours, style: const TextStyle(fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ],
@@ -1493,12 +1622,10 @@ class _OpeningHoursRowState extends State<_OpeningHoursRow> {
           Padding(
             padding: const EdgeInsets.fromLTRB(56, 0, 16, 16),
             child: Column(
-              children: lines.map((line) {
-                final parts = line.split(':');
-                if (parts.length < 2) return const SizedBox.shrink();
-                final day = parts[0].trim();
-                final hours = parts[1].trim();
+              children: daysOfWeek.map((day) { // Use daysOfWeek to ensure order
+                final rawHours = parsedHours[day] ?? 'Closed';
                 final isToday = day == todayDayName;
+                final displayHours = _formatDisplayHours(rawHours, DateFormat.jm(), now);
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
@@ -1509,8 +1636,8 @@ class _OpeningHoursRowState extends State<_OpeningHoursRow> {
                         style: TextStyle(fontWeight: isToday ? FontWeight.bold : FontWeight.normal),
                       ),
                       Text(
-                        hours,
-                        style: TextStyle(fontWeight: isToday ? FontWeight.bold : FontWeight.w600),
+                        displayHours,
+                        style: TextStyle(fontWeight: isToday ? FontWeight.bold : FontWeight.normal), // Changed FontWeight.w600 to FontWeight.normal
                       ),
                     ],
                   ),
@@ -1532,14 +1659,14 @@ class _ActionRow extends StatelessWidget {
   final bool isDark;
 
   const _ActionRow({
-    Key? key, // Added Key parameter
+    super.key,
     required this.icon,
     required this.title,
     required this.value,
     required this.onTap,
     required this.accent,
     required this.isDark,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1579,13 +1706,13 @@ class _InfoRow extends StatelessWidget {
   final bool isDark;
 
   const _InfoRow({
-    Key? key, // Added Key parameter
+    super.key,
     required this.icon,
     required this.title,
     required this.value,
     required this.accent,
     required this.isDark,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1618,12 +1745,12 @@ class FilterDetailsWidget extends StatelessWidget {
   final bool isLast;
 
   const FilterDetailsWidget({
-    Key? key, // Added Key parameter
+    super.key,
     required this.filter,
     required this.isDark,
     required this.colorPrimary,
     required this.isLast,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1662,7 +1789,7 @@ class FilterDetailsWidget extends StatelessWidget {
 class ReviewWidget extends StatelessWidget {
   final ListingReviewModel review;
 
-  const ReviewWidget({Key? key, required this.review}) : super(key: key);
+  const ReviewWidget({super.key, required this.review});
 
   @override
   Widget build(BuildContext context) {
@@ -1716,10 +1843,10 @@ class ListingDetailsWrappingWidget extends StatelessWidget {
   final ListingsUser currentUser;
 
   const ListingDetailsWrappingWidget({
-    Key? key,
+    super.key,
     required this.listing,
     required this.currentUser,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
