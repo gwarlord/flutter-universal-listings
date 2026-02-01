@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import 'package:instaflutter/core/ui/chat/chat/chat_screen.dart';
 import 'package:instaflutter/core/ui/chat/player_widget.dart';
 import 'package:flutter/services.dart';
@@ -137,7 +138,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       builder: (context, themeState) {
         return MaterialApp(
             navigatorKey: entry.navigatorKey, // Use global entry key
-            localizationsDelegates: context.localizationDelegates,
+            localizationsDelegates: [
+              ...context.localizationDelegates,
+              FlutterQuillLocalizations.delegate,
+            ],
             supportedLocales: context.supportedLocales,
             locale: context.locale,
             themeMode: themeState.themeMode,
