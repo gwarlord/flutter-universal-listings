@@ -41,8 +41,7 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
     // Initialize with initial text or empty document
     final document = widget.initialText.isNotEmpty
         ? Document.fromJson(jsonDecode(widget.initialText))
-        : Document()
-          ..insert(0, '');
+        : Document();
 
     _quillController = QuillController(
       document: document,
@@ -166,19 +165,16 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
           // Toolbar
           QuillSimpleToolbar(
             controller: _quillController,
-            config: QuillSimpleToolbarConfig(
-              toolbarIconSize: 18,
+            config: QuillSimpleToolbarConfigurations(
+              toolbarSize: 40,
               toolbarSectionSpacing: 4,
-              axis: Axis.horizontal,
-              showBackgroundColorButton: false,
+              multiRowsDisplay: false,
+              showBackColorButton: false,
               showClearFormat: true,
-              showColorButton: false,
-              showDirection: false,
               showFontFamily: false,
               showFontSize: false,
               showHeaderStyle: true,
               showInlineCode: true,
-              showLineHeightButton: false,
               showLink: true,
               showLeftAlignment: false,
               showRightAlignment: false,
@@ -186,15 +182,6 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
               showJustifyAlignment: false,
               showCodeBlock: false,
               showQuote: true,
-              showSearchButton: false,
-              buttonOptions: const QuillSimpleToolbarButtonOptions(
-                base: QuillToolbarBaseButtonOptions(
-                  iconTheme: QuillIconTheme(
-                    iconSelectedFillColor: Color(0xFF1890FF),
-                    iconUnselectedFillColor: Colors.grey,
-                  ),
-                ),
-              ),
             ),
           ),
           const Divider(height: 1),
@@ -202,7 +189,7 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
           // Editor
           QuillEditor.basic(
             controller: _quillController,
-            config: QuillEditorConfig(
+            configurations: QuillEditorConfigurations(
               readOnly: false,
               autoFocus: false,
               minHeight: 180,
@@ -217,7 +204,6 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
   }
 
   Widget _buildPreview(bool isDark) {
-    final plainText = _getPlainText();
     return Container(
       decoration: BoxDecoration(
         border: Border.all(
@@ -231,7 +217,7 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
       child: SingleChildScrollView(
         child: QuillView.basic(
           document: _quillController.document,
-          config: const QuillViewConfig(
+          configurations: const QuillViewConfigurations(
             readOnly: true,
           ),
         ),
