@@ -68,7 +68,24 @@ class GeminiAIService {
     initialize();
     try {
       print('🤖 [GEMINI] Enhancing description...');
-      final content = [Content.text('Expand and improve this $category listing description for a Caribbean business. Write a multi-sentence, detailed, and engaging About section that highlights the business’s value, services, and benefits. Make the output longer and more helpful than the original. End with a clear, friendly call to action urging readers to contact, call, message, or book now. Do not include any preamble, explanation, or options. Only return the improved About text itself:\n\n$description')];
+      final content = [Content.text('''Expand and improve this $category listing description for a Caribbean business. Create a well-structured, detailed, and engaging About section using this format:
+
+**HEADLINE:** Start with a compelling hook about the business
+
+**FEATURES:** List 3-5 key features or services
+- Feature 1
+- Feature 2
+- Feature 3
+
+**WHY CHOOSE US:** 2-3 unique benefits or selling points
+
+**CALL TO ACTION:** End with a friendly invitation to contact, call, message, or book
+
+Make it professional, engaging, and appropriate for Caribbean customers. Use bullet points and formatting naturally.
+
+Return ONLY the formatted text itself with no preamble:
+
+Original: $description''')];
       final response = await _model!.generateContent(content);
       var aiText = response.text ?? description;
       // Post-process: Remove preamble, explanations, or options, keep only the first user-ready sentence/paragraph
