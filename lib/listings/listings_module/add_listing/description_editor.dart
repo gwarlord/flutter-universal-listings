@@ -185,15 +185,17 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
           ),
           const Divider(height: 1),
 
-          // Editor
-          quill.QuillEditor(
-            controller: _quillController,
-            scrollController: ScrollController(),
-            focusNode: FocusNode(),
-            placeholder: 'Describe your listing...',
-            minHeight: 180,
-            maxHeight: 300,
-            expands: false,
+          // Editor with constraints
+          ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: 180,
+              maxHeight: 300,
+            ),
+            child: quill.QuillEditor(
+              controller: _quillController,
+              scrollController: ScrollController(),
+              focusNode: FocusNode(),
+            ),
           ),
         ],
       ),
