@@ -23,6 +23,8 @@ class DescriptionEditor extends StatefulWidget {
 
 class _DescriptionEditorState extends State<DescriptionEditor> {
   late quill.QuillController _quillController;
+  late FocusNode _focusNode;
+  late ScrollController _scrollController;
   int _charCount = 0;
   int _wordCount = 0;
   bool _showPreview = false;
@@ -31,6 +33,8 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
   @override
   void initState() {
     super.initState();
+    _focusNode = FocusNode();
+    _scrollController = ScrollController();
     _initializeEditor();
     _loadDraft();
   }
@@ -101,6 +105,8 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
   void dispose() {
     _quillController.removeListener(_onTextChanged);
     _quillController.dispose();
+    _focusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -191,10 +197,15 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
               minHeight: 180,
               maxHeight: 300,
             ),
-            child: quill.QuillEditor(
-              controller: _quillController,
-              scrollController: ScrollController(),
-              focusNode: FocusNode(),
+            child: GestureDetector(
+              onTap: () {
+                _focusNode.requestFocus();
+              },
+              child: quill.QuillEditor(
+                controller: _quillController,
+                scrollController: _scrollController,
+                focusNode: _focusNode,
+              ),
             ),
           ),
         ],
