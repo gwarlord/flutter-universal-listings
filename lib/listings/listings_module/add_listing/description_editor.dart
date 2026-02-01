@@ -190,7 +190,6 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
             controller: _quillController,
             scrollController: ScrollController(),
             focusNode: FocusNode(),
-            autoFocus: false,
             readOnly: false,
             placeholder: 'Describe your listing...',
             minHeight: 180,
@@ -203,6 +202,7 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
   }
 
   Widget _buildPreview(bool isDark) {
+    final plainText = _getPlainText();
     return Container(
       decoration: BoxDecoration(
         border: Border.all(
@@ -214,9 +214,15 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
       ),
       padding: const EdgeInsets.all(12),
       child: SingleChildScrollView(
-        child: quill.QuillView.basic(
-          document: _quillController.document,
-          readOnly: true,
+        child: Text(
+          plainText.isEmpty ? 'No description yet...' : plainText,
+          style: TextStyle(
+            fontSize: 14,
+            color: plainText.isEmpty 
+                ? Colors.grey 
+                : isDark ? Colors.white : Colors.black87,
+            height: 1.5,
+          ),
         ),
       ),
     );
