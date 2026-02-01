@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -22,7 +22,7 @@ class DescriptionEditor extends StatefulWidget {
 }
 
 class _DescriptionEditorState extends State<DescriptionEditor> {
-  late QuillController _quillController;
+  late quill.QuillController _quillController;
   int _charCount = 0;
   int _wordCount = 0;
   bool _showPreview = false;
@@ -40,10 +40,10 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
     
     // Initialize with initial text or empty document
     final document = widget.initialText.isNotEmpty
-        ? Document.fromJson(jsonDecode(widget.initialText))
-        : Document();
+        ? quill.Document.fromJson(jsonDecode(widget.initialText))
+        : quill.Document();
 
-    _quillController = QuillController(
+    _quillController = quill.QuillController(
       document: document,
       selection: const TextSelection.collapsed(offset: 0),
     );
@@ -56,7 +56,7 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
     final draft = _prefs.getString(widget.draftKey);
     if (draft != null && draft.isNotEmpty) {
       try {
-        final document = Document.fromJson(jsonDecode(draft));
+        final document = quill.Document.fromJson(jsonDecode(draft));
         _quillController.document = document;
         _updateCounts();
       } catch (e) {
@@ -163,13 +163,13 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
       child: Column(
         children: [
           // Toolbar
-          QuillSimpleToolbar(
+          quill.QuillSimpleToolbar(
             controller: _quillController,
-            config: QuillSimpleToolbarConfigurations(
-              toolbarSize: 40,
+            config: quill.QuillSimpleToolbarConfig(
+              toolbarIconSize: 16,
               toolbarSectionSpacing: 4,
               multiRowsDisplay: false,
-              showBackColorButton: false,
+              showBackgroundColorButton: false,
               showClearFormat: true,
               showFontFamily: false,
               showFontSize: false,
@@ -187,16 +187,17 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
           const Divider(height: 1),
 
           // Editor
-          QuillEditor.basic(
+          quill.QuillEditor(
             controller: _quillController,
-            configurations: QuillEditorConfigurations(
-              readOnly: false,
-              autoFocus: false,
-              minHeight: 180,
-              maxHeight: 300,
-              placeholder: 'Describe your listing...'.replaceAll("'", ''),
-              expands: false,
-            ),
+            scrollController: ScrollController(),
+            scrollable: true,
+            focusNode: FocusNode(),
+            autoFocus: false,
+            readOnly: false,
+            placeholder: 'Describe your listing...',
+            minHeight: 180,
+            maxHeight: 300,
+            expands: false,
           ),
         ],
       ),
@@ -215,11 +216,10 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
       ),
       padding: const EdgeInsets.all(12),
       child: SingleChildScrollView(
-        child: QuillView.basic(
+        child: quill.QuillView(
           document: _quillController.document,
-          configurations: const QuillViewConfigurations(
-            readOnly: true,
-          ),
+          scrollPhysics: const NeverScrollableScrollPhysics(),
+          readOnly: true,
         ),
       ),
     );
