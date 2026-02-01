@@ -184,14 +184,40 @@ class AuthFirebaseUtils extends AuthenticationRepository {
     required auth.PhoneVerificationFailed phoneVerificationFailed,
     required auth.PhoneVerificationCompleted phoneVerificationCompleted,
   }) async {
-    await auth.FirebaseAuth.instance.verifyPhoneNumber(
-      timeout: const Duration(seconds: 30),
-      phoneNumber: phoneNumber,
-      verificationCompleted: phoneVerificationCompleted,
-      verificationFailed: phoneVerificationFailed,
-      codeSent: phoneCodeSent,
-      codeAutoRetrievalTimeout: phoneCodeAutoRetrievalTimeout,
-    );
+    try {
+      debugPrint(
+          '[AuthFirebase] Starting phone verification for: $phoneNumber');
+      
+      await auth.FirebaseAuth.instance.verifyPhoneNumber(
+        timeout: const Duration(seconds: 30),
+        phoneNumber: phoneNumber,
+        verificationCompleted: (auth.PhoneAuthCredential credential) {
+          debugPrint(
+              '[AuthFirebase] Phone verification completed automatically');
+          phoneVerificationCompleted(credential);
+        },
+        verificationFailed: (auth.FirebaseAuthException exception) {
+          debugPrint(
+              '[AuthFirebase] Phone verification failed - Code: ${exception.code}, Message: ${exception.message}');
+          phoneVerificationFailed(exception);
+        },
+        codeSent: (String verificationId, int? forceResendingToken) {
+          debugPrint(
+              '[AuthFirebase] Code sent successfully - VerificationId: $verificationId');
+          phoneCodeSent(verificationId, forceResendingToken);
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          debugPrint(
+              '[AuthFirebase] Code auto-retrieval timeout - VerificationId: $verificationId');
+          phoneCodeAutoRetrievalTimeout(verificationId);
+        },
+      );
+    } catch (e, stackTrace) {
+      debugPrint('[AuthFirebase] Unexpected error during phone verification:');
+      debugPrint('[AuthFirebase] Error: $e');
+      debugPrint('[AuthFirebase] StackTrace: $stackTrace');
+      rethrow;
+    }
   }
 
   @override

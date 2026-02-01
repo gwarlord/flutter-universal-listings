@@ -37,9 +37,8 @@ class WelcomeScreen extends StatelessWidget {
                   Center(
                     child: Image.asset(
                       'assets/images/listings_welcome_image.png',
-                      width: 150.0,
-                      height: 150.0,
-                      color: Color(colorPrimary),
+                      width: 250.0,
+                      height: 250.0,
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -47,7 +46,7 @@ class WelcomeScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(
                         left: 16, top: 32, right: 16, bottom: 8),
                     child: Text(
-                      'Welcome to $appName',
+                      'Welcome to CaribTap',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           color: Color(colorPrimary),
@@ -59,7 +58,7 @@ class WelcomeScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 40, vertical: 16),
                     child: Text(
-                      'Use this codebase to build your own listings app in minutes.'
+                      'Tap into Caribbean skills, services, and side hustles.'
                           .tr(),
                       style: const TextStyle(fontSize: 18),
                       textAlign: TextAlign.center,

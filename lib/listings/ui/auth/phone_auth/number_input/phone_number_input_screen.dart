@@ -409,15 +409,20 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
                                           ),
                                           elevation: 0,
                                         ),
-                                        onPressed: () =>
-                                            context.read<PhoneNumberInputBloc>().add(
-                                                  ValidateFieldsEvent(
-                                                    _key,
-                                                    acceptEula: acceptEULA,
-                                                    isLogin: widget.isLogin,
-                                                    isPhoneValid: _isPhoneValid,
-                                                  ),
+                                        onPressed: () {
+                                          debugPrint(
+                                              '[PhoneNumberInputScreen] Send Code button pressed');
+                                          debugPrint(
+                                              '[PhoneNumberInputScreen] Phone: $_phoneNumber, Valid: $_isPhoneValid, EULA: $acceptEULA');
+                                          context.read<PhoneNumberInputBloc>().add(
+                                                ValidateFieldsEvent(
+                                                  _key,
+                                                  acceptEula: acceptEULA,
+                                                  isLogin: widget.isLogin,
+                                                  isPhoneValid: _isPhoneValid,
                                                 ),
+                                              );
+                                        },
                                         child: Text(
                                           'Send Code'.tr(),
                                           style: const TextStyle(

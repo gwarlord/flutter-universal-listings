@@ -51,22 +51,31 @@ class PhoneNumberInputBloc
 
     on<ValidateFieldsEvent>(
       (event, emit) async {
+        debugPrint(
+            '[PhoneNumberInputBloc] ValidateFieldsEvent - isPhoneValid: ${event.isPhoneValid}, acceptEula: ${event.acceptEula}, isLogin: ${event.isLogin}');
+        
         if (event.key.currentState?.validate() ?? false) {
+          debugPrint('[PhoneNumberInputBloc] Form validation passed');
           if (event.acceptEula || event.isLogin) {
             if (event.isPhoneValid) {
+              debugPrint('[PhoneNumberInputBloc] All validations passed, saving form');
               event.key.currentState!.save();
               emit(ValidFieldsState());
             } else {
+              debugPrint(
+                  '[PhoneNumberInputBloc] Phone number validation failed');
               emit(PhoneInputFailureState(
                   errorMessage:
                       'Invalid phone number, Please try again with a valid phone number.'
                           .tr()));
             }
           } else {
+            debugPrint('[PhoneNumberInputBloc] EULA not accepted');
             emit(PhoneInputFailureState(
                 errorMessage: 'Please accept our terms of use.'.tr()));
           }
         } else {
+          debugPrint('[PhoneNumberInputBloc] Form validation failed');
           emit(PhoneInputFailureState(
               errorMessage: 'Please fill required fields.'.tr()));
         }
@@ -77,17 +86,31 @@ class PhoneNumberInputBloc
         (event, emit) => emit(EulaToggleState(event.eulaAccepted)));
 
     on<VerifyPhoneNumberEvent>((event, emit) async {
-      await authenticationRepository.verifyPhoneNumber(
-          phoneNumber: event.phoneNumber,
-          phoneCodeAutoRetrievalTimeout: onPhoneCodeAutoRetrievalTimeout,
-          phoneCodeSent: onPhoneCodeSent,
-          phoneVerificationFailed: onPhoneVerificationFailed,
-          phoneVerificationCompleted: onPhoneVerificationCompleted);
+      try {
+        debugPrint(
+            '[PhoneNumberInputBloc] Starting phone verification for: ${event.phoneNumber}');
+        await authenticationRepository.verifyPhoneNumber(
+            phoneNumber: event.phoneNumber,
+            phoneCodeAutoRetrievalTimeout: onPhoneCodeAutoRetrievalTimeout,
+            phoneCodeSent: onPhoneCodeSent,
+            phoneVerificationFailed: onPhoneVerificationFailed,
+            phoneVerificationCompleted: onPhoneVerificationCompleted);
+        debugPrint(
+            '[PhoneNumberInputBloc] Phone verification request sent successfully');
+      } catch (e, stackTrace) {
+        debugPrint(
+            '[PhoneNumberInputBloc] Error during phone verification: $e');
+        debugPrint('[PhoneNumberInputBloc] StackTrace: $stackTrace');
+        emit(PhoneInputFailureState(
+            errorMessage: 'Failed to send code. Please try again.'.tr()));
+      }
     });
   }
 
   void onPhoneVerificationCompleted(
       auth.PhoneAuthCredential phoneAuthCredential) {
+    debugPrint(
+        '[PhoneNumberInputBloc] Phone verification completed automatically');
     emit(AutoPhoneVerificationCompletedState(credential: phoneAuthCredential));
   }
 
@@ -105,13 +128,18 @@ class PhoneNumberInputBloc
         break;
     }
     debugPrint(
-        'PhoneNumberInputBloc.onPhoneVerificationFailed ${error.code} ${error.message}');
+        '[PhoneNumberInputBloc] Phone verification failed - Code: ${error.code}, Message: ${error.message}');
     emit(PhoneInputFailureState(errorMessage: message));
   }
 
   void onPhoneCodeSent(String verificationId, int? forceResendingToken) {
+    debugPrint(
+        '[PhoneNumberInputBloc] Code sent successfully - VerificationId: $verificationId, ForceResendingToken: $forceResendingToken');
     emit(CodeSentState(verificationID: verificationId));
   }
 
-  void onPhoneCodeAutoRetrievalTimeout(String verificationId) {}
+  void onPhoneCodeAutoRetrievalTimeout(String verificationId) {
+    debugPrint(
+        '[PhoneNumberInputBloc] Code auto-retrieval timeout - VerificationId: $verificationId');
+  }
 }
