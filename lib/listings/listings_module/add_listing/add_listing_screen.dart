@@ -18,6 +18,7 @@ import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/listings/listings_module/add_listing/add_listing_bloc.dart';
 import 'package:instaflutter/listings/listings_module/add_listing/add_listing_event.dart';
 import 'package:instaflutter/listings/listings_module/add_listing/add_listing_state.dart';
+import 'package:instaflutter/listings/listings_module/add_listing/description_editor.dart';
 import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
 import 'package:instaflutter/listings/services/gemini_ai_service.dart';
 import 'package:instaflutter/listings/listings_module/filters/filters_screen.dart';
@@ -105,7 +106,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   CategoriesModel? _categoryValue;
 
   final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descController = TextEditingController();
+  String _description = '';
   final TextEditingController _priceController = TextEditingController();
 
   final TextEditingController _phoneController = TextEditingController();
@@ -202,7 +203,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   void _populateListingData(ListingModel l) {
     debugPrint('*** DEBUG: _populateListingData called. _placeManuallySelected=[0m$_placeManuallySelected');
     _titleController.text = l.title;
-    _descController.text = l.description;
+    _description = l.description;
     _priceController.text = l.price.toString();
 
     _filters = Map<String, String>.from(l.filters ?? {});
@@ -872,7 +873,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   Future<void> _showAIDescriptionDialog(BuildContext context, bool dark) async {
     final title = _titleController.text.trim();
     final category = _categoryValue?.title ?? '';
-    final existingDesc = _descController.text.trim();
+    final existingDesc = _description.trim();
     final location = _placeDetail?.formattedAddress ?? _selectedPrediction?.description ?? '';
     final services = _services.map((s) => s.name).toList();
 
@@ -901,7 +902,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
         location: location,
         services: services,
         onAccept: (generatedText) {
-          setState(() => _descController.text = generatedText);
+          setState(() => _description = generatedText);
         },
         isDark: dark,
       ),
@@ -1139,14 +1140,15 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              _buildSectionHeader('About'.tr()),
-              TextField(
-                controller: _descController,
-                maxLines: 5,
-                decoration: _getInputDecoration(
-                  label: 'Description'.tr(),
-                  hint: 'Describe your listing...'.tr(),
-                ),
+              DescriptionEditor(
+                initialText: _description,
+                onChanged: (text) {
+                  setState(() => _description = text);
+                },
+                maxCharacters: 2000,
+                draftKey: isEdit 
+                    ? 'listing_description_draft_${widget.listingToEdit!.id}'
+                    : 'listing_description_draft_new',
               ),
               const SizedBox(height: 8),
               // AI Enhancement Buttons
@@ -1157,7 +1159,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       child: OutlinedButton.icon(
                         icon: const Icon(Icons.auto_awesome, size: 18),
                         label: Text(
-                          _descController.text.trim().isEmpty ? 'Generate with AI' : 'Enhance with AI',
+                          _description.trim().isEmpty ? 'Generate with AI' : 'Enhance with AI',
                           style: const TextStyle(fontSize: 13),
                         ),
                         style: OutlinedButton.styleFrom(
@@ -1513,7 +1515,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
   void dispose() {
     _serviceDescriptionController.dispose();
     _titleController.dispose();
-    _descController.dispose();
     _priceController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
@@ -1557,7 +1558,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
     final listingModel = ListingModel(
       title: _titleController.text.trim(),
-      description: _descController.text.trim(),
+      description: _description.trim(),
       categoryID: _categoryValue!.id,
       categoryTitle: _categoryValue!.title,
       categoryPhoto: _categoryValue!.photo,

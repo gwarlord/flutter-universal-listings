@@ -78,6 +78,7 @@ dependencies:
   google_generative_ai: ^0.4.6
   google_fonts: ^6.2.1
   metadata_fetch: ^0.4.2
+  flutter_quill: ^9.8.0
 
 #dependency_overrides:
   #rxdart: 0.28.0
