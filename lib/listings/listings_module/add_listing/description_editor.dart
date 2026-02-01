@@ -43,9 +43,21 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
     _prefs = await SharedPreferences.getInstance();
     
     // Initialize with initial text or empty document
-    final document = widget.initialText.isNotEmpty
-        ? quill.Document.fromJson(jsonDecode(widget.initialText))
-        : quill.Document();
+    late final quill.Document document;
+    
+    if (widget.initialText.isNotEmpty) {
+      try {
+        // Try to parse as JSON (rich text format)
+        document = quill.Document.fromJson(jsonDecode(widget.initialText));
+      } catch (e) {
+        // Fall back to plain text if JSON parsing fails
+        debugPrint('[DescriptionEditor] JSON parse failed, using plain text: $e');
+        document = quill.Document()
+          ..insert(0, widget.initialText);
+      }
+    } else {
+      document = quill.Document();
+    }
 
     _quillController = quill.QuillController(
       document: document,
