@@ -53,34 +53,30 @@ class GeminiAIService {
       print('🤖 [GEMINI] Generating description...');
       
       final servicesText = services.isNotEmpty 
-          ? '\nServices offered: ${services.join(", ")}'
+          ? '\nServices: ${services.join(", ")}'
           : '';
       
       final locationText = location?.isNotEmpty ?? false
-          ? '\nLocation: $location'
+          ? 'in $location'
           : '';
       
-      final prompt = '''Create an engaging, professional About/Description section for a Caribbean business with these details:
+      final prompt = '''Create a brief, engaging description for a Caribbean $category business.
 
-BUSINESS NAME: $title
-CATEGORY: $category
-$locationText$servicesText
+Business: $title $locationText$servicesText
 
-Write a compelling description (150-250 words) that:
-1. Opens with a compelling headline about what makes this business special
-2. Highlights 3-5 key benefits, features, or services (use - for list items)
-3. Includes a "Why Choose Us" section with 2-3 differentiators
-4. Ends with a clear call to action (visit, call, book, message, etc.)
-5. Uses markdown formatting (* for bold, - for lists) for visual appeal
-6. Maintains a warm, professional, Caribbean-friendly tone
+Write a concise 2-3 sentence description (max 80 words) that:
+- Highlights what makes this business unique
+- Mentions key services or benefits
+- Invites customers to engage
 
-Return ONLY the description text with no preamble or meta-commentary. Start directly with the content.''';
+Use plain text only. NO markdown, NO asterisks, NO hashtags.
+
+Return ONLY the description text with no preamble.''';
       
       final content = [Content.text(prompt)];
       final response = await _model!.generateContent(content);
       var aiText = response.text ?? '';
       
-      // Clean up markdown formatting from AI response
       aiText = aiText.trim();
       
       // Remove common preambles if present
@@ -98,7 +94,6 @@ Return ONLY the description text with no preamble or meta-commentary. Start dire
       for (final p in preambles) {
         if (aiText.toLowerCase().startsWith(p.toLowerCase())) {
           aiText = aiText.substring(p.length).trimLeft();
-          // Remove trailing colon if present
           if (aiText.startsWith(':')) {
             aiText = aiText.substring(1).trimLeft();
           }
@@ -120,25 +115,21 @@ Return ONLY the description text with no preamble or meta-commentary. Start dire
     initialize();
     try {
       print('🤖 [GEMINI] Enhancing description...');
-      final content = [Content.text('''You are an expert Caribbean business marketing writer. Enhance and expand this $category listing description into a compelling, well-structured About section.
+      final content = [Content.text('''Improve this $category business description. Make it more engaging and professional while keeping it brief.
 
-CURRENT DESCRIPTION: $description
+Current: $description
 
-REQUIREMENTS:
-1. Start with a powerful headline that captures the business essence
-2. Highlight 3-5 key benefits, features, or services
-3. Use strong formatting: bold for emphasis, lists for features, short paragraphs for scannability
-4. Add a unique "Why Choose Us" section with 2-3 differentiators
-5. End with a clear call to action (visit, call, book, message)
-6. Make it warm, professional, and Caribbean-friendly
-7. Aim for 150-300 words total
-8. Use markdown formatting (* for bold, - for lists, # for headers) to make it visually engaging
+Write a concise 2-3 sentence improvement (max 80 words) that:
+- Highlights unique value
+- Sounds professional and warm
+- Invites customer action
 
-Return ONLY the enhanced description with no preamble, explanations, or meta-commentary. Start directly with the content.''')];
+Use PLAIN TEXT ONLY. NO markdown, NO asterisks, NO hashtags, NO special formatting.
+
+Return ONLY the improved description with no preamble.''')];
       final response = await _model!.generateContent(content);
       var aiText = response.text ?? description;
       
-      // Clean up markdown formatting from AI response
       aiText = aiText.trim();
       
       // Remove common preambles if present
@@ -159,7 +150,6 @@ Return ONLY the enhanced description with no preamble, explanations, or meta-com
       for (final p in preambles) {
         if (aiText.toLowerCase().startsWith(p.toLowerCase())) {
           aiText = aiText.substring(p.length).trimLeft();
-          // Remove trailing colon if present
           if (aiText.startsWith(':')) {
             aiText = aiText.substring(1).trimLeft();
           }
