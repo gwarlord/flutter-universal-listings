@@ -166,7 +166,6 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
           quill.QuillSimpleToolbar(
             controller: _quillController,
             config: quill.QuillSimpleToolbarConfig(
-              toolbarIconSize: 16,
               toolbarSectionSpacing: 4,
               multiRowsDisplay: false,
               showBackgroundColorButton: false,
@@ -190,7 +189,6 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
           quill.QuillEditor(
             controller: _quillController,
             scrollController: ScrollController(),
-            scrollable: true,
             focusNode: FocusNode(),
             autoFocus: false,
             readOnly: false,
@@ -216,9 +214,8 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
       ),
       padding: const EdgeInsets.all(12),
       child: SingleChildScrollView(
-        child: quill.QuillView(
+        child: quill.QuillView.basic(
           document: _quillController.document,
-          scrollPhysics: const NeverScrollableScrollPhysics(),
           readOnly: true,
         ),
       ),
