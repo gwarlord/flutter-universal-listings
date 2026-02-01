@@ -306,7 +306,10 @@ class ListingsFirebaseUtils extends ListingsRepository {
     await firestore
         .collection(cfg.listingsCollection)
         .doc(updatedListing.id)
-        .update(updatedListing.toJson());
+        .update({
+          'reviewsCount': updatedListing.reviewsCount,
+          'reviewsSum': updatedListing.reviewsSum,
+        });
   }
 
   // ---------------------------

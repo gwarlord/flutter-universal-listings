@@ -3,7 +3,6 @@ import '../model/deal_ad_model.dart';
 import 'package:http/http.dart' as http; // New import
 import 'dart:convert'; // New import
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // New import for .env
-import 'package:easy_localization/easy_localization.dart'; // New import for .tr()
 import 'package:instaflutter/listings/model/listings_user.dart'; // Changed import to ListingsUser
 
 class DealAdService {
@@ -30,6 +29,13 @@ class DealAdService {
     return _adsRef.where('status', isEqualTo: 'approved').orderBy('approvedAt', descending: true).snapshots().map(
       (snap) => snap.docs.map((doc) => DealAdModel.fromDoc(doc)).toList(),
     );
+  }
+
+  // New method to get ads by user ID
+  Stream<List<DealAdModel>> getAdsByUserId(String userId) {
+    return _adsRef.where('listerId', isEqualTo: userId).orderBy('createdAt', descending: true).snapshots().map(
+          (snap) => snap.docs.map((doc) => DealAdModel.fromDoc(doc)).toList(),
+        );
   }
 
   Future<void> approveAd(String adId, String reviewerId) async {
@@ -80,8 +86,8 @@ class DealAdService {
             'to': pushToken,
             'priority': 'high',
             'notification': {
-              'title': 'New Promotion Uploaded!'.tr(),
-              'body': 'A new promotion "$promotionCaption" has been submitted for review.'.tr(),
+              'title': 'New Promotion Uploaded!',
+              'body': 'A new promotion "$promotionCaption" has been submitted for review.',
             },
             'data': {
               'type': 'promotion',

@@ -83,11 +83,13 @@ service cloud.firestore {
       // 1. User is the author
       // 2. User is an admin
       // 3. User is ONLY incrementing the viewCount (allows public view tracking)
+      // 4. User is ONLY updating reviewsCount and reviewsSum (allows review posting)
         allow update: if isSignedIn() && (
           request.auth.uid == resource.data.authorID ||
           request.auth.uid == resource.data.customerId ||
           isAdmin() ||
-          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount']))
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount'])) ||
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reviewsCount', 'reviewsSum']))
         );
       
       allow delete: if isSignedIn() && (request.auth.uid == resource.data.authorID || isAdmin());
