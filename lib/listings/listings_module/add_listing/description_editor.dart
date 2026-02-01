@@ -190,7 +190,6 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
             controller: _quillController,
             scrollController: ScrollController(),
             focusNode: FocusNode(),
-            readOnly: false,
             placeholder: 'Describe your listing...',
             minHeight: 180,
             maxHeight: 300,
