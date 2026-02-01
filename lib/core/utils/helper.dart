@@ -270,8 +270,11 @@ Widget _getCircularImageProvider(
   ));
 }
 
-bool isDarkMode(BuildContext context) =>
-    Theme.of(context).brightness != Brightness.light;
+bool isDarkMode(BuildContext context) {
+  final isDark = Theme.of(context).brightness != Brightness.light;
+  debugPrint('isDarkMode: $isDark (Brightness: ${Theme.of(context).brightness})'); // Debug print
+  return isDark;
+}
 
 Future<geo.Position?> getCurrentLocation() async {
   bool serviceEnabled;
@@ -280,7 +283,7 @@ Future<geo.Position?> getCurrentLocation() async {
   // Test if location services are enabled.
   serviceEnabled = await geo.Geolocator.isLocationServiceEnabled();
   if (!serviceEnabled) {
-    // Location services are not enabled don't continue
+    // Location services are not enabled don\'t continue
     // accessing the position and request users of the
     // App to enable the location services.
     loc.Location location = loc.Location();
@@ -297,7 +300,7 @@ Future<geo.Position?> getCurrentLocation() async {
     if (permission == geo.LocationPermission.denied) {
       // Permissions are denied, next time you could try
       // requesting permissions again (this is also where
-      // Android's shouldShowRequestPermissionRationale
+      // Android\'s shouldShowRequestPermissionRationale
       // returned true. According to Android guidelines
       // your App should show an explanatory UI now.
       return null;
@@ -359,7 +362,7 @@ String updateTime(int timer) {
 
   String twoDigitMinutes = twoDigits(callDuration.inMinutes.remainder(60));
   String twoDigitSeconds = twoDigits(callDuration.inSeconds.remainder(60));
-  return '${twoDigitsHours(callDuration.inHours)}$twoDigitMinutes:$twoDigitSeconds';
+  return '${twoDigitsHours(callDuration.inHours)}${twoDigitMinutes}:$twoDigitSeconds';
 }
 
 Widget showEmptyState(String title, String description,

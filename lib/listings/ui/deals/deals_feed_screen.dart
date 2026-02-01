@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:instaflutter/listings/services/deal_ad_service.dart';
@@ -22,15 +23,57 @@ class DealsFeedScreen extends StatefulWidget {
 
 class _DealsFeedScreenState extends State<DealsFeedScreen> {
   late PageController _pageController;
+  Timer? _autoScrollTimer;
+  bool _isUserScrolling = false;
+  List<DealAdModel> _currentAds = []; // Added to store the ads
+  StreamSubscription<List<DealAdModel>>? _adsSubscription; // Added subscription
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: widget.initialIndex);
+    
+    // Subscribe to the stream to get ads and start auto-scroll
+    _adsSubscription = DealAdService().getApprovedAds().listen((ads) {
+      if (mounted) {
+        setState(() {
+          _currentAds = ads;
+          _startAutoScroll(); // Start auto-scroll once ads are available
+        });
+      }
+    });
+  }
+
+  void _startAutoScroll() {
+    _autoScrollTimer?.cancel(); // Cancel any existing timer
+    _autoScrollTimer = Timer.periodic(const Duration(seconds: 7), (timer) {
+      if (_isUserScrolling || _currentAds.isEmpty) return; // Don't auto-scroll if user is interacting or no ads
+
+      if (_pageController.hasClients) {
+        final currentPage = _pageController.page ?? 0;
+        final totalPages = _currentAds.length; // Use the stored ads
+
+        if (totalPages == 0) return; // No ads to scroll
+
+        int nextPage = (currentPage.toInt() + 1) % totalPages; // Explicit toInt for safety
+
+        _pageController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 1000),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  void _stopAutoScroll() {
+    _autoScrollTimer?.cancel();
   }
 
   @override
   void dispose() {
+    _stopAutoScroll();
+    _adsSubscription?.cancel(); // Cancel the stream subscription
     _pageController.dispose();
     super.dispose();
   }
@@ -46,31 +89,59 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
         title: null,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: StreamBuilder<List<DealAdModel>>(
-        stream: DealAdService().getApprovedAds(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Colors.white));
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (ScrollNotification notification) {
+          if (notification is UserScrollNotification) {
+            if (notification.metrics.axisDirection == AxisDirection.down ||
+                notification.metrics.axisDirection == AxisDirection.up) {
+              // User started scrolling vertically
+              if (notification.depth == 0) { // Only listen to the main scrollable
+                _isUserScrolling = true;
+                _stopAutoScroll();
+              }
+            }
+            // Corrected: Only check extentAfter for reaching the end
+            if (notification.metrics.extentAfter == 0 || notification.metrics.extentBefore == 0) { 
+              // User stopped scrolling (or reached end/beginning), resume auto-scroll after a delay
+              if (_isUserScrolling && notification.depth == 0) {
+                _isUserScrolling = false;
+                Future.delayed(const Duration(seconds: 3), () {
+                  if (mounted && !_isUserScrolling) {
+                    _startAutoScroll();
+                  }
+                });
+              }
+            }
           }
-          final ads = snapshot.data ?? [];
-          if (ads.isEmpty) {
-            return const Center(
-              child: Text('No deals or promotions available.', style: TextStyle(color: Colors.white)),
-            );
-          }
-
-          return PageView.builder(
-            scrollDirection: Axis.vertical,
-            itemCount: ads.length,
-            controller: _pageController,
-            itemBuilder: (context, index) {
-              return DealFeedItem(
-                ad: ads[index], 
-                currentUser: widget.currentUser,
-              );
-            },
-          );
+          return false;
         },
+        child: StreamBuilder<List<DealAdModel>>(
+          stream: DealAdService().getApprovedAds(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: Colors.white));
+            }
+            // Use _currentAds which is updated in initState for data
+            // final ads = snapshot.data ?? []; // No longer needed here as _currentAds holds the data
+            if (_currentAds.isEmpty) {
+              return const Center(
+                child: Text('No deals or promotions available.', style: TextStyle(color: Colors.white)),
+              );
+            }
+
+            return PageView.builder(
+              scrollDirection: Axis.vertical,
+              itemCount: _currentAds.length, // Use _currentAds.length
+              controller: _pageController,
+              itemBuilder: (context, index) {
+                return DealFeedItem(
+                  ad: _currentAds[index], // Use _currentAds[index]
+                  currentUser: widget.currentUser,
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

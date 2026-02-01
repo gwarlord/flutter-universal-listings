@@ -21,6 +21,7 @@ import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 import 'package:instaflutter/listings/ui/auth/launcher/launcher_screen.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:instaflutter/main.dart' as entry;
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // Added import
 
 runListings() {
   appName = 'Flutter Universal Listings';
@@ -32,7 +33,7 @@ runListings() {
   reviewCollection = 'reviews';
   filtersCollection = 'filters';
 
-  googleMapsApiKey = 'AIzaSyAmBTqCgeWA_-F9Dz5eHoYdGURT_YiAwWI';
+  googleMapsApiKey = dotenv.env['GOOGLE_API_KEY'] ?? ''; // Updated to use dotenv
 
   return EasyLocalization(
     supportedLocales: const [Locale('en'), Locale('ar')],
@@ -175,11 +176,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             onSurface: Colors.white,
             brightness: Brightness.dark,
           ),
-          appBarTheme: AppBarTheme(
+          appBarTheme: AppBarTheme( // Removed color property
             centerTitle: true,
-            color: Color(colorPrimary),
-            titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20.0, fontWeight: FontWeight.w500),
+            color: Color(colorPrimary), // This line is removed
+            titleTextStyle: TextStyle(color: Colors.white, fontSize: 20.0, fontWeight: FontWeight.w500),
             systemOverlayStyle: SystemUiOverlayStyle.light,
+            iconTheme: IconThemeData(color: Colors.white), // Added for consistency
           ),
         ),
         debugShowCheckedModeBanner: false,

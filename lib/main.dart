@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:instaflutter/listings/main.dart';
+import 'package:instaflutter/listings/main.dart' as listings_app; // Added alias
 import 'package:instaflutter/core/utils/helper.dart';
 
 // Global navigator key for navigation without context
@@ -143,5 +143,5 @@ void main() async {
   EasyLocalization.logger.enableBuildModes = [];
   await MobileAds.instance.initialize();
 
-  runApp(runListings());
+  runApp(listings_app.runListings()); // Called with alias
 }

@@ -594,7 +594,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                         if (_hasContactOrHours(listing)) ...[
                           const SizedBox(height: 32),
                           Text(
-                            'Contact & Hours'.tr(),
+                            'Contact, Hours & Social'.tr(),
                             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 16),
@@ -611,6 +611,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             onWhatsapp: () => _launchWhatsApp(listing.whatsapp),
                             onYoutube: () => _launchUrl(listing.youtube),
                             onX: () => _launchUrl(listing.x),
+                            showOnlyFirst: 5,
                           ),
                         ],
                         // Location Map
@@ -1323,60 +1324,105 @@ class _ContactHoursCard extends StatelessWidget {
   final bool isDark;
   final VoidCallback onCall, onEmail, onWebsite, onInstagram, onFacebook, onTiktok, onWhatsapp, onYoutube, onX;
 
+  final int showOnlyFirst;
+
   const _ContactHoursCard({
     super.key,
     required this.listing, required this.colorPrimary, required this.isDark,
     required this.onCall, required this.onEmail, required this.onWebsite,
     required this.onInstagram, required this.onFacebook, required this.onTiktok,
     required this.onWhatsapp, required this.onYoutube, required this.onX,
+    this.showOnlyFirst = 0,
   });
 
   @override
   Widget build(BuildContext context) {
     final bg = isDark ? Colors.grey.shade900 : Colors.grey.shade50;
-    final rows = <Widget>[];
-
-    void addRow(Widget row) {
-      if (rows.isNotEmpty) {
-        rows.add(Divider(height: 1, indent: 56, color: isDark ? Colors.white10 : Colors.black12));
+    final contactRows = <Widget>[];
+    void addContactRow(Widget row) {
+      if (contactRows.isNotEmpty) {
+        contactRows.add(Divider(height: 1, indent: 56, color: isDark ? Colors.white10 : Colors.black12));
       }
-      rows.add(row);
+      contactRows.add(row);
     }
 
-    if (listing.phone.isNotEmpty) addRow(_ActionRow(icon: Icons.call, title: 'Phone'.tr(), value: listing.phone, onTap: onCall, accent: colorPrimary, isDark: isDark));
-    if (listing.email.isNotEmpty) addRow(_ActionRow(icon: Icons.email, title: 'Email'.tr(), value: listing.email, onTap: onEmail, accent: colorPrimary, isDark: isDark));
-    if (listing.website.isNotEmpty) addRow(_ActionRow(icon: FontAwesomeIcons.globe, title: 'Website'.tr(), value: listing.website, onTap: onWebsite, accent: colorPrimary, isDark: isDark));
-    
+    if (listing.phone.isNotEmpty) addContactRow(_ActionRow(icon: Icons.call, title: 'Phone'.tr(), value: listing.phone, onTap: onCall, accent: colorPrimary, isDark: isDark));
+    if (listing.email.isNotEmpty) addContactRow(_ActionRow(icon: Icons.email, title: 'Email'.tr(), value: listing.email, onTap: onEmail, accent: colorPrimary, isDark: isDark));
+    if (listing.website.isNotEmpty) addContactRow(_ActionRow(icon: FontAwesomeIcons.globe, title: 'Website'.tr(), value: listing.website, onTap: onWebsite, accent: colorPrimary, isDark: isDark));
     if (listing.instagram.isNotEmpty) {
       final igHandle = extractSocialHandle(listing.instagram, 'instagram.com');
-      addRow(_ActionRow(icon: FontAwesomeIcons.instagram, title: 'Instagram'.tr(), value: igHandle, onTap: onInstagram, accent: colorPrimary, isDark: isDark));
+      addContactRow(_ActionRow(icon: FontAwesomeIcons.instagram, title: 'Instagram'.tr(), value: igHandle, onTap: onInstagram, accent: colorPrimary, isDark: isDark));
     }
     if (listing.facebook.isNotEmpty) {
       final fbHandle = extractSocialHandle(listing.facebook, 'facebook.com');
-      addRow(_ActionRow(icon: FontAwesomeIcons.facebook, title: 'Facebook'.tr(), value: fbHandle, onTap: onFacebook, accent: colorPrimary, isDark: isDark));
+      addContactRow(_ActionRow(icon: FontAwesomeIcons.facebook, title: 'Facebook'.tr(), value: fbHandle, onTap: onFacebook, accent: colorPrimary, isDark: isDark));
     }
     if (listing.tiktok.isNotEmpty) {
       final ttHandle = extractSocialHandle(listing.tiktok, 'tiktok.com');
-      addRow(_ActionRow(icon: FontAwesomeIcons.tiktok, title: 'TikTok'.tr(), value: ttHandle, onTap: onTiktok, accent: colorPrimary, isDark: isDark));
+      addContactRow(_ActionRow(icon: FontAwesomeIcons.tiktok, title: 'TikTok'.tr(), value: ttHandle, onTap: onTiktok, accent: colorPrimary, isDark: isDark));
     }
-    if (listing.whatsapp.isNotEmpty) addRow(_ActionRow(icon: FontAwesomeIcons.whatsapp, title: 'WhatsApp'.tr(), value: listing.whatsapp, onTap: onWhatsapp, accent: colorPrimary, isDark: isDark));
+    if (listing.whatsapp.isNotEmpty) addContactRow(_ActionRow(icon: FontAwesomeIcons.whatsapp, title: 'WhatsApp'.tr(), value: listing.whatsapp, onTap: onWhatsapp, accent: colorPrimary, isDark: isDark));
     if (listing.youtube.isNotEmpty) {
       final ytHandle = extractSocialHandle(listing.youtube, 'youtube.com');
-      addRow(_ActionRow(icon: Icons.ondemand_video, title: 'YouTube'.tr(), value: ytHandle, onTap: onYoutube, accent: colorPrimary, isDark: isDark));
+      addContactRow(_ActionRow(icon: Icons.ondemand_video, title: 'YouTube'.tr(), value: ytHandle, onTap: onYoutube, accent: colorPrimary, isDark: isDark));
     }
     if (listing.x.isNotEmpty) {
       final xHandle = extractSocialHandle(listing.x, 'x.com');
-      addRow(_ActionRow(icon: FontAwesomeIcons.xTwitter, title: 'X'.tr(), value: xHandle, onTap: onX, accent: colorPrimary, isDark: isDark));
-    }
-    
-    if (listing.openingHours.isNotEmpty) {
-      addRow(_OpeningHoursRow(value: listing.openingHours, accent: colorPrimary, isDark: isDark));
+      addContactRow(_ActionRow(icon: FontAwesomeIcons.xTwitter, title: 'X'.tr(), value: xHandle, onTap: onX, accent: colorPrimary, isDark: isDark));
     }
 
+    int maxToShow = showOnlyFirst > 0 ? showOnlyFirst : contactRows.length;
+
+    return _ContactRowsExpander(
+      contactRows: contactRows,
+      maxToShow: maxToShow,
+      openingHours: listing.openingHours,
+      colorPrimary: colorPrimary,
+      isDark: isDark,
+    );
+  }
+}
+
+
+// Helper widget to manage expansion state
+class _ContactRowsExpander extends StatefulWidget {
+  final List<Widget> contactRows;
+  final int maxToShow;
+  final String openingHours;
+  final Color colorPrimary;
+  final bool isDark;
+  const _ContactRowsExpander({
+    required this.contactRows,
+    required this.maxToShow,
+    required this.openingHours,
+    required this.colorPrimary,
+    required this.isDark,
+  });
+  @override
+  State<_ContactRowsExpander> createState() => _ContactRowsExpanderState();
+}
+
+class _ContactRowsExpanderState extends State<_ContactRowsExpander> {
+  bool showAll = false;
+  @override
+  Widget build(BuildContext context) {
+    final visibleRows = showAll ? widget.contactRows : widget.contactRows.take(widget.maxToShow).toList();
     return Container(
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(16), border: Border.all(color: isDark ? Colors.white10 : Colors.black12)),
+      decoration: BoxDecoration(color: widget.isDark ? Colors.grey.shade900 : Colors.grey.shade50, borderRadius: BorderRadius.circular(16), border: Border.all(color: widget.isDark ? Colors.white10 : Colors.black12)),
       child: Column(
-        children: rows,
+        children: [
+          ...visibleRows,
+          if (!showAll && widget.contactRows.length > widget.maxToShow)
+            TextButton(
+              onPressed: () => setState(() => showAll = true),
+              child: Text('Show All'.tr()),
+            ),
+          if (widget.openingHours.isNotEmpty)
+            ...[
+              if (visibleRows.isNotEmpty) Divider(height: 1, indent: 56, color: widget.isDark ? Colors.white10 : Colors.black12),
+              _OpeningHoursRow(value: widget.openingHours, accent: widget.colorPrimary, isDark: widget.isDark),
+            ],
+        ],
       ),
     );
   }
@@ -1543,7 +1589,7 @@ class _OpeningHoursRowState extends State<_OpeningHoursRow> {
     bool isOpen = false;
 
     if (rawTodayHours.toLowerCase() != 'closed') {
-      final format = DateFormat.jm();
+      final format = DateFormat('h:mm a'); // Changed from DateFormat.jm()
       if (rawTodayHours.contains('→')) {
         try {
           final timeParts = rawTodayHours.split('→');
@@ -1575,7 +1621,7 @@ class _OpeningHoursRowState extends State<_OpeningHoursRow> {
       }
     }
 
-    final displayTodayHours = _formatDisplayHours(rawTodayHours, DateFormat.jm(), now);
+    final displayTodayHours = _formatDisplayHours(rawTodayHours, DateFormat('h:mm a'), now); // Changed from DateFormat.jm()
 
     return Column(
       children: [
@@ -1625,7 +1671,7 @@ class _OpeningHoursRowState extends State<_OpeningHoursRow> {
               children: daysOfWeek.map((day) { // Use daysOfWeek to ensure order
                 final rawHours = parsedHours[day] ?? 'Closed';
                 final isToday = day == todayDayName;
-                final displayHours = _formatDisplayHours(rawHours, DateFormat.jm(), now);
+                final displayHours = _formatDisplayHours(rawHours, DateFormat('h:mm a'), now); // Changed from DateFormat.jm()
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
@@ -1649,6 +1695,7 @@ class _OpeningHoursRowState extends State<_OpeningHoursRow> {
     );
   }
 }
+
 
 class _ActionRow extends StatelessWidget {
   final IconData icon;

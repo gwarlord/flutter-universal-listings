@@ -70,7 +70,7 @@ class DealAdModel {
       listingId: data['listingId'] ?? '',
       mediaUrl: data['mediaUrl'] ?? '',
       mediaType: data['mediaType'] ?? 'image',
-      thumbnailUrl: data['thumbnailUrl'],
+      thumbnailUrl: data['thumbnailUrl'] as String?, // Explicitly cast to String?
       caption: data['caption'] ?? '',
       durationDays: data['durationDays'] ?? 0,
       pricePaid: (data['pricePaid'] as num?)?.toDouble() ?? 0.0,

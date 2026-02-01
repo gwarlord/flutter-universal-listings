@@ -10,7 +10,7 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
 import 'package:instaflutter/core/utils/ads/ads_utils.dart';
 import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
+import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/listings/listings_module/add_listing/add_listing_screen.dart';
 import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
 import 'package:instaflutter/listings/listings_module/category_listings/category_listings_screen.dart';
@@ -258,7 +258,7 @@ class HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Color(colorPrimary),
+                  color: Color(cfg.colorPrimary), 
                 ),
               ),
             ),
@@ -306,7 +306,7 @@ class HomeScreenState extends State<HomeScreen> {
                           country.name,
                           style: TextStyle(color: isDark ? Colors.white : Colors.black),
                         ),
-                        activeColor: Color(colorPrimary),
+                        activeColor: Color(cfg.colorPrimary), 
                         checkColor: Colors.white,
                         value: isSelected,
                         onChanged: (bool? newValue) {
@@ -331,7 +331,7 @@ class HomeScreenState extends State<HomeScreen> {
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(colorPrimary),
+                    backgroundColor: Color(cfg.colorPrimary), 
                   ),
                   onPressed: () {
                     setState(() {
@@ -454,7 +454,7 @@ class HomeScreenState extends State<HomeScreen> {
                     SliverToBoxAdapter(
                       child: showEmptyState(
                         'No Categories'.tr(),
-                        'All Categories will be shown here once added by the admin.'.tr(),
+                        'All Categories will be shown here here once added by the admin.'.tr(),
                       ),
                     )
                   else
@@ -535,7 +535,7 @@ class HomeScreenState extends State<HomeScreen> {
                               decoration: BoxDecoration(
                                 color: dark ? Colors.black : Colors.grey[50],
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Color(colorPrimary).withOpacity(0.1)),
+                                border: Border.all(color: Color(cfg.colorPrimary).withOpacity(0.1)),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -550,7 +550,7 @@ class HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ),
                                   ),
-                                  Icon(Icons.tune, color: Color(colorPrimary), size: 20),
+                                  Icon(Icons.tune, color: Color(cfg.colorPrimary), size: 20),
                                 ],
                               ),
                             ),
@@ -568,8 +568,8 @@ class HomeScreenState extends State<HomeScreen> {
                                 return Chip(
                                   label: Text(country.name, style: const TextStyle(fontSize: 12)),
                                   onDeleted: () => setState(() => _selectedCountryCodes.remove(code)),
-                                  backgroundColor: Color(colorPrimary).withOpacity(0.1),
-                                  deleteIconColor: Color(colorPrimary),
+                                  backgroundColor: Color(cfg.colorPrimary).withOpacity(0.1),
+                                  deleteIconColor: Color(cfg.colorPrimary),
                                   side: BorderSide.none,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 );
@@ -591,7 +591,7 @@ class HomeScreenState extends State<HomeScreen> {
                         height: 260,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
-                          color: Color(colorPrimary).withOpacity(dark ? 0.05 : 0.03),
+                          color: Color(cfg.colorPrimary).withOpacity(dark ? 0.05 : 0.03),
                         ),
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
@@ -631,7 +631,7 @@ class HomeScreenState extends State<HomeScreen> {
                                   _selectedCountryCodes = [];
                                   _searchController.clear();
                                 }),
-                                colorPrimary: Color(colorPrimary),
+                                colorPrimary: Color(cfg.colorPrimary),
                               ),
                             ),
                           );
@@ -674,12 +674,12 @@ class HomeScreenState extends State<HomeScreen> {
                                 child: OutlinedButton(
                                   style: OutlinedButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(vertical: 14),
-                                    side: BorderSide(color: Color(colorPrimary)),
+                                    side: BorderSide(color: Color(cfg.colorPrimary)),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   ),
                                   child: Text(
                                     'Show All'.tr() + ' (${filteredListingsWithAds.length - 4})',
-                                    style: TextStyle(color: Color(colorPrimary), fontWeight: FontWeight.bold),
+                                    style: TextStyle(color: Color(cfg.colorPrimary), fontWeight: FontWeight.bold),
                                   ),
                                   onPressed: () => context.read<HomeBloc>().add(ToggleShowAllEvent()),
                                 ),
@@ -781,7 +781,11 @@ class HomeScreenState extends State<HomeScreen> {
                     listing.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: dark ? Colors.white : Colors.black87,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Row(
@@ -803,7 +807,7 @@ class HomeScreenState extends State<HomeScreen> {
                     listing.categoryTitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Color(colorPrimary), fontSize: 10, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: Color(cfg.colorPrimary), fontSize: 10, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -937,7 +941,7 @@ class _DealAdCarouselItemState extends State<DealAdCarouselItem> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Color(colorPrimary),
+                    color: Color(cfg.colorPrimary),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -1016,6 +1020,7 @@ class CategoryHomeCardWidget extends StatelessWidget {
     );
   }
 }
+
 
 class ListingHomeCardWidget extends StatefulWidget {
   final ListingModel? listing;
@@ -1149,7 +1154,7 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
                           child: Icon(
                             listing.isFav ? Icons.favorite : Icons.favorite_border,
                             size: 16,
-                            color: listing.isFav ? Color(colorPrimary) : Colors.white,
+                            color: listing.isFav ? Color(cfg.colorPrimary) : Colors.white,
                           ),
                         ),
                       ),
@@ -1177,45 +1182,24 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.place, size: 10, color: Colors.grey),
+                      const Icon(Icons.location_on, size: 12, color: Colors.grey),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           listing.place,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 10, color: Colors.grey),
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.star, size: 12, color: Color(colorPrimary)),
-                          const SizedBox(width: 2),
-                          Text(
-                            safeRating.toStringAsFixed(1),
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      if (listing.price.trim().isNotEmpty)
-                        Flexible(
-                          child: Text(
-                            '${_getCurrencySymbol(listing.currencyCode)}${listing.price}',
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Color(colorPrimary),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ),
-                    ],
+                  const SizedBox(height: 8),
+                  Text(
+                    listing.categoryTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Color(cfg.colorPrimary), fontSize: 10, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -1274,7 +1258,7 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
                               context,
                               'Deleting...'.tr(),
                               false,
-                              Color(colorPrimary),
+                              Color(cfg.colorPrimary),
                             );
                             blocContext.read<HomeBloc>().add(
                               ListingDeleteByAdminEvent(listing: listing),
@@ -1306,7 +1290,7 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
                               context,
                               'Deleting...'.tr(),
                               false,
-                              Color(colorPrimary),
+                              Color(cfg.colorPrimary),
                             );
                             blocContext.read<HomeBloc>().add(
                               ListingDeleteByAdminEvent(listing: listing),

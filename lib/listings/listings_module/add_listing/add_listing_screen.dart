@@ -182,6 +182,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
 
   Future<void> _initializeEditListing() async {
+    // Always reset manual selection so the address is loaded from the listing unless user picks a new one
+    _placeManuallySelected = false;
     try {
       // Reload listing from Firestore to ensure we have latest changes (e.g., from booking services)
       final freshListing = await listingApiManager.getListing(listingID: widget.listingToEdit!.id);

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:instaflutter/core/ui/chat/conversation/conversations_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
+import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/ui/container/container_bloc.dart';
 import 'package:instaflutter/listings/listings_module/add_listing/add_listing_screen.dart';
@@ -25,7 +25,7 @@ import 'package:instaflutter/listings/listings_module/chat_settings/chat_setting
 import 'package:instaflutter/listings/ui/profile/profile/profile_screen.dart';
 import '../deals/deals_promotion_screen.dart';
 import '../deals/ad_review_approval_screen.dart';
-import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
+import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart' as listings_api; // Corrected import with alias
 import 'package:provider/provider.dart';
 import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 
@@ -106,7 +106,7 @@ class _ContainerState extends State<ContainerScreen> {
         backgroundColor: dark ? Colors.grey[900] : Colors.white,
         title: Row(
           children: [
-            Icon(Icons.lock, color: Color(colorPrimary)),
+            Icon(Icons.lock, color: Color(cfg.colorPrimary)),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -130,7 +130,7 @@ class _ContainerState extends State<ContainerScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(colorPrimary),
+              backgroundColor: Color(cfg.colorPrimary),
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
@@ -233,7 +233,7 @@ class _ContainerState extends State<ContainerScreen> {
                           }
                         },
                         unselectedItemColor: Colors.grey,
-                        selectedItemColor: Color(colorPrimary),
+                        selectedItemColor: Color(cfg.colorPrimary),
                         items: [
                           BottomNavigationBarItem(
                               icon: const Icon(Icons.home), label: 'Home'.tr()),
@@ -312,6 +312,7 @@ class _ContainerState extends State<ContainerScreen> {
                   title: Text(
                     _appBarTitle,
                   ),
+                  centerTitle: true,
                 ),
                 body: _currentWidget,
               );
@@ -323,7 +324,7 @@ class _ContainerState extends State<ContainerScreen> {
   }
 
   Widget _buildModernDrawer(BuildContext context, ListingsUser currentUser, bool isDark) {
-    final primaryColorValue = Color(colorPrimary);
+    final primaryColorValue = Color(cfg.colorPrimary);
     final selectedBgColor = primaryColorValue.withOpacity(0.1);
 
     return Drawer(
@@ -498,9 +499,6 @@ class _ContainerState extends State<ContainerScreen> {
                         onTap: () {
                           if (currentUser.hasBookingServices) {
                             _navigateToListingServices(context);
-                          } else {
-                            Navigator.pop(context);
-                            _showUpgradeDialog(context, 'Booking Services', 'Professional');
                           }
                         },
                         isDark: isDark,
@@ -540,7 +538,7 @@ class _ContainerState extends State<ContainerScreen> {
                         onTap: () {
                           Navigator.pop(context);
                           if (currentUser.hasDirectMessaging) {
-                            push(context, ChatSettingsScreen(currentUser: currentUser, listingsRepository: listingApiManager));
+                            push(context, ChatSettingsScreen(currentUser: currentUser, listingsRepository: listings_api.listingApiManager)); // Corrected usage of alias
                           } else {
                             _showUpgradeDialog(context, 'Chat Settings', 'Premium');
                           }
@@ -557,8 +555,6 @@ class _ContainerState extends State<ContainerScreen> {
                           Navigator.pop(context);
                           if (currentUser.isAdmin || ['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase())) {
                             push(context, AdvancedAnalyticsScreen(currentUser: currentUser));
-                          } else {
-                            _showUpgradeDialog(context, 'Advanced Analytics', 'Premium');
                           }
                         },
                         isDark: isDark,
