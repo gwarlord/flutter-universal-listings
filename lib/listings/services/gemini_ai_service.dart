@@ -51,10 +51,62 @@ class GeminiAIService {
     initialize();
     try {
       print('🤖 [GEMINI] Generating description...');
-      final prompt = 'Write a short professional description for a Caribbean business: $title ($category). Location: $location.';
+      
+      final servicesText = services.isNotEmpty 
+          ? '\nServices offered: ${services.join(", ")}'
+          : '';
+      
+      final locationText = location?.isNotEmpty ?? false
+          ? '\nLocation: $location'
+          : '';
+      
+      final prompt = '''Create an engaging, professional About/Description section for a Caribbean business with these details:
+
+BUSINESS NAME: $title
+CATEGORY: $category
+$locationText$servicesText
+
+Write a compelling description (150-250 words) that:
+1. Opens with a compelling headline about what makes this business special
+2. Highlights 3-5 key benefits, features, or services (use - for list items)
+3. Includes a "Why Choose Us" section with 2-3 differentiators
+4. Ends with a clear call to action (visit, call, book, message, etc.)
+5. Uses markdown formatting (* for bold, - for lists) for visual appeal
+6. Maintains a warm, professional, Caribbean-friendly tone
+
+Return ONLY the description text with no preamble or meta-commentary. Start directly with the content.''';
+      
       final content = [Content.text(prompt)];
       final response = await _model!.generateContent(content);
-      return response.text ?? '';
+      var aiText = response.text ?? '';
+      
+      // Clean up markdown formatting from AI response
+      aiText = aiText.trim();
+      
+      // Remove common preambles if present
+      final preambles = [
+        'Here is',
+        'Here\'s',
+        'Description:',
+        'Based on',
+        'I\'ve created',
+        'Sure,',
+        'Certainly,',
+        'Of course,',
+        'AI-generated',
+      ];
+      for (final p in preambles) {
+        if (aiText.toLowerCase().startsWith(p.toLowerCase())) {
+          aiText = aiText.substring(p.length).trimLeft();
+          // Remove trailing colon if present
+          if (aiText.startsWith(':')) {
+            aiText = aiText.substring(1).trimLeft();
+          }
+        }
+      }
+      
+      print('✅ [GEMINI] Generated (${aiText.length} chars)');
+      return aiText;
     } catch (e) {
       print('❌ [GEMINI] Error (generateListingDescription): $e');
       return _diagnoseAndFallback(e);
@@ -68,49 +120,53 @@ class GeminiAIService {
     initialize();
     try {
       print('🤖 [GEMINI] Enhancing description...');
-      final content = [Content.text('''Expand and improve this $category listing description for a Caribbean business. Create a well-structured, detailed, and engaging About section using this format:
+      final content = [Content.text('''You are an expert Caribbean business marketing writer. Enhance and expand this $category listing description into a compelling, well-structured About section.
 
-**HEADLINE:** Start with a compelling hook about the business
+CURRENT DESCRIPTION: $description
 
-**FEATURES:** List 3-5 key features or services
-- Feature 1
-- Feature 2
-- Feature 3
+REQUIREMENTS:
+1. Start with a powerful headline that captures the business essence
+2. Highlight 3-5 key benefits, features, or services
+3. Use strong formatting: bold for emphasis, lists for features, short paragraphs for scannability
+4. Add a unique "Why Choose Us" section with 2-3 differentiators
+5. End with a clear call to action (visit, call, book, message)
+6. Make it warm, professional, and Caribbean-friendly
+7. Aim for 150-300 words total
+8. Use markdown formatting (* for bold, - for lists, # for headers) to make it visually engaging
 
-**WHY CHOOSE US:** 2-3 unique benefits or selling points
-
-**CALL TO ACTION:** End with a friendly invitation to contact, call, message, or book
-
-Make it professional, engaging, and appropriate for Caribbean customers. Use bullet points and formatting naturally.
-
-Return ONLY the formatted text itself with no preamble:
-
-Original: $description''')];
+Return ONLY the enhanced description with no preamble, explanations, or meta-commentary. Start directly with the content.''')];
       final response = await _model!.generateContent(content);
       var aiText = response.text ?? description;
-      // Post-process: Remove preamble, explanations, or options, keep only the first user-ready sentence/paragraph
-      if (aiText.contains('\n')) {
-        // Take only the first non-empty line
-        aiText = aiText.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).first;
-      }
+      
+      // Clean up markdown formatting from AI response
+      aiText = aiText.trim();
+      
       // Remove common preambles if present
       final preambles = [
         'Here is',
         'Here\'s',
         'Suggestion:',
-        'Improved',
-        'Enhanced',
+        'Improved:',
+        'Enhanced:',
+        'Enhanced description:',
         'Option',
         'Sure,',
         'Certainly,',
         'Of course,',
         'AI-generated',
+        'Based on the description',
       ];
       for (final p in preambles) {
         if (aiText.toLowerCase().startsWith(p.toLowerCase())) {
           aiText = aiText.substring(p.length).trimLeft();
+          // Remove trailing colon if present
+          if (aiText.startsWith(':')) {
+            aiText = aiText.substring(1).trimLeft();
+          }
         }
       }
+      
+      print('✅ [GEMINI] Enhanced (${aiText.length} chars)');
       return aiText;
     } catch (e) {
       print('❌ [GEMINI] Error (enhanceDescription): $e');

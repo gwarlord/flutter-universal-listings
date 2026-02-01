@@ -39,6 +39,19 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
     _loadDraft();
   }
 
+  @override
+  void didUpdateWidget(DescriptionEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If initialText changed (e.g., during edit mode data loading), reinitialize
+    if (oldWidget.initialText != widget.initialText && widget.initialText.isNotEmpty) {
+      final preview = widget.initialText.length > 50 
+          ? widget.initialText.substring(0, 50) 
+          : widget.initialText;
+      debugPrint('[DescriptionEditor] initialText changed, reinitializing with: $preview...');
+      _initializeEditor();
+    }
+  }
+
   Future<void> _initializeEditor() async {
     _prefs = await SharedPreferences.getInstance();
     

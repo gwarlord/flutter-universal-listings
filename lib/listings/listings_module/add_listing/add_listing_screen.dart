@@ -150,6 +150,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   List<CategoriesModel> _categories = [];
   late ListingsUser currentUser;
   bool isLoadingCategories = true;
+  bool _isLoadingListing = false;
 
   bool get isEdit => widget.listingToEdit != null;
   String? _countryCode;
@@ -171,6 +172,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   void initState() {
     if (isEdit) {
       _selectedCurrencyCode = widget.listingToEdit?.currencyCode ?? 'USD';
+      _isLoadingListing = true;
     }
     super.initState();
     currentUser = widget.currentUser;
@@ -197,6 +199,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
     } catch (e) {
       // Fallback to passed listing on error
       _populateListingData(widget.listingToEdit!);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingListing = false);
+      }
     }
   }
 
