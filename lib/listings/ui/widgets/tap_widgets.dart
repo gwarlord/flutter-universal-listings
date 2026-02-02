@@ -279,20 +279,24 @@ class _TapReasonDialogState extends State<TapReasonDialog> {
             ),
           ),
           const SizedBox(height: 8),
-          ...TapReason.values.map((reason) => RadioListTile<TapReason>(
-                title: Text(
-                  reason.displayText.tr(),
-                  style: TextStyle(color: textColor),
+          ...TapReason.values.map((reason) => Theme(
+                data: Theme.of(context).copyWith(
+                  unselectedWidgetColor: isDark ? Colors.white70 : Colors.grey,
                 ),
-                value: reason,
-                groupValue: selectedReason,
-                onChanged: (value) {
-                  setState(() {
-                    selectedReason = value;
-                  });
-                },
-                contentPadding: EdgeInsets.zero,
-                activeColor: isDark ? Colors.blue.shade300 : Colors.blue,
+                child: RadioListTile<TapReason>(
+                  title: Text(
+                    reason.displayText.tr(),
+                    style: TextStyle(color: textColor),
+                  ),
+                  value: reason,
+                  groupValue: selectedReason,
+                  onChanged: (value) {
+                    setState(() {
+                      selectedReason = value;
+                    });
+                  },
+                  contentPadding: EdgeInsets.zero,
+                ),
               )),
         ],
       ),
