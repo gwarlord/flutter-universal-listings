@@ -641,13 +641,16 @@ class AuthFirebaseUtils extends AuthenticationRepository {
   /// returns an error message on failure or null on success
   Future<String?> _createNewUser(ListingsUser user) async {
     try {
+      debugPrint('📝 _createNewUser: Attempting to save user ${user.userID} to Firestore...');
       await firestore
           .collection(usersCollection)
           .doc(user.userID)
           .set(user.toJson());
+      debugPrint('✅ _createNewUser: User saved successfully to Firestore');
       return null;
     } catch (e, s) {
-      debugPrint('apiManager.createNewUser $e $s');
+      debugPrint('❌ _createNewUser ERROR: $e');
+      debugPrint('Stack trace: $s');
       return 'Couldn\'t sign up'.tr();
     }
   }
