@@ -323,6 +323,16 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       }
       
       debugPrint('👤 Creating user object...');
+      
+      // Ensure user is fully authenticated before proceeding
+      await Future.delayed(const Duration(milliseconds: 500));
+      final currentUser = auth.FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        debugPrint('❌ User not authenticated after creation');
+        return 'Authentication failed. Please try again.'.tr();
+      }
+      debugPrint('✅ User authenticated: ${currentUser.uid}');
+      
       ListingsUser user = ListingsUser(
           active: true,
           lastOnlineTimestamp: Timestamp.now(),
@@ -337,6 +347,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           profilePictureURL: profilePicUrl);
       
       debugPrint('💾 Saving user to Firestore...');
+      debugPrint('User ID: ${user.userID}, Email: ${user.email}');
       String? errorMessage = await _createNewUser(user);
       if (errorMessage == null) {
         debugPrint('✅ Signup complete!');
