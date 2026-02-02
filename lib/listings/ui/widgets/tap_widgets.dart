@@ -292,6 +292,7 @@ class _TapReasonDialogState extends State<TapReasonDialog> {
                   });
                 },
                 contentPadding: EdgeInsets.zero,
+                activeColor: isDark ? Colors.blue.shade300 : Colors.blue,
               )),
         ],
       ),
