@@ -123,6 +123,12 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   bool get _canEditOrDelete =>
       currentUser.userID == listing.authorID || currentUser.isAdmin;
 
+  String _tapBadgeText() {
+    final badge = TapBadge.fromString(listing.tapBadge);
+    if (badge == null || badge == TapBadge.none) return '';
+    return badge.displayText;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -463,24 +469,12 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                         ],
                         // Tap (Vouch) Section
                         if (currentUser.userID != listing.authorID) ...[
-                          Row(
-                            children: [
-                              TapButton(
-                                isTapped: _isTapped,
-                                tapCount: listing.tapCount,
-                                onTap: _handleTapToggle,
-                                isLoading: _isTapLoading,
-                              ),
-                              const SizedBox(width: 12),
-                              if (listing.tapBadge != 'none')
-                                Expanded(
-                                  child: TapBadgeWidget(
-                                    tapCount: listing.tapCount,
-                                    tapBadge: listing.tapBadge,
-                                    showCount: false,
-                                  ),
-                                ),
-                            ],
+                          TapVouchButton(
+                            isTapped: _isTapped,
+                            tapCount: listing.tapCount,
+                            badgeText: _tapBadgeText(),
+                            onTap: _handleTapToggle,
+                            enabled: !_isTapLoading,
                           ),
                           Divider(height: 48, thickness: 1, color: dividerColor),
                         ],
@@ -1321,26 +1315,27 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
         _isTapLoading = false;
         if (result.success) {
           _isTapped = result.isTapped;
+          // Reload listing after short delay to get updated tapCount from Cloud Functions
+          Future.delayed(const Duration(milliseconds: 800)).then((_) {
+            if (mounted) {
+              _loadUpdatedListing();
+            }
+          });
         }
       });
+    }
+  }
 
-      if (result.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.isTapped ? 'Thanks for vouching!'.tr() : 'Tap removed'.tr()),
-            duration: const Duration(seconds: 2),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else if (result.errorMessage != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.errorMessage!.tr()),
-            duration: const Duration(seconds: 3),
-            backgroundColor: Colors.red,
-          ),
-        );
+  Future<void> _loadUpdatedListing() async {
+    try {
+      final updatedListing = await _listingsRepository.getListingById(listing.id);
+      if (mounted && updatedListing != null) {
+        setState(() {
+          listing = updatedListing;
+        });
       }
+    } catch (e) {
+      debugPrint('Error loading updated listing: $e');
     }
   }
 
