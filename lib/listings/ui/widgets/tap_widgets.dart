@@ -252,21 +252,38 @@ class _TapReasonDialogState extends State<TapReasonDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    
     return AlertDialog(
-      title: Text(tapDialogTitle.tr()),
+      backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+      title: Text(
+        tapDialogTitle.tr(),
+        style: TextStyle(color: textColor),
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(tapDialogMessage.tr()),
+          Text(
+            tapDialogMessage.tr(),
+            style: TextStyle(color: textColor),
+          ),
           const SizedBox(height: 16),
           Text(
             'Why are you vouching? (optional)'.tr(),
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+              color: textColor,
+            ),
           ),
           const SizedBox(height: 8),
           ...TapReason.values.map((reason) => RadioListTile<TapReason>(
-                title: Text(reason.displayText.tr()),
+                title: Text(
+                  reason.displayText.tr(),
+                  style: TextStyle(color: textColor),
+                ),
                 value: reason,
                 groupValue: selectedReason,
                 onChanged: (value) {
