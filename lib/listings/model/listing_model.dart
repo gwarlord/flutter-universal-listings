@@ -81,6 +81,10 @@ class ListingModel {
   num reviewsCount;
   num reviewsSum;
 
+  /// Taps (Community Vouching)
+  int tapCount;
+  String tapBadge; // 'none', 'community_vouched', 'community_verified'
+
   /// Analytics
   int viewCount;
 
@@ -148,6 +152,8 @@ class ListingModel {
     this.verificationReason,
     this.reviewsCount = 0,
     this.reviewsSum = 0,
+    this.tapCount = 0,
+    this.tapBadge = 'none',
     this.viewCount = 0,
     this.countryCode = '',
     this.isFeatured = false,
@@ -213,6 +219,8 @@ class ListingModel {
       verificationReason: json['verificationReason'],
       reviewsCount: json['reviewsCount'] ?? 0,
       reviewsSum: json['reviewsSum'] ?? 0,
+      tapCount: json['tapCount'] ?? 0,
+      tapBadge: json['tapBadge'] ?? 'none',
       viewCount: json['viewCount'] ?? 0,
       countryCode: json['countryCode'] ?? '',
       isFeatured: json['isFeatured'] ?? false,
@@ -275,6 +283,8 @@ class ListingModel {
       'verificationReason': verificationReason,
       'reviewsCount': reviewsCount,
       'reviewsSum': reviewsSum,
+      'tapCount': tapCount,
+      'tapBadge': tapBadge,
       'viewCount': viewCount,
       'countryCode': countryCode,
       'isFeatured': isFeatured,
@@ -332,6 +342,8 @@ class ListingModel {
     bool? verified,
     num? reviewsCount,
     num? reviewsSum,
+    int? tapCount,
+    String? tapBadge,
     String? countryCode,
   }) {
     return ListingModel(
@@ -383,6 +395,8 @@ class ListingModel {
       verified: verified ?? this.verified,
       reviewsCount: reviewsCount ?? this.reviewsCount,
       reviewsSum: reviewsSum ?? this.reviewsSum,
+      tapCount: tapCount ?? this.tapCount,
+      tapBadge: tapBadge ?? this.tapBadge,
       countryCode: countryCode ?? this.countryCode,
     );
   }

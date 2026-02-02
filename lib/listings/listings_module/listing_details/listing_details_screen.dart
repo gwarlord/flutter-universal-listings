@@ -31,6 +31,10 @@ import 'package:instaflutter/listings/listings_module/booking/booking_request_di
 import 'package:instaflutter/listings/listings_module/api/booking_api_manager.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:instaflutter/listings/ui/subscription/paywall_screen.dart';
+import 'package:instaflutter/listings/ui/widgets/tap_widgets.dart';
+import 'package:instaflutter/listings/services/tap_service.dart';
+import 'package:instaflutter/listings/listings_module/api/firebase/tap_firebase.dart';
+import 'package:instaflutter/listings/model/tap_model.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
@@ -111,6 +115,11 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   bool _servicesExpanded = false;
   List<ListingReviewModel> reviews = []; // Explicitly declared here
 
+  // Tap (Vouch) feature
+  late TapService _tapService;
+  bool _isTapped = false;
+  bool _isTapLoading = false;
+
   bool get _canEditOrDelete =>
       currentUser.userID == listing.authorID || currentUser.isAdmin;
 
@@ -119,6 +128,11 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     super.initState();
     currentUser = widget.currentUser;
     listing = widget.listing;
+    
+    // Initialize Tap service
+    _tapService = TapService(TapFirebase());
+    _loadUserTapStatus();
+    
     _listingStream = FirebaseFirestore.instance
         .collection(cfg.listingsCollection)
         .doc(listing.id)
@@ -422,7 +436,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        // Rating Summary
+                        // Rating Summary and Tap Count
                         Row(
                           children: [
                             Icon(Icons.star, size: 16, color: primaryColor),
@@ -435,12 +449,39 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                               const SizedBox(width: 4),
                               Text('(${reviews.length})', style: TextStyle(color: dark ? Colors.grey : Colors.grey.shade600)),
                             ],
+                            if (listing.tapCount > 0) ...[
+                              const SizedBox(width: 16),
+                              TapCountDisplay(tapCount: listing.tapCount),
+                            ],
                           ],
                         ),
                         Divider(height: 48, thickness: 1, color: dividerColor),
                         // Author Info (only show if there's content to display)
                         if (listing.logo.isNotEmpty || _authorIsPremium == true) ...[
                           _buildAuthorSection(dark),
+                          Divider(height: 48, thickness: 1, color: dividerColor),
+                        ],
+                        // Tap (Vouch) Section
+                        if (currentUser.userID != listing.authorID) ...[
+                          Row(
+                            children: [
+                              TapButton(
+                                isTapped: _isTapped,
+                                tapCount: listing.tapCount,
+                                onTap: _handleTapToggle,
+                                isLoading: _isTapLoading,
+                              ),
+                              const SizedBox(width: 12),
+                              if (listing.tapBadge != 'none')
+                                Expanded(
+                                  child: TapBadgeWidget(
+                                    tapCount: listing.tapCount,
+                                    tapBadge: listing.tapBadge,
+                                    showCount: false,
+                                  ),
+                                ),
+                            ],
+                          ),
                           Divider(height: 48, thickness: 1, color: dividerColor),
                         ],
                         // Description
@@ -1232,6 +1273,75 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     try {
       await FirebaseFirestore.instance.collection(cfg.listingsCollection).doc(listing.id).update({'viewCount': FieldValue.increment(1)});
     } catch (e) { print(e); }
+  }
+
+  // Tap (Vouch) feature methods
+  Future<void> _loadUserTapStatus() async {
+    final isTapped = await _tapService.hasUserTapped(
+      listingId: listing.id,
+      userId: currentUser.userID,
+    );
+    if (mounted) {
+      setState(() {
+        _isTapped = isTapped;
+      });
+    }
+  }
+
+  Future<void> _handleTapToggle() async {
+    setState(() {
+      _isTapLoading = true;
+    });
+
+    // Show dialog to optionally select reason
+    TapReason? reason;
+    if (!_isTapped) {
+      reason = await showDialog<TapReason?>(
+        context: context,
+        builder: (context) => const TapReasonDialog(),
+      );
+      
+      // User cancelled dialog
+      if (reason == null && !mounted) {
+        setState(() {
+          _isTapLoading = false;
+        });
+        return;
+      }
+    }
+
+    final result = await _tapService.toggleTap(
+      listing: listing,
+      userId: currentUser.userID,
+      reason: reason,
+    );
+
+    if (mounted) {
+      setState(() {
+        _isTapLoading = false;
+        if (result.success) {
+          _isTapped = result.isTapped;
+        }
+      });
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.isTapped ? 'Thanks for vouching!'.tr() : 'Tap removed'.tr()),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else if (result.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!.tr()),
+            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _onMapCreated(GoogleMapController controller) {

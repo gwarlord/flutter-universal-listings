@@ -286,3 +286,6 @@ export const sendSubscriptionReminders = functions.pubsub
 // Export deal ad and chat notification triggers
 export { onDealAdApproved } from './deal_ad_notifications';
 export { onChatMessageCreated } from './chat_notifications';
+
+// Export tap (vouch) feature functions
+export { onTapCreated, onTapDeleted, recomputeAllTapCounts } from './tap_functions';

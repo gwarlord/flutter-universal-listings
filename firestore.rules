@@ -84,13 +84,16 @@ service cloud.firestore {
       // 2. User is an admin
       // 3. User is ONLY incrementing the viewCount (allows public view tracking)
       // 4. User is ONLY updating reviewsCount and reviewsSum (allows review posting)
+      // NOTE: tapCount and tapBadge are managed by Cloud Functions only
         allow update: if isSignedIn() && (
           request.auth.uid == resource.data.authorID ||
           request.auth.uid == resource.data.customerId ||
           isAdmin() ||
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount'])) ||
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reviewsCount', 'reviewsSum']))
-        );
+        ) && 
+        // Prevent client-side modification of tap fields (Cloud Functions only)
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['tapCount', 'tapBadge']) || isAdmin());
       
       allow delete: if isSignedIn() && (request.auth.uid == resource.data.authorID || isAdmin());
       
@@ -103,6 +106,26 @@ service cloud.firestore {
             isAdmin()
           );
           allow delete: if isSignedIn() && (request.auth.uid == resource.data.customerId || request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID || isAdmin());
+      }
+      
+      // Taps (Vouching) subcollection
+      match /taps/{userId} {
+        // Anyone can read taps (they are public)
+        allow read: if true;
+        
+        // Users can create their own tap document
+        // Must be authenticated, cannot tap own listing, must set correct userId
+        allow create: if isSignedIn() && 
+                        request.auth.uid == userId && 
+                        request.auth.uid != get(/databases/$(database)/documents/listings/$(listingId)).data.authorID &&
+                        request.resource.data.userId == request.auth.uid &&
+                        request.resource.data.listingId == listingId;
+        
+        // Users can delete only their own tap
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+        
+        // No updates allowed (delete and recreate instead)
+        allow update: if false;
       }
     }
     
