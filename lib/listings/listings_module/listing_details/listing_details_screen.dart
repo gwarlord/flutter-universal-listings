@@ -1286,6 +1286,8 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     setState(() {
       _isTapLoading = true;
     });
+    
+    debugPrint('📱 TAP TOGGLE START - Current _isTapped: $_isTapped, tapCount: ${listing.tapCount}');
 
     // Show dialog to optionally select reason
     TapReason? reason;
@@ -1309,15 +1311,20 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
       userId: currentUser.userID,
       reason: reason,
     );
+    
+    debugPrint('📱 TAP TOGGLE RESULT: success=${result.success}, isTapped=${result.isTapped}, error=${result.errorMessage}');
 
     if (mounted) {
       setState(() {
         _isTapLoading = false;
         if (result.success) {
           _isTapped = result.isTapped;
-          // Reload listing after short delay to get updated tapCount from Cloud Functions
-          Future.delayed(const Duration(milliseconds: 800)).then((_) {
+          debugPrint('📱 State updated: _isTapped=$_isTapped');
+          // Reload listing after delay to get updated tapCount from Cloud Functions
+          debugPrint('📱 Scheduling listing reload in 1500ms...');
+          Future.delayed(const Duration(milliseconds: 1500)).then((_) {
             if (mounted) {
+              debugPrint('📱 Triggering listing reload now');
               _loadUpdatedListing();
             }
           });
@@ -1328,6 +1335,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
   Future<void> _loadUpdatedListing() async {
     try {
+      debugPrint('📱 RELOAD START - Current listing.tapCount: ${listing.tapCount}');
       final doc = await FirebaseFirestore.instance
           .collection('listings')
           .doc(listing.id)
@@ -1335,14 +1343,19 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
       
       if (mounted && doc.exists) {
         final data = doc.data()!;
-        debugPrint('🔄 Updated listing data: tapCount=${data['tapCount']}, tapBadge=${data['tapBadge']}');
+        final firestoreTapCount = data['tapCount'] ?? 0;
+        final firestoreTapBadge = data['tapBadge'] ?? 'none';
+        debugPrint('🔄 FIRESTORE DATA: tapCount=$firestoreTapCount, tapBadge=$firestoreTapBadge');
+        
         final updatedListing = ListingModel.fromJson(data);
+        debugPrint('📱 PARSED LISTING: tapCount=${updatedListing.tapCount}, tapBadge=${updatedListing.tapBadge}');
+        
         setState(() {
           listing = updatedListing;
-          debugPrint('✅ Listing state updated: tapCount=${listing.tapCount}');
+          debugPrint('✅ LISTING STATE UPDATED: tapCount=${listing.tapCount}');
         });
       } else {
-        debugPrint('⚠️ Listing document not found');
+        debugPrint('⚠️ Listing document not found in Firestore');
       }
     } catch (e) {
       debugPrint('❌ Error loading updated listing: $e');

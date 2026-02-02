@@ -63,13 +63,17 @@ class TapService {
     TapReason? reason,
   }) async {
     try {
+      final effectiveUserId = _firebaseAuth.currentUser?.uid ?? userId;
+      debugPrint('🎯 toggleTap() START - userId=$effectiveUserId, listingId=${listing.id}, reason=$reason');
+
       // Validate eligibility
       final (canTap, errorMessage) = await validateTapEligibility(
         listing: listing,
-        userId: userId,
+        userId: effectiveUserId,
       );
 
       if (!canTap) {
+        debugPrint('❌ toggleTap() BLOCKED - $errorMessage');
         return TapResult(
           success: false,
           isTapped: false,
@@ -80,33 +84,39 @@ class TapService {
       // Check current tap status
       final isTapped = await _repository.hasUserTapped(
         listingId: listing.id,
-        userId: userId,
+        userId: effectiveUserId,
       );
+      debugPrint('🎯 Current isTapped: $isTapped');
 
       bool success;
       if (isTapped) {
         // Remove tap
+        debugPrint('🎯 Removing tap...');
         success = await _repository.removeTap(
           listingId: listing.id,
-          userId: userId,
+          userId: effectiveUserId,
         );
       } else {
         // Create tap
+        debugPrint('🎯 Creating tap...');
         success = await _repository.createTap(
           listingId: listing.id,
-          userId: userId,
+          userId: effectiveUserId,
           reason: reason,
         );
       }
 
       // Update last action timestamp
       _lastTapAction = DateTime.now();
-
-      return TapResult(
+      
+      final result = TapResult(
         success: success,
         isTapped: !isTapped && success,
         errorMessage: success ? null : tapErrorGeneral,
       );
+      
+      debugPrint('🎯 toggleTap() COMPLETE - success=$success, newIsTapped=${result.isTapped}');
+      return result;
     } catch (e) {
       debugPrint('❌ toggleTap() ERROR: $e');
       return TapResult(
@@ -122,9 +132,10 @@ class TapService {
     required String listingId,
     required String userId,
   }) async {
+    final effectiveUserId = _firebaseAuth.currentUser?.uid ?? userId;
     return await _repository.hasUserTapped(
       listingId: listingId,
-      userId: userId,
+      userId: effectiveUserId,
     );
   }
 
@@ -138,9 +149,10 @@ class TapService {
     required String listingId,
     required String userId,
   }) async {
+    final effectiveUserId = _firebaseAuth.currentUser?.uid ?? userId;
     return await _repository.getUserTap(
       listingId: listingId,
-      userId: userId,
+      userId: effectiveUserId,
     );
   }
 
