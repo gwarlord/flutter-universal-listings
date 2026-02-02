@@ -235,7 +235,7 @@ class HomeScreenState extends State<HomeScreen> {
     bool isDark = false,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0, top: 24.0),
+      padding: const EdgeInsets.only(bottom: 8.0, top: 4.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -244,7 +244,7 @@ class HomeScreenState extends State<HomeScreen> {
               title,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 20,
+                fontSize: 18,
                 color: isDark ? Colors.white : Colors.black87,
                 letterSpacing: 0.5,
               ),
@@ -253,10 +253,15 @@ class HomeScreenState extends State<HomeScreen> {
           if (onSeeAll != null)
             TextButton(
               onPressed: onSeeAll,
+              style: TextButton.styleFrom(
+                minimumSize: Size.zero,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
               child: Text(
                 'View All'.tr(),
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: Color(cfg.colorPrimary), 
                 ),
@@ -415,66 +420,105 @@ class HomeScreenState extends State<HomeScreen> {
                   const SliverToBoxAdapter(child: SizedBox(height: 16)),
                   
                   // 1. Deals & Promotions Section
-                  if (_dealAds.isNotEmpty) ...[
+                  if (_dealAds.isNotEmpty)
                     SliverToBoxAdapter(
-                      child: _buildSectionHeader(
-                        title: 'Deals & Promotions'.tr(),
-                        onSeeAll: () => push(context, DealsFeedScreen(currentUser: currentUser)),
-                        isDark: dark,
-                      ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: SizedBox(
-                        height: 150,
-                        child: ListView.builder(
-                          controller: _dealsScrollController,
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _dealAds.length,
-                          itemBuilder: (context, index) {
-                            final ad = _dealAds[index];
-                            return DealAdCarouselItem(ad: ad, index: index, isDark: dark, currentUser: currentUser);
-                          },
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 6.0),
+                        padding: const EdgeInsets.only(top: 8.0, bottom: 12.0),
+                        decoration: BoxDecoration(
+                          color: dark ? Colors.grey[850] : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                              child: _buildSectionHeader(
+                                title: 'Deals & Promotions'.tr(),
+                                onSeeAll: () => push(context, DealsFeedScreen(currentUser: currentUser)),
+                                isDark: dark,
+                              ),
+                            ),
+                            SizedBox(
+                              height: 150,
+                              child: ListView.builder(
+                                controller: _dealsScrollController,
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _dealAds.length,
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                itemBuilder: (context, index) {
+                                  final ad = _dealAds[index];
+                                  return DealAdCarouselItem(ad: ad, index: index, isDark: dark, currentUser: currentUser);
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
 
                   // 2. Categories Section
                   SliverToBoxAdapter(
-                    child: _buildSectionHeader(title: 'Categories'.tr(), isDark: dark),
-                  ),
-                  if (loadingCategories)
-                    const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Center(child: CircularProgressIndicator.adaptive()),
-                      ),
-                    )
-                  else if (_categories.isEmpty)
-                    SliverToBoxAdapter(
-                      child: showEmptyState(
-                        'No Categories'.tr(),
-                        'All Categories will be shown here here once added by the admin.'.tr(),
-                      ),
-                    )
-                  else
-                    SliverToBoxAdapter(
-                      child: SizedBox(
-                        height: 120,
-                        child: ListView.builder(
-                          controller: _categoryScrollController,
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _categories.length,
-                          itemBuilder: (context, index) => CategoryHomeCardWidget(
-                            currentUser: currentUser,
-                            category: _categories[index],
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 6.0),
+                      padding: const EdgeInsets.only(top: 8.0, bottom: 12.0),
+                      decoration: BoxDecoration(
+                        color: dark ? Colors.grey[850] : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: _buildSectionHeader(title: 'Categories'.tr(), isDark: dark),
+                          ),
+                          if (loadingCategories)
+                            const Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Center(child: CircularProgressIndicator.adaptive()),
+                            )
+                          else if (_categories.isEmpty)
+                            showEmptyState(
+                              'No Categories'.tr(),
+                              'All Categories will be shown here here once added by the admin.'.tr(),
+                            )
+                          else
+                            SizedBox(
+                              height: 120,
+                              child: ListView.builder(
+                                controller: _categoryScrollController,
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _categories.length,
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                itemBuilder: (context, index) => CategoryHomeCardWidget(
+                                  currentUser: currentUser,
+                                  category: _categories[index],
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
+                  ),
 
                   // 3. Search & Filter Block
-                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 12)),
                   SliverToBoxAdapter(
                     child: Container(
                       padding: const EdgeInsets.all(16),
