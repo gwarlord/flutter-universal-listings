@@ -333,6 +333,10 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       }
       debugPrint('✅ User authenticated: ${currentUser.uid}');
       
+      // Get auth token to check if it's valid
+      String? idToken = await currentUser.getIdToken();
+      debugPrint('✅ Auth token obtained: ${idToken?.substring(0, 20)}...');
+      
       ListingsUser user = ListingsUser(
           active: true,
           lastOnlineTimestamp: Timestamp.now(),
@@ -354,7 +358,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
         return user;
       } else {
         debugPrint('❌ _createNewUser returned error: $errorMessage');
-        return 'Couldn\'t sign up for firebase, Please try again.'.tr();
+        return errorMessage;
       }
     } on auth.FirebaseAuthException catch (error) {
       debugPrint('❌ FirebaseAuthException: ${error.code} - ${error.message}');
@@ -653,12 +657,24 @@ class AuthFirebaseUtils extends AuthenticationRepository {
   Future<String?> _createNewUser(ListingsUser user) async {
     try {
       debugPrint('📝 _createNewUser: Attempting to save user ${user.userID} to Firestore...');
+      debugPrint('📝 User data to save: ${user.toJson()}');
       await firestore
           .collection(usersCollection)
           .doc(user.userID)
           .set(user.toJson());
       debugPrint('✅ _createNewUser: User saved successfully to Firestore');
       return null;
+    } on FirebaseException catch (e, s) {
+      debugPrint('❌ _createNewUser FIREBASE ERROR: Code=${e.code}, Message=${e.message}');
+      debugPrint('Stack trace: $s');
+      
+      // Handle specific Firebase errors
+      if (e.code == 'permission-denied') {
+        return 'Permission denied. App Check or authentication issue.'.tr();
+      } else if (e.code == 'unauthenticated') {
+        return 'Authentication failed. Please try again.'.tr();
+      }
+      return 'Couldn\'t save user to database. Please try again.'.tr();
     } catch (e, s) {
       debugPrint('❌ _createNewUser ERROR: $e');
       debugPrint('Stack trace: $s');
