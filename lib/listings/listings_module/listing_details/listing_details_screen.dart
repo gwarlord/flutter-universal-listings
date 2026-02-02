@@ -1328,8 +1328,13 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
   Future<void> _loadUpdatedListing() async {
     try {
-      final updatedListing = await _listingsRepository.getListingById(listing.id);
-      if (mounted && updatedListing != null) {
+      final doc = await FirebaseFirestore.instance
+          .collection('listings')
+          .doc(listing.id)
+          .get();
+      
+      if (mounted && doc.exists) {
+        final updatedListing = ListingModel.fromJson(doc.data()!);
         setState(() {
           listing = updatedListing;
         });
