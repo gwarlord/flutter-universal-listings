@@ -304,8 +304,8 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       {required String emailAddress,
       required String password,
       File? image,
-      firstName = 'Anonymous',
-      lastName = 'User'}) async {
+      String firstName = 'Anonymous',
+      String lastName = 'User'}) async {
     try {
       debugPrint('🔐 Starting signup for: $emailAddress');
       auth.UserCredential result = await auth.FirebaseAuth.instance
