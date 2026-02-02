@@ -566,6 +566,15 @@ class WaterRippleIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Show thumbs up when vouched, water ripple when not
+    if (isActive) {
+      return Icon(
+        Icons.thumb_up_rounded,
+        size: size,
+        color: color,
+      );
+    }
+    
     return SizedBox(
       width: size,
       height: size,
