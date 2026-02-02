@@ -11,9 +11,11 @@ export const onTapCreated = functions.firestore
   .document("listings/{listingId}/taps/{userId}")
   .onCreate(async (snap, context) => {
     const listingId = context.params.listingId;
+    const userId = context.params.userId;
     const tapData = snap.data();
 
-    console.log(`📍 Tap created for listing ${listingId} by user ${tapData.userId}`);
+    console.log(`🚀 [onTapCreated] TRIGGERED for listing=${listingId}, user=${userId}`);
+    console.log(`📝 Tap data:`, tapData);
 
     try {
       const listingRef = db.collection("listings").doc(listingId);
@@ -23,7 +25,7 @@ export const onTapCreated = functions.firestore
         const listingDoc = await transaction.get(listingRef);
         
         if (!listingDoc.exists) {
-          console.error(`❌ Listing ${listingId} not found`);
+          console.error(`❌ [onTapCreated] Listing ${listingId} not found`);
           return;
         }
 
@@ -31,15 +33,18 @@ export const onTapCreated = functions.firestore
         const newTapCount = currentTapCount + 1;
         const newTapBadge = computeTapBadge(newTapCount);
 
+        console.log(`📊 [onTapCreated] Incrementing ${listingId}: ${currentTapCount} → ${newTapCount}, badge=${newTapBadge}`);
+
         transaction.update(listingRef, {
           tapCount: newTapCount,
           tapBadge: newTapBadge,
         });
 
-        console.log(`✅ Updated listing ${listingId}: tapCount=${newTapCount}, tapBadge=${newTapBadge}`);
+        console.log(`✅ [onTapCreated] Updated listing ${listingId}: tapCount=${newTapCount}, tapBadge=${newTapBadge}`);
       });
     } catch (error) {
-      console.error(`❌ Error updating tap count for listing ${listingId}:`, error);
+      console.error(`❌ [onTapCreated] Error updating tap count for listing ${listingId}:`, error);
+      throw error;
     }
   });
 
@@ -51,9 +56,11 @@ export const onTapDeleted = functions.firestore
   .document("listings/{listingId}/taps/{userId}")
   .onDelete(async (snap, context) => {
     const listingId = context.params.listingId;
+    const userId = context.params.userId;
     const tapData = snap.data();
 
-    console.log(`📍 Tap deleted for listing ${listingId} by user ${tapData.userId}`);
+    console.log(`🚀 [onTapDeleted] TRIGGERED for listing=${listingId}, user=${userId}`);
+    console.log(`📝 Tap data:`, tapData);
 
     try {
       const listingRef = db.collection("listings").doc(listingId);
@@ -63,7 +70,7 @@ export const onTapDeleted = functions.firestore
         const listingDoc = await transaction.get(listingRef);
         
         if (!listingDoc.exists) {
-          console.error(`❌ Listing ${listingId} not found`);
+          console.error(`❌ [onTapDeleted] Listing ${listingId} not found`);
           return;
         }
 
@@ -71,15 +78,18 @@ export const onTapDeleted = functions.firestore
         const newTapCount = Math.max(0, currentTapCount - 1); // Ensure non-negative
         const newTapBadge = computeTapBadge(newTapCount);
 
+        console.log(`📊 [onTapDeleted] Decrementing ${listingId}: ${currentTapCount} → ${newTapCount}, badge=${newTapBadge}`);
+
         transaction.update(listingRef, {
           tapCount: newTapCount,
           tapBadge: newTapBadge,
         });
 
-        console.log(`✅ Updated listing ${listingId}: tapCount=${newTapCount}, tapBadge=${newTapBadge}`);
+        console.log(`✅ [onTapDeleted] Updated listing ${listingId}: tapCount=${newTapCount}, tapBadge=${newTapBadge}`);
       });
     } catch (error) {
-      console.error(`❌ Error updating tap count for listing ${listingId}:`, error);
+      console.error(`❌ [onTapDeleted] Error updating tap count for listing ${listingId}:`, error);
+      throw error;
     }
   });
 
