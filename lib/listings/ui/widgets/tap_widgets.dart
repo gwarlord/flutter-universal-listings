@@ -274,10 +274,11 @@ class _TapVouchButtonState extends State<TapVouchButton> with TickerProviderStat
       end: Alignment.centerRight,
     );
 
+    // Brighter, more saturated version when vouched
     final tappedOverlay = LinearGradient(
       colors: [
-        const Color(0xFF20C4B4).withOpacity(0.88),
-        const Color(0xFF1B75D0).withOpacity(0.88),
+        const Color(0xFF2FE3D8),
+        const Color(0xFF3BA5FF),
       ],
       begin: Alignment.centerLeft,
       end: Alignment.centerRight,

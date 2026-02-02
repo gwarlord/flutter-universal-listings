@@ -1334,13 +1334,18 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
           .get();
       
       if (mounted && doc.exists) {
-        final updatedListing = ListingModel.fromJson(doc.data()!);
+        final data = doc.data()!;
+        debugPrint('🔄 Updated listing data: tapCount=${data['tapCount']}, tapBadge=${data['tapBadge']}');
+        final updatedListing = ListingModel.fromJson(data);
         setState(() {
           listing = updatedListing;
+          debugPrint('✅ Listing state updated: tapCount=${listing.tapCount}');
         });
+      } else {
+        debugPrint('⚠️ Listing document not found');
       }
     } catch (e) {
-      debugPrint('Error loading updated listing: $e');
+      debugPrint('❌ Error loading updated listing: $e');
     }
   }
 
