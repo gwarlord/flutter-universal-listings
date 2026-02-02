@@ -307,15 +307,22 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       firstName = 'Anonymous',
       lastName = 'User'}) async {
     try {
+      debugPrint('🔐 Starting signup for: $emailAddress');
       auth.UserCredential result = await auth.FirebaseAuth.instance
           .createUserWithEmailAndPassword(
               email: emailAddress, password: password);
+      debugPrint('✅ Firebase Auth user created: ${result.user?.uid}');
+      
       String profilePicUrl = '';
       if (image != null) {
         updateProgress('Uploading image, Please wait...'.tr());
+        debugPrint('📷 Uploading profile image...');
         profilePicUrl =
             await _uploadUserImageToServer(image, result.user?.uid ?? '');
+        debugPrint('✅ Image uploaded: $profilePicUrl');
       }
+      
+      debugPrint('👤 Creating user object...');
       ListingsUser user = ListingsUser(
           active: true,
           lastOnlineTimestamp: Timestamp.now(),
@@ -328,14 +335,19 @@ class AuthFirebaseUtils extends AuthenticationRepository {
               ? await firebaseMessaging.getAPNSToken() ?? ''
               : await firebaseMessaging.getToken() ?? '',
           profilePictureURL: profilePicUrl);
+      
+      debugPrint('💾 Saving user to Firestore...');
       String? errorMessage = await _createNewUser(user);
       if (errorMessage == null) {
+        debugPrint('✅ Signup complete!');
         return user;
       } else {
+        debugPrint('❌ _createNewUser returned error: $errorMessage');
         return 'Couldn\'t sign up for firebase, Please try again.'.tr();
       }
     } on auth.FirebaseAuthException catch (error) {
-      debugPrint('$error${error.stackTrace}');
+      debugPrint('❌ FirebaseAuthException: ${error.code} - ${error.message}');
+      debugPrint('Stack trace: ${error.stackTrace}');
       String message = 'Couldn\'t sign up'.tr();
       switch (error.code) {
         case 'email-already-in-use':
@@ -355,7 +367,9 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           break;
       }
       return message;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('❌ SIGNUP ERROR: $e');
+      debugPrint('Stack trace: $stackTrace');
       return 'Couldn\'t sign up'.tr();
     }
   }
