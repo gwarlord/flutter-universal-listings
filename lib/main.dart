@@ -77,9 +77,10 @@ void main() async {
   await dotenv.load(fileName: ".env");
   await EasyLocalization.ensureInitialized();
   await Firebase.initializeApp();
-  await FirebaseAppCheck.instance.activate(
-    androidProvider: AndroidProvider.playIntegrity,
-  );
+  // TODO: Re-enable App Check after signup is working
+  // await FirebaseAppCheck.instance.activate(
+  //   androidProvider: AndroidProvider.playIntegrity,
+  // );
 
   // Initialize local notifications
   const AndroidInitializationSettings initializationSettingsAndroid =
