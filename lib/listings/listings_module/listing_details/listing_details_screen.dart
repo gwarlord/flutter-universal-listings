@@ -126,6 +126,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
   // Mini Store feature
   final StoreService _storeService = StoreService();
+  Stream<List<CatalogItem>>? _catalogStream;
 
   bool get _canEditOrDelete =>
       currentUser.userID == listing.authorID || currentUser.isAdmin;
@@ -150,6 +151,14 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
         .collection(cfg.listingsCollection)
         .doc(listing.id)
         .snapshots();
+    
+    // Initialize catalog stream once (prevents rebuilds)
+    if (listing.storeEnabled && 
+        (listing.storeMode == 'internal_catalog' || listing.storeMode == 'both') &&
+        listing.listerTierSnapshot == 'premium') {
+      _catalogStream = _storeService.getCatalogItems(listing.id).map((items) => items.take(6).toList());
+    }
+    
     if (listing.storeEnabled && listing.storeUrl.isNotEmpty) {
       _fetchStorePreview(listing.storeUrl);
     }
@@ -1021,7 +1030,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
         ),
         const SizedBox(height: 12),
         StreamBuilder<List<CatalogItem>>(
-          stream: _storeService.getCatalogItems(listing.id).map((items) => items.take(6).toList()),
+          stream: _catalogStream,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator.adaptive());
