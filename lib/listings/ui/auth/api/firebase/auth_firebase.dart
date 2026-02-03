@@ -67,6 +67,15 @@ class AuthFirebaseUtils extends AuthenticationRepository {
     try {
       auth.UserCredential result = await auth.FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
+      var currentUser = result.user;
+      if (currentUser != null) {
+        await currentUser.reload();
+        currentUser = auth.FirebaseAuth.instance.currentUser;
+      }
+      if (currentUser != null && !currentUser.emailVerified) {
+        await auth.FirebaseAuth.instance.signOut();
+        return 'Email not verified. Please request a verification code in the app.'.tr();
+      }
       DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await firestore
           .collection(usersCollection)
           .doc(result.user?.uid ?? '')
@@ -109,6 +118,16 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       debugPrint('apiManager.loginWithEmailAndPassword $e $s');
       return 'Login failed, Please try again.';
     }
+  }
+
+  @override
+  Future<String?> resendEmailVerification(
+      {required String emailAddress, required String password}) async {
+    // Note: This method is deprecated. Email verification now uses code-based system.
+    // Users should use the "Send verification code" button in the Verify Email screen,
+    // which calls the Cloud Function sendVerificationCode instead.
+    debugPrint('⚠️ resendEmailVerification called - this is deprecated, use code-based system');
+    return 'Please use the "Send verification code" button to receive a verification code.'.tr();
   }
 
   @override
@@ -304,6 +323,9 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       {required String emailAddress,
       required String password,
       File? image,
+      String countryCode = '',
+      String gender = 'Prefer not to say',
+      String ageRange = 'Prefer not to say',
       String firstName = 'Anonymous',
       String lastName = 'User'}) async {
     try {
@@ -333,7 +355,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       }
       debugPrint('✅ User authenticated: ${currentUser.uid}');
       
-      // Get auth token to check if it's valid
+      // Get auth token to check if it\'s valid
       String? idToken = await currentUser.getIdToken();
       debugPrint('✅ Auth token obtained: ${idToken?.substring(0, 20)}...');
       
@@ -345,6 +367,9 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           firstName: firstName,
           userID: result.user?.uid ?? '',
           lastName: lastName,
+            countryCode: countryCode,
+            gender: gender,
+            ageRange: ageRange,
              pushToken: (Platform.isIOS)
               ? await firebaseMessaging.getAPNSToken() ?? ''
               : await firebaseMessaging.getToken() ?? '',
@@ -354,7 +379,10 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       debugPrint('User ID: ${user.userID}, Email: ${user.email}');
       String? errorMessage = await _createNewUser(user);
       if (errorMessage == null) {
-        debugPrint('✅ Signup complete!');
+        // Note: Email verification now uses code-based system via Cloud Function
+        // Keep user signed in so they can call Cloud Functions
+        // They will be signed out if they try to access the app without verifying
+        debugPrint('✅ Signup complete - user authenticated for verification');
         return user;
       } else {
         debugPrint('❌ _createNewUser returned error: $errorMessage');
@@ -366,8 +394,23 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       String message = 'Couldn\'t sign up'.tr();
       switch (error.code) {
         case 'email-already-in-use':
-          message = 'Email already in use, Please pick another email!'.tr();
-          break;
+          // Check if the existing account is unverified
+          try {
+            debugPrint('⚠️ Email already registered. Checking verification status...');
+            auth.UserCredential loginResult = await auth.FirebaseAuth.instance
+                .signInWithEmailAndPassword(email: emailAddress, password: password);
+            
+            if (loginResult.user != null && !loginResult.user!.emailVerified) {
+              await auth.FirebaseAuth.instance.signOut();
+              return 'This email is registered but not verified. Please resend verification from login.'.tr();
+            } else {
+              await auth.FirebaseAuth.instance.signOut();
+              return 'Email already in use, Please pick another email!'.tr();
+            }
+          } catch (e) {
+            debugPrint('❌ Failed to check existing account: $e');
+            return 'Email already in use. If you forgot your password, use the reset option.'.tr();
+          }
         case 'invalid-email':
           message = 'Enter valid e-mail'.tr();
           break;
@@ -696,4 +739,20 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       debugPrint('apiManager.deleteUser $e $s');
     }
   }
+
+  Future<String?> handleEmailVerification(String oobCode) async {
+    try {
+      await auth.FirebaseAuth.instance.applyActionCode(oobCode);
+      // Email verification successful!
+      print('✅ Email verification successful!');
+      return null; // Return null for success
+    } on auth.FirebaseAuthException catch (e) {
+      print('❌ Error applying action code: $e');
+      return 'Failed to verify email: ${e.message}';
+    } catch (e) {
+      print('❌ Unexpected error during email verification: $e');
+      return 'An unexpected error occurred during email verification.';
+    }
+  }
+
 }

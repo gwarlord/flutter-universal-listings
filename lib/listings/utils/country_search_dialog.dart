@@ -1,19 +1,41 @@
 import 'package:flutter/material.dart';
 import 'caribbean_countries.dart';
+import 'world_countries.dart';
 
-Future<String?> showCountrySearchDialog(BuildContext context, String? selectedCode) async {
+class _CountryItem {
+  final String code;
+  final String name;
+
+  const _CountryItem({
+    required this.code,
+    required this.name,
+  });
+}
+
+Future<String?> showCountrySearchDialog(
+  BuildContext context, 
+  String? selectedCode, {
+  bool caribbeanOnly = false,
+}) async {
   return showDialog<String>(
     context: context,
     builder: (context) {
-      return _CountrySearchDialog(selectedCode: selectedCode);
+      return _CountrySearchDialog(
+        selectedCode: selectedCode,
+        caribbeanOnly: caribbeanOnly,
+      );
     },
   );
 }
 
 class _CountrySearchDialog extends StatefulWidget {
   final String? selectedCode;
+  final bool caribbeanOnly;
 
-  const _CountrySearchDialog({this.selectedCode});
+  const _CountrySearchDialog({
+    this.selectedCode,
+    this.caribbeanOnly = false,
+  });
 
   @override
   State<_CountrySearchDialog> createState() => _CountrySearchDialogState();
@@ -21,13 +43,19 @@ class _CountrySearchDialog extends StatefulWidget {
 
 class _CountrySearchDialogState extends State<_CountrySearchDialog> {
   late TextEditingController _searchController;
-  late List<CaribbeanCountry> _filtered;
+  late List<_CountryItem> _filtered;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
-    _filtered = List.from(CaribbeanCountries.all);
+    _filtered = widget.caribbeanOnly
+      ? CaribbeanCountries.all
+        .map((c) => _CountryItem(code: c.code, name: c.name))
+        .toList()
+      : WorldCountries.all
+        .map((c) => _CountryItem(code: c.code, name: c.name))
+        .toList();
   }
 
   @override
@@ -68,9 +96,18 @@ class _CountrySearchDialogState extends State<_CountrySearchDialog> {
               ),
               onChanged: (value) {
                 setState(() {
-                  _filtered = CaribbeanCountries.all
-                      .where((c) => c.name.toLowerCase().contains(value.toLowerCase()))
+                  final sourceList = widget.caribbeanOnly
+                    ? CaribbeanCountries.all
+                      .map((c) => _CountryItem(code: c.code, name: c.name))
+                      .toList()
+                    : WorldCountries.all
+                      .map((c) => _CountryItem(code: c.code, name: c.name))
                       .toList();
+                  _filtered = sourceList
+                    .where((c) => c.name
+                      .toLowerCase()
+                      .contains(value.toLowerCase()))
+                    .toList();
                 });
               },
             ),

@@ -32,14 +32,19 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onChatMessageCreated = exports.onDealAdApproved = exports.sendSubscriptionReminders = exports.onBookingUpdated = exports.onBookingCreated = void 0;
+exports.recomputeAllTapCounts = exports.onTapDeleted = exports.onTapCreated = exports.onChatMessageCreated = exports.onDealAdApproved = exports.sendSubscriptionReminders = exports.onBookingUpdated = exports.onBookingCreated = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
+// Export email verification functions
+__exportStar(require("./email_verification"), exports);
 admin.initializeApp();
 const db = admin.firestore();
 const messaging = admin.messaging();
@@ -262,3 +267,8 @@ var deal_ad_notifications_1 = require("./deal_ad_notifications");
 Object.defineProperty(exports, "onDealAdApproved", { enumerable: true, get: function () { return deal_ad_notifications_1.onDealAdApproved; } });
 var chat_notifications_1 = require("./chat_notifications");
 Object.defineProperty(exports, "onChatMessageCreated", { enumerable: true, get: function () { return chat_notifications_1.onChatMessageCreated; } });
+// Export tap (vouch) feature functions
+var tap_functions_1 = require("./tap_functions");
+Object.defineProperty(exports, "onTapCreated", { enumerable: true, get: function () { return tap_functions_1.onTapCreated; } });
+Object.defineProperty(exports, "onTapDeleted", { enumerable: true, get: function () { return tap_functions_1.onTapDeleted; } });
+Object.defineProperty(exports, "recomputeAllTapCounts", { enumerable: true, get: function () { return tap_functions_1.recomputeAllTapCounts; } });

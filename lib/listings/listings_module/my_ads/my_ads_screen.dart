@@ -57,7 +57,7 @@ class _MyAdsScreenState extends State<MyAdsScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'You haven't posted any advertisements. Tap the button below to create your first ad!'.tr(),
+                      'You haven\'t posted any advertisements. Tap the button below to create your first ad!'.tr(),
                       style: TextStyle(
                         fontSize: 16,
                         color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -94,7 +94,11 @@ class _MyAdsScreenState extends State<MyAdsScreen> {
                   leading: ad.mediaType == 'image'
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: displayImage(ad.mediaUrl, width: 60, height: 60),
+                          child: SizedBox(
+                            width: 60,
+                            height: 60,
+                            child: displayImage(ad.mediaUrl),
+                          ),
                         )
                       : const Icon(Icons.videocam, size: 40),
                   title: Text(ad.caption, style: const TextStyle(fontWeight: FontWeight.bold)),

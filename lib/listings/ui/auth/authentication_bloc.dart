@@ -92,6 +92,12 @@ class AuthenticationBloc
       }
     });
 
+    on<ResendEmailVerificationEvent>((event, emit) async {
+      final message = await authenticationRepository.resendEmailVerification(
+          emailAddress: event.email, password: event.password);
+      emit(AuthenticationState.unauthenticated(message: message));
+    });
+
     on<LoginWithPhoneNumberEvent>((event, emit) async {
       dynamic result = await authenticationRepository
           .loginOrCreateUserWithPhoneNumberCredential(
@@ -113,6 +119,9 @@ class AuthenticationBloc
               emailAddress: event.emailAddress,
               password: event.password,
               image: event.image,
+              countryCode: event.countryCode,
+              gender: event.gender,
+              ageRange: event.ageRange,
               firstName: event.firstName,
               lastName: event.lastName);
       if (result != null && result is ListingsUser) {

@@ -46,6 +46,7 @@ dependencies:
   flutter_image_compress: ^2.4.0
   audio_session: ^0.2.2
   url_launcher: ^6.3.0
+  app_links: ^3.4.5
   provider: ^6.1.2
   bloc: ^9.0.0
   flutter_bloc: ^9.1.1
@@ -66,7 +67,6 @@ dependencies:
   flutter_google_places_hoc081098: ^2.0.0
   flutter_staggered_grid_view: ^0.7.0
   share_plus: ^10.1.0
-
 
   characters: ^1.4.0
   dart_either: ^1.0.0

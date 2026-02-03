@@ -1,12 +1,14 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:app_links/app_links.dart';
 import 'package:instaflutter/listings/main.dart' as listings_app; // Added alias
 import 'package:instaflutter/core/utils/helper.dart';
 
@@ -23,6 +25,44 @@ const AndroidNotificationChannel chatChannel = AndroidNotificationChannel(
   description: 'Notifications for new chat messages.', 
   importance: Importance.max,
 );
+
+// Handle Firebase email verification deep links
+Future<void> _handleFirebaseEmailVerificationLink(String? link) async {
+  if (link == null) return;
+  
+  try {
+    // Extract query parameters
+    final uri = Uri.parse(link);
+    final mode = uri.queryParameters['mode'];
+    final oobCode = uri.queryParameters['oobCode'];
+    
+    // Check if this is an email verification link
+    if (mode == 'verifyEmail' && oobCode != null) {
+      print('🔐 Processing Firebase email verification code...');
+      // Apply the verification code
+      await FirebaseAuth.instance.applyActionCode(oobCode);
+      // Refresh the current user
+      await FirebaseAuth.instance.currentUser?.reload();
+      print('✅ Email verified successfully via deep link!');
+      // Show success message
+      if (navigatorKey.currentContext != null) {
+        showSnackBar(navigatorKey.currentContext!, 'Email verified successfully!'.tr());
+      }
+    }
+  } catch (e) {
+    print('❌ Error processing verification link: $e');
+    if (navigatorKey.currentContext != null) {
+      showSnackBar(navigatorKey.currentContext!, 'Verification failed: $e'.tr());
+    }
+  }
+}
+
+// Show snackbar
+void showSnackBar(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message)),
+  );
+}
 
 // Handle background messages
 @pragma('vm:entry-point')
@@ -77,10 +117,34 @@ void main() async {
   await dotenv.load(fileName: ".env");
   await EasyLocalization.ensureInitialized();
   await Firebase.initializeApp();
-  // TODO: Re-enable App Check after signup is working
+  // Temporarily disabled App Check for testing verification codes
+  // TODO: Re-enable App Check before production
   // await FirebaseAppCheck.instance.activate(
-  //   androidProvider: AndroidProvider.playIntegrity,
+  //   androidProvider: AndroidProvider.debug,
   // );
+  // await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
+
+  // Handle deep links for Firebase email verification
+  final appLinks = AppLinks();
+  
+  // Listen for incoming links while app is running
+  appLinks.uriLinkStream.listen((uri) {
+    print('🔗 Deep link received: $uri');
+    _handleFirebaseEmailVerificationLink(uri.toString());
+  }, onError: (err) {
+    print('❌ Deep link error: $err');
+  });
+
+  // Handle initial link when app is launched from a terminated state
+  try {
+    final initialUri = await appLinks.getInitialAppLink();
+    if (initialUri != null) {
+      print('🔗 Initial deep link: $initialUri');
+      await _handleFirebaseEmailVerificationLink(initialUri.toString());
+    }
+  } catch (err) {
+    print('❌ Error getting initial link: $err');
+  }
 
   // Initialize local notifications
   const AndroidInitializationSettings initializationSettingsAndroid =

@@ -15,6 +15,13 @@ class LoginWithAppleEvent extends AuthenticationEvent {}
 
 class LoginWithGoogleEvent extends AuthenticationEvent {}
 
+class ResendEmailVerificationEvent extends AuthenticationEvent {
+  String email;
+  String password;
+
+  ResendEmailVerificationEvent({required this.email, required this.password});
+}
+
 class LoginWithPhoneNumberEvent extends AuthenticationEvent {
   auth.PhoneAuthCredential credential;
   String phoneNumber;
@@ -34,13 +41,19 @@ class SignupWithEmailAndPasswordEvent extends AuthenticationEvent {
   String emailAddress;
   String password;
   File? image;
-  String? firstName;
-  String? lastName;
+  String firstName;
+  String lastName;
+  String countryCode;
+  String gender;
+  String ageRange;
 
   SignupWithEmailAndPasswordEvent(
       {required this.emailAddress,
       required this.password,
       this.image,
+      this.countryCode = '',
+      this.gender = 'Prefer not to say',
+      this.ageRange = 'Prefer not to say',
       this.firstName = 'Anonymous',
       this.lastName = 'User'});
 }

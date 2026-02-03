@@ -161,6 +161,17 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    // Email verification codes
+    match /email_verifications/{verificationId} {
+      // Only the user can read their own verification records
+      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
+      // Cloud Functions create verification records
+      allow create: if false; // Only Cloud Functions can create
+      // Cloud Functions update verification records
+      allow update: if false; // Only Cloud Functions can update
+      allow delete: if false; // Only Cloud Functions can delete
+    }
+    
     // Stripe customers
     match /stripe_customers/{userId} {
       allow read: if isOwner(userId) || isAdmin();

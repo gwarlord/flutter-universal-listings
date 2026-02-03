@@ -25,6 +25,11 @@ abstract class AuthenticationRepository {
   /// Returns [ListingsUser] if user if logged in, or [String] error message if failed
   loginWithGoogle();
 
+  /// Resend email verification for email/password users
+  /// Returns null on success or an error message
+  Future<String?> resendEmailVerification(
+      {required String emailAddress, required String password});
+
   /// Logs the user in or create a new user if no user already registered with [credential] before.
   /// Returns [ListingsUser] if success, otherwise returns a [String] holding the error message
   Future<dynamic> loginOrCreateUserWithPhoneNumberCredential({
@@ -41,8 +46,11 @@ abstract class AuthenticationRepository {
       {required String emailAddress,
       required String password,
       File? image,
-      firstName = 'Anonymous',
-      lastName = 'User'});
+      String countryCode = '',
+      String gender = 'Prefer not to say',
+      String ageRange = 'Prefer not to say',
+      String firstName = 'Anonymous',
+      String lastName = 'User'});
 
   /// Logs the [user] of the system
   logout(ListingsUser user);

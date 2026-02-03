@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart' as easy_local;
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -14,8 +15,9 @@ import 'package:instaflutter/listings/ui/container/container_screen.dart';
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:instaflutter/constants.dart';
-import 'package:instaflutter/listings/utils/caribbean_countries.dart';
+import 'package:instaflutter/listings/utils/world_countries.dart';
 import 'package:instaflutter/listings/utils/country_search_dialog.dart';
+import 'package:instaflutter/listings/ui/auth/verify_email/verify_email_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -31,10 +33,28 @@ class _SignUpState extends State<SignUpScreen> {
   final GlobalKey<FormState> _key = GlobalKey();
   String? firstName, lastName, email, password, confirmPassword;
   String? _countryCode;
+  String _gender = 'Prefer not to say';
+  String _ageRange = 'Prefer not to say';
   AutovalidateMode _validate = AutovalidateMode.disabled;
   bool acceptEULA = true;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  final List<String> _genderOptions = const [
+    'Prefer not to say',
+    'Female',
+    'Male',
+    'Non-binary',
+    'Other',
+  ];
+  final List<String> _ageRangeOptions = const [
+    'Prefer not to say',
+    '18-24',
+    '25-34',
+    '35-44',
+    '45-54',
+    '55-64',
+    '65+',
+  ];
   String? validateCountry(String? code) {
     if (code == null || code.trim().isEmpty) {
       return 'Country is required';
@@ -89,13 +109,29 @@ class _SignUpState extends State<SignUpScreen> {
                 listener: (context, state) {
                   context.read<LoadingCubit>().hideLoading();
                   if (state.authState == AuthState.authenticated) {
-                    if (mounted) {
-                      pushAndRemoveUntil(
-                          context,
-                          ContainerWrapperWidget(
-                            currentUser: state.user!,
+                    // Check if email is verified
+                    if (state.user!.email.isNotEmpty && 
+                        !auth.FirebaseAuth.instance.currentUser!.emailVerified) {
+                      // Navigate to verify email screen
+                      if (mounted) {
+                        pushReplacement(
+                          context, 
+                          VerifyEmailScreen(
+                            email: state.user!.email,
+                            password: password!,
                           ),
-                          false);
+                        );
+                      }
+                    } else {
+                      // Email verified or no email - proceed to home
+                      if (mounted) {
+                        pushAndRemoveUntil(
+                            context,
+                            ContainerWrapperWidget(
+                              currentUser: state.user!,
+                            ),
+                            false);
+                      }
                     }
                   } else {
                     showSnackBar(
@@ -119,8 +155,11 @@ class _SignUpState extends State<SignUpScreen> {
                         emailAddress: email!,
                         password: password!,
                         image: _image,
-                        lastName: lastName,
-                        firstName: firstName));
+                        countryCode: _countryCode ?? '',
+                        gender: _gender,
+                        ageRange: _ageRange,
+                        lastName: lastName ?? 'User',
+                        firstName: firstName ?? 'Anonymous'));
                   } else if (state is SignUpFailureState) {
                     showSnackBar(context, state.errorMessage);
                   }
@@ -228,18 +267,56 @@ class _SignUpState extends State<SignUpScreen> {
                                 padding: const EdgeInsets.all(16.0),
                                 child: Column(
                                   children: [
+                                    TextFormField(
+                                      textInputAction: TextInputAction.next,
+                                      textCapitalization:
+                                          TextCapitalization.words,
+                                      validator: validateName,
+                                      onSaved: (String? val) {
+                                        firstName = val;
+                                      },
+                                      style: TextStyle(
+                                          color: isDarkMode(context)
+                                              ? Colors.white
+                                              : Colors.grey.shade900),
+                                      decoration: _inputDecoration(
+                                        context,
+                                        'First Name'.tr(),
+                                        icon: Icons.person_outline,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    TextFormField(
+                                      textInputAction: TextInputAction.next,
+                                      textCapitalization:
+                                          TextCapitalization.words,
+                                      validator: validateName,
+                                      onSaved: (String? val) {
+                                        lastName = val;
+                                      },
+                                      style: TextStyle(
+                                          color: isDarkMode(context)
+                                              ? Colors.white
+                                              : Colors.grey.shade900),
+                                      decoration: _inputDecoration(
+                                        context,
+                                        'Last Name'.tr(),
+                                        icon: Icons.person_outline,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
                                     // Country select
                                     GestureDetector(
                                       onTap: () async {
-                                          final selected = await showCountrySearchDialog(context, _countryCode);
+                                          final selected = await showCountrySearchDialog(context, _countryCode, caribbeanOnly: false);
                                           if (selected != null) setState(() => _countryCode = selected);
                                         },
                                       child: AbsorbPointer(
                                         child: TextFormField(
                                           controller: TextEditingController(
-                                            text: CaribbeanCountries.all.firstWhere(
+                                            text: WorldCountries.all.firstWhere(
                                               (c) => c.code == _countryCode,
-                                              orElse: () => CaribbeanCountry(code: '', name: ''),
+                                              orElse: () => Country(code: '', name: ''),
                                             ).name,
                                           ),
                                           validator: (_) => validateCountry(_countryCode),
@@ -251,6 +328,44 @@ class _SignUpState extends State<SignUpScreen> {
                                           readOnly: true,
                                         ),
                                       ),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    DropdownButtonFormField<String>(
+                                      value: _gender,
+                                      decoration: _inputDecoration(
+                                        context,
+                                        'Gender'.tr(),
+                                        icon: Icons.person_outline,
+                                      ),
+                                      items: _genderOptions
+                                          .map((g) => DropdownMenuItem<String>(
+                                                value: g,
+                                                child: Text(g),
+                                              ))
+                                          .toList(),
+                                      onChanged: (value) {
+                                        if (value == null) return;
+                                        setState(() => _gender = value);
+                                      },
+                                    ),
+                                    const SizedBox(height: 14),
+                                    DropdownButtonFormField<String>(
+                                      value: _ageRange,
+                                      decoration: _inputDecoration(
+                                        context,
+                                        'Age Range'.tr(),
+                                        icon: Icons.cake_outlined,
+                                      ),
+                                      items: _ageRangeOptions
+                                          .map((a) => DropdownMenuItem<String>(
+                                                value: a,
+                                                child: Text(a),
+                                              ))
+                                          .toList(),
+                                      onChanged: (value) {
+                                        if (value == null) return;
+                                        setState(() => _ageRange = value);
+                                      },
                                     ),
                                     const SizedBox(height: 14),
                                     TextFormField(

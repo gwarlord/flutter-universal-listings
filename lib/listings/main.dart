@@ -23,6 +23,7 @@ import 'package:instaflutter/listings/ui/auth/launcher/launcher_screen.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:instaflutter/main.dart' as entry;
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // Added import
+import 'package:instaflutter/listings/ui/auth/api/firebase/auth_firebase.dart';
 
 runListings() {
   appName = 'Flutter Universal Listings';
@@ -84,7 +85,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           _handleNotification(remoteMessage.data, navKey, context);
         }
       });
-      
+
       tokenStream = FirebaseMessaging.instance.onTokenRefresh.listen((event) {
         if (BlocProvider.of<AuthenticationBloc>(context).user != null) {
           BlocProvider.of<AuthenticationBloc>(context).user!.pushToken = event;
@@ -92,6 +93,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               BlocProvider.of<AuthenticationBloc>(context).user!);
         }
       });
+
       setState(() {
         _initialized = true;
       });

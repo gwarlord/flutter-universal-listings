@@ -55,6 +55,13 @@ class AuthLocalData extends AuthenticationRepository {
   }
 
   @override
+  Future<String?> resendEmailVerification(
+      {required String emailAddress, required String password}) {
+    // TODO: implement resendEmailVerification
+    throw UnimplementedError();
+  }
+
+  @override
   Future loginWithEmailAndPassword(String email, String password) {
     // TODO: implement loginWithEmailAndPassword
     throw UnimplementedError();
@@ -83,8 +90,11 @@ class AuthLocalData extends AuthenticationRepository {
       {required String emailAddress,
       required String password,
       File? image,
-      firstName = 'Anonymous',
-      lastName = 'User'}) {
+      String countryCode = '',
+      String gender = 'Prefer not to say',
+      String ageRange = 'Prefer not to say',
+      String firstName = 'Anonymous',
+      String lastName = 'User'}) {
     // TODO: implement signUpWithEmailAndPassword
     throw UnimplementedError();
   }

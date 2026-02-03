@@ -214,6 +214,38 @@ class _LoginScreen extends State<LoginScreen> {
                                       ).tr(),
                                     ),
                                   ),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton(
+                                      onPressed: () {
+                                        final isValid = _key.currentState?.validate() ?? false;
+                                        if (!isValid) {
+                                          setState(() => _validate = AutovalidateMode.onUserInteraction);
+                                          showSnackBar(
+                                              context,
+                                              'Enter your email and password to resend verification.'.tr());
+                                          return;
+                                        }
+                                        _key.currentState!.save();
+                                        context.read<LoadingCubit>().showLoading(
+                                              context,
+                                              'Sending verification email...'.tr(),
+                                              false,
+                                              Color(colorPrimary),
+                                            );
+                                        context.read<AuthenticationBloc>().add(
+                                              ResendEmailVerificationEvent(
+                                                email: email!,
+                                                password: password!,
+                                              ),
+                                            );
+                                      },
+                                      child: const Text(
+                                        'Resend verification email',
+                                        style: TextStyle(fontWeight: FontWeight.w600),
+                                      ).tr(),
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   ElevatedButton(
                                     style: ElevatedButton.styleFrom(

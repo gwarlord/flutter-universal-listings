@@ -2,6 +2,9 @@ import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import sgMail from "@sendgrid/mail";
 
+// Export email verification functions
+export * from "./email_verification";
+
 admin.initializeApp();
 const db = admin.firestore();
 const messaging = admin.messaging();

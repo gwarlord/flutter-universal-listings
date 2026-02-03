@@ -54,6 +54,14 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- Firebase Email Verification Deep Links -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="caribtap.firebaseapp.com" android:pathPrefix="/__/auth/action" />
+            </intent-filter>
         </activity>
 
         <meta-data

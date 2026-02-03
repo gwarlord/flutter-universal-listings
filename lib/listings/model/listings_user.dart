@@ -11,6 +11,8 @@ class ListingsUser extends User {
   DateTime? subscriptionExpiresAt;
   String? revenueCatCustomerId;
   String countryCode;
+  String gender;
+  String ageRange;
 
   List<String> likedListingsIDs;
 
@@ -31,6 +33,8 @@ class ListingsUser extends User {
     this.subscriptionExpiresAt,
     this.revenueCatCustomerId,
     this.countryCode = '',
+    this.gender = 'Prefer not to say',
+    this.ageRange = 'Prefer not to say',
     this.likedListingsIDs = const [],
   }) : super(
           firstName: firstName,
@@ -74,6 +78,8 @@ class ListingsUser extends User {
           : null,
       revenueCatCustomerId: parsedJson['revenueCatCustomerId']?.toString(),
       countryCode: parsedJson['countryCode'] ?? '',
+      gender: parsedJson['gender'] ?? 'Prefer not to say',
+      ageRange: parsedJson['ageRange'] ?? 'Prefer not to say',
       likedListingsIDs:
           List<String>.from(parsedJson['likedListingsIDs'] ?? const []),
     );
@@ -101,6 +107,8 @@ class ListingsUser extends User {
       'subscriptionTier': subscriptionTier,
       'suspended': suspended,
       'countryCode': countryCode,
+      'gender': gender,
+      'ageRange': ageRange,
       'likedListingsIDs': likedListingsIDs,
     };
   }

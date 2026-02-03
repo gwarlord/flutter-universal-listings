@@ -5,6 +5,7 @@
 import FlutterMacOS
 import Foundation
 
+import app_links
 import audio_session
 import cloud_firestore
 import cloud_functions
@@ -35,6 +36,7 @@ import video_player_avfoundation
 import webview_flutter_wkwebview
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
+  AppLinksMacosPlugin.register(with: registry.registrar(forPlugin: "AppLinksMacosPlugin"))
   AudioSessionPlugin.register(with: registry.registrar(forPlugin: "AudioSessionPlugin"))
   FLTFirebaseFirestorePlugin.register(with: registry.registrar(forPlugin: "FLTFirebaseFirestorePlugin"))
   FirebaseFunctionsPlugin.register(with: registry.registrar(forPlugin: "FirebaseFunctionsPlugin"))

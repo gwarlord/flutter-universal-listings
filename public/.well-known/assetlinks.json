@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.instaflutter.instaflutter.android",
+      "sha256_cert_fingerprints": [
+        "5A:EA:DF:04:B9:85:B1:80:A8:3F:05:A0:5C:13:66:1D:1F:B0:5E:B6:E2:69:C8:7F:42:0A:0C:FB:4A:7E:8B:21"
+      ]
+    }
+  }
+]
