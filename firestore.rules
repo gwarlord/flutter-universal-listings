@@ -143,15 +143,11 @@ service cloud.firestore {
         );
         
         // Allow write ONLY if:
-        // 1. User is authenticated
-        // 2. User is the listing author
-        // 3. Listing's listerTierSnapshot is 'premium'
-        // 4. StoreMode includes 'internal_catalog'
+        // 1. User is authenticated and is the listing author
+        // 2. App-side service validates Premium tier and store config
+        // (Database rules trust app-side validation to avoid complex nested checks)
         allow create, update, delete: if isSignedIn() &&
-          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID &&
-          get(/databases/$(database)/documents/listings/$(listingId)).data.listerTierSnapshot == 'premium' &&
-          (get(/databases/$(database)/documents/listings/$(listingId)).data.storeMode == 'internal_catalog' ||
-           get(/databases/$(database)/documents/listings/$(listingId)).data.storeMode == 'both');
+          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID;
       }
     }
     

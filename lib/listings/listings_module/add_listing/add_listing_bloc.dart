@@ -407,8 +407,8 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
 
       emit(AddListingProgressState(progressMessage: 'Updating Listing...'.tr()));
       try {
-        // DEBUG: Log storeEnabled and storeUrl before updating Firestore
-        print('DEBUG: Firestore update storeEnabled = \\${event.listingModel.storeEnabled}, storeUrl = \\${event.listingModel.storeUrl}');
+        // DEBUG: Log store fields before updating Firestore
+        print('DEBUG: Firestore update storeEnabled=${event.listingModel.storeEnabled}, storeMode=${event.listingModel.storeMode}, storeUrl=${event.listingModel.storeUrl}');
         final updateData = <String, dynamic>{
           'title': event.listingModel.title,
           'description': event.listingModel.description,
@@ -434,6 +434,13 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           'blockedDates': event.listingModel.blockedDates,
           'storeEnabled': event.listingModel.storeEnabled,
           'storeUrl': event.listingModel.storeUrl,
+          'storeMode': event.listingModel.storeMode,
+          'storeCurrencyCode': event.listingModel.storeCurrencyCode,
+          'storeDeliveryEnabled': event.listingModel.storeDeliveryEnabled,
+          'storePickupEnabled': event.listingModel.storePickupEnabled,
+          'storeLeadTimeHours': event.listingModel.storeLeadTimeHours,
+          'storeUpdatedAt': event.listingModel.storeUpdatedAt,
+          'listerTierSnapshot': event.listingModel.listerTierSnapshot,
           'instagram': event.listingModel.instagram,
           'facebook': event.listingModel.facebook,
           'tiktok': event.listingModel.tiktok,

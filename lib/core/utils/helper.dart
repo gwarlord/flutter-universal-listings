@@ -271,9 +271,7 @@ Widget _getCircularImageProvider(
 }
 
 bool isDarkMode(BuildContext context) {
-  final isDark = Theme.of(context).brightness != Brightness.light;
-  debugPrint('isDarkMode: $isDark (Brightness: ${Theme.of(context).brightness})'); // Debug print
-  return isDark;
+  return Theme.of(context).brightness != Brightness.light;
 }
 
 Future<geo.Position?> getCurrentLocation() async {
