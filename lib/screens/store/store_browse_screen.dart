@@ -41,9 +41,17 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
   }
 
   bool get _isStoreAvailable {
-    return widget.listing.storeEnabled &&
-           widget.listing.storeMode?.contains('internal') == true &&
+    final available = widget.listing.storeEnabled &&
+           (widget.listing.storeMode == 'internal_catalog' || widget.listing.storeMode == 'both') &&
            widget.listing.listerTierSnapshot == 'premium';
+    
+    if (!available) {
+      print('❌ Store unavailable - storeEnabled: ${widget.listing.storeEnabled}, '
+            'storeMode: ${widget.listing.storeMode}, '
+            'listerTierSnapshot: ${widget.listing.listerTierSnapshot}');
+    }
+    
+    return available;
   }
 
   int get _cartItemCount {
