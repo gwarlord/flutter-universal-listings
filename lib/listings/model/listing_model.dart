@@ -57,7 +57,17 @@ class ListingModel {
 
   /// Store (Premium Feature)
   bool storeEnabled;
+  String? storeMode; // "external_url" | "internal_catalog" | "both"
   String storeUrl;
+  String? storeCurrencyCode; // Defaults to listing.currencyCode
+  bool storeDeliveryEnabled;
+  bool storePickupEnabled;
+  int storeLeadTimeHours; // Minimum lead time for orders
+  Timestamp? storeUpdatedAt;
+  
+  /// Lister tier snapshot - CRITICAL for rules & UI performance
+  /// This is set when the listing is saved and indicates the owner's tier at that time
+  String listerTierSnapshot; // "free" | "professional" | "premium"
 
   /// Social Media
   String instagram;
@@ -143,7 +153,14 @@ class ListingModel {
     this.blockedDates = const [],
     this.chatEnabled = true,
     this.storeEnabled = false,
+    this.storeMode,
     this.storeUrl = '',
+    String? storeCurrencyCode,
+    this.storeDeliveryEnabled = false,
+    this.storePickupEnabled = true,
+    this.storeLeadTimeHours = 24,
+    this.storeUpdatedAt,
+    this.listerTierSnapshot = 'free',
     this.instagram = '',
     this.facebook = '',
     this.tiktok = '',
@@ -174,6 +191,7 @@ class ListingModel {
     List<Map<String, dynamic>>? menuUploads,
     List<Map<String, dynamic>>? menuSections,
   })  : menuCurrencyCode = menuCurrencyCode ?? currencyCode,
+        storeCurrencyCode = storeCurrencyCode ?? currencyCode,
         menuUploads = menuUploads ?? [],
         menuSections = menuSections ?? [],
         createdAt = createdAt ?? Timestamp.now().seconds;
@@ -219,7 +237,14 @@ class ListingModel {
       blockedDates: List<int>.from(json['blockedDates'] ?? []),
       chatEnabled: json['chatEnabled'] ?? true,
       storeEnabled: json['storeEnabled'] ?? false,
+      storeMode: json['storeMode'],
       storeUrl: json['storeUrl'] ?? '',
+      storeCurrencyCode: json['storeCurrencyCode'] ?? json['currencyCode'] ?? 'USD',
+      storeDeliveryEnabled: json['storeDeliveryEnabled'] ?? false,
+      storePickupEnabled: json['storePickupEnabled'] ?? true,
+      storeLeadTimeHours: json['storeLeadTimeHours'] ?? 24,
+      storeUpdatedAt: json['storeUpdatedAt'],
+      listerTierSnapshot: json['listerTierSnapshot'] ?? 'free',
       instagram: json['instagram'] ?? '',
       facebook: json['facebook'] ?? '',
       tiktok: json['tiktok'] ?? '',
@@ -289,7 +314,14 @@ class ListingModel {
       'blockedDates': blockedDates,
       'chatEnabled': chatEnabled,
       'storeEnabled': storeEnabled,
+      'storeMode': storeMode,
       'storeUrl': storeUrl,
+      'storeCurrencyCode': storeCurrencyCode,
+      'storeDeliveryEnabled': storeDeliveryEnabled,
+      'storePickupEnabled': storePickupEnabled,
+      'storeLeadTimeHours': storeLeadTimeHours,
+      'storeUpdatedAt': storeUpdatedAt,
+      'listerTierSnapshot': listerTierSnapshot,
       'instagram': instagram,
       'facebook': facebook,
       'tiktok': tiktok,

@@ -127,6 +127,21 @@ service cloud.firestore {
         // No updates allowed (delete and recreate instead)
         allow update: if false;
       }
+      
+      // Catalog Items (Mini Store - Premium Feature)
+      match /catalog_items/{itemId} {
+        // Allow read ONLY if parent listing has store enabled AND lister is Premium
+        allow read: if get(/databases/$(database)/documents/listings/$(listingId)).data.storeEnabled == true &&
+                       get(/databases/$(database)/documents/listings/$(listingId)).data.listerTierSnapshot == 'premium';
+        
+        // Allow write ONLY if:
+        // 1. User is authenticated
+        // 2. User is the listing author
+        // 3. Listing's listerTierSnapshot is 'premium'
+        allow create, update, delete: if isSignedIn() &&
+          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID &&
+          get(/databases/$(database)/documents/listings/$(listingId)).data.listerTierSnapshot == 'premium';
+      }
     }
     
     // Categories collection
@@ -170,6 +185,28 @@ service cloud.firestore {
       // Cloud Functions update verification records
       allow update: if false; // Only Cloud Functions can update
       allow delete: if false; // Only Cloud Functions can delete
+    }
+    
+    // Order Requests (Mini Store - Premium Feature)
+    match /order_requests/{requestId} {
+      // Allow create ONLY if:
+      // 1. User is authenticated and is the customer
+      // 2. Listing exists, has store enabled, and lister is Premium
+      allow create: if isSignedIn() &&
+        request.auth.uid == request.resource.data.customerId &&
+        get(/databases/$(database)/documents/listings/$(request.resource.data.listingId)).data.storeEnabled == true &&
+        get(/databases/$(database)/documents/listings/$(request.resource.data.listingId)).data.listerTierSnapshot == 'premium';
+      
+      // Allow read if user is customer OR lister
+      allow read: if isSignedIn() &&
+        (request.auth.uid == resource.data.customerId || request.auth.uid == resource.data.listerId);
+      
+      // Allow update ONLY by lister (Premium check enforced by service layer)
+      allow update: if isSignedIn() &&
+        request.auth.uid == resource.data.listerId;
+      
+      // No deletes allowed
+      allow delete: if false;
     }
     
     // Stripe customers
