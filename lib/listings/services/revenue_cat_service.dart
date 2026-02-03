@@ -13,10 +13,10 @@ class RevenueCatService {
   static const String yearlyProductId = 'yearly';
   static const String lifetimeProductId = 'lifetime';
 
-  // API Keys - Replace these with your PUBLIC SDK KEYS from RevenueCat Dashboard
-  // These will NOT charge real money in Sandbox/Test environments (TestFlight, Android Alpha/Beta)
-  static const String _androidApiKey = 'test_HlFlRPeoSwcyoKewtdDNaMiGCLy';
-  static const String _iosApiKey = 'test_HlFlRPeoSwcyoKewtdDNaMiGCLy';
+  // API Keys - PUBLIC SDK KEYS from RevenueCat Dashboard
+  static const String _androidApiKey = 'goog_CYlnLYINLZyhsaesInFSQaGYJFV';
+  // IMPORTANT: You usually need a separate Apple key (starting with appl_) for iOS
+  static const String _iosApiKey = 'goog_CYlnLYINLZyhsaesInFSQaGYJFV'; 
 
   static final RevenueCatService _instance = RevenueCatService._internal();
   factory RevenueCatService() => _instance;
@@ -58,12 +58,37 @@ class RevenueCatService {
     }
   }
 
-  Future<Offerings?> getOfferings() async {
+  Future<Offerings> getOfferings() async {
     try {
-      return await Purchases.getOfferings();
+      final offerings = await Purchases.getOfferings();
+      
+      if (offerings.current == null) {
+        throw PlatformException(
+          code: 'NO_CURRENT_OFFERING',
+          message: 'No current offering configured in RevenueCat. Please set an offering as "Current" in the dashboard.',
+        );
+      }
+      
+      if (offerings.current!.availablePackages.isEmpty) {
+        throw PlatformException(
+          code: 'EMPTY_OFFERING',
+          message: 'The current offering has no packages for this platform. Ensure Google Play products are attached to your packages in RevenueCat.',
+        );
+      }
+      
+      return offerings;
+    } on PlatformException catch (e) {
+      // Check for common RevenueCat configuration errors
+      if (e.code == 'ConfigurationError' || e.message?.contains('Play Store products') == true) {
+        throw PlatformException(
+          code: 'CONFIG_ERROR',
+          message: 'Store configuration error. Please ensure Google Play products are correctly mapped to your packages in the RevenueCat dashboard.',
+          details: e.message,
+        );
+      }
+      rethrow;
     } catch (e) {
-      print('❌ Error fetching offerings: $e');
-      return null;
+      rethrow;
     }
   }
 

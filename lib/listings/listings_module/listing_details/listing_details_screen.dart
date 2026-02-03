@@ -1211,10 +1211,8 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   }
 
   void _handleMessage() {
-    if (!currentUser.hasDirectMessaging) {
-      push(context, PaywallScreen(currentUser: currentUser));
-      return;
-    }
+    // Chat is allowed if the listing owner has enabled it (listing.chatEnabled)
+    // No subscription required for users wanting to chat with a listing
     
     // Create the channel ID correctly
     List<String> ids = [currentUser.userID, listing.authorID];

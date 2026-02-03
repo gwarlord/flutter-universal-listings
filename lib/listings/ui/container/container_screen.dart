@@ -499,6 +499,9 @@ class _ContainerState extends State<ContainerScreen> {
                         onTap: () {
                           if (currentUser.hasBookingServices) {
                             _navigateToListingServices(context);
+                          } else {
+                            Navigator.pop(context);
+                            _showUpgradeDialog(context, 'Booking Services', 'Professional');
                           }
                         },
                         isDark: isDark,

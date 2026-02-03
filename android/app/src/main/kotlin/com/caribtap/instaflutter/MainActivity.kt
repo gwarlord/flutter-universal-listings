@@ -1,4 +1,4 @@
-package com.instaflutter.instaflutter
+package com.caribtap.instaflutter
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

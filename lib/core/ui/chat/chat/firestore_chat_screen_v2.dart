@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:instaflutter/constants.dart';
+import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/core/model/user.dart';
 import 'package:instaflutter/core/utils/helper.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -179,8 +180,8 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
       appBar: AppBar(
         elevation: 1,
         centerTitle: false,
-        backgroundColor: isDark ? const Color(0xFF1F2C34) : Colors.white,
-        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black87),
+        backgroundColor: isDark ? const Color(0xFF1F2C34) : Color(colorPrimary),
+        iconTheme: IconThemeData(color: Colors.white),
         title: Row(
           children: [
             if (widget.listingImage.isNotEmpty)
@@ -200,7 +201,7 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black87,
+                      color: Colors.white,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -208,7 +209,7 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
                     'CaribTap Chat'.tr(),
                     style: TextStyle(
                       fontSize: 12,
-                      color: isDark ? const Color(0xFF8696A0) : Colors.grey[600],
+                      color: Colors.white70,
                     ),
                   ),
                 ],

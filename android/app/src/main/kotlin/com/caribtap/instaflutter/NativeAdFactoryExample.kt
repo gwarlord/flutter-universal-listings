@@ -1,4 +1,4 @@
-package com.instaflutter.instaflutter
+package com.caribtap.instaflutter
 
 import android.annotation.SuppressLint
 import android.view.LayoutInflater
@@ -10,7 +10,7 @@ import android.widget.TextView
 import com.google.android.gms.ads.nativead.MediaView
 import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdView
-import com.instaflutter.instaflutter.android.R
+import com.caribtap.instaflutter.android.R
 import io.flutter.plugins.googlemobileads.GoogleMobileAdsPlugin.NativeAdFactory
 
 class NativeAdFactoryExample(private val layoutInflater: LayoutInflater) :

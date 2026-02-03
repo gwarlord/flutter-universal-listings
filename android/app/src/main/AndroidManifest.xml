@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.instaflutter.instaflutter.android">
+    package="com.caribtap.instaflutter.android">
 
     <uses-permission android:name="com.android.vending.BILLING" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -38,7 +38,7 @@
         android:enableOnBackInvokedCallback="true">
 
         <activity
-            android:name="com.instaflutter.instaflutter.MainActivity"
+            android:name="com.caribtap.instaflutter.MainActivity"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:exported="true"
             android:hardwareAccelerated="true"

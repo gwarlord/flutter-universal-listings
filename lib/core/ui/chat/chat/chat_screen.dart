@@ -196,7 +196,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Text(
                       channelDataModel.listingTitle!,
                       style: TextStyle(
-                        color: isDarkMode(context) ? Colors.white : Colors.white,
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 17,
                         letterSpacing: 0.1,
@@ -208,8 +208,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 Text(
                   channelDataModel.name,
                   style: TextStyle(
-                    color:
-                    isDarkMode(context) ? Colors.grey.shade200 : Colors.white,
+                    color: Colors.white,
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
@@ -222,7 +221,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Text(
                       statusText,
                       style: TextStyle(
-                        color: isDarkMode(context) ? Colors.grey[300] : Colors.white70,
+                        color: Colors.white70,
                         fontSize: 11.5,
                         fontWeight: FontWeight.w400,
                       ),
