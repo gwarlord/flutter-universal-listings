@@ -30,6 +30,7 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
   final StoreService _storeService = StoreService();
   String _selectedCategory = 'All';
   final List<String> _categories = ['All', 'Food & Drink', 'Products', 'Services', 'Other'];
+  bool _migrationDone = false;
 
   @override
   void initState() {
@@ -41,6 +42,27 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
         showSnackBar(context, '🔒 Premium subscription required');
         Navigator.pop(context);
       });
+    } else {
+      // Migrate listings tier snapshots (one-time, runs silently)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _runMigration();
+      });
+    }
+  }
+
+  /// Run the tier snapshot migration (one-time on load)
+  Future<void> _runMigration() async {
+    if (_migrationDone) return;
+    _migrationDone = true;
+
+    try {
+      final result = await _storeService.migrateListingTierSnapshots();
+      if (result['success'] == true) {
+        print('✅ Migration successful: ${result['processedCount']} listings updated');
+      }
+    } catch (e) {
+      print('⚠️ Migration skipped: $e');
+      // Not critical - continue with normal flow
     }
   }
 

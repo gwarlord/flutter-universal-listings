@@ -39,7 +39,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.recomputeAllTapCounts = exports.onTapDeleted = exports.onTapCreated = exports.onChatMessageCreated = exports.onDealAdApproved = exports.sendSubscriptionReminders = exports.onBookingUpdated = exports.onBookingCreated = void 0;
+exports.recomputeAllTapCounts = exports.onTapDeleted = exports.onTapCreated = exports.onChatMessageCreated = exports.onDealAdApproved = exports.migrateListingTierSnapshots = exports.sendSubscriptionReminders = exports.onBookingUpdated = exports.onBookingCreated = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
@@ -261,6 +261,69 @@ exports.sendSubscriptionReminders = functions.pubsub
         await doc.ref.update({ subscriptionReminderLastSentAt: admin.firestore.FieldValue.serverTimestamp() });
     }
     return null;
+});
+// Migrate listings to set listerTierSnapshot from author's current subscription
+exports.migrateListingTierSnapshots = functions.https.onCall(async (data, context) => {
+    // Require authentication
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "Must be logged in");
+    }
+    // Require admin to run this
+    const adminUser = await db.collection("users").doc(context.auth.uid).get();
+    if (!adminUser.exists || !adminUser.data()?.isAdmin) {
+        throw new functions.https.HttpsError("permission-denied", "Only admins can run this migration");
+    }
+    let processedCount = 0;
+    let skippedCount = 0;
+    try {
+        const listingsRef = db.collection("listings");
+        const snapshot = await listingsRef.get();
+        const batch = db.batch();
+        let batchSize = 0;
+        const MAX_BATCH_SIZE = 500;
+        for (const listingDoc of snapshot.docs) {
+            const listingData = listingDoc.data();
+            // Skip if already has listerTierSnapshot set to a valid value
+            if (listingData.listerTierSnapshot && listingData.listerTierSnapshot !== "free") {
+                skippedCount++;
+                continue;
+            }
+            // Get author's current tier
+            const authorId = listingData.authorID;
+            if (!authorId) {
+                functions.logger.warn("Listing missing authorID", { listingId: listingDoc.id });
+                skippedCount++;
+                continue;
+            }
+            try {
+                const authorDoc = await db.collection("users").doc(authorId).get();
+                const authorTier = authorDoc.exists ? (authorDoc.data()?.subscriptionTier || "free") : "free";
+                // Update the listing with author's tier
+                batch.update(listingDoc.ref, { listerTierSnapshot: authorTier.toLowerCase() });
+                processedCount++;
+                batchSize++;
+                // Commit batch if it gets too large
+                if (batchSize >= MAX_BATCH_SIZE) {
+                    await batch.commit();
+                    batchSize = 0;
+                }
+            }
+            catch (err) {
+                functions.logger.error("Error processing listing", { listingId: listingDoc.id, error: err });
+                skippedCount++;
+            }
+        }
+        // Commit remaining batch
+        if (batchSize > 0) {
+            await batch.commit();
+        }
+        functions.logger.info("✅ Migration complete", { processedCount, skippedCount });
+        return { success: true, processedCount, skippedCount };
+    }
+    catch (error) {
+        functions.logger.error("Migration failed", { error });
+        throw new functions.https.HttpsError("internal", String(error));
+    }
 });
 // Export deal ad and chat notification triggers
 var deal_ad_notifications_1 = require("./deal_ad_notifications");

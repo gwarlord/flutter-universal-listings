@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:instaflutter/listings/model/catalog_item.dart';
 import 'package:instaflutter/listings/model/order_request.dart';
@@ -14,6 +15,7 @@ import 'package:uuid/uuid.dart';
 class StoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
+  final FirebaseFunctions _functions = FirebaseFunctions.instance;
   final _uuid = const Uuid();
 
   /// Get catalog items for a listing
@@ -353,5 +355,20 @@ class StoreService {
       'status': OrderStatus.cancelled.value,
       'updatedAt': Timestamp.now(),
     });
+  }
+
+  /// Migrate existing listings to set listerTierSnapshot from author's tier
+  /// Call this once when Premium user first accesses their store features
+  Future<Map<String, dynamic>> migrateListingTierSnapshots() async {
+    try {
+      final HttpsCallable callable = _functions.httpsCallable('migrateListingTierSnapshots');
+      final result = await callable.call();
+      return result.data as Map<String, dynamic>? ?? {};
+    } catch (e) {
+      // Silently fail - migration is not critical for functionality
+      // listerTierSnapshot defaults to 'free' which won't break queries
+      print('⚠️ Migration warning: $e');
+      return {'success': false, 'error': e.toString()};
+    }
   }
 }
