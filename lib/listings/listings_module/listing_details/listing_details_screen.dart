@@ -42,6 +42,7 @@ import 'package:instaflutter/core/ui/video/adaptive_video_player.dart';
 import 'package:instaflutter/core/ui/full_screen_video_viewer/full_screen_video_viewer.dart';
 import 'package:instaflutter/core/model/channel_data_model.dart';
 import 'package:instaflutter/core/model/user.dart' as core_user;
+import 'package:instaflutter/widgets/menu/menu_section_widget.dart';
 
 import 'package:metadata_fetch/metadata_fetch.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -623,6 +624,8 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                         // Price Section (if not in bottom bar)
                         if (listing.price.trim().isNotEmpty)
                           _buildPriceCard(dark, primaryColor),
+                        // Menu Section
+                        MenuSectionWidget(listing: listing),
                         // Services Section
                         if (listing.services.isNotEmpty) _buildServicesSection(dark, primaryColor),
                         // Contact & Hours

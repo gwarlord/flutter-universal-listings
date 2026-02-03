@@ -22,6 +22,7 @@ import 'package:instaflutter/listings/listings_module/add_listing/description_ed
 import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
 import 'package:instaflutter/listings/services/gemini_ai_service.dart';
 import 'package:instaflutter/listings/listings_module/filters/filters_screen.dart';
+import 'package:instaflutter/widgets/menu/menu_edit_section_widget.dart';
 import 'package:instaflutter/listings/model/categories_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
@@ -1279,6 +1280,15 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 decoration: _getInputDecoration(label: 'Website'.tr(), icon: Icons.language),
               ),
               const SizedBox(height: 16),
+              // Menu Section
+              if (isEdit && widget.listingToEdit != null)
+                MenuEditSectionWidget(
+                  listing: widget.listingToEdit!,
+                  onMenuUpdated: () {
+                    if (mounted) setState(() {});
+                  },
+                ),
+              const SizedBox(height: 24),
               _buildSectionHeader('Social Media'.tr(), isSocial: true),
               TextField(
                 controller: _instagramController,

@@ -96,6 +96,14 @@ class ListingModel {
   int? featuredUntil; // Timestamp in seconds, null = no expiration
   String? featuredBy; // 'auto-premium', 'admin', or admin user ID
 
+  /// Menu (Food & Beverage)
+  bool menuEnabled;
+  String menuMode;
+  String menuCurrencyCode;
+  Timestamp? menuUpdatedAt;
+  List<Map<String, dynamic>> menuUploads;
+  List<Map<String, dynamic>> menuSections;
+
   /// UI-only
   bool isFav = false;
 
@@ -159,7 +167,16 @@ class ListingModel {
     this.isFeatured = false,
     this.featuredUntil,
     this.featuredBy,
-  }) : createdAt = createdAt ?? Timestamp.now().seconds;
+    this.menuEnabled = false,
+    this.menuMode = "both",
+    String? menuCurrencyCode,
+    this.menuUpdatedAt,
+    List<Map<String, dynamic>>? menuUploads,
+    List<Map<String, dynamic>>? menuSections,
+  })  : menuCurrencyCode = menuCurrencyCode ?? currencyCode,
+        menuUploads = menuUploads ?? [],
+        menuSections = menuSections ?? [],
+        createdAt = createdAt ?? Timestamp.now().seconds;
 
   factory ListingModel.fromJson(Map<String, dynamic> json) {
     return ListingModel(
@@ -226,6 +243,12 @@ class ListingModel {
       isFeatured: json['isFeatured'] ?? false,
       featuredUntil: json['featuredUntil'],
       featuredBy: json['featuredBy'],
+        menuEnabled: json['menuEnabled'] ?? false,
+        menuMode: json['menuMode'] ?? "both",
+        menuCurrencyCode: json['menuCurrencyCode'] ?? json['currencyCode'] ?? 'USD',
+        menuUpdatedAt: json['menuUpdatedAt'],
+        menuUploads: (json['menuUploads'] as List?)?.map((e) => Map<String, dynamic>.from(e)).toList() ?? [],
+        menuSections: (json['menuSections'] as List?)?.map((e) => Map<String, dynamic>.from(e)).toList() ?? [],
     );
   }
 
@@ -290,6 +313,12 @@ class ListingModel {
       'isFeatured': isFeatured,
       'featuredUntil': featuredUntil,
       'featuredBy': featuredBy,
+        'menuEnabled': menuEnabled,
+        'menuMode': menuMode,
+        'menuCurrencyCode': menuCurrencyCode,
+        'menuUpdatedAt': menuUpdatedAt,
+        'menuUploads': menuUploads,
+        'menuSections': menuSections,
     };
   }
 
