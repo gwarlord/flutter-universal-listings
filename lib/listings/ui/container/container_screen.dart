@@ -19,6 +19,8 @@ import 'package:instaflutter/listings/listings_module/booking/my_bookings_screen
 import 'package:instaflutter/listings/listings_module/booking/booking_management_screen.dart';
 import 'package:instaflutter/listings/ui/subscription/paywall_screen.dart';
 import 'package:instaflutter/listings/ui/subscription/customer_center_screen.dart';
+import 'package:instaflutter/listings/utils/subscription_helper.dart';
+import 'package:instaflutter/screens/store/orders_management_screen.dart';
 import 'package:instaflutter/listings/listings_module/analytics/analytics_screen.dart';
 import 'package:instaflutter/listings/listings_module/analytics/advanced_analytics_screen.dart';
 import 'package:instaflutter/listings/listings_module/chat_settings/chat_settings_screen.dart';
@@ -465,6 +467,20 @@ class _ContainerState extends State<ContainerScreen> {
                       onTap: () {
                         Navigator.pop(context);
                         push(context, BookingManagementWrapperWidget(currentUser: currentUser));
+                      },
+                      isDark: isDark,
+                      primaryColor: primaryColorValue,
+                    ),
+                  
+                  // Order Requests (Premium only)
+                  if (isPremiumUser(currentUser))
+                    _drawerTile(
+                      title: 'Order Requests'.tr(),
+                      icon: Icons.shopping_bag_rounded,
+                      trailing: _tierBadge('PREMIUM', Colors.purple),
+                      onTap: () {
+                        Navigator.pop(context);
+                        push(context, OrdersManagementScreen(currentUser: currentUser));
                       },
                       isDark: isDark,
                       primaryColor: primaryColorValue,

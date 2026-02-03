@@ -43,6 +43,9 @@ import 'package:instaflutter/core/ui/full_screen_video_viewer/full_screen_video_
 import 'package:instaflutter/core/model/channel_data_model.dart';
 import 'package:instaflutter/core/model/user.dart' as core_user;
 import 'package:instaflutter/widgets/menu/menu_section_widget.dart';
+import 'package:instaflutter/listings/services/store_service.dart';
+import 'package:instaflutter/listings/model/catalog_item.dart';
+import 'package:instaflutter/screens/store/store_browse_screen.dart';
 
 import 'package:metadata_fetch/metadata_fetch.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -626,6 +629,11 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                           _buildPriceCard(dark, primaryColor),
                         // Menu Section
                         MenuSectionWidget(listing: listing),
+                        // Store Section (Premium only, internal catalog mode)
+                        if (listing.storeEnabled && 
+                            (listing.storeMode == 'internal_catalog' || listing.storeMode == 'both') &&
+                            listing.listerTierSnapshot == 'premium')
+                          _buildStoreSection(dark, primaryColor),
                         // Services Section
                         if (listing.services.isNotEmpty) _buildServicesSection(dark, primaryColor),
                         // Contact & Hours
@@ -990,6 +998,139 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   color: isDark ? Colors.white : Colors.black,
                 ),
               ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStoreSection(bool isDark, Color primaryColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Mini Store'.tr(), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<List<CatalogItem>>(
+          stream: StoreService().getCatalogItems(listing.id).map((items) => items.take(6).toList()),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator.adaptive());
+            }
+            
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade800.withOpacity(0.3) : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.inventory_2_outlined, color: primaryColor, size: 32),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        'No items available yet. Check back soon!',
+                        style: TextStyle(
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final items = snapshot.data!;
+            
+            return Column(
+              children: [
+                SizedBox(
+                  height: 140,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final item = items[index];
+                      return Container(
+                        width: 110,
+                        margin: EdgeInsets.only(right: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                height: 90,
+                                color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                                child: item.photos.isNotEmpty
+                                    ? Image.network(
+                                        item.photos.first,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        errorBuilder: (_, __, ___) => Icon(Icons.image, size: 40),
+                                      )
+                                    : Center(child: Icon(Icons.inventory_2, size: 40, color: Colors.grey)),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              item.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              '\$${item.price.toStringAsFixed(2)} ${item.currencyCode}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      final currentUser = context.read<AuthenticationBloc>().user;
+                      if (currentUser != null) {
+                        push(context, StoreBrowseScreen(
+                          listing: listing,
+                          currentUser: currentUser,
+                        ));
+                      }
+                    },
+                    icon: Icon(Icons.storefront),
+                    label: Text('Browse Full Store'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             );
           },
         ),

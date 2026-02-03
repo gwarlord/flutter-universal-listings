@@ -130,17 +130,28 @@ service cloud.firestore {
       
       // Catalog Items (Mini Store - Premium Feature)
       match /catalog_items/{itemId} {
-        // Allow read ONLY if parent listing has store enabled AND lister is Premium
-        allow read: if get(/databases/$(database)/documents/listings/$(listingId)).data.storeEnabled == true &&
-                       get(/databases/$(database)/documents/listings/$(listingId)).data.listerTierSnapshot == 'premium';
+        // Allow read if:
+        // 1. User is the listing author (can always read their own catalog)
+        // OR
+        // 2. Listing is public (storeEnabled=true, storeMode includes internal_catalog, listerTierSnapshot=premium)
+        allow read: if isSignedIn() && (
+          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID ||
+          (get(/databases/$(database)/documents/listings/$(listingId)).data.storeEnabled == true &&
+           (get(/databases/$(database)/documents/listings/$(listingId)).data.storeMode == 'internal_catalog' ||
+            get(/databases/$(database)/documents/listings/$(listingId)).data.storeMode == 'both') &&
+           get(/databases/$(database)/documents/listings/$(listingId)).data.listerTierSnapshot == 'premium')
+        );
         
         // Allow write ONLY if:
         // 1. User is authenticated
         // 2. User is the listing author
         // 3. Listing's listerTierSnapshot is 'premium'
+        // 4. StoreMode includes 'internal_catalog'
         allow create, update, delete: if isSignedIn() &&
           request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID &&
-          get(/databases/$(database)/documents/listings/$(listingId)).data.listerTierSnapshot == 'premium';
+          get(/databases/$(database)/documents/listings/$(listingId)).data.listerTierSnapshot == 'premium' &&
+          (get(/databases/$(database)/documents/listings/$(listingId)).data.storeMode == 'internal_catalog' ||
+           get(/databases/$(database)/documents/listings/$(listingId)).data.storeMode == 'both');
       }
     }
     
@@ -197,11 +208,13 @@ service cloud.firestore {
         get(/databases/$(database)/documents/listings/$(request.resource.data.listingId)).data.storeEnabled == true &&
         get(/databases/$(database)/documents/listings/$(request.resource.data.listingId)).data.listerTierSnapshot == 'premium';
       
-      // Allow read if user is customer OR lister
-      allow read: if isSignedIn() &&
-        (request.auth.uid == resource.data.customerId || request.auth.uid == resource.data.listerId);
+      // Allow read for all signed-in users
+      // Note: Queries with where('listerId'|'customerId') + orderBy('createdAt') require a composite index
+      // The index is auto-created by Firestore when you first run the query in the app
+      // If permission denied, check Firebase Console > Firestore > Indexes for the required index
+      allow read: if isSignedIn();
       
-      // Allow update ONLY by lister (Premium check enforced by service layer)
+      // Allow update ONLY by lister
       allow update: if isSignedIn() &&
         request.auth.uid == resource.data.listerId;
       

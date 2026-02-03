@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:instaflutter/constants.dart';
+import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/model/catalog_item.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
@@ -108,7 +109,7 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
               child: Text(
                 'Save'.tr(),
                 style: TextStyle(
-                  color: Color(colorPrimary),
+                  color: Color(cfg.colorPrimary),
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
@@ -245,7 +246,7 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
                 ),
                 value: _trackStock,
                 onChanged: (value) => setState(() => _trackStock = value),
-                activeColor: Color(colorPrimary),
+                activeColor: Color(cfg.colorPrimary),
               ),
               
               if (_trackStock) ...[
@@ -277,7 +278,7 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
                 ),
                 value: _isAvailable,
                 onChanged: (value) => setState(() => _isAvailable = value),
-                activeColor: Color(colorPrimary),
+                activeColor: Color(cfg.colorPrimary),
               ),
               const SizedBox(height: 24),
 
@@ -416,7 +417,7 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
           borderRadius: BorderRadius.circular(8),
           color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
           border: Border.all(
-            color: Color(colorPrimary).withOpacity(0.5),
+            color: Color(cfg.colorPrimary).withOpacity(0.5),
             width: 2,
             style: BorderStyle.solid,
           ),
@@ -424,7 +425,7 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
         child: Icon(
           isPhotos ? Icons.add_photo_alternate : Icons.videocam,
           size: 40,
-          color: Color(colorPrimary),
+          color: Color(cfg.colorPrimary),
         ),
       ),
     );

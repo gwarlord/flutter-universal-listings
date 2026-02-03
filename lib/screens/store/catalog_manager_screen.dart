@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:instaflutter/constants.dart';
+import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/model/catalog_item.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
@@ -86,7 +87,7 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
                         setState(() => _selectedCategory = category);
                       }
                     },
-                    selectedColor: Color(colorPrimary),
+                    selectedColor: Color(cfg.colorPrimary),
                     labelStyle: TextStyle(
                       color: isSelected ? Colors.white : (dark ? Colors.white70 : Colors.black87),
                     ),
@@ -225,7 +226,7 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
                       '${getCurrencySymbol(item.currencyCode)}${item.price.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Color(colorPrimary),
+                        color: Color(cfg.colorPrimary),
                         fontWeight: FontWeight.w600,
                       ),
                     ),

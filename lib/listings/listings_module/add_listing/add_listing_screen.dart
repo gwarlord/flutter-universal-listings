@@ -27,6 +27,8 @@ import 'package:instaflutter/listings/model/categories_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/utils/opening_hours_editor.dart';
+import 'package:instaflutter/listings/utils/subscription_helper.dart';
+import 'package:instaflutter/screens/store/catalog_manager_screen.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 
 class AddListingWrappingWidget extends StatelessWidget {
@@ -168,6 +170,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
   // Store/Ecommerce
   bool _storeEnabled = false;
   final TextEditingController _storeUrlController = TextEditingController();
+  String _storeMode = 'external_url'; // "external_url" | "internal_catalog" | "both"
+  int _storeLeadTimeHours = 24;
 
   @override
   void initState() {
@@ -271,6 +275,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
     // Store/Ecommerce fields
     _storeEnabled = l.storeEnabled;
     _storeUrlController.text = l.storeUrl ?? '';
+    _storeMode = l.storeMode ?? 'external_url';
+    _storeLeadTimeHours = l.storeLeadTimeHours;
   }
 
   Future<void> _refreshUserSubscription() async {
@@ -1338,11 +1344,157 @@ class _AddListingScreenState extends State<AddListingScreen> {
               ),
               if (_storeEnabled) ...[
                 const SizedBox(height: 12),
-                TextField(
-                  controller: _storeUrlController,
-                  keyboardType: TextInputType.url,
-                  decoration: _getInputDecoration(label: 'Store URL', icon: Icons.store),
+                // Store Mode Dropdown (Premium-gated)
+                DropdownButtonFormField<String>(
+                  value: _storeMode,
+                  decoration: _getInputDecoration(
+                    label: 'Store Mode',
+                    icon: Icons.storefront,
+                  ),
+                  dropdownColor: isDarkMode(context) ? Colors.grey.shade800 : Colors.white,
+                  style: TextStyle(
+                    color: isDarkMode(context) ? Colors.white : Colors.black,
+                    fontSize: 16,
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'external_url',
+                      child: Text('External URL Only'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'internal_catalog',
+                      enabled: isPremiumUser(currentUser),
+                      child: Row(
+                        children: [
+                          Text('Internal Catalog'),
+                          if (!isPremiumUser(currentUser)) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Color(0xFFFFD700),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'PREMIUM',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'both',
+                      enabled: isPremiumUser(currentUser),
+                      child: Row(
+                        children: [
+                          Text('Both (URL + Catalog)'),
+                          if (!isPremiumUser(currentUser)) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Color(0xFFFFD700),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'PREMIUM',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      // Block non-Premium users from selecting internal catalog options
+                      if ((value == 'internal_catalog' || value == 'both') && !isPremiumUser(currentUser)) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Internal Catalog requires Premium subscription'.tr()),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                        return;
+                      }
+                      setState(() => _storeMode = value);
+                    }
+                  },
                 ),
+                const SizedBox(height: 12),
+                // External URL field (show if mode is external_url or both)
+                if (_storeMode == 'external_url' || _storeMode == 'both') ...[
+                  TextField(
+                    controller: _storeUrlController,
+                    keyboardType: TextInputType.url,
+                    decoration: _getInputDecoration(label: 'Store URL', icon: Icons.link),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                // Lead Time Hours
+                TextField(
+                  keyboardType: TextInputType.number,
+                  decoration: _getInputDecoration(
+                    label: 'Lead Time (Hours)',
+                    icon: Icons.access_time,
+                    hint: 'Minimum hours needed to prepare orders',
+                  ),
+                  controller: TextEditingController(text: _storeLeadTimeHours.toString())
+                    ..selection = TextSelection.fromPosition(
+                      TextPosition(offset: _storeLeadTimeHours.toString().length),
+                    ),
+                  onChanged: (value) {
+                    final parsed = int.tryParse(value);
+                    if (parsed != null && parsed >= 0) {
+                      _storeLeadTimeHours = parsed;
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                // Manage Catalog button (Premium-only)
+                if ((_storeMode == 'internal_catalog' || _storeMode == 'both') && isPremiumUser(currentUser)) ...[
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      // Navigate to CatalogManagerScreen (only after listing is saved)
+                      if (!isEdit) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Please save the listing first, then you can manage catalog items'.tr()),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                        return;
+                      }
+                      // For edit mode, navigate to catalog manager
+                      push(context, CatalogManagerScreen(
+                        listing: widget.listingToEdit!,
+                        currentUser: currentUser,
+                      ));
+                    },
+                    icon: Icon(Icons.inventory_2),
+                    label: Text(isEdit ? 'Manage Catalog Items' : 'Save Listing First'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isEdit ? Color(colorPrimary) : Colors.grey,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
               ],
               const SizedBox(height: 20),
 
@@ -1596,6 +1748,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
       blockedDates: _blockedDates.map((d) => d.millisecondsSinceEpoch).toList(),
       storeEnabled: _storeEnabled,
       storeUrl: _storeUrlController.text.trim(),
+      storeMode: _storeMode,
+      storeLeadTimeHours: _storeLeadTimeHours,
+      listerTierSnapshot: currentUser.subscriptionTier.toLowerCase(),
       instagram: _instagramController.text.trim(),
       facebook: _facebookController.text.trim(),
       tiktok: _tiktokController.text.trim(),
