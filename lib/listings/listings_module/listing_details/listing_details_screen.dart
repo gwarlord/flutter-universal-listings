@@ -124,6 +124,9 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   bool _isTapped = false;
   bool _isTapLoading = false;
 
+  // Mini Store feature
+  final StoreService _storeService = StoreService();
+
   bool get _canEditOrDelete =>
       currentUser.userID == listing.authorID || currentUser.isAdmin;
 
@@ -1018,7 +1021,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
         ),
         const SizedBox(height: 12),
         StreamBuilder<List<CatalogItem>>(
-          stream: StoreService().getCatalogItems(listing.id).map((items) => items.take(6).toList()),
+          stream: _storeService.getCatalogItems(listing.id).map((items) => items.take(6).toList()),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator.adaptive());
