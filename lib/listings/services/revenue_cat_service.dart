@@ -15,8 +15,8 @@ class RevenueCatService {
 
   // API Keys - Replace these with your PUBLIC SDK KEYS from RevenueCat Dashboard
   // These will NOT charge real money in Sandbox/Test environments (TestFlight, Android Alpha/Beta)
-  static const String _androidApiKey = 'goog_YOUR_ACTUAL_ANDROID_PUBLIC_KEY';
-  static const String _iosApiKey = 'appl_YOUR_ACTUAL_IOS_PUBLIC_KEY';
+  static const String _androidApiKey = 'test_HlFlRPeoSwcyoKewtdDNaMiGCLy';
+  static const String _iosApiKey = 'test_HlFlRPeoSwcyoKewtdDNaMiGCLy';
 
   static final RevenueCatService _instance = RevenueCatService._internal();
   factory RevenueCatService() => _instance;

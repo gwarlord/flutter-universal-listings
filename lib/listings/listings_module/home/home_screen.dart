@@ -85,8 +85,10 @@ class HomeScreenState extends State<HomeScreen> {
   // Cycling controllers
   late ScrollController _categoryScrollController;
   late ScrollController _dealsScrollController;
+  late ScrollController _featuredScrollController;
   Timer? _categoryCycleTimer;
   Timer? _dealsCycleTimer;
+  Timer? _featuredCycleTimer;
 
   @override
   void initState() {
@@ -95,12 +97,14 @@ class HomeScreenState extends State<HomeScreen> {
     _searchController = TextEditingController();
     _categoryScrollController = ScrollController();
     _dealsScrollController = ScrollController();
+    _featuredScrollController = ScrollController();
     context.read<HomeBloc>().add(GetCategoriesEvent());
     context.read<HomeBloc>().add(GetListingsEvent());
     _loadFeaturedListings();
     _loadDeals();
     _startCategoryCycling();
     _startDealsCycling();
+    _startFeaturedCycling();
   }
 
   void _startCategoryCycling() {
@@ -135,6 +139,26 @@ class HomeScreenState extends State<HomeScreen> {
         }
 
         _dealsScrollController.animateTo(
+          nextOffset,
+          duration: const Duration(milliseconds: 1200),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
+
+  void _startFeaturedCycling() {
+    _featuredCycleTimer?.cancel();
+    _featuredCycleTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (_featuredScrollController.hasClients && _featuredListings.isNotEmpty) {
+        final maxScroll = _featuredScrollController.position.maxScrollExtent;
+        double nextOffset = _featuredScrollController.offset + 216.0; // 200 width + 16 margin
+
+        if (nextOffset > maxScroll + 50) {
+          nextOffset = 0.0;
+        }
+
+        _featuredScrollController.animateTo(
           nextOffset,
           duration: const Duration(milliseconds: 1200),
           curve: Curves.easeInOut,
@@ -189,8 +213,10 @@ class HomeScreenState extends State<HomeScreen> {
     _searchController.dispose();
     _categoryScrollController.dispose();
     _dealsScrollController.dispose();
+     _featuredScrollController.dispose();
     _categoryCycleTimer?.cancel();
     _dealsCycleTimer?.cancel();
+     _featuredCycleTimer?.cancel();
     super.dispose();
   }
 
@@ -638,6 +664,7 @@ class HomeScreenState extends State<HomeScreen> {
                           color: Color(cfg.colorPrimary).withOpacity(dark ? 0.05 : 0.03),
                         ),
                         child: ListView.builder(
+                           controller: _featuredScrollController,
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.all(12),
                           itemCount: _featuredListings.length,
