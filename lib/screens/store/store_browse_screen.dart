@@ -167,19 +167,32 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
             ),
           ),
 
-          // Category filters
-          SizedBox(
-            height: 50,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                _buildCategoryChip('All', dark),
-                _buildCategoryChip('Food & Drink', dark),
-                _buildCategoryChip('Products', dark),
-                _buildCategoryChip('Services', dark),
-              ],
-            ),
+          // Category filters (dynamically generated from catalog items)
+          StreamBuilder<List<CatalogItem>>(
+            stream: _storeService.getCatalogItems(widget.listing.id),
+            builder: (context, snapshot) {
+              // Get unique categories from items
+              final items = snapshot.data ?? [];
+              final categories = <String>{'All'};
+              for (final item in items) {
+                if (item.category.isNotEmpty) {
+                  categories.add(item.category);
+                }
+              }
+              final categoryList = categories.toList();
+              
+              return SizedBox(
+                height: 50,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: categoryList.length,
+                  itemBuilder: (context, index) {
+                    return _buildCategoryChip(categoryList[index], dark);
+                  },
+                ),
+              );
+            },
           ),
 
           // Sort options
@@ -232,18 +245,9 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
 
                 var items = snapshot.data ?? [];
 
-                // Filter by category
+                // Filter by category (using custom category field)
                 if (_selectedCategory != 'All') {
-                  items = items.where((item) {
-                    if (_selectedCategory == 'Food & Drink') {
-                      return item.type == CatalogItemType.foodDrink;
-                    } else if (_selectedCategory == 'Products') {
-                      return item.type == CatalogItemType.product;
-                    } else if (_selectedCategory == 'Services') {
-                      return item.type == CatalogItemType.service;
-                    }
-                    return true;
-                  }).toList();
+                  items = items.where((item) => item.category == _selectedCategory).toList();
                 }
 
                 // Filter by search
