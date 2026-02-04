@@ -628,7 +628,7 @@ class _CartScreenState extends State<CartScreen> {
             ],
           ),
           backgroundColor: Color(colorPrimary),
-          duration: const Duration(seconds: 4),
+          duration: const Duration(seconds: 6),
           action: widget.currentUser != null
               ? SnackBarAction(
                   label: 'View'.tr(),
