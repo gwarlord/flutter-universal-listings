@@ -632,7 +632,12 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
                   const Spacer(),
                   IconButton(
                     onPressed: _quantity > 1 ? () => setState(() => _quantity--) : null,
-                    icon: const Icon(Icons.remove_circle_outline),
+                    icon: Icon(
+                      Icons.remove_circle_outline,
+                      color: _quantity > 1
+                          ? Color(colorPrimary)
+                          : (dark ? Colors.grey.shade600 : Colors.grey.shade400),
+                    ),
                   ),
                   Text(
                     _quantity.toString(),
@@ -644,7 +649,10 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
                   ),
                   IconButton(
                     onPressed: () => setState(() => _quantity++),
-                    icon: const Icon(Icons.add_circle_outline),
+                    icon: Icon(
+                      Icons.add_circle_outline,
+                      color: Color(colorPrimary),
+                    ),
                   ),
                 ],
               ),
