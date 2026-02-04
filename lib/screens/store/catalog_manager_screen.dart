@@ -29,7 +29,6 @@ class CatalogManagerScreen extends StatefulWidget {
 class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
   final StoreService _storeService = StoreService();
   String _selectedCategory = 'All';
-  final List<String> _categories = ['All', 'Food & Drink', 'Products', 'Services', 'Other'];
   bool _migrationDone = false;
 
   @override
@@ -89,34 +88,49 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
       ),
       body: Column(
         children: [
-          // Category filter
-          Container(
-            height: 50,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _categories.length,
-              itemBuilder: (context, index) {
-                final category = _categories[index];
-                final isSelected = _selectedCategory == category;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(category.tr()),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      if (selected) {
-                        setState(() => _selectedCategory = category);
-                      }
-                    },
-                    selectedColor: Color(cfg.colorPrimary),
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : (dark ? Colors.white70 : Colors.black87),
-                    ),
-                  ),
-                );
-              },
-            ),
+          // Category filter (dynamically generated from catalog items)
+          StreamBuilder<List<CatalogItem>>(
+            stream: _storeService.getCatalogItems(widget.listing.id),
+            builder: (context, snapshot) {
+              // Get unique categories from items
+              final items = snapshot.data ?? [];
+              final categories = <String>{'All'};
+              for (final item in items) {
+                if (item.category.isNotEmpty) {
+                  categories.add(item.category);
+                }
+              }
+              final categoryList = categories.toList();
+              
+              return Container(
+                height: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: categoryList.length,
+                  itemBuilder: (context, index) {
+                    final category = categoryList[index];
+                    final isSelected = _selectedCategory == category;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(category.tr()),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() => _selectedCategory = category);
+                          }
+                        },
+                        selectedColor: Color(cfg.colorPrimary),
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : (dark ? Colors.white70 : Colors.black87),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
           ),
 
           // Catalog items list
@@ -139,19 +153,10 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
 
                 final items = snapshot.data ?? [];
                 
-                // Filter by category
+                // Filter by category (using custom category field)
                 final filteredItems = _selectedCategory == 'All'
                     ? items
-                    : items.where((item) {
-                        if (_selectedCategory == 'Food & Drink') {
-                          return item.type == CatalogItemType.foodDrink;
-                        } else if (_selectedCategory == 'Products') {
-                          return item.type == CatalogItemType.product;
-                        } else if (_selectedCategory == 'Services') {
-                          return item.type == CatalogItemType.service;
-                        }
-                        return item.category == _selectedCategory;
-                      }).toList();
+                    : items.where((item) => item.category == _selectedCategory).toList();
 
                 if (filteredItems.isEmpty) {
                   return Center(
