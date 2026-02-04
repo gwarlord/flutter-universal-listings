@@ -604,12 +604,15 @@ class _CartScreenState extends State<CartScreen> {
       widget.cartItems.clear();
       widget.onCartUpdated?.call();
 
+      // Get root context before popping screens
+      final rootContext = context;
+      
       // Close cart and return to listing detail
       Navigator.of(context).pop(); // Close cart
       Navigator.of(context).pop(); // Close store browse
 
       // Show success snackbar with action to view order
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(rootContext).showSnackBar(
         SnackBar(
           content: Row(
             children: [
@@ -634,9 +637,8 @@ class _CartScreenState extends State<CartScreen> {
                   label: 'View'.tr(),
                   textColor: Colors.white,
                   onPressed: () {
-                    // Navigate to customer orders screen
-                    Navigator.push(
-                      context,
+                    // Navigate to customer orders screen using root navigator
+                    Navigator.of(rootContext, rootNavigator: true).push(
                       MaterialPageRoute(
                         builder: (context) => CustomerOrdersScreen(
                           currentUser: widget.currentUser!,
