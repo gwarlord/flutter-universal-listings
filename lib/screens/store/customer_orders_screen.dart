@@ -31,72 +31,61 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
 
-    return Scaffold(
-      backgroundColor: dark ? Colors.black : Colors.white,
-      appBar: AppBar(
-        backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
-        title: Text(
-          'My Orders'.tr(),
-          style: TextStyle(color: dark ? Colors.white : Colors.black),
-        ),
-        iconTheme: IconThemeData(color: dark ? Colors.white : Colors.black),
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('order_requests')
-            .where('customerId', isEqualTo: widget.currentUser.userID)
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('order_requests')
+          .where('customerId', isEqualTo: widget.currentUser.userID)
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.shopping_bag_outlined,
-                    size: 64,
-                    color: dark ? Colors.white54 : Colors.black54,
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.shopping_bag_outlined,
+                  size: 64,
+                  color: dark ? Colors.white54 : Colors.black54,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No orders yet'.tr(),
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: dark ? Colors.white70 : Colors.black54,
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No orders yet'.tr(),
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: dark ? Colors.white70 : Colors.black54,
-                    ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Orders you place will appear here'.tr(),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: dark ? Colors.white54 : Colors.black45,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Orders you place will appear here'.tr(),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: dark ? Colors.white54 : Colors.black45,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final orders = snapshot.data!.docs
-              .map((doc) => OrderRequest.fromJson(doc.data() as Map<String, dynamic>))
-              .toList();
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: orders.length,
-            itemBuilder: (context, index) {
-              final order = orders[index];
-              return _buildOrderCard(order, dark, context);
-            },
+                ),
+              ],
+            ),
           );
-        },
-      ),
+        }
+
+        final orders = snapshot.data!.docs
+            .map((doc) => OrderRequest.fromJson(doc.data() as Map<String, dynamic>))
+            .toList();
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(12),
+          itemCount: orders.length,
+          itemBuilder: (context, index) {
+            final order = orders[index];
+            return _buildOrderCard(order, dark, context);
+          },
+        );
+      },
     );
   }
 
