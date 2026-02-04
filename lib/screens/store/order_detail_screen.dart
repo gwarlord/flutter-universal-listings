@@ -42,8 +42,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     super.initState();
     _currentOrder = widget.order;
 
-    // CRITICAL: Verify Premium access
-    if (!isPremiumUser(widget.currentUser)) {
+    // CRITICAL: Verify Premium access only for listers viewing order requests
+    // Customers can always view their own orders
+    final isLister = widget.currentUser.userID == widget.order.listerId;
+    if (isLister && !isPremiumUser(widget.currentUser)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         showSnackBar(context, '🔒 Premium subscription required');
         Navigator.pop(context);
