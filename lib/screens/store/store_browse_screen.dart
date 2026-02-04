@@ -635,7 +635,7 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
                     icon: Icon(
                       Icons.remove_circle_outline,
                       color: _quantity > 1
-                          ? Color(colorPrimary)
+                          ? Color(cfg.colorPrimary)
                           : (dark ? Colors.grey.shade600 : Colors.grey.shade400),
                     ),
                   ),
@@ -651,7 +651,7 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
                     onPressed: () => setState(() => _quantity++),
                     icon: Icon(
                       Icons.add_circle_outline,
-                      color: Color(colorPrimary),
+                      color: Color(cfg.colorPrimary),
                     ),
                   ),
                 ],
