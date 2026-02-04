@@ -10,6 +10,7 @@ import 'package:instaflutter/listings/model/order_request.dart';
 import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/screens/store/cart_models.dart';
 import 'package:instaflutter/screens/store/order_chat_helper.dart';
+import 'package:instaflutter/screens/store/customer_orders_screen.dart';
 import 'package:instaflutter/listings/listings_app_config.dart';
 
 /// Cart screen for reviewing and submitting orders
@@ -607,7 +608,7 @@ class _CartScreenState extends State<CartScreen> {
       Navigator.of(context).pop(); // Close cart
       Navigator.of(context).pop(); // Close store browse
 
-      // Show success message with prominent styling
+      // Show success snackbar with action to view order
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -628,6 +629,21 @@ class _CartScreenState extends State<CartScreen> {
           ),
           backgroundColor: Color(colorPrimary),
           duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'View'.tr(),
+            textColor: Colors.white,
+            onPressed: () {
+              // Navigate to customer orders screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CustomerOrdersScreen(
+                    currentUser: widget.currentUser,
+                  ),
+                ),
+              );
+            },
+          ),
           elevation: 8,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
