@@ -99,14 +99,19 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
             padding: const EdgeInsets.all(16),
             child: TextField(
               controller: _searchController,
+              style: TextStyle(color: dark ? Colors.white : Colors.black),
               onChanged: (value) {
                 setState(() => _searchQuery = value);
               },
               decoration: InputDecoration(
                 hintText: 'Search rentals...'.tr(),
-                prefixIcon: const Icon(Icons.search),
+                hintStyle: TextStyle(color: dark ? Colors.white54 : Colors.black45),
+                prefixIcon: Icon(Icons.search, color: dark ? Colors.white70 : Colors.black54),
+                filled: true,
+                fillColor: dark ? Colors.grey.shade900 : Colors.grey.shade100,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
                 ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
@@ -409,7 +414,11 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
               // Title
               Text(
                 widget.item.unitName,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: dark ? Colors.white : Colors.black,
+                ),
               ),
               const SizedBox(height: 12),
 
@@ -428,38 +437,55 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
               if (widget.item.vehicleDetails != null) ...[
                 Text(
                   'Vehicle Details'.tr(),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: dark ? Colors.white : Colors.black,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   '${widget.item.vehicleDetails!['make']} ${widget.item.vehicleDetails!['model']} (${widget.item.vehicleDetails!['year']})',
-                  style: const TextStyle(fontSize: 13),
-                ),
-                const SizedBox(height: 20),
-              ],
-
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: dark ? Colors.grey.shade300 : Colors.black87,
+                  ),
               // Date selection
               Text(
                 'Select Rental Period'.tr(),
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: dark ? Colors.white : Colors.black,
+                ),
               ),
               const SizedBox(height: 12),
 
               // Start date
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text('Start Date'.tr()),
-                subtitle: Text(DateFormat('MMM dd, yyyy').format(_startDate)),
-                trailing: const Icon(Icons.calendar_today),
+                title: Text(
+                  'Start Date'.tr(),
+                  style: TextStyle(color: dark ? Colors.white : Colors.black),
+                ),
+                subtitle: Text(
+                  DateFormat('MMM dd, yyyy').format(_startDate),
+                  style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
+                ),
+                trailing: Icon(Icons.calendar_today, color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
                 onTap: () => _selectDate(context, true),
               ),
 
               // End date
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text('End Date'.tr()),
-                subtitle: Text(DateFormat('MMM dd, yyyy').format(_endDate)),
-                trailing: const Icon(Icons.calendar_today),
+                title: Text(
+                  'End Date'.tr(),
+                  style: TextStyle(color: dark ? Colors.white : Colors.black),
+                ),
+                subtitle: Text(
+                  DateFormat('MMM dd, yyyy').format(_endDate),
+                  style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
+                ),
+                trailing: Icon(Icons.calendar_today, color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
                 onTap: () => _selectDate(context, false),
               ),
 
@@ -477,28 +503,47 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Duration'.tr()),
-                        Text('${_getDurationDays()} days'),
+                        Text(
+                          'Duration'.tr(),
+                          style: TextStyle(color: dark ? Colors.white : Colors.black),
+                        ),
+                        Text(
+                          '${_getDurationDays()} days',
+                          style: TextStyle(color: dark ? Colors.white : Colors.black),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Price per ${widget.item.pricingUnit}'.tr()),
-                        Text('\$${widget.item.basePrice.toStringAsFixed(2)}'),
+                        Text(
+                          'Price per ${widget.item.pricingUnit}'.tr(),
+                          style: TextStyle(color: dark ? Colors.white : Colors.black),
+                        ),
+                        Text(
+                          '\$${widget.item.basePrice.toStringAsFixed(2)}',
+                          style: TextStyle(color: dark ? Colors.white : Colors.black),
+                        ),
                       ],
                     ),
                     const Divider(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Total'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                          'Total'.tr(),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: dark ? Colors.white : Colors.black,
+                          ),
+                        ),
                         Text(
                           '\$${_calculateTotal().toStringAsFixed(2)}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
+                            color: dark ? Colors.white : Colors.black,
                           ),
                         ),
                       ],

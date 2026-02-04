@@ -147,10 +147,15 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
               TextField(
                 controller: _notesController,
                 maxLines: 3,
+                style: TextStyle(color: dark ? Colors.white : Colors.black),
                 decoration: InputDecoration(
                   hintText: 'Any special requests or notes...'.tr(),
+                  hintStyle: TextStyle(color: dark ? Colors.white54 : Colors.black45),
+                  filled: true,
+                  fillColor: dark ? Colors.grey.shade800 : Colors.grey.shade100,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
                   ),
                 ),
               ),
