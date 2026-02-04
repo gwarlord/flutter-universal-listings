@@ -375,17 +375,55 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<void> _pickDateTime() async {
+    final dark = isDarkMode(context);
+    
     final date = await showDatePicker(
       context: context,
       initialDate: DateTime.now().add(Duration(hours: widget.listing.storeLeadTimeHours)),
       firstDate: DateTime.now().add(Duration(hours: widget.listing.storeLeadTimeHours)),
       lastDate: DateTime.now().add(const Duration(days: 30)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            primaryColor: Color(colorPrimary),
+            colorScheme: ColorScheme.fromSwatch(
+              primarySwatch: Colors.blue,
+              brightness: dark ? Brightness.dark : Brightness.light,
+            ).copyWith(
+              primary: Color(colorPrimary),
+              surface: dark ? Colors.grey.shade900 : Colors.white,
+            ),
+            textTheme: dark
+                ? ThemeData.dark().textTheme
+                : ThemeData.light().textTheme,
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (date != null && mounted) {
       final time = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.now(),
+        builder: (context, child) {
+          return Theme(
+            data: Theme.of(context).copyWith(
+              primaryColor: Color(colorPrimary),
+              colorScheme: ColorScheme.fromSwatch(
+                primarySwatch: Colors.blue,
+                brightness: dark ? Brightness.dark : Brightness.light,
+              ).copyWith(
+                primary: Color(colorPrimary),
+                surface: dark ? Colors.grey.shade900 : Colors.white,
+              ),
+              textTheme: dark
+                  ? ThemeData.dark().textTheme
+                  : ThemeData.light().textTheme,
+            ),
+            child: child!,
+          );
+        },
       );
 
       if (time != null && mounted) {
