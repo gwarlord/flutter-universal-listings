@@ -409,6 +409,11 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
       try {
         // DEBUG: Log store fields before updating Firestore
         print('DEBUG: Firestore update storeEnabled=${event.listingModel.storeEnabled}, storeMode=${event.listingModel.storeMode}, storeUrl=${event.listingModel.storeUrl}');
+        print('🟢 DEBUG [PublishListingEvent - EDIT]: rentalConfig=${event.listingModel.rentalConfig}');
+        print('🟢 DEBUG [PublishListingEvent - EDIT]: rentalConfig?.isRentalEnabled=${event.listingModel.rentalConfig?.isRentalEnabled}');
+        print('🟢 DEBUG [PublishListingEvent - EDIT]: rentalConfig?.basePrice=${event.listingModel.rentalConfig?.basePrice}');
+        print('🟢 DEBUG [PublishListingEvent - EDIT]: rentalConfig?.toJson()=${event.listingModel.rentalConfig?.toJson()}');
+        
         final updateData = <String, dynamic>{
           'title': event.listingModel.title,
           'description': event.listingModel.description,
@@ -468,7 +473,8 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           // keep existing videos in Firestore unless user removed them
           // (if you want “remove all videos” behavior, pass explicit empty list)
         }
-
+        print('🟢 DEBUG [PublishListingEvent - EDIT]: updateData contains rentalConfig? ${updateData.containsKey('rentalConfig')}');
+        print('🟢 DEBUG [PublishListingEvent - EDIT]: updateData[rentalConfig]=${updateData['rentalConfig']}');
         await FirebaseFirestore.instance
             .collection('listings')
             .doc(event.listingIdToUpdate)

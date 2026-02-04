@@ -300,6 +300,7 @@ class _RentalConfigEditorState extends State<RentalConfigEditor> {
     
     // If no base price set, don't create config yet (validation)
     if (_isRentalEnabled && _basePriceController.text.isEmpty) {
+      debugPrint('🔴 DEBUG [RentalConfigEditor._notifyChange]: Rental enabled but no base price - returning early');
       return;
     }
 
@@ -324,6 +325,9 @@ class _RentalConfigEditorState extends State<RentalConfigEditor> {
           ? null 
           : _termsController.text,
     );
+
+    debugPrint('🟢 DEBUG [RentalConfigEditor._notifyChange]: Created config: isRentalEnabled=${config.isRentalEnabled}, basePrice=${config.basePrice}, rentalType=${config.rentalType}');
+    debugPrint('🟢 DEBUG [RentalConfigEditor._notifyChange]: Full config JSON: ${config.toJson()}');
 
     widget.onConfigChanged(config);
   }

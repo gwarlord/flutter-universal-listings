@@ -1788,7 +1788,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 RentalConfigEditor(
                   initialConfig: _rentalConfig ?? widget.listingToEdit?.rentalConfig,
                   onConfigChanged: (config) {
-                    setState(() => _rentalConfig = config);
+                    debugPrint('🟢 DEBUG [AddListingScreen.onConfigChanged]: Received config: $config');
+                    debugPrint('🟢 DEBUG [AddListingScreen.onConfigChanged]: isRentalEnabled=${config?.isRentalEnabled}, basePrice=${config?.basePrice}');
+                    setState(() {
+                      _rentalConfig = config;
+                      debugPrint('🟢 DEBUG [AddListingScreen.onConfigChanged]: _rentalConfig updated to: $_rentalConfig');
+                    });
                   },
                 ),
                 const SizedBox(height: 20),
@@ -1989,6 +1994,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
     final latitude = _placeDetail?.geometry?.location.lat ?? (isEdit ? widget.listingToEdit?.latitude ?? 0 : 0);
     final longitude = _placeDetail?.geometry?.location.lng ?? (isEdit ? widget.listingToEdit?.longitude ?? 0 : 0);
     debugPrint('*** DEBUG: _postListing called. place="$place" lat=$latitude lng=$longitude');
+    debugPrint('🟢 DEBUG [_postListing]: _rentalConfig=${_rentalConfig}');
+    debugPrint('🟢 DEBUG [_postListing]: _rentalConfig?.isRentalEnabled=${_rentalConfig?.isRentalEnabled}');
+    debugPrint('🟢 DEBUG [_postListing]: _rentalConfig?.basePrice=${_rentalConfig?.basePrice}');
 
     final listingModel = ListingModel(
       title: _titleController.text.trim(),
@@ -2035,6 +2043,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
       latitude: latitude,
       longitude: longitude,
     );
+
+    debugPrint('🟢 DEBUG [_postListing]: listingModel.rentalConfig=${listingModel.rentalConfig}');
+    debugPrint('🟢 DEBUG [_postListing]: listingModel.rentalConfig?.toJson()=${listingModel.rentalConfig?.toJson()}');
 
     context.read<AddListingBloc>().add(
       PublishListingEvent(
