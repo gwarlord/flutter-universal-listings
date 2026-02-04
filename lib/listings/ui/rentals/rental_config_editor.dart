@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/core/utils/helper.dart';
+import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import '../../model/rental_config.dart';
 
 class RentalConfigEditor extends StatefulWidget {
@@ -101,8 +102,8 @@ class _RentalConfigEditorState extends State<RentalConfigEditor> {
                 ? const TextStyle(color: Colors.white, fontSize: 14)
                 : const TextStyle(fontSize: 14),
           ),
-          activeColor: Color(colorPrimary),
-          activeTrackColor: Color(colorPrimary).withOpacity(0.5),
+          activeColor: Color(cfg.colorPrimary),
+          activeTrackColor: Color(cfg.colorPrimary).withOpacity(0.5),
           inactiveThumbColor: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
           inactiveTrackColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
         ),
