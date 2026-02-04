@@ -651,6 +651,47 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Widget? _buildActionButtons(bool dark) {
+    // Check if current user is the customer or the lister
+    final isCustomer = widget.currentUser.userID == _currentOrder.customerId;
+    final isLister = widget.currentUser.userID == _currentOrder.listerId;
+
+    // Customer can only cancel requested orders
+    if (isCustomer && _currentOrder.status == OrderStatus.requested) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+        decoration: BoxDecoration(
+          color: dark ? Colors.grey.shade900 : Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _isUpdating ? null : () => _updateStatus(OrderStatus.cancelled),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text(
+              'Cancel Order'.tr(),
+              style: const TextStyle(fontSize: 16, color: Colors.white),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Lister can decline/confirm requested orders or fulfill confirmed orders
+    if (!isLister) {
+      return null;
+    }
+
     if (_currentOrder.status != OrderStatus.requested &&
         _currentOrder.status != OrderStatus.confirmed) {
       return null;
