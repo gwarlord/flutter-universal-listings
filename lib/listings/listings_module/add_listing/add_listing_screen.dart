@@ -966,15 +966,15 @@ class _AddListingScreenState extends State<AddListingScreen> {
           borderRadius: BorderRadius.circular(8),
           color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
           border: Border.all(
-            color: Color(cfg.colorPrimary).withOpacity(0.5),
+            color: Color(colorPrimary).withOpacity(0.5),
             width: 2,
             style: BorderStyle.solid,
           ),
         ),
         child: Icon(
-          Icons.add_a_photo_alternate,
+          Icons.add_a_photo,
           size: 40,
-          color: Color(cfg.colorPrimary),
+          color: Color(colorPrimary),
         ),
       ),
     );
@@ -1097,15 +1097,15 @@ class _AddListingScreenState extends State<AddListingScreen> {
           borderRadius: BorderRadius.circular(8),
           color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
           border: Border.all(
-            color: Color(cfg.colorPrimary).withOpacity(0.5),
+            color: Color(colorPrimary).withOpacity(0.5),
             width: 2,
             style: BorderStyle.solid,
           ),
         ),
         child: Icon(
-          Icons.add_a_video,
+          Icons.add_video,
           size: 40,
-          color: Color(cfg.colorPrimary),
+          color: Color(colorPrimary),
         ),
       ),
     );
