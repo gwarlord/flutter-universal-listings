@@ -21,6 +21,7 @@ import 'package:instaflutter/listings/ui/subscription/paywall_screen.dart';
 import 'package:instaflutter/listings/ui/subscription/customer_center_screen.dart';
 import 'package:instaflutter/listings/utils/subscription_helper.dart';
 import 'package:instaflutter/screens/store/orders_management_screen.dart';
+import 'package:instaflutter/screens/store/customer_orders_screen.dart';
 import 'package:instaflutter/listings/listings_module/analytics/analytics_screen.dart';
 import 'package:instaflutter/listings/listings_module/analytics/advanced_analytics_screen.dart';
 import 'package:instaflutter/listings/listings_module/chat_settings/chat_settings_screen.dart';
@@ -31,7 +32,7 @@ import 'package:instaflutter/listings/listings_module/api/listings_api_manager.d
 import 'package:provider/provider.dart';
 import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 
-enum DrawerSelection { home, conversations, categories, search, profile }
+enum DrawerSelection { home, conversations, categories, search, orders, profile }
 
 class ContainerWrapperWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -403,6 +404,25 @@ class _ContainerState extends State<ContainerScreen> {
                         currentTabIndex: 3,
                         drawerSelection: DrawerSelection.search,
                         currentWidget: SearchWrapperWidget(currentUser: currentUser),
+                      ));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+
+                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
+                  _drawerSectionLabel('Shopping'.tr(), isDark),
+                  _drawerTile(
+                    title: 'My Orders'.tr(),
+                    icon: Icons.shopping_bag_rounded,
+                    isSelected: _drawerSelection == DrawerSelection.orders,
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.read<ContainerBloc>().add(TabSelectedEvent(
+                        appBarTitle: 'My Orders'.tr(),
+                        currentTabIndex: 4,
+                        drawerSelection: DrawerSelection.orders,
+                        currentWidget: CustomerOrdersScreen(currentUser: currentUser),
                       ));
                     },
                     isDark: isDark,
