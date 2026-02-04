@@ -629,21 +629,23 @@ class _CartScreenState extends State<CartScreen> {
           ),
           backgroundColor: Color(colorPrimary),
           duration: const Duration(seconds: 4),
-          action: SnackBarAction(
-            label: 'View'.tr(),
-            textColor: Colors.white,
-            onPressed: () {
-              // Navigate to customer orders screen
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CustomerOrdersScreen(
-                    currentUser: widget.currentUser,
-                  ),
-                ),
-              );
-            },
-          ),
+          action: widget.currentUser != null
+              ? SnackBarAction(
+                  label: 'View'.tr(),
+                  textColor: Colors.white,
+                  onPressed: () {
+                    // Navigate to customer orders screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CustomerOrdersScreen(
+                          currentUser: widget.currentUser!,
+                        ),
+                      ),
+                    );
+                  },
+                )
+              : null,
           elevation: 8,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

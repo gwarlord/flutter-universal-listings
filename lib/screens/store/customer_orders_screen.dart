@@ -244,6 +244,11 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
         textColor = Colors.red.shade900;
         label = 'Declined'.tr();
         break;
+      case OrderStatus.cancelled:
+        bgColor = Colors.grey.shade300;
+        textColor = Colors.grey.shade800;
+        label = 'Cancelled'.tr();
+        break;
     }
 
     return Container(
