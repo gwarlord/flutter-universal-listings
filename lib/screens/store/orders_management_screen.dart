@@ -79,8 +79,8 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
           unselectedLabelColor: dark ? Colors.white54 : Colors.black45,
           indicatorColor: Color(cfg.colorPrimary),
           tabs: [
-            Tab(text: 'Requested'.tr()),
-            Tab(text: 'Confirmed'.tr()),
+            Tab(text: 'Pending'.tr()), // Requested = Pending (Active)
+            Tab(text: 'Confirmed'.tr()), // Active
             Tab(text: 'Fulfilled'.tr()),
             Tab(text: 'Declined'.tr()),
             Tab(text: 'Cancelled'.tr()),
