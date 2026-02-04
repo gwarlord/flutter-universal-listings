@@ -457,6 +457,8 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           // Ensure custom booking questions are updated
           'enableCustomQuestions': event.listingModel.enableCustomQuestions,
           'customQuestions': event.listingModel.customQuestions,
+          // Premium Rentals
+          'rentalConfig': event.listingModel.rentalConfig?.toJson(),
         };
 
         // Include videos only if present in your model/schema
