@@ -299,6 +299,7 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
     /* -------------------- Publish (Add or Edit) -------------------- */
 
     on<PublishListingEvent>((event, emit) async {
+      print('🟢 DEBUG [PublishListingEvent ENTRY]: isEdit=${event.isEdit}, hasRentalConfig=${event.listingModel.rentalConfig != null}');
       // Upload NEW logo
       String? logoUrl;
       if (event.newLogoFile != null) {
@@ -379,6 +380,10 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
 
       // ADD flow
       if (!event.isEdit) {
+        print('🟢 DEBUG [PublishListingEvent - ADD]: Publishing new listing');
+        print('🟢 DEBUG [PublishListingEvent - ADD]: rentalConfig=${event.listingModel.rentalConfig}');
+        print('🟢 DEBUG [PublishListingEvent - ADD]: rentalConfig?.toJson()=${event.listingModel.rentalConfig?.toJson()}');
+        
         emit(AddListingProgressState(progressMessage: 'Publishing Listing...'.tr()));
         final bool isDone = await listingsRepository.publishListing(event.listingModel);
 
