@@ -30,8 +30,13 @@ import 'package:instaflutter/listings/utils/populate_test_data.dart';
 
 class ProfileScreen extends StatefulWidget {
   final ListingsUser currentUser;
+  final bool showAppBar;
 
-  const ProfileScreen({super.key, required this.currentUser});
+  const ProfileScreen({
+    super.key,
+    required this.currentUser,
+    this.showAppBar = true,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -49,45 +54,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     // Use theme-driven AppBar color
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) {
-        if (didPop) return;
-        if (Platform.isAndroid) {
-          pushAndRemoveUntil(
-            context,
-            HomeScreen(currentUser: currentUser),
-            false,
-          );
-        } else {
-          Navigator.pop(context);
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text('Profile'.tr()),
-          leading: IconButton(
-            icon: const Icon(Icons.home),
-            onPressed: () {
-              pushAndRemoveUntil(
-                context,
-                ContainerWrapperWidget(currentUser: currentUser),
-                false,
-              );
-            },
-          ),
-        ),
-        body: BlocProvider(
-          create: (context) => ProfileBloc(
-            currentUser: currentUser,
-            profileRepository: profileApiManager,
-          ),
-          child: Builder(
-            builder: (context) {
-              return MultiBlocListener(
-                listeners: [
-                  BlocListener<AuthenticationBloc, AuthenticationState>(
-                    listener: (context, state) {
+    final body = BlocProvider(
+      create: (context) => ProfileBloc(
+        currentUser: currentUser,
+        profileRepository: profileApiManager,
+      ),
+      child: Builder(
+        builder: (context) {
+          return MultiBlocListener(
+            listeners: [
+              BlocListener<AuthenticationBloc, AuthenticationState>(
+                listener: (context, state) {
                       context.read<LoadingCubit>().hideLoading();
                       if (state.authState == AuthState.unauthenticated) {
                         pushAndRemoveUntil(context, const WelcomeScreen(), false);
@@ -492,6 +469,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
         ),
+      ),
+    );
+
+    // If showAppBar is false, return just the body
+    if (!widget.showAppBar) {
+      return body;
+    }
+
+    // Otherwise wrap in PopScope and Scaffold with AppBar
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        if (Platform.isAndroid) {
+          pushAndRemoveUntil(
+            context,
+            HomeScreen(currentUser: currentUser),
+            false,
+          );
+        } else {
+          Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Profile'.tr()),
+          leading: IconButton(
+            icon: const Icon(Icons.home),
+            onPressed: () {
+              pushAndRemoveUntil(
+                context,
+                ContainerWrapperWidget(currentUser: currentUser),
+                false,
+              );
+            },
+          ),
+        ),
+        body: body,
       ),
     );
   }

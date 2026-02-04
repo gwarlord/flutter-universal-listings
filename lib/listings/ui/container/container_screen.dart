@@ -455,7 +455,10 @@ class _ContainerState extends State<ContainerScreen> {
                         appBarTitle: 'Profile'.tr(),
                         currentTabIndex: 3,
                         drawerSelection: DrawerSelection.profile,
-                        currentWidget: ProfileScreen(currentUser: currentUser),
+                        currentWidget: ProfileScreen(
+                          currentUser: currentUser,
+                          showAppBar: false,
+                        ),
                       ));
                     },
                     isDark: isDark,
