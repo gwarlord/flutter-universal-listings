@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
@@ -38,6 +39,8 @@ class _CartScreenState extends State<CartScreen> {
 
   FulfillmentMethod _fulfillmentMethod = FulfillmentMethod.pickup;
   DateTime? _preferredDate;
+  double? _deliveryLatitude;
+  double? _deliveryLongitude;
   bool _isSubmitting = false;
 
   @override
@@ -148,6 +151,9 @@ class _CartScreenState extends State<CartScreen> {
                             fillColor: dark ? Colors.grey.shade900 : Colors.grey.shade50,
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        // Location pinning button
+                        _buildLocationPinButton(dark),
                       ],
 
                       // Preferred date/time
@@ -374,6 +380,88 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
+  Widget _buildLocationPinButton(bool dark) {
+    final hasLocation = _deliveryLatitude != null && _deliveryLongitude != null;
+    
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: hasLocation ? Color(colorPrimary) : Colors.grey.shade400,
+        ),
+        borderRadius: BorderRadius.circular(8),
+        color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
+          splashColor: Colors.transparent,
+          leading: Icon(
+            hasLocation ? Icons.location_on : Icons.location_on_outlined,
+            color: hasLocation ? Color(colorPrimary) : (dark ? Colors.white70 : Colors.black54),
+          ),
+          title: Text(
+            hasLocation ? 'Location Pinned'.tr() : 'Pin Delivery Location'.tr(),
+            style: TextStyle(
+              color: dark ? Colors.white : Colors.black,
+              fontWeight: hasLocation ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          subtitle: hasLocation
+              ? Text(
+                  '$_deliveryLatitude, $_deliveryLongitude',
+                  style: TextStyle(
+                    color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    fontSize: 12,
+                  ),
+                )
+              : Text(
+                  'Tap to pin your delivery location on map'.tr(),
+                  style: TextStyle(
+                    color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  ),
+                ),
+          trailing: Icon(
+            Icons.chevron_right,
+            color: dark ? Colors.white70 : Colors.black54,
+          ),
+          onTap: () => _openLocationPicker(dark),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openLocationPicker(bool dark) async {
+    // Request location permission
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        if (!mounted) return;
+        showSnackBar(context, 'Location permission is required for delivery'.tr());
+        return;
+      }
+    }
+
+    if (!mounted) return;
+
+    // Show location picker dialog
+    final result = await showDialog<Map<String, double>>(
+      context: context,
+      builder: (context) => LocationPickerDialog(
+        initialLatitude: _deliveryLatitude,
+        initialLongitude: _deliveryLongitude,
+        isDarkMode: dark,
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _deliveryLatitude = result['latitude'];
+        _deliveryLongitude = result['longitude'];
+      });
+    }
+  }
+
   Future<void> _pickDateTime() async {
     final dark = isDarkMode(context);
     
@@ -465,6 +553,8 @@ class _CartScreenState extends State<CartScreen> {
       final fulfillment = FulfillmentInfo(
         method: _fulfillmentMethod,
         address: _fulfillmentMethod == FulfillmentMethod.delivery ? _addressController.text.trim() : null,
+        latitude: _fulfillmentMethod == FulfillmentMethod.delivery ? _deliveryLatitude : null,
+        longitude: _fulfillmentMethod == FulfillmentMethod.delivery ? _deliveryLongitude : null,
         preferredAt: _preferredDate,
       );
 
@@ -507,27 +597,43 @@ class _CartScreenState extends State<CartScreen> {
         customer: widget.currentUser!,
       );
 
-      // Clear cart
+      if (!mounted) return;
+
+      // Clear cart and refresh
       widget.cartItems.clear();
       widget.onCartUpdated?.call();
 
-      if (!mounted) return;
-
-      // Navigate to chat
+      // Close cart and return to listing detail
       Navigator.of(context).pop(); // Close cart
       Navigator.of(context).pop(); // Close store browse
 
-      // Navigate to chat screen
-      Navigator.pushNamed(
-        context,
-        '/chatConversation',
-        arguments: {
-          'currentUser': widget.currentUser,
-          'channelId': channelId,
-        },
+      // Show success message with prominent styling
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Order request sent successfully!'.tr(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Color(colorPrimary),
+          duration: const Duration(seconds: 4),
+          elevation: 8,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
       );
-
-      showSnackBar(context, 'Order request sent successfully!'.tr());
     } catch (e) {
       if (mounted) {
         showSnackBar(context, e.toString());
@@ -537,5 +643,208 @@ class _CartScreenState extends State<CartScreen> {
         setState(() => _isSubmitting = false);
       }
     }
+  }
+}
+
+/// Location Picker Dialog
+class LocationPickerDialog extends StatefulWidget {
+  final double? initialLatitude;
+  final double? initialLongitude;
+  final bool isDarkMode;
+
+  const LocationPickerDialog({
+    Key? key,
+    this.initialLatitude,
+    this.initialLongitude,
+    required this.isDarkMode,
+  }) : super(key: key);
+
+  @override
+  State<LocationPickerDialog> createState() => _LocationPickerDialogState();
+}
+
+class _LocationPickerDialogState extends State<LocationPickerDialog> {
+  late double _latitude;
+  late double _longitude;
+  late TextEditingController _latController;
+  late TextEditingController _lngController;
+  bool _isLoadingLocation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _latitude = widget.initialLatitude ?? 0;
+    _longitude = widget.initialLongitude ?? 0;
+    _latController = TextEditingController(text: _latitude.toString());
+    _lngController = TextEditingController(text: _longitude.toString());
+  }
+
+  @override
+  void dispose() {
+    _latController.dispose();
+    _lngController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() => _isLoadingLocation = true);
+    
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      
+      setState(() {
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+        _latController.text = _latitude.toString();
+        _lngController.text = _longitude.toString();
+      });
+    } catch (e) {
+      if (mounted) {
+        showSnackBar(context, 'Failed to get location: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingLocation = false);
+      }
+    }
+  }
+
+  void _updateLocation() {
+    try {
+      final lat = double.tryParse(_latController.text);
+      final lng = double.tryParse(_lngController.text);
+      
+      if (lat == null || lng == null) {
+        showSnackBar(context, 'Invalid latitude or longitude'.tr());
+        return;
+      }
+      
+      Navigator.pop(context, {
+        'latitude': lat,
+        'longitude': lng,
+      });
+    } catch (e) {
+      showSnackBar(context, 'Error parsing location: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: widget.isDarkMode ? Colors.grey.shade900 : Colors.white,
+      title: Text(
+        'Delivery Location'.tr(),
+        style: TextStyle(
+          color: widget.isDarkMode ? Colors.white : Colors.black,
+        ),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Use current location button
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton.icon(
+                onPressed: _isLoadingLocation ? null : _getCurrentLocation,
+                icon: _isLoadingLocation
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.my_location, color: Colors.white),
+                label: Text(
+                  'Use Current Location'.tr(),
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorPrimary != 0 ? Color(colorPrimary) : Colors.blue,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Or manually enter coordinates
+            Text(
+              'Or enter coordinates manually:'.tr(),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: widget.isDarkMode ? Colors.white70 : Colors.black54,
+              ),
+            ),
+            const SizedBox(height: 12),
+            
+            // Latitude field
+            TextField(
+              controller: _latController,
+              style: TextStyle(color: widget.isDarkMode ? Colors.white : Colors.black),
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Latitude'.tr(),
+                labelStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white70 : Colors.black54,
+                ),
+                border: const OutlineInputBorder(),
+                filled: true,
+                fillColor: widget.isDarkMode ? Colors.grey.shade800 : Colors.grey.shade50,
+              ),
+              onChanged: (value) {
+                _latitude = double.tryParse(value) ?? _latitude;
+              },
+            ),
+            const SizedBox(height: 12),
+            
+            // Longitude field
+            TextField(
+              controller: _lngController,
+              style: TextStyle(color: widget.isDarkMode ? Colors.white : Colors.black),
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Longitude'.tr(),
+                labelStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white70 : Colors.black54,
+                ),
+                border: const OutlineInputBorder(),
+                filled: true,
+                fillColor: widget.isDarkMode ? Colors.grey.shade800 : Colors.grey.shade50,
+              ),
+              onChanged: (value) {
+                _longitude = double.tryParse(value) ?? _longitude;
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancel'.tr(),
+            style: TextStyle(
+              color: widget.isDarkMode ? Colors.grey.shade400 : Colors.black54,
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: _updateLocation,
+          child: Text(
+            'Confirm'.tr(),
+            style: TextStyle(
+              color: colorPrimary != 0 ? Color(colorPrimary) : Colors.blue,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

@@ -371,4 +371,19 @@ class StoreService {
       return {'success': false, 'error': e.toString()};
     }
   }
+
+  /// Update store fulfillment settings
+  Future<void> updateListingStoreSettings({
+    required String listingId,
+    required bool pickupEnabled,
+    required bool deliveryEnabled,
+    required int leadTimeHours,
+  }) async {
+    await _firestore.collection('listings').doc(listingId).update({
+      'storePickupEnabled': pickupEnabled,
+      'storeDeliveryEnabled': deliveryEnabled,
+      'storeLeadTimeHours': leadTimeHours,
+      'updatedAt': Timestamp.now(),
+    });
+  }
 }

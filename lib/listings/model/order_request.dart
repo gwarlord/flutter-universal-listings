@@ -39,11 +39,15 @@ enum FulfillmentMethod {
 class FulfillmentInfo {
   final FulfillmentMethod method;
   final String? address;
+  final double? latitude;
+  final double? longitude;
   final DateTime? preferredAt;
 
   FulfillmentInfo({
     required this.method,
     this.address,
+    this.latitude,
+    this.longitude,
     this.preferredAt,
   });
 
@@ -51,6 +55,8 @@ class FulfillmentInfo {
     return FulfillmentInfo(
       method: FulfillmentMethod.fromString(json['method'] ?? 'pickup'),
       address: json['address'],
+      latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
+      longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
       preferredAt: json['preferredAt'] != null
           ? (json['preferredAt'] is Timestamp
               ? (json['preferredAt'] as Timestamp).toDate()
@@ -63,6 +69,8 @@ class FulfillmentInfo {
     return {
       'method': method.value,
       'address': address,
+      'latitude': latitude,
+      'longitude': longitude,
       'preferredAt': preferredAt != null ? Timestamp.fromDate(preferredAt!) : null,
     };
   }

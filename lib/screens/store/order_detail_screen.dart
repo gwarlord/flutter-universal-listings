@@ -1,9 +1,14 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:instaflutter/constants.dart';
+import 'package:instaflutter/core/model/user.dart';
+import 'package:instaflutter/core/ui/chat/chat/firestore_chat_screen_v2.dart';
 import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/core/utils/helper.dart';
+import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/model/order_request.dart';
 import 'package:instaflutter/listings/services/store_service.dart';
@@ -30,10 +35,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   final OrderChatHelper _chatHelper = OrderChatHelper();
   ListingsUser? _customer;
   bool _isUpdating = false;
+  late OrderRequest _currentOrder;
 
   @override
   void initState() {
     super.initState();
+    _currentOrder = widget.order;
 
     // CRITICAL: Verify Premium access
     if (!isPremiumUser(widget.currentUser)) {
@@ -43,7 +50,25 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       });
     }
 
+    _loadOrderDetails();
     _loadCustomer();
+  }
+
+  Future<void> _loadOrderDetails() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('order_requests')
+          .doc(widget.order.id)
+          .get();
+      if (doc.exists && mounted) {
+        final updatedOrder = OrderRequest.fromJson(doc.data()!);
+        setState(() {
+          _currentOrder = updatedOrder;
+        });
+      }
+    } catch (e) {
+      // Ignore error - use local order data
+    }
   }
 
   Future<void> _loadCustomer() async {
@@ -76,7 +101,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         ),
         iconTheme: IconThemeData(color: dark ? Colors.white : Colors.black),
         actions: [
-          if (widget.order.channelId != null)
+          if (_currentOrder.channelId != null)
             IconButton(
               icon: const Icon(Icons.chat),
               onPressed: _openChat,
@@ -89,7 +114,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         children: [
           // Order ID
           Text(
-            'Order #${widget.order.id.substring(0, 8).toUpperCase()}',
+            'Order #${_currentOrder.id.substring(0, 8).toUpperCase()}',
             style: TextStyle(
               fontSize: 14,
               color: dark ? Colors.white54 : Colors.black45,
@@ -98,7 +123,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           const SizedBox(height: 8),
 
           // Status
-          _buildStatusChip(widget.order.status, dark),
+          _buildStatusChip(_currentOrder.status, dark),
           const SizedBox(height: 24),
 
           // Customer info
@@ -130,7 +155,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
           // Items
           _buildSectionTitle('Items'.tr(), dark),
-          ...widget.order.items.map((item) => _buildItemCard(item, dark)),
+          ..._currentOrder.items.map((item) => _buildItemCard(item, dark)),
           const SizedBox(height: 16),
 
           // Total
@@ -150,7 +175,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     ),
                   ),
                   Text(
-                    _formatCurrency(widget.order.estimatedTotal, widget.order.currencyCode),
+                    _formatCurrency(widget.order.estimatedTotal),
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -193,14 +218,64 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       ),
                     ],
                   ),
-                  if (widget.order.fulfillment.address != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.order.fulfillment.address!,
-                      style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                  if (_currentOrder.fulfillment.address != null) ...[
+                    const SizedBox(height: 12),
+                    // Tappable address with navigation
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _canNavigate()
+                            ? () => _navigateToDelivery()
+                            : null,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    size: 16,
+                                    color: _canNavigate()
+                                        ? Color(cfg.colorPrimary)
+                                        : (dark ? Colors.white70 : Colors.black54),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _currentOrder.fulfillment.address!,
+                                      style: TextStyle(
+                                        color: _canNavigate()
+                                            ? Color(cfg.colorPrimary)
+                                            : (dark ? Colors.white70 : Colors.black54),
+                                        fontWeight: _canNavigate() ? FontWeight.w600 : FontWeight.normal,
+                                        decoration: _canNavigate() ? TextDecoration.underline : null,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (_canNavigate())
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 24, top: 4),
+                                  child: Text(
+                                    'Tap to navigate'.tr(),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color(cfg.colorPrimary),
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ],
-                  if (widget.order.fulfillment.preferredAt != null) ...[
+                  if (_currentOrder.fulfillment.preferredAt != null) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -208,19 +283,70 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             size: 16, color: dark ? Colors.white70 : Colors.black54),
                         const SizedBox(width: 4),
                         Text(
-                          'Preferred: ${DateFormat('MMM d, y • h:mm a').format(widget.order.fulfillment.preferredAt!)}',
+                          'Preferred: ${DateFormat('MMM d, y • h:mm a').format(_currentOrder.fulfillment.preferredAt!)}',
                           style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
                         ),
                       ],
                     ),
                   ],
+                  // Order action section for lister
+                  const SizedBox(height: 12),
+                  Divider(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                  const SizedBox(height: 12),
+                  if (_currentOrder.status == OrderStatus.requested)
+                    SizedBox(
+                      width: double.infinity,
+                      child: Text(
+                        'This order is pending your response'.tr(),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.orange,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  // Share buttons
+                  const SizedBox(height: 12),
+                  Divider(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildShareButton(
+                          icon: Icons.mail,
+                          label: 'Email'.tr(),
+                          onPressed: _shareViaEmail,
+                          dark: dark,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildShareButton(
+                          icon: Icons.chat,
+                          label: 'WhatsApp'.tr(),
+                          onPressed: _shareViaWhatsApp,
+                          dark: dark,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildShareButton(
+                          icon: Icons.share,
+                          label: 'Share'.tr(),
+                          onPressed: _shareOrder,
+                          dark: dark,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
           ),
 
           // Notes
-          if (widget.order.notes != null && widget.order.notes!.isNotEmpty) ...[
+          if (_currentOrder.notes != null && _currentOrder.notes!.isNotEmpty) ...[
             const SizedBox(height: 16),
             _buildSectionTitle('Notes'.tr(), dark),
             Card(
@@ -228,7 +354,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  widget.order.notes!,
+                  _currentOrder.notes!,
                   style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
                 ),
               ),
@@ -238,7 +364,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           // Date
           const SizedBox(height: 16),
           Text(
-            'Created: ${widget.order.createdAt != null ? DateFormat('MMM d, y • h:mm a').format(widget.order.createdAt!.toDate()) : 'N/A'}',
+            'Created: ${_currentOrder.createdAt != null ? DateFormat('MMM d, y • h:mm a').format(_currentOrder.createdAt!.toDate()) : 'N/A'}',,
             style: TextStyle(
               fontSize: 12,
               color: dark ? Colors.white54 : Colors.black45,
@@ -264,10 +390,157 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
+  bool _canNavigate() {
+    return _currentOrder.fulfillment.method == FulfillmentMethod.delivery &&
+        _currentOrder.fulfillment.latitude != null &&
+        _currentOrder.fulfillment.longitude != null;
+  }
+
+  Future<void> _navigateToDelivery() async {
+    final lat = _currentOrder.fulfillment.latitude;
+    final lng = _currentOrder.fulfillment.longitude;
+    
+    if (lat == null || lng == null) {
+      showSnackBar(context, 'Location coordinates not available'.tr());
+      return;
+    }
+
+    final googleMapsUrl = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+    final appleMapsUrl = 'https://maps.apple.com/?q=$lat,$lng';
+
+    try {
+      // Try Google Maps first
+      if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
+        await launchUrl(Uri.parse(googleMapsUrl), mode: LaunchMode.externalApplication);
+      } else if (await canLaunchUrl(Uri.parse(appleMapsUrl))) {
+        // Fallback to Apple Maps
+        await launchUrl(Uri.parse(appleMapsUrl), mode: LaunchMode.externalApplication);
+      } else {
+        showSnackBar(context, 'No maps app available'.tr());
+      }
+    } catch (e) {
+      showSnackBar(context, 'Error opening maps: $e');
+    }
+  }
+
+  String _generateOrderSummary() {
+    final buffer = StringBuffer();
+    buffer.writeln('ORDER #${_currentOrder.id.substring(0, 8).toUpperCase()}');
+    buffer.writeln('Status: ${_currentOrder.status.value}');
+    buffer.writeln('');
+    buffer.writeln('ITEMS:');
+    for (var item in _currentOrder.items) {
+      buffer.writeln('  • ${item.name} x${item.qty} @ ${_formatCurrency(item.unitPrice)}');
+    }
+    buffer.writeln('');
+    buffer.writeln('Total: ${_formatCurrency(_currentOrder.estimatedTotal)}');
+    buffer.writeln('');
+    buffer.writeln('FULFILLMENT:');
+    buffer.writeln('Method: ${_currentOrder.fulfillment.method.value}');
+    if (_currentOrder.fulfillment.address != null) {
+      buffer.writeln('Address: ${_currentOrder.fulfillment.address}');
+    }
+    if (_currentOrder.fulfillment.latitude != null && _currentOrder.fulfillment.longitude != null) {
+      buffer.writeln('Coordinates: ${_currentOrder.fulfillment.latitude}, ${_currentOrder.fulfillment.longitude}');
+      buffer.writeln('Maps: https://www.google.com/maps/search/?api=1&query=${_currentOrder.fulfillment.latitude},${_currentOrder.fulfillment.longitude}');
+    }
+    if (_currentOrder.fulfillment.preferredAt != null) {
+      buffer.writeln('Preferred: ${DateFormat('MMM d, y • h:mm a').format(_currentOrder.fulfillment.preferredAt!)}');
+    }
+    if (_currentOrder.notes != null) {
+      buffer.writeln('');
+      buffer.writeln('Notes: ${_currentOrder.notes}');
+    }
+    return buffer.toString();
+  }
+
+  String _formatCurrency(double amount) {
+    final symbol = _getCurrencySymbol(_currentOrder.currencyCode);
+    return '$symbol${amount.toStringAsFixed(2)}';
+  }
+
+  String _getCurrencySymbol(String code) {
+    switch (code.toUpperCase()) {
+      case 'USD':
+      case 'TTD':
+      case 'JMD':
+        return '\$';
+      case 'EUR':
+        return '€';
+      case 'GBP':
+        return '£';
+      default:
+        return '\$';
+    }
+  }
+
+  Future<void> _shareViaEmail() async {
+    final summary = _generateOrderSummary();
+    final subject = 'Order #${_currentOrder.id.substring(0, 8).toUpperCase()} - ${_currentOrder.status.value}';
+    
+    try {
+      final emailUrl = 'mailto:?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(summary)}';
+      if (await canLaunchUrl(Uri.parse(emailUrl))) {
+        await launchUrl(Uri.parse(emailUrl));
+      } else {
+        showSnackBar(context, 'No email app available'.tr());
+      }
+    } catch (e) {
+      showSnackBar(context, 'Error sharing via email: $e');
+    }
+  }
+
+  Future<void> _shareViaWhatsApp() async {
+    final summary = _generateOrderSummary();
+    
+    try {
+      final whatsappUrl = 'https://wa.me/?text=${Uri.encodeComponent(summary)}';
+      if (await canLaunchUrl(Uri.parse(whatsappUrl))) {
+        await launchUrl(Uri.parse(whatsappUrl), mode: LaunchMode.externalApplication);
+      } else {
+        showSnackBar(context, 'WhatsApp not installed'.tr());
+      }
+    } catch (e) {
+      showSnackBar(context, 'Error sharing via WhatsApp: $e');
+    }
+  }
+
+  Future<void> _shareOrder() async {
+    final summary = _generateOrderSummary();
+    
+    try {
+      await Share.share(
+        summary,
+        subject: 'Order #${_currentOrder.id.substring(0, 8).toUpperCase()}',
+      );
+    } catch (e) {
+      showSnackBar(context, 'Error sharing: $e');
+    }
+  }
+
+  Widget _buildShareButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+    required bool dark,
+  }) {
+    return OutlinedButton.icon(
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Color(cfg.colorPrimary),
+        side: BorderSide(color: Color(cfg.colorPrimary)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      ),
+    );
+  }
+
   Widget _buildStatusChip(OrderStatus status, bool dark) {
-    Color color;
-    String label;
-    IconData icon;
+    late Color color;
+    late String label;
+    late IconData icon;
 
     switch (status) {
       case OrderStatus.requested:
@@ -312,9 +585,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           Text(
             label,
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
               color: color,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],
@@ -365,7 +637,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ),
             const SizedBox(width: 16),
             Text(
-              _formatCurrency(item.total, widget.order.currencyCode),
+              _formatCurrency(item.unitPrice * item.qty),
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -379,13 +651,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Widget? _buildActionButtons(bool dark) {
-    if (widget.order.status != OrderStatus.requested &&
-        widget.order.status != OrderStatus.confirmed) {
+    if (_currentOrder.status != OrderStatus.requested &&
+        _currentOrder.status != OrderStatus.confirmed) {
       return null;
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
       decoration: BoxDecoration(
         color: dark ? Colors.grey.shade900 : Colors.white,
         boxShadow: [
@@ -396,7 +668,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ),
         ],
       ),
-      child: widget.order.status == OrderStatus.requested
+      child: _currentOrder.status == OrderStatus.requested
           ? Row(
               children: [
                 Expanded(
@@ -448,26 +720,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  String _formatCurrency(double amount, String currencyCode) {
-    final symbol = _getCurrencySymbol(currencyCode);
-    return '$symbol${amount.toStringAsFixed(2)}';
-  }
-
-  String _getCurrencySymbol(String code) {
-    switch (code.toUpperCase()) {
-      case 'USD':
-      case 'TTD':
-      case 'JMD':
-        return '\$';
-      case 'EUR':
-        return '€';
-      case 'GBP':
-        return '£';
-      default:
-        return '\$';
-    }
-  }
-
   Future<void> _updateStatus(OrderStatus newStatus) async {
     setState(() => _isUpdating = true);
 
@@ -503,17 +755,107 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       }
     }
   }
-
   void _openChat() {
-    if (widget.order.channelId == null) return;
+    if (_currentOrder.channelId == null) return;
 
-    Navigator.pushNamed(
-      context,
-      '/chatConversation',
-      arguments: {
-        'currentUser': widget.currentUser,
-        'channelId': widget.order.channelId,
-      },
-    );
+    // Load listing and lister info for the chat
+    _loadListingForChat();
+  }
+
+  Future<void> _loadListingForChat() async {
+    try {
+      // Load the listing
+      final listingDoc = await FirebaseFirestore.instance
+          .collection('listings')
+          .doc(widget.order.listingId)
+          .get();
+
+      if (!listingDoc.exists) {
+        showSnackBar(context, 'Listing not found'.tr());
+        return;
+      }
+
+      final listing = ListingModel.fromJson(listingDoc.data()!);
+
+      // Load the lister details
+      final listerDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.order.listerId)
+          .get();
+
+      late List<User> otherParticipants;
+      if (listerDoc.exists) {
+        final listerData = listerDoc.data()!;
+        otherParticipants = [
+          User(
+            userID: listerData['userId'] ?? _currentOrder.listerId,
+            firstName: listerData['firstName'] ?? listerData['name'] ?? 'Lister',
+            profilePictureURL: listerData['profilePictureURL'] ?? '',
+          ),
+        ];
+      } else {
+        otherParticipants = const [];
+      }
+
+      // Post order details summary to chat for lister reference
+      await _postOrderSummaryToChat();
+
+      if (!mounted) return;
+
+      // Navigate to chat with listing and lister info
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => FirestoreChatScreenV2(
+            channelId: _currentOrder.channelId!,
+            currentUserId: widget.currentUser.userID,
+            listingTitle: listing.title,
+            listingImage: listing.photo ?? '',
+            otherParticipants: otherParticipants,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        showSnackBar(context, 'Error opening chat: $e');
+      }
+    }
+  }
+
+  Future<void> _postOrderSummaryToChat() async {
+    try {
+      final channelRef = FirebaseFirestore.instance
+          .collection('chat_channels')
+          .doc(_currentOrder.channelId);
+
+      // Check if order summary already exists in chat
+      final messagesSnapshot = await channelRef
+          .collection('thread')
+          .where('metadata.isOrderSummary', isEqualTo: true)
+          .limit(1)
+          .get();
+
+      // Only post if order summary doesn't already exist
+      if (messagesSnapshot.docs.isEmpty) {
+        final orderSummary = _generateOrderSummary();
+        
+        await channelRef.collection('thread').add({
+          'content': orderSummary,
+          'senderId': widget.currentUser.userID,
+          'senderFirstName': widget.currentUser.firstName,
+          'senderLastName': widget.currentUser.lastName,
+          'senderProfilePictureURL': widget.currentUser.profilePictureURL,
+          'created': Timestamp.now(),
+          'type': 'order_summary',
+          'metadata': {
+            'isOrderSummary': true,
+            'orderId': widget.order.id,
+          },
+        });
+      }
+    } catch (e) {
+      // Silent fail - order summary is just a convenience
+      print('Error posting order summary: $e');
+    }
   }
 }

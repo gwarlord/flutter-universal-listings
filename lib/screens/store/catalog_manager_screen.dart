@@ -9,6 +9,7 @@ import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/listings/utils/subscription_helper.dart';
 import 'package:instaflutter/screens/store/catalog_item_editor_screen.dart';
+import 'package:instaflutter/screens/store/store_settings_screen.dart';
 
 /// Catalog Manager Screen - Premium Only
 /// Allows listing owners to manage their Mini Store catalog
@@ -79,6 +80,11 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
         ),
         iconTheme: IconThemeData(color: dark ? Colors.white : Colors.black),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: _openStoreSettings,
+            tooltip: 'Store Settings'.tr(),
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: _addNewItem,
@@ -447,5 +453,20 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
         showSnackBar(context, e.toString());
       }
     }
+  }
+
+  void _openStoreSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StoreSettingsScreen(
+          listing: widget.listing,
+          currentUser: widget.currentUser,
+          onSettingsUpdated: () {
+            setState(() {});
+          },
+        ),
+      ),
+    );
   }
 }

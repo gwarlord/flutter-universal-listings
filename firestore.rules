@@ -6,6 +6,11 @@ service cloud.firestore {
     match /chatChannels/{channelId}/{subCollection=**} {
       allow read, write: if isSignedIn();
     }
+
+    // Allow access to all subcollections under chat_channels (snake_case variant)
+    match /chat_channels/{channelId}/{subCollection=**} {
+      allow read, write: if isSignedIn();
+    }
     
     // Catch-all for chat-related collections to ensure access during migration
     match /chats/{document=**} {
