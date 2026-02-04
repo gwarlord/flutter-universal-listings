@@ -40,7 +40,6 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
   late TextEditingController _stockQtyController;
   late TextEditingController _categoryController;
 
-  CatalogItemType _selectedType = CatalogItemType.product;
   bool _isAvailable = true;
   bool _trackStock = false;
   List<String> _photos = [];
@@ -62,7 +61,6 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
     _categoryController = TextEditingController(text: item?.category ?? '');
     
     if (item != null) {
-      _selectedType = item.type;
       _isAvailable = item.isAvailable;
       _trackStock = item.trackStock;
       _photos = List.from(item.photos);
@@ -124,41 +122,6 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Item Type
-              Text(
-                'Item Type'.tr(),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: dark ? Colors.white : Colors.black,
-                ),
-              ),
-              const SizedBox(height: 8),
-              SegmentedButton<CatalogItemType>(
-                segments: [
-                  ButtonSegment(
-                    value: CatalogItemType.foodDrink,
-                    label: Text('Food & Drink'.tr()),
-                    icon: const Icon(Icons.restaurant),
-                  ),
-                  ButtonSegment(
-                    value: CatalogItemType.product,
-                    label: Text('Product'.tr()),
-                    icon: const Icon(Icons.shopping_bag),
-                  ),
-                  ButtonSegment(
-                    value: CatalogItemType.service,
-                    label: Text('Service'.tr()),
-                    icon: const Icon(Icons.build),
-                  ),
-                ],
-                selected: {_selectedType},
-                onSelectionChanged: (Set<CatalogItemType> selection) {
-                  setState(() => _selectedType = selection.first);
-                },
-              ),
-              const SizedBox(height: 24),
-
               // Name
               TextFormField(
                 controller: _nameController,
@@ -503,7 +466,7 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
       // Create/update item
       final item = CatalogItem(
         id: itemId,
-        type: _selectedType,
+        type: widget.item?.type ?? CatalogItemType.product, // Default to product if not editing
         category: _categoryController.text.trim(),
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim().isEmpty 
