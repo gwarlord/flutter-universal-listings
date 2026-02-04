@@ -39,7 +39,10 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
     
     if (!_showHistory) {
       // Show only active orders (requested, confirmed)
-      query = query.where('status', whereIn: ['requested', 'confirmed']);
+      query = query.where('status', whereIn: [
+        OrderStatus.requested.value,
+        OrderStatus.confirmed.value,
+      ]);
     }
     
     query = query.orderBy('createdAt', descending: true);
