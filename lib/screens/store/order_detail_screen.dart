@@ -364,7 +364,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           // Date
           const SizedBox(height: 16),
           Text(
-            'Created: ${_currentOrder.createdAt != null ? DateFormat('MMM d, y • h:mm a').format(_currentOrder.createdAt!.toDate()) : 'N/A'}',,
+            'Created: ${_currentOrder.createdAt != null ? DateFormat('MMM d, y • h:mm a').format(_currentOrder.createdAt!.toDate()) : 'N/A'}',
             style: TextStyle(
               fontSize: 12,
               color: dark ? Colors.white54 : Colors.black45,
