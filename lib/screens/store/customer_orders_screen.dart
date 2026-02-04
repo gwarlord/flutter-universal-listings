@@ -8,6 +8,7 @@ import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/model/order_request.dart';
 import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
+import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/screens/store/order_detail_screen.dart';
 
 /// Screen for customers to view their order history
@@ -27,25 +28,11 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
   final Map<String, ListingModel> _listingCache = {};
   final Map<String, ListingsUser> _listerCache = {};
   bool _showHistory = false; // Toggle between active orders and all orders
+  late final StoreService _storeService = StoreService();
 
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
-
-    // Build query - filter by status if not showing history
-    Query query = FirebaseFirestore.instance
-        .collection('order_requests')
-        .where('customerId', isEqualTo: widget.currentUser.userID);
-    
-    if (!_showHistory) {
-      // Show only active orders (requested, confirmed)
-      query = query.where('status', whereIn: [
-        OrderStatus.requested.value,
-        OrderStatus.confirmed.value,
-      ]);
-    }
-    
-    query = query.orderBy('createdAt', descending: true);
 
     return Column(
       children: [
@@ -92,14 +79,16 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
         ),
         // Orders list
         Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: query.snapshots(),
-      builder: (context, snapshot) {
+          child: StreamBuilder<List<OrderRequest>>(
+            stream: _storeService.getOrderRequestsForCustomer(
+              customerId: widget.currentUser.userID,
+            ),
+            builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -130,15 +119,45 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
           );
         }
 
-        final orders = snapshot.data!.docs
-            .map((doc) => OrderRequest.fromJson(doc.data() as Map<String, dynamic>))
-            .toList();
+        var allOrders = snapshot.data!;
+        
+        // Filter orders based on toggle
+        final filteredOrders = _showHistory 
+            ? allOrders
+            : allOrders
+                .where((o) => 
+                    o.status == OrderStatus.requested || 
+                    o.status == OrderStatus.confirmed)
+                .toList();
+
+        if (filteredOrders.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.shopping_bag_outlined,
+                  size: 64,
+                  color: dark ? Colors.white54 : Colors.black54,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _showHistory ? 'No order history'.tr() : 'No active orders'.tr(),
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: dark ? Colors.white70 : Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
 
         return ListView.builder(
           padding: const EdgeInsets.all(12),
-          itemCount: orders.length,
+          itemCount: filteredOrders.length,
           itemBuilder: (context, index) {
-            final order = orders[index];
+            final order = filteredOrders[index];
             return _buildOrderCard(order, dark, context);
           },
         );
