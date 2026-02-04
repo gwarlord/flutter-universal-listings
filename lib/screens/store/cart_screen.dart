@@ -183,7 +183,7 @@ class _CartScreenState extends State<CartScreen> {
 
                 // Submit button
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
                   decoration: BoxDecoration(
                     color: dark ? Colors.grey.shade900 : Colors.white,
                     boxShadow: [
