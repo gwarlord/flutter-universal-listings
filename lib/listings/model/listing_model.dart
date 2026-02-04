@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'rental_config.dart';
 
 class ListingModel {
   /// REQUIRED
@@ -114,6 +115,9 @@ class ListingModel {
   List<Map<String, dynamic>> menuUploads;
   List<Map<String, dynamic>> menuSections;
 
+  /// Rentals (Premium Feature)
+  RentalConfig? rentalConfig;
+
   /// UI-only
   bool isFav = false;
 
@@ -190,6 +194,7 @@ class ListingModel {
     this.menuUpdatedAt,
     List<Map<String, dynamic>>? menuUploads,
     List<Map<String, dynamic>>? menuSections,
+    this.rentalConfig,
   })  : menuCurrencyCode = menuCurrencyCode ?? currencyCode,
         storeCurrencyCode = storeCurrencyCode ?? currencyCode,
         menuUploads = menuUploads ?? [],
@@ -274,6 +279,9 @@ class ListingModel {
         menuUpdatedAt: json['menuUpdatedAt'],
         menuUploads: (json['menuUploads'] as List?)?.map((e) => Map<String, dynamic>.from(e)).toList() ?? [],
         menuSections: (json['menuSections'] as List?)?.map((e) => Map<String, dynamic>.from(e)).toList() ?? [],
+        rentalConfig: json['rentalConfig'] != null 
+            ? RentalConfig.fromJson(json['rentalConfig'] as Map<String, dynamic>)
+            : null,
     );
   }
 
@@ -351,6 +359,7 @@ class ListingModel {
         'menuUpdatedAt': menuUpdatedAt,
         'menuUploads': menuUploads,
         'menuSections': menuSections,
+        'rentalConfig': rentalConfig?.toJson(),
     };
   }
 
@@ -406,6 +415,7 @@ class ListingModel {
     int? tapCount,
     String? tapBadge,
     String? countryCode,
+    RentalConfig? rentalConfig,
   }) {
     return ListingModel(
       id: id ?? this.id,
@@ -458,6 +468,7 @@ class ListingModel {
       reviewsSum: reviewsSum ?? this.reviewsSum,
       tapCount: tapCount ?? this.tapCount,
       tapBadge: tapBadge ?? this.tapBadge,
+      rentalConfig: rentalConfig ?? this.rentalConfig,
       countryCode: countryCode ?? this.countryCode,
     );
   }
