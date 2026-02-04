@@ -76,10 +76,18 @@ Future<void> _showLocalNotification(RemoteMessage message) async {
   final notification = message.notification;
   final data = message.data;
 
-  const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-    'chat_messages',
-    'Chat Messages',
-    channelDescription: 'Notifications for new chat messages.',
+  // Determine notification channel based on type
+  final notificationType = data['type'] ?? 'chat';
+  final channelId = notificationType.contains('order') ? 'orders' : 'chat_messages';
+  final channelName = notificationType.contains('order') ? 'Orders' : 'Chat Messages';
+  final channelDescription = notificationType.contains('order') 
+      ? 'Notifications for order updates' 
+      : 'Notifications for new chat messages.';
+
+  final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    channelId,
+    channelName,
+    channelDescription: channelDescription,
     importance: Importance.max,
     priority: Priority.high,
     showWhen: true,
@@ -105,9 +113,15 @@ Future<void> _showLocalNotification(RemoteMessage message) async {
 
 void _handleNotificationClick(RemoteMessage message) {
   print('🔔 Notification clicked with data: ${message.data}');
-  if (message.data['type'] == 'chat' && message.data['channelID'] != null) {
+  final notificationType = message.data['type'];
+  
+  if (notificationType == 'chat' && message.data['channelID'] != null) {
     // Navigation logic handled in listings/main.dart or here
     // Note: We'll need a mechanism to pass this to the UI after app is ready
+  } else if (notificationType == 'new_order' || notificationType == 'order_status_changed') {
+    // Store order notification data for navigation after app is ready
+    print('🛒 Order notification: orderId=${message.data['orderId']}, status=${message.data['status']}');
+    // Navigation will be handled by the app once it's ready
   }
 }
 

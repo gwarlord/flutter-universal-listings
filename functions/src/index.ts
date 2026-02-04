@@ -5,6 +5,9 @@ import sgMail from "@sendgrid/mail";
 // Export email verification functions
 export * from "./email_verification";
 
+// Export order notification functions
+export * from "./order_notifications";
+
 admin.initializeApp();
 const db = admin.firestore();
 const messaging = admin.messaging();
