@@ -99,26 +99,6 @@ export const onOrderStatusChanged = functions.firestore
     }
 
     try {
-      // Get customer's user document to fetch FCM token
-      const customerDoc = await admin
-        .firestore()
-        .collection("users")
-        .doc(after.customerId)
-        .get();
-
-      if (!customerDoc.exists) {
-        console.log("Customer not found:", after.customerId);
-        return null;
-      }
-
-      const customer = customerDoc.data();
-      const fcmToken = customer?.pushToken;
-
-      if (!fcmToken) {
-        console.log("Customer has no FCM token:", after.customerId);
-        return null;
-      }
-
       // Get listing details for notification
       const listingDoc = await admin
         .firestore()
@@ -134,35 +114,68 @@ export const onOrderStatusChanged = functions.firestore
       let title = "";
       let body = "";
       let emoji = "";
+      let recipientId = after.customerId; // Default: notify customer
 
       switch (after.status) {
         case "confirmed":
           emoji = "✅";
           title = "Order Confirmed";
           body = `Your order for ${listingTitle} has been confirmed!`;
+          recipientId = after.customerId;
           break;
         case "declined":
           emoji = "❌";
           title = "Order Declined";
           body = `Your order for ${listingTitle} was declined.`;
+          recipientId = after.customerId;
           break;
         case "fulfilled":
           emoji = "📦";
           title = "Order Fulfilled";
           body = `Your order for ${listingTitle} is ready!`;
+          recipientId = after.customerId;
           break;
         case "cancelled":
           emoji = "🚫";
           title = "Order Cancelled";
-          body = `Your order for ${listingTitle} was cancelled.`;
+          // Determine who cancelled it and notify accordingly
+          if (before.status === "requested") {
+            // Customer cancelling their pending order - notify lister
+            body = `An order for ${listingTitle} was cancelled.`;
+            recipientId = after.listerId;
+          } else {
+            // Lister declining - notify customer
+            body = `Your order for ${listingTitle} was cancelled.`;
+            recipientId = after.customerId;
+          }
           break;
         default:
           return null;
       }
 
+      // Get the recipient's FCM token
+      const recipientDoc = await admin
+        .firestore()
+        .collection("users")
+        .doc(recipientId)
+        .get();
+
+      if (!recipientDoc.exists) {
+        console.log("Recipient not found:", recipientId);
+        return null;
+      }
+
+      const recipient = recipientDoc.data();
+      const recipientFcmToken = recipient?.pushToken;
+
+      if (!recipientFcmToken) {
+        console.log("Recipient has no FCM token:", recipientId);
+        return null;
+      }
+
       // Send notification
       const message = {
-        token: fcmToken,
+        token: recipientFcmToken,
         notification: {
           title: `${emoji} ${title}`,
           body: body,
@@ -194,7 +207,7 @@ export const onOrderStatusChanged = functions.firestore
 
       await admin.messaging().send(message);
       console.log(
-        `Order status notification sent to customer: ${after.customerId}, status: ${after.status}`
+        `Order status notification sent to ${recipientId}, status: ${after.status}`
       );
 
       return null;
