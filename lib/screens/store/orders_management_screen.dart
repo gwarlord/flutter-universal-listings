@@ -29,13 +29,16 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
   late TabController _tabController;
   final Map<String, ListingsUser> _customerCache = {};
 
-  final List<OrderStatus?> _statusFilters = [
-    OrderStatus.requested, // Active: Requested
-    OrderStatus.confirmed, // Active: Confirmed  
+  // Use a special marker for active orders (both pending and confirmed)
+  static const String _activeOrdersMarker = 'ACTIVE';
+  static const String _allOrdersMarker = 'ALL';
+  
+  final List<dynamic> _statusFilters = [
+    _activeOrdersMarker, // Active Orders (Pending + Confirmed with visual separation)
     OrderStatus.fulfilled,
     OrderStatus.declined,
     OrderStatus.cancelled,
-    null, // All (including history)
+    _allOrdersMarker, // All orders including history
   ];
 
   @override
@@ -50,7 +53,7 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
       });
     }
 
-    _tabController = TabController(length: _statusFilters.length, vsync: this);
+    _tabController = TabController(length: _statusFilters.length, vsync: this, initialIndex: 0);
   }
 
   @override
@@ -79,8 +82,7 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
           unselectedLabelColor: dark ? Colors.white54 : Colors.black45,
           indicatorColor: Color(cfg.colorPrimary),
           tabs: [
-            Tab(text: 'Pending'.tr()), // Requested = Pending (Active)
-            Tab(text: 'Confirmed'.tr()), // Active
+            Tab(text: 'Active Orders'.tr()),
             Tab(text: 'Fulfilled'.tr()),
             Tab(text: 'Declined'.tr()),
             Tab(text: 'Cancelled'.tr()),
@@ -95,11 +97,12 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
     );
   }
 
-  Widget _buildOrderList(OrderStatus? statusFilter, bool dark) {
+  Widget _buildOrderList(dynamic statusFilter, bool dark) {
     return StreamBuilder<List<OrderRequest>>(
       stream: _storeService.getOrderRequestsForLister(
         listerId: widget.currentUser.userID,
-        statusFilter: statusFilter,
+        statusFilter: statusFilter == _activeOrdersMarker ? null : 
+                      statusFilter == _allOrdersMarker ? null : statusFilter,
       ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -115,7 +118,73 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
           );
         }
 
-        final orders = snapshot.data ?? [];
+        var orders = snapshot.data ?? [];
+
+        // Filter for Active Orders tab - show both Pending and Confirmed with visual separation
+        if (statusFilter == _activeOrdersMarker) {
+          final pending = orders.where((o) => o.status == OrderStatus.requested).toList();
+          final confirmed = orders.where((o) => o.status == OrderStatus.confirmed).toList();
+
+          if (pending.isEmpty && confirmed.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.receipt_long_outlined,
+                    size: 64,
+                    color: dark ? Colors.grey.shade700 : Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No active orders'.tr(),
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: dark ? Colors.white70 : Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              // Pending Orders section
+              if (pending.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12, left: 4),
+                  child: Text(
+                    'Pending'.tr(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.orange.shade600,
+                    ),
+                  ),
+                ),
+                ...pending.map((order) => _buildOrderCard(order, dark)),
+              ],
+              // Confirmed Orders section
+              if (confirmed.isNotEmpty) ...[
+                if (pending.isNotEmpty) const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12, left: 4),
+                  child: Text(
+                    'Confirmed'.tr(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.green.shade600,
+                    ),
+                  ),
+                ),
+                ...confirmed.map((order) => _buildOrderCard(order, dark)),
+              ],
+            ],
+          );
+        }
 
         if (orders.isEmpty) {
           return Center(
