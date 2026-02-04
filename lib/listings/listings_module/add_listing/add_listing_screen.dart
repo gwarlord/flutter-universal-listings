@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:instaflutter/listings/utils/caribbean_countries.dart';
 import 'package:instaflutter/listings/utils/country_search_dialog.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -883,6 +884,284 @@ class _AddListingScreenState extends State<AddListingScreen> {
     }
   }
 
+  Widget _buildPhotoGrid(bool dark) {
+    final totalCount = _existingPhotoUrls.length + _newImages.length;
+    const maxPhotos = 10;
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        // Existing photos
+        ..._existingPhotoUrls.asMap().entries.map((entry) => _buildPhotoTile(
+          url: entry.value,
+          dark: dark,
+          onRemove: () => setState(() => _existingPhotoUrls.removeAt(entry.key)),
+        )),
+        
+        // New photos
+        ..._newImages.asMap().entries.map((entry) => _buildPhotoTile(
+          file: entry.value,
+          dark: dark,
+          onRemove: () {
+            context.read<AddListingBloc>().add(RemoveListingImageEvent(image: entry.value));
+          },
+        )),
+        
+        // Add button (only if under limit)
+        if (totalCount < maxPhotos)
+          _buildAddPhotoButton(dark),
+      ],
+    );
+  }
+
+  Widget _buildPhotoTile({
+    String? url,
+    File? file,
+    required bool dark,
+    required VoidCallback onRemove,
+  }) {
+    return Stack(
+      children: [
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: url != null
+                ? Image.network(url, fit: BoxFit.cover)
+                : (file != null ? Image.file(file, fit: BoxFit.cover) : const Icon(Icons.image)),
+          ),
+        ),
+        Positioned(
+          top: 4,
+          right: 4,
+          child: GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, size: 16, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAddPhotoButton(bool dark) {
+    return GestureDetector(
+      onTap: _pickPhotosMulti,
+      child: Container(
+        width: 100,
+        height: 100,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+          border: Border.all(
+            color: Color(cfg.colorPrimary).withOpacity(0.5),
+            width: 2,
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Icon(
+          Icons.add_a_photo_alternate,
+          size: 40,
+          color: Color(cfg.colorPrimary),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickPhotosMulti() async {
+    final picker = ImagePicker();
+    final pickedFiles = await picker.pickMultiImage();
+    
+    if (pickedFiles.isNotEmpty) {
+      final files = pickedFiles.map((xFile) => File(xFile.path)).toList();
+      context.read<AddListingBloc>().add(AddImagesToListingEvent(images: files));
+    }
+  }
+
+  Widget _buildVideoGrid(bool dark) {
+    final totalCount = _existingVideoUrls.length + _newVideos.length;
+    const maxVideos = 3;
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        // Existing videos
+        ..._existingVideoUrls.asMap().entries.map((entry) => _buildVideoTile(
+          url: entry.value,
+          dark: dark,
+          onRemove: () => setState(() => _existingVideoUrls.removeAt(entry.key)),
+        )),
+        
+        // New videos
+        ..._newVideos.asMap().entries.map((entry) => _buildVideoTile(
+          file: entry.value,
+          dark: dark,
+          onRemove: () {
+            context.read<AddListingBloc>().add(RemoveListingVideoEvent(video: entry.value));
+          },
+        )),
+        
+        // Add button (only if under limit)
+        if (totalCount < maxVideos)
+          _buildAddVideoButton(dark),
+      ],
+    );
+  }
+
+  Widget _buildVideoTile({
+    String? url,
+    File? file,
+    required bool dark,
+    required VoidCallback onRemove,
+  }) {
+    return Stack(
+      children: [
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: file != null
+                ? FutureBuilder<Uint8List?>(
+                    future: _generateVideoThumbnail(file),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data != null) {
+                        return Image.memory(snapshot.data!, fit: BoxFit.cover);
+                      }
+                      return Center(
+                        child: Icon(Icons.videocam, size: 40, color: Colors.grey.shade600),
+                      );
+                    },
+                  )
+                : Center(
+                    child: Icon(Icons.videocam, size: 40, color: Colors.grey.shade600),
+                  ),
+          ),
+        ),
+        Positioned(
+          top: 4,
+          right: 4,
+          child: GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, size: 16, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<Uint8List?> _generateVideoThumbnail(File videoFile) async {
+    try {
+      return await VideoThumbnail.thumbnailData(
+        video: videoFile.path,
+        imageFormat: ImageFormat.PNG,
+        maxHeight: 100,
+        quality: 75,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Widget _buildAddVideoButton(bool dark) {
+    return GestureDetector(
+      onTap: _pickVideosMulti,
+      child: Container(
+        width: 100,
+        height: 100,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+          border: Border.all(
+            color: Color(cfg.colorPrimary).withOpacity(0.5),
+            width: 2,
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Icon(
+          Icons.add_a_video,
+          size: 40,
+          color: Color(cfg.colorPrimary),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickVideosMulti() async {
+    final picker = ImagePicker();
+    
+    // Show selection modal for user to pick videos (max 3, minus existing count)
+    final maxAvailable = 3 - _existingVideoUrls.length - _newVideos.length;
+    
+    if (maxAvailable <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Maximum 3 videos allowed'.tr())),
+      );
+      return;
+    }
+
+    // Pick videos individually since pickMultiVideo isn't available
+    // Instead, we'll allow picking one at a time through the modal
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        message: Text('Add video'.tr()),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _pickSingleVideoAndAdd(fromGallery: true);
+            },
+            child: Text('Choose from gallery'.tr()),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _pickSingleVideoAndAdd(fromGallery: false);
+            },
+            child: Text('Record video'.tr()),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancel'.tr()),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickSingleVideoAndAdd({required bool fromGallery}) async {
+    try {
+      context.read<AddListingBloc>().add(AddVideoToListingEvent(fromGallery: fromGallery));
+    } catch (_) {
+      // Handle error
+    }
+  }
+
   Future<void> _showAIDescriptionDialog(BuildContext context, bool dark) async {
     final title = _titleController.text.trim();
     final category = _categoryValue?.title ?? '';
@@ -1609,51 +1888,21 @@ class _AddListingScreenState extends State<AddListingScreen> {
               const SizedBox(height: 12),
 
               _buildSectionHeader('Photos'.tr()),
-              SizedBox(
-                height: 110,
-                child: BlocBuilder<AddListingBloc, AddListingState>(
-                  buildWhen: (old, current) => old != current && current is ListingImagesUpdatedState,
-                  builder: (context, state) {
-                    if (state is ListingImagesUpdatedState) _newImages = state.images;
-                    return ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        if (isEdit)
-                          ..._existingPhotoUrls.asMap().entries.map((e) => ExistingListingImageWidget(
-                                imageUrl: e.value,
-                                onRemove: () => setState(() => _existingPhotoUrls.removeAt(e.key)),
-                              )),
-                        ..._newImages.map((f) => ListingImageWidget(imageFile: f, isAddButton: false)),
-                        ListingImageWidget(imageFile: null, isAddButton: true),
-                      ],
-                    );
-                  },
-                ),
+              BlocBuilder<AddListingBloc, AddListingState>(
+                buildWhen: (old, current) => old != current && current is ListingImagesUpdatedState,
+                builder: (context, state) {
+                  if (state is ListingImagesUpdatedState) _newImages = state.images;
+                  return _buildPhotoGrid(isDarkMode(context));
+                },
               ),
 
               _buildSectionHeader('Videos (max 3)'.tr()),
-              SizedBox(
-                height: 110,
-                child: BlocBuilder<AddListingBloc, AddListingState>(
-                  buildWhen: (old, current) => old != current && current is ListingVideosUpdatedState,
-                  builder: (context, state) {
-                    if (state is ListingVideosUpdatedState) _newVideos = state.videos;
-                    final totalVideosCount = _existingVideoUrls.length + _newVideos.length;
-                    return ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        if (isEdit)
-                          ..._existingVideoUrls.asMap().entries.map((e) => ExistingListingVideoWidget(
-                                videoUrl: e.value,
-                                onRemove: () => setState(() => _existingVideoUrls.removeAt(e.key)),
-                              )),
-                        ..._newVideos.map((v) => ListingVideoWidget(videoFile: v, isAddButton: false)),
-                        if (totalVideosCount < 3)
-                          ListingVideoWidget(videoFile: null, isAddButton: true),
-                      ],
-                    );
-                  },
-                ),
+              BlocBuilder<AddListingBloc, AddListingState>(
+                buildWhen: (old, current) => old != current && current is ListingVideosUpdatedState,
+                builder: (context, state) {
+                  if (state is ListingVideosUpdatedState) _newVideos = state.videos;
+                  return _buildVideoGrid(isDarkMode(context));
+                },
               ),
 
               const SizedBox(height: 40),

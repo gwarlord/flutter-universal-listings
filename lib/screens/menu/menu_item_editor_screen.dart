@@ -60,7 +60,9 @@ class _MenuItemEditorScreenState extends State<MenuItemEditorScreen> {
   }
 
   Future<void> _pickImage() async {
-    if (_newPhotoFiles.length + _photos.length >= 2) {
+    final availableSlots = 2 - _newPhotoFiles.length - _photos.length;
+    
+    if (availableSlots <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Maximum 2 photos allowed')),
       );
@@ -68,9 +70,13 @@ class _MenuItemEditorScreenState extends State<MenuItemEditorScreen> {
     }
 
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() => _newPhotoFiles.add(File(pickedFile.path)));
+    final pickedFiles = await picker.pickMultiImage();
+    
+    if (pickedFiles.isNotEmpty) {
+      final filesToAdd = pickedFiles.take(availableSlots).toList();
+      setState(() {
+        _newPhotoFiles.addAll(filesToAdd.map((xFile) => File(xFile.path)));
+      });
     }
   }
 
