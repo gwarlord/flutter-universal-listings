@@ -179,10 +179,13 @@ class _RentalConfigEditorState extends State<RentalConfigEditor> {
                 // Buffer Minutes
                 TextFormField(
                   controller: _bufferMinutesController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Buffer Minutes',
                     hintText: 'Time between bookings (default: 30)',
-                    border: OutlineInputBorder(),
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    ),
+                    border: const OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
                   onChanged: (_) => _notifyChange(),
@@ -273,9 +276,12 @@ class _RentalConfigEditorState extends State<RentalConfigEditor> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _termsController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Enter rental terms and conditions',
-                    border: OutlineInputBorder(),
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    ),
+                    border: const OutlineInputBorder(),
                   ),
                   maxLines: 5,
                   onChanged: (_) => _notifyChange(),
