@@ -45,6 +45,7 @@ import 'package:instaflutter/core/model/user.dart' as core_user;
 import 'package:instaflutter/widgets/menu/menu_section_widget.dart';
 import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/listings/model/catalog_item.dart';
+import 'package:instaflutter/listings/model/rental_config.dart';
 import 'package:instaflutter/screens/store/store_browse_screen.dart';
 
 import 'package:metadata_fetch/metadata_fetch.dart';
@@ -646,6 +647,9 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             (listing.storeMode == 'internal_catalog' || listing.storeMode == 'both') &&
                             listing.listerTierSnapshot == 'premium')
                           _buildStoreSection(dark, primaryColor),
+                        // Rentals Section
+                        if (listing.rentalConfig != null && listing.rentalConfig!.isRentalEnabled)
+                          _buildRentalsSection(dark, primaryColor, listing.rentalConfig!),
                         // Services Section
                         if (listing.services.isNotEmpty) _buildServicesSection(dark, primaryColor),
                         // Contact & Hours
@@ -1145,6 +1149,150 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
               ],
             );
           },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRentalsSection(bool isDark, Color primaryColor, RentalConfig rentalConfig) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Rentals'.tr(), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: primaryColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: primaryColor.withOpacity(0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Base Price
+              _rentalInfoRow(
+                icon: Icons.attach_money,
+                label: 'Base Price'.tr(),
+                value: '\$${rentalConfig.basePrice.toStringAsFixed(2)} per ${rentalConfig.defaultPricingUnit.toString().split('.').last}',
+                primaryColor: primaryColor,
+              ),
+              const SizedBox(height: 12),
+              
+              // Rental Type
+              _rentalInfoRow(
+                icon: Icons.category,
+                label: 'Type'.tr(),
+                value: rentalConfig.rentalType.toString().split('.').last,
+                primaryColor: primaryColor,
+              ),
+              const SizedBox(height: 12),
+
+              // Buffer Minutes
+              _rentalInfoRow(
+                icon: Icons.schedule,
+                label: 'Buffer Time'.tr(),
+                value: '${rentalConfig.bufferMinutes} minutes',
+                primaryColor: primaryColor,
+              ),
+
+              // Deposit (if required)
+              if (rentalConfig.requiresDeposit) ...[
+                const SizedBox(height: 12),
+                _rentalInfoRow(
+                  icon: Icons.security,
+                  label: 'Deposit Required'.tr(),
+                  value: '\$${rentalConfig.depositAmount?.toStringAsFixed(2) ?? '0.00'}',
+                  primaryColor: primaryColor,
+                ),
+              ],
+
+              // License (if required)
+              if (rentalConfig.requiresLicense) ...[
+                const SizedBox(height: 12),
+                _rentalInfoRow(
+                  icon: Icons.card_membership,
+                  label: 'Driver License Required'.tr(),
+                  value: 'Yes'.tr(),
+                  primaryColor: primaryColor,
+                ),
+              ],
+
+              // Terms and Conditions
+              if (rentalConfig.termsAndConditions != null && rentalConfig.termsAndConditions!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.description, size: 20, color: primaryColor),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Terms & Conditions'.tr(),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        rentalConfig.termsAndConditions!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _rentalInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color primaryColor,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: primaryColor),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              Text(
+                value,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
         ),
       ],
     );
