@@ -215,9 +215,13 @@ service cloud.firestore {
       // If permission denied, check Firebase Console > Firestore > Indexes for the required index
       allow read: if isSignedIn();
       
-      // Allow update ONLY by lister
-      allow update: if isSignedIn() &&
-        request.auth.uid == resource.data.listerId;
+      // Allow update by:
+      // 1. Lister (managing order status: confirmed, fulfilled, declined)
+      // 2. Customer (cancelling their own pending orders)
+      allow update: if isSignedIn() && (
+        request.auth.uid == resource.data.listerId ||
+        request.auth.uid == resource.data.customerId
+      );
       
       // No deletes allowed
       allow delete: if false;
