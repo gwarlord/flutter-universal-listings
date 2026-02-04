@@ -428,6 +428,20 @@ class _ContainerState extends State<ContainerScreen> {
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
+                  
+                  // Order Requests (Premium only)
+                  if (isPremiumUser(currentUser))
+                    _drawerTile(
+                      title: 'Order Requests'.tr(),
+                      icon: Icons.event_note_rounded,
+                      trailing: _tierBadge('PREMIUM', Colors.purple),
+                      onTap: () {
+                        Navigator.pop(context);
+                        push(context, OrdersManagementScreen(currentUser: currentUser));
+                      },
+                      isDark: isDark,
+                      primaryColor: primaryColorValue,
+                    ),
 
                   const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
                   _drawerSectionLabel('Account'.tr(), isDark),
@@ -487,20 +501,6 @@ class _ContainerState extends State<ContainerScreen> {
                       onTap: () {
                         Navigator.pop(context);
                         push(context, BookingManagementWrapperWidget(currentUser: currentUser));
-                      },
-                      isDark: isDark,
-                      primaryColor: primaryColorValue,
-                    ),
-                  
-                  // Order Requests (Premium only)
-                  if (isPremiumUser(currentUser))
-                    _drawerTile(
-                      title: 'Order Requests'.tr(),
-                      icon: Icons.shopping_bag_rounded,
-                      trailing: _tierBadge('PREMIUM', Colors.purple),
-                      onTap: () {
-                        Navigator.pop(context);
-                        push(context, OrdersManagementScreen(currentUser: currentUser));
                       },
                       isDark: isDark,
                       primaryColor: primaryColorValue,
