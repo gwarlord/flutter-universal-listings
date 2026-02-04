@@ -93,9 +93,9 @@ Future<void> _showLocalNotification(RemoteMessage message) async {
     showWhen: true,
   );
 
-  const NotificationDetails notificationDetails = NotificationDetails(
+  final NotificationDetails notificationDetails = NotificationDetails(
     android: androidDetails,
-    iOS: DarwinNotificationDetails(
+    iOS: const DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,

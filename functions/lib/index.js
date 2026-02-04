@@ -45,6 +45,8 @@ const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
 // Export email verification functions
 __exportStar(require("./email_verification"), exports);
+// Export order notification functions
+__exportStar(require("./order_notifications"), exports);
 admin.initializeApp();
 const db = admin.firestore();
 const messaging = admin.messaging();
