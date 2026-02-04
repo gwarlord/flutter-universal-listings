@@ -31,6 +31,8 @@ import 'package:instaflutter/listings/utils/opening_hours_editor.dart';
 import 'package:instaflutter/listings/utils/subscription_helper.dart';
 import 'package:instaflutter/screens/store/catalog_manager_screen.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:instaflutter/listings/ui/rentals/rental_config_editor.dart';
+import 'package:instaflutter/listings/model/rental_config.dart';
 
 class AddListingWrappingWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -174,11 +176,15 @@ class _AddListingScreenState extends State<AddListingScreen> {
   String _storeMode = 'external_url'; // "external_url" | "internal_catalog" | "both"
   int _storeLeadTimeHours = 24;
 
+  // Rentals (Premium Feature)
+  RentalConfig? _rentalConfig;
+
   @override
   void initState() {
     if (isEdit) {
       _selectedCurrencyCode = widget.listingToEdit?.currencyCode ?? 'USD';
       _isLoadingListing = true;
+      _rentalConfig = widget.listingToEdit?.rentalConfig;
     }
     super.initState();
     currentUser = widget.currentUser;
@@ -1777,6 +1783,17 @@ class _AddListingScreenState extends State<AddListingScreen> {
               ],
               const SizedBox(height: 20),
 
+              // Rentals section (Premium-gated)
+              if (isPremiumUser(currentUser)) ...[  
+                RentalConfigEditor(
+                  initialConfig: _rentalConfig ?? widget.listingToEdit?.rentalConfig,
+                  onConfigChanged: (config) {
+                    setState(() => _rentalConfig = config);
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
+
               // Services section (always available)
               _buildSectionHeader('Services'.tr()),
               const SizedBox(height: 16),
@@ -2000,6 +2017,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       storeMode: _storeMode,
       storeLeadTimeHours: _storeLeadTimeHours,
       listerTierSnapshot: currentUser.subscriptionTier.toLowerCase(),
+      rentalConfig: _rentalConfig,
       instagram: _instagramController.text.trim(),
       facebook: _facebookController.text.trim(),
       tiktok: _tiktokController.text.trim(),
