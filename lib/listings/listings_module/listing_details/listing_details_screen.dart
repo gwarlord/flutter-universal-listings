@@ -46,6 +46,8 @@ import 'package:instaflutter/widgets/menu/menu_section_widget.dart';
 import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/listings/model/catalog_item.dart';
 import 'package:instaflutter/listings/model/rental_config.dart';
+import 'package:instaflutter/listings/ui/rentals/rental_booking_dialog.dart';
+import 'package:instaflutter/listings/ui/rentals/rental_bookings_screen.dart';
 import 'package:instaflutter/screens/store/store_browse_screen.dart';
 
 import 'package:metadata_fetch/metadata_fetch.dart';
@@ -1263,6 +1265,51 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                 ),
               ],
             ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Book Rental Button (for customers) or Manage Bookings (for owner)
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () {
+              if (widget.currentUser.userID == listing.authorID) {
+                // Owner - Navigate to manage bookings
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => RentalBookingsScreen(
+                      listing: listing,
+                      currentUser: widget.currentUser,
+                    ),
+                  ),
+                );
+              } else {
+                // Customer - Show booking dialog
+                showDialog(
+                  context: context,
+                  builder: (context) => RentalBookingDialog(
+                    listing: listing,
+                    currentUser: widget.currentUser,
+                    rentalConfig: rentalConfig,
+                  ),
+                );
+              }
+            },
+            icon: Icon(widget.currentUser.userID == listing.authorID 
+              ? Icons.manage_accounts 
+              : Icons.event_available),
+            label: Text(widget.currentUser.userID == listing.authorID 
+              ? 'Manage Rental Bookings' 
+              : 'Book This Rental'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
           ),
         ),
       ],
