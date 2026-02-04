@@ -1103,7 +1103,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
           ),
         ),
         child: Icon(
-          Icons.add_video,
+          Icons.videocam,
           size: 40,
           color: Color(colorPrimary),
         ),
