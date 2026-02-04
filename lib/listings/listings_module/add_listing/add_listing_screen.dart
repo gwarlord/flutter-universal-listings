@@ -33,6 +33,7 @@ import 'package:instaflutter/screens/store/catalog_manager_screen.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:instaflutter/listings/ui/rentals/rental_config_editor.dart';
 import 'package:instaflutter/listings/model/rental_config.dart';
+import 'package:instaflutter/listings/ui/rentals/rental_bookings_screen.dart';
 
 class AddListingWrappingWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -1784,7 +1785,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
               const SizedBox(height: 20),
 
               // Rentals section (Premium-gated)
-              if (isPremiumUser(currentUser)) ...[  
+              if (isPremiumUser(currentUser)) ...[
                 RentalConfigEditor(
                   initialConfig: _rentalConfig ?? widget.listingToEdit?.rentalConfig,
                   onConfigChanged: (config) {
@@ -1796,6 +1797,29 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     });
                   },
                 ),
+                const SizedBox(height: 12),
+                // Manage Rental Bookings button (only when editing and rentals are enabled)
+                if (isEdit && (_rentalConfig?.isRentalEnabled ?? false)) ...[  
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      push(context, RentalBookingsScreen(
+                        listing: widget.listingToEdit!,
+                        currentUser: currentUser,
+                      ));
+                    },
+                    icon: const Icon(Icons.calendar_month),
+                    label: Text(isEdit ? 'Manage Rental Bookings' : 'Save Listing First'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isEdit ? Color(colorPrimary) : Colors.grey,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 const SizedBox(height: 20),
               ],
 

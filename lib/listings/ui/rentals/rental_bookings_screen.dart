@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:instaflutter/listings/model/rental_booking.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/services/rental_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:instaflutter/core/utils/helper.dart';
 
 class RentalBookingsScreen extends StatefulWidget {
@@ -21,7 +21,6 @@ class RentalBookingsScreen extends StatefulWidget {
 }
 
 class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
-  final RentalService _rentalService = RentalService();
   String _selectedTab = 'pending'; // pending, confirmed, completed, cancelled
 
   @override
@@ -61,11 +60,13 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
 
           // Bookings List
           Expanded(
-            child: StreamBuilder<List<RentalBooking>>(
-              stream: _rentalService.getListingBookingsStream(
-                listingId: widget.listing.id,
-                status: _getStatusFromTab(_selectedTab),
-              ),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('rental_bookings')
+                  .where('listingId', isEqualTo: widget.listing.id)
+                  .where('status', isEqualTo: _selectedTab)
+                  .orderBy('createdAt', descending: true)
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator.adaptive());
@@ -77,7 +78,11 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                   );
                 }
 
-                final bookings = snapshot.data ?? [];
+                final docs = snapshot.data?.docs ?? [];
+                final bookings = docs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return RentalBooking.fromJson(data, doc.id);
+                }).toList();
 
                 if (bookings.isEmpty) {
                   return Center(
@@ -140,7 +145,19 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
   }
 
   Widget _buildBookingCard(RentalBooking booking, Color primaryColor, bool isDark) {
-    return Card(
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('users').doc(booking.customerId).get(),
+      builder: (context, userSnapshot) {
+        String customerName = 'Customer';
+        String customerEmail = '';
+        
+        if (userSnapshot.hasData && userSnapshot.data!.exists) {
+          final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+          customerName = '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim();
+          customerEmail = userData['email'] ?? '';
+        }
+
+        return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -161,14 +178,14 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        booking.customerName,
+                        customerName,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
                       Text(
-                        booking.customerEmail,
+                        customerEmail,
                         style: TextStyle(
                           fontSize: 12,
                           color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -195,11 +212,11 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        DateFormat('MMM dd, yyyy').format(booking.startDate),
+                        DateFormat('MMM dd, yyyy').format(booking.startTime),
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       Text(
-                        DateFormat('h:mm a').format(booking.startDate),
+                        DateFormat('h:mm a').format(booking.startTime),
                         style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                       ),
                     ],
@@ -217,11 +234,11 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        DateFormat('MMM dd, yyyy').format(booking.endDate),
+                        DateFormat('MMM dd, yyyy').format(booking.endTime),
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       Text(
-                        DateFormat('h:mm a').format(booking.endDate),
+                        DateFormat('h:mm a').format(booking.endTime),
                         style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                       ),
                     ],
@@ -243,7 +260,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                 children: [
                   const Text('Total Price', style: TextStyle(fontWeight: FontWeight.w600)),
                   Text(
-                    '\$${booking.totalPrice.toStringAsFixed(2)}',
+                    '\$${booking.totalAmount.toStringAsFixed(2)}',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -253,33 +270,6 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                 ],
               ),
             ),
-
-            // Notes
-            if (booking.customerNotes.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Customer Notes',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(booking.customerNotes),
-                  ],
-                ),
-              ),
-            ],
 
             // Actions
             if (booking.status == RentalBookingStatus.pending) ...[
@@ -354,6 +344,8 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
         ),
       ),
     );
+      },
+    );
   }
 
   Widget _buildStatusChip(RentalBookingStatus status, Color primaryColor) {
@@ -380,6 +372,10 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
       case RentalBookingStatus.cancelled:
         color = Colors.red;
         label = 'Cancelled';
+        break;
+      case RentalBookingStatus.disputed:
+        color = Colors.purple;
+        label = 'Disputed';
         break;
     }
 
@@ -423,7 +419,13 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
     RentalBookingStatus newStatus,
   ) async {
     try {
-      await _rentalService.updateBookingStatus(booking.id, newStatus);
+      await FirebaseFirestore.instance
+          .collection('rental_bookings')
+          .doc(booking.id)
+          .update({
+        'status': newStatus.toString().split('.').last,
+        'updatedAt': Timestamp.now(),
+      });
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

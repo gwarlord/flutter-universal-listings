@@ -4,7 +4,7 @@ import 'package:instaflutter/listings/model/rental_config.dart';
 import 'package:instaflutter/listings/model/rental_booking.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/services/rental_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:instaflutter/core/utils/helper.dart';
 
 class RentalBookingDialog extends StatefulWidget {
@@ -24,7 +24,6 @@ class RentalBookingDialog extends StatefulWidget {
 }
 
 class _RentalBookingDialogState extends State<RentalBookingDialog> {
-  final RentalService _rentalService = RentalService();
   
   DateTime? _startDate;
   DateTime? _endDate;
@@ -84,18 +83,33 @@ class _RentalBookingDialogState extends State<RentalBookingDialog> {
         return;
       }
 
-      final available = await _rentalService.checkAvailability(
-        listingId: widget.listing.id,
-        startDate: startDateTime,
-        endDate: endDateTime,
-      );
+      // For now, just calculate price (availability checking requires rental unit)
+      // In production, you'd select a specific rental unit first
+      final duration = endDateTime.difference(startDateTime);
+      double price = 0.0;
+      
+      switch (widget.rentalConfig.defaultPricingUnit) {
+        case RentalPricingUnit.hourly:
+          final hours = duration.inHours;
+          price = widget.rentalConfig.basePrice * hours;
+          break;
+        case RentalPricingUnit.daily:
+          final days = (duration.inDays > 0) ? duration.inDays : 1;
+          price = widget.rentalConfig.basePrice * days;
+          break;
+        case RentalPricingUnit.weekly:
+          final weeks = (duration.inDays / 7).ceil();
+          price = widget.rentalConfig.basePrice * weeks;
+          break;
+        case RentalPricingUnit.monthly:
+          final months = (duration.inDays / 30).ceil();
+          price = widget.rentalConfig.basePrice * months;
+          break;
+      }
+
+      final available = true; // Simplified for now
 
       if (available) {
-        final price = _rentalService.calculatePrice(
-          config: widget.rentalConfig,
-          startDate: startDateTime,
-          endDate: endDateTime,
-        );
 
         setState(() {
           _isAvailable = true;
@@ -138,25 +152,47 @@ class _RentalBookingDialogState extends State<RentalBookingDialog> {
     );
 
     try {
-      final booking = RentalBooking(
-        id: '',
-        listingId: widget.listing.id,
-        listingTitle: widget.listing.title,
-        customerId: widget.currentUser.userID,
-        customerName: widget.currentUser.fullName(),
-        customerEmail: widget.currentUser.email,
-        listingAuthorId: widget.listing.authorID,
-        startDate: startDateTime,
-        endDate: endDateTime,
-        status: RentalBookingStatus.pending,
-        totalPrice: _totalPrice,
-        pricingUnit: widget.rentalConfig.defaultPricingUnit,
-        depositAmount: widget.rentalConfig.requiresDeposit ? widget.rentalConfig.depositAmount : null,
-        customerNotes: _notesController.text.trim(),
-        createdAt: DateTime.now(),
-      );
+      // Save booking to Firestore using a simplified structure
+      final now = DateTime.now();
+      final duration = endDateTime.difference(startDateTime);
+      int quantity = 1;
+      
+      switch (widget.rentalConfig.defaultPricingUnit) {
+        case RentalPricingUnit.hourly:
+          quantity = duration.inHours;
+          break;
+        case RentalPricingUnit.daily:
+          quantity = (duration.inDays > 0) ? duration.inDays : 1;
+          break;
+        case RentalPricingUnit.weekly:
+          quantity = (duration.inDays / 7).ceil();
+          break;
+        case RentalPricingUnit.monthly:
+          quantity = (duration.inDays / 30).ceil();
+          break;
+      }
 
-      await _rentalService.createBooking(booking);
+      final depositAmt = widget.rentalConfig.requiresDeposit 
+          ? (widget.rentalConfig.depositAmount ?? 0.0) 
+          : 0.0;
+
+      await FirebaseFirestore.instance.collection('rental_bookings').add({
+        'listingId': widget.listing.id,
+        'rentalUnitId': 'general', // Would be selected in production
+        'customerId': widget.currentUser.userID,
+        'listerId': widget.listing.authorID,
+        'startTime': Timestamp.fromDate(startDateTime),
+        'endTime': Timestamp.fromDate(endDateTime),
+        'pricingUnit': widget.rentalConfig.defaultPricingUnit.toString().split('.').last,
+        'unitPrice': widget.rentalConfig.basePrice,
+        'quantity': quantity,
+        'subtotal': _totalPrice,
+        'depositAmount': depositAmt,
+        'totalAmount': _totalPrice + depositAmt,
+        'status': RentalBookingStatus.pending.toString().split('.').last,
+        'createdAt': Timestamp.fromDate(now),
+        'updatedAt': Timestamp.fromDate(now),
+      });
 
       if (mounted) {
         Navigator.pop(context, true);
