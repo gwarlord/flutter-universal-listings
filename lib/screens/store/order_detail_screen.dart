@@ -767,12 +767,25 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     setState(() => _isUpdating = true);
 
     try {
-      // Update order status
-      await _storeService.updateOrderStatus(
-        requestId: widget.order.id,
-        status: newStatus,
-        currentUser: widget.currentUser,
-      );
+      final isCustomer = widget.currentUser.userID == _currentOrder.customerId;
+      
+      // Customer can only cancel their order
+      if (isCustomer && newStatus == OrderStatus.cancelled) {
+        await _storeService.cancelOrder(
+          requestId: widget.order.id,
+          currentUser: widget.currentUser,
+        );
+      } else if (isCustomer) {
+        // Customer can't perform other actions
+        throw Exception('You can only cancel your pending orders');
+      } else {
+        // Lister updating order status
+        await _storeService.updateOrderStatus(
+          requestId: widget.order.id,
+          status: newStatus,
+          currentUser: widget.currentUser,
+        );
+      }
 
       // Post status update to chat if channel exists
       if (widget.order.channelId != null) {
