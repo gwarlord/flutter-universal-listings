@@ -26,17 +26,71 @@ class CustomerOrdersScreen extends StatefulWidget {
 class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
   final Map<String, ListingModel> _listingCache = {};
   final Map<String, ListingsUser> _listerCache = {};
+  bool _showHistory = false; // Toggle between active orders and all orders
 
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
 
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('order_requests')
-          .where('customerId', isEqualTo: widget.currentUser.userID)
-          .orderBy('createdAt', descending: true)
-          .snapshots(),
+    // Build query - filter by status if not showing history
+    Query query = FirebaseFirestore.instance
+        .collection('order_requests')
+        .where('customerId', isEqualTo: widget.currentUser.userID);
+    
+    if (!_showHistory) {
+      // Show only active orders (requested, confirmed)
+      query = query.where('status', whereIn: ['requested', 'confirmed']);
+    }
+    
+    query = query.orderBy('createdAt', descending: true);
+
+    return Column(
+      children: [
+        // Filter toggle
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: dark ? Colors.grey.shade900 : Colors.grey.shade100,
+            border: Border(
+              bottom: BorderSide(
+                color: dark ? Colors.grey.shade800 : Colors.grey.shade300,
+                width: 1,
+              ),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _showHistory ? 'All Orders'.tr() : 'Active Orders'.tr(),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: dark ? Colors.white : Colors.black,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _showHistory = !_showHistory;
+                  });
+                },
+                icon: Icon(
+                  _showHistory ? Icons.filter_list_off : Icons.history,
+                  size: 20,
+                ),
+                label: Text(_showHistory ? 'Active Only'.tr() : 'Show History'.tr()),
+                style: TextButton.styleFrom(
+                  foregroundColor: Color(cfg.colorPrimary),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Orders list
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: query.snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -86,6 +140,9 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
           },
         );
       },
+          ),
+        ),
+      ],
     );
   }
 

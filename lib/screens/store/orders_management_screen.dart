@@ -30,12 +30,12 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
   final Map<String, ListingsUser> _customerCache = {};
 
   final List<OrderStatus?> _statusFilters = [
-    null, // All
-    OrderStatus.requested,
-    OrderStatus.confirmed,
+    OrderStatus.requested, // Active: Requested
+    OrderStatus.confirmed, // Active: Confirmed  
     OrderStatus.fulfilled,
     OrderStatus.declined,
     OrderStatus.cancelled,
+    null, // All (including history)
   ];
 
   @override
@@ -79,12 +79,12 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
           unselectedLabelColor: dark ? Colors.white54 : Colors.black45,
           indicatorColor: Color(cfg.colorPrimary),
           tabs: [
-            Tab(text: 'All'.tr()),
             Tab(text: 'Requested'.tr()),
             Tab(text: 'Confirmed'.tr()),
             Tab(text: 'Fulfilled'.tr()),
             Tab(text: 'Declined'.tr()),
             Tab(text: 'Cancelled'.tr()),
+            Tab(text: 'All'.tr()),
           ],
         ),
       ),
