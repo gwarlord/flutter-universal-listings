@@ -210,6 +210,8 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
                 value: _trackStock,
                 onChanged: (value) => setState(() => _trackStock = value),
                 activeColor: Color(cfg.colorPrimary),
+                inactiveTrackColor: dark ? Colors.grey.shade700 : Colors.grey.shade300,
+                inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
               ),
               
               if (_trackStock) ...[
@@ -242,6 +244,8 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
                 value: _isAvailable,
                 onChanged: (value) => setState(() => _isAvailable = value),
                 activeColor: Color(cfg.colorPrimary),
+                inactiveTrackColor: dark ? Colors.grey.shade700 : Colors.grey.shade300,
+                inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
               ),
               const SizedBox(height: 24),
 
