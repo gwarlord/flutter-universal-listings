@@ -449,6 +449,10 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
                     fontSize: 13,
                     color: dark ? Colors.grey.shade300 : Colors.black87,
                   ),
+                ),
+                const SizedBox(height: 20),
+              ],
+
               // Date selection
               Text(
                 'Select Rental Period'.tr(),
