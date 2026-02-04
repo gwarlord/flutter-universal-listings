@@ -53,26 +53,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Use theme-driven AppBar color
-    final body = BlocProvider(
-      create: (context) => ProfileBloc(
-        currentUser: currentUser,
-        profileRepository: profileApiManager,
-      ),
-      child: Builder(
-        builder: (context) {
-          return MultiBlocListener(
-            listeners: [
-              BlocListener<AuthenticationBloc, AuthenticationState>(
-                listener: (context, state) {
-                      context.read<LoadingCubit>().hideLoading();
-                      if (state.authState == AuthState.unauthenticated) {
-                        pushAndRemoveUntil(context, const WelcomeScreen(), false);
-                      }
-                    },
-                  ),
-                  BlocListener<ProfileBloc, ProfileState>(
-                    listener: (context, state) async {
+    // If embedded in container, skip the PopScope and AppBar
+    if (!widget.showAppBar) {
+      return BlocProvider(
+        create: (context) => ProfileBloc(
+          currentUser: currentUser,
+          profileRepository: profileApiManager,
+        ),
+        child: Builder(
+          builder: (context) {
+            return MultiBlocListener(
+              listeners: [
+                BlocListener<AuthenticationBloc, AuthenticationState>(
+                  listener: (context, state) {
+                    context.read<LoadingCubit>().hideLoading();
+                    if (state.authState == AuthState.unauthenticated) {
+                      pushAndRemoveUntil(context, const WelcomeScreen(), false);
+                    }
+                  },
+                ),
+                BlocListener<ProfileBloc, ProfileState>(
+                  listener: (context, state) async {
                       if (state is UpdatedUserState) {
                         context.read<LoadingCubit>().hideLoading();
                         context.read<AuthenticationBloc>().user =
@@ -469,15 +470,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
         ),
-      ),
-    );
-
-    // If showAppBar is false, return just the body
-    if (!widget.showAppBar) {
-      return body;
+      );
     }
 
-    // Otherwise wrap in PopScope and Scaffold with AppBar
+    // Full version with AppBar for standalone navigation
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) {
@@ -506,7 +502,369 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
         ),
-        body: body,
+        body: BlocProvider(
+          create: (context) => ProfileBloc(
+            currentUser: currentUser,
+            profileRepository: profileApiManager,
+          ),
+          child: Builder(
+            builder: (context) {
+              return MultiBlocListener(
+                listeners: [
+                  BlocListener<AuthenticationBloc, AuthenticationState>(
+                    listener: (context, state) {
+                      context.read<LoadingCubit>().hideLoading();
+                      if (state.authState == AuthState.unauthenticated) {
+                        pushAndRemoveUntil(context, const WelcomeScreen(), false);
+                      }
+                    },
+                  ),
+                  BlocListener<ProfileBloc, ProfileState>(
+                    listener: (context, state) async {
+                      if (state is UpdatedUserState) {
+                        context.read<LoadingCubit>().hideLoading();
+                        context.read<AuthenticationBloc>().user =
+                            state.updatedUser;
+                        currentUser = state.updatedUser;
+                      } else if (state is UploadingImageState) {
+                        context.read<LoadingCubit>().showLoading(
+                              context,
+                              'Uploading image...'.tr(),
+                              false,
+                              Color(colorPrimary),
+                            );
+                      } else if (state is ReauthRequiredState) {
+                        bool? result = await showDialog(
+                          context: context,
+                          builder: (context) => ReAuthUserScreen(
+                            provider: state.authProvider,
+                            currentEmail:
+                                auth.FirebaseAuth.instance.currentUser!.email,
+                            phoneNumber: auth
+                                .FirebaseAuth.instance.currentUser!.phoneNumber,
+                            isDeleteUser: true,
+                          ),
+                        );
+                        if (result != null && result) {
+                          if (!context.mounted) return;
+                          context
+                              .read<AuthenticationBloc>()
+                              .add(UserDeletedEvent());
+                        }
+                      } else if (state is DeleteUserConfirmationState) {
+                        bool? result = await _showModernDeleteConfirmationDialog(context);
+                        if (result == true) {
+                          if (!context.mounted) return;
+                          context.read<LoadingCubit>().showLoading(
+                                context,
+                                'Deleting account...'.tr(),
+                                false,
+                                Color(colorPrimary),
+                              );
+                          context
+                              .read<ProfileBloc>()
+                              .add(DeleteUserConfirmedEvent());
+                        }
+                      } else if (state is UserDeletedState) {
+                        context.read<LoadingCubit>().hideLoading();
+                        context
+                            .read<AuthenticationBloc>()
+                            .add(UserDeletedEvent());
+                      }
+                    },
+                  ),
+                ],
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding:
+                            const EdgeInsets.only(top: 32.0, left: 32, right: 32),
+                        child: Column(
+                          children: [
+                            BlocBuilder<ProfileBloc, ProfileState>(
+                                buildWhen: (old, current) =>
+                                    current is UpdatedUserState && old != current,
+                                builder: (context, state) {
+                                  return Center(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black26,
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                        border: Border.all(
+                                          color: Theme.of(context).colorScheme.primary,
+                                          width: 3,
+                                        ),
+                                      ),
+                                      child: ClipOval(
+                                        child: displayCircleImage(
+                                          currentUser.profilePictureURL,
+                                          130,
+                                          false,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                            SizedBox(
+                              width: 175,
+                              child: FloatingActionButton(
+                                  backgroundColor: Color(colorAccent),
+                                  mini: true,
+                                  onPressed: () => _onCameraClick(context),
+                                  child: Icon(
+                                    Icons.camera_alt,
+                                    color: isDarkMode(context)
+                                        ? Colors.black
+                                        : Colors.white,
+                                  )),
+                            )
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding:
+                            const EdgeInsets.only(top: 16.0, right: 32, left: 32),
+                        child: BlocBuilder<ProfileBloc, ProfileState>(
+                            buildWhen: (old, current) =>
+                                current is UpdatedUserState && old != current,
+                            builder: (context, state) {
+                              return Text(
+                                currentUser.fullName(),
+                                style: TextStyle(
+                                    color: isDarkMode(context)
+                                        ? Colors.white
+                                        : Colors.black,
+                                    fontSize: 20),
+                                textAlign: TextAlign.center,
+                              );
+                            }),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          currentUser.isAdmin
+                              ? 'Plan: ADMIN'
+                              : 'Plan: ${currentUser.subscriptionTier.toUpperCase()}',
+                          style: TextStyle(
+                            color: currentUser.isAdmin
+                                ? Colors.green.shade600
+                                : (isDarkMode(context) ? Colors.grey.shade400 : Colors.grey.shade700),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Column(
+                          children: [
+                            if (currentUser.isAdmin) ...[
+                              _modernListTile(
+                                context,
+                                icon: Icons.playlist_add_rounded,
+                                iconColor: Colors.orange,
+                                title: 'Populate Test Data'.tr(),
+                                onTap: () async {
+                                  context.read<LoadingCubit>().showLoading(
+                                    context,
+                                    'Generating test content...'.tr(),
+                                    false,
+                                    Color(colorPrimary),
+                                  );
+                                  try {
+                                    await TestDataPopulator.populateAll();
+                                    if (context.mounted) {
+                                      context.read<LoadingCubit>().hideLoading();
+                                      showSnackBar(context, 'Test data generated successfully!'.tr());
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      context.read<LoadingCubit>().hideLoading();
+                                      showSnackBar(context, 'Error populating data. Check Firestore rules.'.tr());
+                                    }
+                                  }
+                                },
+                              ),
+                              _modernListTile(
+                                context,
+                                icon: Icons.delete_sweep_rounded,
+                                iconColor: Colors.redAccent,
+                                title: 'Clear Test Data'.tr(),
+                                onTap: () async {
+                                  bool? confirm = await showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: Text('Clear Test Data'.tr()),
+                                      content: Text('This will delete all test listings, deals, reviews, bookings, and chats. Are you sure?'.tr()),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context, false),
+                                          child: Text('Cancel'.tr()),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context, true),
+                                          style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                          child: Text('Delete'.tr()),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirm == true) {
+                                    if (!context.mounted) return;
+                                    context.read<LoadingCubit>().showLoading(
+                                      context,
+                                      'Clearing test data...'.tr(),
+                                      false,
+                                      Color(colorPrimary),
+                                    );
+                                    try {
+                                      await TestDataPopulator.clearAll();
+                                      if (context.mounted) {
+                                        context.read<LoadingCubit>().hideLoading();
+                                        showSnackBar(context, 'Test data cleared successfully!'.tr());
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        context.read<LoadingCubit>().hideLoading();
+                                        showSnackBar(context, 'Error clearing data. Check Firestore rules.'.tr());
+                                      }
+                                    }
+                                  }
+                                },
+                              ),
+                              _modernListTile(
+                                context,
+                                icon: Icons.dashboard_rounded,
+                                iconColor: Colors.deepPurple,
+                                title: 'Admin Dashboard'.tr(),
+                                onTap: () => push(
+                                  context,
+                                  AdminDashboardScreen(currentUser: currentUser),
+                                ),
+                              ),
+                              _modernListTile(
+                                context,
+                                icon: Icons.approval_rounded,
+                                iconColor: Colors.teal,
+                                title: 'Deal Approval'.tr(),
+                                onTap: () => push(
+                                  context,
+                                  AdApprovalScreen(currentUser: currentUser),
+                                ),
+                              ),
+                            ],
+                            _modernListTile(
+                              context,
+                              icon: Icons.account_circle_rounded,
+                              iconColor: Colors.blue,
+                              title: 'Account Details'.tr(),
+                              onTap: () => push(
+                                context,
+                                AccountDetailsScreen(currentUser: currentUser),
+                              ),
+                            ),
+                            _modernListTile(
+                              context,
+                              icon: Icons.settings_rounded,
+                              iconColor: Colors.grey,
+                              title: 'Settings'.tr(),
+                              onTap: () => push(
+                                context,
+                                SettingsScreen(currentUser: currentUser),
+                              ),
+                            ),
+                            _modernListTile(
+                              context,
+                              icon: Icons.list_rounded,
+                              iconColor: Colors.green,
+                              title: 'My Listings'.tr(),
+                              onTap: () => push(
+                                context,
+                                MyListingsScreen(currentUser: currentUser),
+                              ),
+                            ),
+                            _modernListTile(
+                              context,
+                              icon: Icons.favorite_rounded,
+                              iconColor: Colors.red,
+                              title: 'Favorites'.tr(),
+                              onTap: () => push(
+                                context,
+                                FavoriteListingsScreen(currentUser: currentUser),
+                              ),
+                            ),
+                            _modernListTile(
+                              context,
+                              icon: Icons.calendar_today_rounded,
+                              iconColor: Colors.orange,
+                              title: 'My Bookings'.tr(),
+                              onTap: () => push(
+                                context,
+                                MyBookingsScreen(currentUser: currentUser),
+                              ),
+                            ),
+                            if (currentUser.isPremiumUser) ...[
+                              _modernListTile(
+                                context,
+                                icon: Icons.event_available_rounded,
+                                iconColor: Colors.deepOrange,
+                                title: 'Booking Management'.tr(),
+                                onTap: () => push(
+                                  context,
+                                  BookingManagementScreen(currentUser: currentUser),
+                                ),
+                              ),
+                              _modernListTile(
+                                context,
+                                icon: Icons.manage_accounts_rounded,
+                                iconColor: Colors.amber,
+                                title: 'Manage User Subscription'.tr(),
+                                onTap: () => push(
+                                  context,
+                                  EditUserSubscriptionScreen(currentUser: currentUser),
+                                ),
+                              ),
+                            ],
+                            _modernListTile(
+                              context,
+                              icon: Icons.contact_support_rounded,
+                              iconColor: Colors.cyan,
+                              title: 'Contact Us'.tr(),
+                              onTap: () => push(
+                                context,
+                                const ContactUsScreen(),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              child: Divider(),
+                            ),
+                            _modernListTile(
+                              context,
+                              icon: Icons.logout_rounded,
+                              iconColor: Colors.redAccent,
+                              title: 'Logout'.tr(),
+                              onTap: () {
+                                context.read<AuthenticationBloc>().add(LogoutEvent());
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
       ),
     );
   }
