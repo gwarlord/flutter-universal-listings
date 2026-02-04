@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:instaflutter/constants.dart';
+import 'package:instaflutter/core/utils/helper.dart';
 import '../../model/rental_config.dart';
 
 class RentalConfigEditor extends StatefulWidget {
@@ -73,18 +75,13 @@ class _RentalConfigEditorState extends State<RentalConfigEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Enable/Disable Rentals
         SwitchListTile(
-          title: Text(
-            'Enable Rentals',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          subtitle: const Text('Allow customers to rent this listing'),
           value: _isRentalEnabled,
           onChanged: (value) {
             setState(() {
@@ -92,6 +89,22 @@ class _RentalConfigEditorState extends State<RentalConfigEditor> {
               _notifyChange();
             });
           },
+          title: Text(
+            'Enable Rentals',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          subtitle: Text(
+            'Allow customers to rent this listing',
+            style: isDark
+                ? const TextStyle(color: Colors.white, fontSize: 14)
+                : const TextStyle(fontSize: 14),
+          ),
+          activeColor: Color(colorPrimary),
+          activeTrackColor: Color(colorPrimary).withOpacity(0.5),
+          inactiveThumbColor: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+          inactiveTrackColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
         ),
         
         if (_isRentalEnabled) ...[
@@ -275,15 +288,17 @@ class _RentalConfigEditorState extends State<RentalConfigEditor> {
   }
 
   void _notifyChange() {
-    if (!_isRentalEnabled) {
-      widget.onConfigChanged(null);
+    // Always create config, even if disabled
+    // The parent will decide whether to save it based on isRentalEnabled flag
+    
+    // If no base price set, don't create config yet (validation)
+    if (_isRentalEnabled && _basePriceController.text.isEmpty) {
       return;
     }
 
-    final basePrice = double.tryParse(_basePriceController.text);
-    if (basePrice == null) {
-      return; // Invalid price, don't create config
-    }
+    final basePrice = _basePriceController.text.isEmpty 
+        ? 0.0 
+        : double.tryParse(_basePriceController.text) ?? 0.0;
 
     final config = RentalConfig(
       isRentalEnabled: _isRentalEnabled,

@@ -2017,7 +2017,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       storeMode: _storeMode,
       storeLeadTimeHours: _storeLeadTimeHours,
       listerTierSnapshot: currentUser.subscriptionTier.toLowerCase(),
-      rentalConfig: _rentalConfig,
+      rentalConfig: _rentalConfig?.isRentalEnabled ?? false ? _rentalConfig : null,
       instagram: _instagramController.text.trim(),
       facebook: _facebookController.text.trim(),
       tiktok: _tiktokController.text.trim(),
