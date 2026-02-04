@@ -112,12 +112,11 @@ class RentalBrowseService {
       // For MVP, create one booking per rental item
       // In production, could group by date range for efficiency
       
-      final bookingId = _firestore.collection('rental_bookings').doc().id;
-      
-      // Use first item's dates (in production, you might aggregate)
       if (cartItems.isEmpty) return null;
       
+      final bookingId = _firestore.collection('rental_bookings').doc().id;
       final firstItem = cartItems.first;
+      final durationDays = firstItem.endDate.difference(firstItem.startDate).inDays + 1;
       
       final booking = RentalBooking(
         id: bookingId,
@@ -127,6 +126,11 @@ class RentalBrowseService {
         listerId: listerId,
         startTime: firstItem.startDate,
         endTime: firstItem.endDate,
+        pricingUnit: RentalPricingUnit.daily,
+        unitPrice: firstItem.pricePerDay,
+        quantity: durationDays,
+        subtotal: firstItem.totalPrice,
+        depositAmount: depositAmount ?? 0.0,
         totalAmount: totalAmount,
         status: RentalBookingStatus.pending,
         createdAt: DateTime.now(),
@@ -166,10 +170,7 @@ class RentalBrowseService {
         .snapshots()
         .map((snapshot) {
           return snapshot.docs
-              .map((doc) => RentalBooking.fromJson({
-                    ...doc.data(),
-                    'id': doc.id,
-                  }))
+              .map((doc) => RentalBooking.fromJson(doc.data(), doc.id))
               .toList();
         });
   }
@@ -185,10 +186,7 @@ class RentalBrowseService {
           .get();
 
       final bookings = snapshot.docs
-          .map((doc) => RentalBooking.fromJson({
-                ...doc.data(),
-                'id': doc.id,
-              }))
+          .map((doc) => RentalBooking.fromJson(doc.data(), doc.id))
           .toList();
 
       // Filter by date

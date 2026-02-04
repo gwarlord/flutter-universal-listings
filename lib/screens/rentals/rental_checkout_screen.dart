@@ -381,7 +381,7 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.listing.author ?? 'Unknown Lister'.tr(),
+                    widget.listing.authorName.isNotEmpty ? widget.listing.authorName : 'Unknown Lister'.tr(),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
