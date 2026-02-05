@@ -6,6 +6,7 @@ import 'package:instaflutter/listings/model/categories_model.dart';
 import 'package:instaflutter/listings/model/filter_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listing_review_model.dart';
+import 'package:instaflutter/listings/model/suspension_info.dart';
 
 class ListingsLocalData extends ListingsRepository {
   @override
@@ -88,10 +89,17 @@ class ListingsLocalData extends ListingsRepository {
   Future<List<ListingModel>> getSuspendedListings() async => [];
 
   @override
-  Future<void> suspendListing({required ListingModel listing}) async {}
+  Future<void> suspendListing({
+    required ListingModel listing,
+    SuspensionInfo? suspensionInfo,
+    required String adminId,
+  }) async {}
 
   @override
-  Future<void> unsuspendListing({required ListingModel listing}) async {}
+  Future<void> unsuspendListing({
+    required ListingModel listing,
+    required String adminId,
+  }) async {}
 
   @override
   Future<List<ListingModel>> getUnverifiedListings() async => [];

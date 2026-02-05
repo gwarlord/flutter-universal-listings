@@ -455,7 +455,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   void _showSuspendUserConfirmation(ListingsUser user) async {
     final suspensionInfo = await showDialog(
       context: context,
-      builder: (_) => SuspensionReasonDialog(userName: user.fullName()),
+      builder: (_) => SuspensionReasonDialog(subjectName: user.fullName()),
     );
     
     if (suspensionInfo != null && mounted) {
@@ -483,16 +483,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   void _showSuspendListingConfirmation(ListingModel listing) async {
-    final result = await _showModernActionDialog(
-      context,
-      title: 'Suspend Listing?'.tr(),
-      content: 'Are you sure you want to suspend "${listing.title}"? It will be hidden from all users.'.tr(),
-      isDestructive: true,
-      actionLabel: 'Suspend'.tr(),
+    debugPrint('[Admin] Suspend listing tapped: ${listing.id} (${listing.title})');
+    final suspensionInfo = await showDialog(
+      context: context,
+      builder: (_) => SuspensionReasonDialog(
+        subjectName: listing.title,
+        title: 'Suspend Listing',
+        warningText: 'This listing will be hidden from all users and the lister will be notified.',
+      ),
     );
-    if (result == true) {
-      if (!mounted) return;
-      context.read<AdminBloc>().add(SuspendListingEvent(listing: listing));
+
+    debugPrint(
+      '[Admin] Suspend listing dialog result: ${suspensionInfo == null ? 'cancelled' : 'confirmed'}',
+    );
+    if (suspensionInfo != null && mounted) {
+      debugPrint('[Admin] Dispatching SuspendListingEvent for ${listing.id}');
+      context.read<AdminBloc>().add(
+        SuspendListingEvent(
+          listing: listing,
+          suspensionInfo: suspensionInfo,
+        ),
+      );
     }
   }
 
@@ -811,6 +822,37 @@ class ModernListingCard extends StatelessWidget {
               ],
             ),
           ),
+          if (isSuspended && listing.suspensionInfo != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (listing.suspensionInfo!.reason != null)
+                      Text(
+                        'Reason: ${listing.suspensionInfo!.reason!.displayName}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.red),
+                      ),
+                    if (listing.suspensionInfo!.reasonText != null && listing.suspensionInfo!.reasonText!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        listing.suspensionInfo!.reasonText!,
+                        style: TextStyle(fontSize: 11, color: Colors.red.shade700),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

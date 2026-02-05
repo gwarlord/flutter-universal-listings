@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:instaflutter/listings/model/suspension_info.dart';
 import 'rental_config.dart';
 
 class ListingModel {
@@ -82,6 +83,7 @@ class ListingModel {
   Map<String, dynamic> filters;
   bool isApproved;
   bool suspended;
+  SuspensionInfo? suspensionInfo;
   bool verified;
   String? verificationMethod; // 'auto', 'manual', or null
   int? verifiedAt; // Timestamp in seconds
@@ -174,6 +176,7 @@ class ListingModel {
     this.filters = const {},
     this.isApproved = false,
     this.suspended = false,
+    this.suspensionInfo,
     this.verified = false,
     this.verificationMethod,
     this.verifiedAt,
@@ -259,6 +262,9 @@ class ListingModel {
       filters: Map<String, dynamic>.from(json['filters'] ?? {}),
       isApproved: json['isApproved'] ?? false,
       suspended: json['suspended'] ?? false,
+        suspensionInfo: json['suspensionInfo'] != null
+          ? SuspensionInfo.fromJson(json['suspensionInfo'] as Map<String, dynamic>)
+          : null,
       verified: json['verified'] ?? false,
       verificationMethod: json['verificationMethod'],
       verifiedAt: json['verifiedAt'],
@@ -339,6 +345,7 @@ class ListingModel {
       'filters': filters,
       'isApproved': isApproved,
       'suspended': suspended,
+      'suspensionInfo': suspensionInfo?.toJson(),
       'verified': verified,
       'verificationMethod': verificationMethod,
       'verifiedAt': verifiedAt,
@@ -409,6 +416,7 @@ class ListingModel {
     Map<String, dynamic>? filters,
     bool? isApproved,
     bool? suspended,
+    SuspensionInfo? suspensionInfo,
     bool? verified,
     num? reviewsCount,
     num? reviewsSum,
@@ -463,6 +471,7 @@ class ListingModel {
       filters: filters ?? this.filters,
       isApproved: isApproved ?? this.isApproved,
       suspended: suspended ?? this.suspended,
+      suspensionInfo: suspensionInfo ?? this.suspensionInfo,
       verified: verified ?? this.verified,
       reviewsCount: reviewsCount ?? this.reviewsCount,
       reviewsSum: reviewsSum ?? this.reviewsSum,

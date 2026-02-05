@@ -5,6 +5,7 @@ import 'package:instaflutter/listings/model/categories_model.dart';
 import 'package:instaflutter/listings/model/filter_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listing_review_model.dart';
+import 'package:instaflutter/listings/model/suspension_info.dart';
 
 abstract class ListingsRepository {
   // Categories / filters
@@ -48,13 +49,20 @@ abstract class ListingsRepository {
 
   // Listing suspension
   Future<List<ListingModel>> getSuspendedListings();
-  Future<void> suspendListing({required ListingModel listing});
+  Future<void> suspendListing({
+    required ListingModel listing,
+    SuspensionInfo? suspensionInfo,
+    required String adminId,
+  });
 
   // Verification
   Future<List<ListingModel>> getUnverifiedListings();
   Future<void> verifyListing(String listingId, String adminId, String reason);
   Future<void> rejectListing(String listingId);
-  Future<void> unsuspendListing({required ListingModel listing});
+  Future<void> unsuspendListing({
+    required ListingModel listing,
+    required String adminId,
+  });
 
   // Featured listings
   Future<List<ListingModel>> getFeaturedListings();

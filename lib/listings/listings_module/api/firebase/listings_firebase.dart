@@ -14,6 +14,7 @@ import 'package:instaflutter/listings/model/categories_model.dart';
 import 'package:instaflutter/listings/model/filter_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listing_review_model.dart';
+import 'package:instaflutter/listings/model/suspension_info.dart';
 import 'package:path/path.dart' as path;
 
 class ListingsFirebaseUtils extends ListingsRepository {
@@ -82,30 +83,66 @@ class ListingsFirebaseUtils extends ListingsRepository {
 
   @override
   Future<List<ListingModel>> getSuspendedListings() async {
-    QuerySnapshot querySnapshot = await firestore
+    QuerySnapshot<Map<String, dynamic>> querySnapshot = await firestore
         .collection(cfg.listingsCollection)
         .where('suspended', isEqualTo: true)
         .get();
-    
-    return querySnapshot.docs
-        .map((doc) => ListingModel.fromJson(doc.data() as Map<String, dynamic>))
-        .toList();
+
+    return querySnapshot.docs.map(_listingFromDoc).toList();
   }
 
   @override
-  Future<void> suspendListing({required ListingModel listing}) async {
+  Future<void> suspendListing({
+    required ListingModel listing,
+    SuspensionInfo? suspensionInfo,
+    required String adminId,
+  }) async {
+    debugPrint('[ListingsFirebase] suspendListing START: ${listing.id}');
+    final info = suspensionInfo ?? SuspensionInfo(
+      isSuspended: true,
+      suspendedAt: DateTime.now(),
+      suspendedBy: adminId,
+    );
+
+    final updatedInfo = info.copyWith(
+      isSuspended: true,
+      suspendedAt: info.suspendedAt ?? DateTime.now(),
+      suspendedBy: adminId,
+    );
+
+    debugPrint('[ListingsFirebase] Updating Firestore doc ${listing.id} with suspended=true');
     await firestore
         .collection(cfg.listingsCollection)
         .doc(listing.id)
-        .update({'suspended': true});
+        .update({
+          'suspended': true,
+          'suspensionInfo': updatedInfo.toJson(),
+        });
+    debugPrint('[ListingsFirebase] suspendListing COMPLETE: ${listing.id}');
   }
 
   @override
-  Future<void> unsuspendListing({required ListingModel listing}) async {
+  Future<void> unsuspendListing({
+    required ListingModel listing,
+    required String adminId,
+  }) async {
+    debugPrint('[ListingsFirebase] unsuspendListing START: ${listing.id}');
+    final currentInfo = listing.suspensionInfo ?? SuspensionInfo(isSuspended: true);
+    final updatedInfo = currentInfo.copyWith(
+      isSuspended: false,
+      unsuspendedAt: DateTime.now(),
+      unsuspendedBy: adminId,
+    );
+
+    debugPrint('[ListingsFirebase] Updating Firestore doc ${listing.id} with suspended=false');
     await firestore
         .collection(cfg.listingsCollection)
         .doc(listing.id)
-        .update({'suspended': false});
+        .update({
+          'suspended': false,
+          'suspensionInfo': updatedInfo.toJson(),
+        });
+    debugPrint('[ListingsFirebase] unsuspendListing COMPLETE: ${listing.id}');
   }
 
   // ---------------------------

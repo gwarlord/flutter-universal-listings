@@ -31,8 +31,9 @@ class UnsuspendUserEvent extends AdminEvent {
 
 class SuspendListingEvent extends AdminEvent {
   ListingModel listing;
+  SuspensionInfo? suspensionInfo;
 
-  SuspendListingEvent({required this.listing});
+  SuspendListingEvent({required this.listing, this.suspensionInfo});
 }
 
 class UnsuspendListingEvent extends AdminEvent {

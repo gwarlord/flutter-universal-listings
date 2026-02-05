@@ -6,11 +6,15 @@ import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/listings/model/suspension_info.dart';
 
 class SuspensionReasonDialog extends StatefulWidget {
-  final String userName;
+  final String subjectName;
+  final String title;
+  final String warningText;
 
   const SuspensionReasonDialog({
     Key? key,
-    required this.userName,
+    required this.subjectName,
+    this.title = 'Suspend User',
+    this.warningText = 'The user will not be able to log in and will receive a notification.',
   }) : super(key: key);
 
   @override
@@ -61,14 +65,14 @@ class _SuspensionReasonDialogState extends State<SuspensionReasonDialog> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Suspend User'.tr(),
+                          widget.title.tr(),
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
-                          widget.userName,
+                          widget.subjectName,
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey,
@@ -152,7 +156,7 @@ class _SuspensionReasonDialogState extends State<SuspensionReasonDialog> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'The user will not be able to log in and will receive a notification.'.tr(),
+                        widget.warningText.tr(),
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.red.shade700,
