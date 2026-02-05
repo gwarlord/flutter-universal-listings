@@ -70,6 +70,8 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
 
     on<SuspendListingEvent>((event, emit) async {
       await listingsRepository.suspendListing(listing: event.listing);
+      // Update the listing's suspended property
+      event.listing.suspended = true;
       if (!suspendedListings.any((l) => l.id == event.listing.id)) {
         suspendedListings.add(event.listing);
       }
@@ -79,8 +81,13 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
 
     on<UnsuspendListingEvent>((event, emit) async {
       await listingsRepository.unsuspendListing(listing: event.listing);
+      // Update the listing's suspended property
+      event.listing.suspended = false;
       suspendedListings.removeWhere((l) => l.id == event.listing.id);
-      emit(SuspendedListingsState(suspendedListings: suspendedListings));
+      if (!allListings.any((l) => l.id == event.listing.id)) {
+        allListings.add(event.listing);
+      }
+      emit(AllListingsState(listings: allListings));
     });
 
     on<LoadingEvent>((event, emit) => emit(LoadingState()));
