@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/core/utils/helper.dart';
+import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/listings/model/suspension_info.dart';
 
 class SuspensionReasonDialog extends StatefulWidget {
@@ -107,7 +108,7 @@ class _SuspensionReasonDialogState extends State<SuspensionReasonDialog> {
                       onChanged: (value) {
                         setState(() => _selectedReason = value!);
                       },
-                      activeColor: Color(colorPrimary),
+                      activeColor: Color(cfg.colorPrimary),
                     );
                   }).toList(),
                 ),

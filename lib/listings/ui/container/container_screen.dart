@@ -499,7 +499,7 @@ class _ContainerState extends State<ContainerScreen> {
                       primaryColor: primaryColorValue,
                     ),
                   _drawerTile(
-                    title: 'Booking Services'.tr(),
+                    title: 'Activate Booking'.tr(),
                     icon: Icons.room_service_rounded,
                     trailing: !currentUser.hasBookingServices ? _lockIcon() : _tierBadge('PRO', Colors.blue),
                     onTap: () {
@@ -507,7 +507,7 @@ class _ContainerState extends State<ContainerScreen> {
                         _navigateToListingServices(context);
                       } else {
                         Navigator.pop(context);
-                        _showUpgradeDialog(context, 'Booking Services', 'Professional');
+                        _showUpgradeDialog(context, 'Activate Booking', 'Professional');
                       }
                     },
                     isDark: isDark,
@@ -583,7 +583,7 @@ class _ContainerState extends State<ContainerScreen> {
                     primaryColor: primaryColorValue,
                   ),
                   _drawerTile(
-                    title: 'Chat Settings'.tr(),
+                    title: 'Activate Chat'.tr(),
                     icon: Icons.chat_rounded,
                     trailing: !currentUser.hasDirectMessaging ? _lockIcon() : _tierBadge('PREMIUM', Colors.purple),
                     onTap: () {
@@ -591,7 +591,7 @@ class _ContainerState extends State<ContainerScreen> {
                       if (currentUser.hasDirectMessaging) {
                         push(context, ChatSettingsScreen(currentUser: currentUser, listingsRepository: listings_api.listingApiManager));
                       } else {
-                        _showUpgradeDialog(context, 'Chat Settings', 'Premium');
+                        _showUpgradeDialog(context, 'Activate Chat', 'Premium');
                       }
                     },
                     isDark: isDark,

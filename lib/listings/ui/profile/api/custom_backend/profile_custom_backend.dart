@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:instaflutter/listings/model/suspension_info.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_repository.dart';
 
 class ProfileCustomBackendUtils extends ProfileRepository {
@@ -36,13 +37,20 @@ class ProfileCustomBackendUtils extends ProfileRepository {
   }
 
   @override
-  Future<void> suspendUser({required ListingsUser user}) {
+  Future<void> suspendUser({
+    required ListingsUser user,
+    SuspensionInfo? suspensionInfo,
+    required String adminId,
+  }) {
     // TODO: implement suspendUser
     throw UnimplementedError();
   }
 
   @override
-  Future<void> unsuspendUser({required ListingsUser user}) {
+  Future<void> unsuspendUser({
+    required ListingsUser user,
+    required String adminId,
+  }) {
     // TODO: implement unsuspendUser
     throw UnimplementedError();
   }
