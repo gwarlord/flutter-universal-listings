@@ -103,6 +103,12 @@ class ListingsCustomBackendUtils extends ListingsRepository {
   }) async {}
 
   @override
+  Future<void> requestUnsuspension({
+    required ListingModel listing,
+    required String requestText,
+  }) async {}
+
+  @override
   Future<ListingReviewModel?> postReview({required ListingReviewModel reviewModel}) async {
     return null;
   }

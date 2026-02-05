@@ -143,8 +143,124 @@ class MyListingCard extends StatefulWidget {
 }
 
 class _MyListingCardState extends State<MyListingCard> {
+  void _showRequestUnsuspensionDialog() {
+    final TextEditingController controller = TextEditingController();
+    final isDark = isDarkMode(context);
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Request Unsuspension'.tr(),
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (widget.listing.suspensionInfo?.reason != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Suspension Reason:'.tr(),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.listing.suspensionInfo!.reason!.displayName,
+                      style: TextStyle(color: Colors.red, fontSize: 13),
+                    ),
+                    if (widget.listing.suspensionInfo!.reasonText != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.listing.suspensionInfo!.reasonText!,
+                        style: TextStyle(color: Colors.red.shade700, fontSize: 12),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            Text(
+              'Explain why this listing should be unsuspended:'.tr(),
+              style: TextStyle(fontSize: 14, color: isDark ? Colors.grey[400] : Colors.grey[700]),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: 'Provide details about your response...'.tr(),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                filled: true,
+                fillColor: isDark ? Colors.grey[800] : Colors.grey[100],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Cancel'.tr()),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(colorPrimary),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              if (controller.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Please provide a response'.tr())),
+                );
+                return;
+              }
+              
+              Navigator.pop(dialogContext);
+              
+              try {
+                await listingApiManager.requestUnsuspension(
+                  listing: widget.listing,
+                  requestText: controller.text.trim(),
+                );
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Unsuspension request submitted'.tr())),
+                  );
+                  // Refresh listings
+                  context.read<MyListingsBloc>().add(GetMyListingsEvent());
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              }
+            },
+            child: Text('Submit Request'.tr()),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isSuspended = widget.listing.suspended;
+    final suspensionRequested = widget.listing.suspensionInfo?.unsuspensionRequested ?? false;
+    
     return GestureDetector(
       onTap: () async {
         bool? isListingDeleted = await push(
@@ -166,24 +282,60 @@ class _MyListingCardState extends State<MyListingCard> {
               fit: StackFit.expand,
               children: [
                 displayImage(widget.listing.photo),
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: IconButton(
-                    tooltip: widget.listing.isFav
-                        ? 'Remove From Favorites'.tr()
-                        : 'Add To Favorites'.tr(),
-                    icon: Icon(
-                      Icons.favorite,
-                      color: widget.listing.isFav
-                          ? Color(colorPrimary)
-                          : Colors.white,
+                if (isSuspended)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.block, color: Colors.red, size: 32),
+                          const SizedBox(height: 4),
+                          Text(
+                            'SUSPENDED'.tr(),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          if (suspensionRequested)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                'Request Pending'.tr(),
+                                style: TextStyle(
+                                  color: Colors.yellow,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                    onPressed: () => context
-                        .read<MyListingsBloc>()
-                        .add(ListingFavUpdated(listing: widget.listing)),
                   ),
-                ),
+                if (!isSuspended)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: IconButton(
+                      tooltip: widget.listing.isFav
+                          ? 'Remove From Favorites'.tr()
+                          : 'Add To Favorites'.tr(),
+                      icon: Icon(
+                        Icons.favorite,
+                        color: widget.listing.isFav
+                            ? Color(colorPrimary)
+                            : Colors.white,
+                      ),
+                      onPressed: () => context
+                          .read<MyListingsBloc>()
+                          .add(ListingFavUpdated(listing: widget.listing)),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -198,25 +350,41 @@ class _MyListingCardState extends State<MyListingCard> {
                     : Colors.grey.shade800,
                 fontWeight: FontWeight.bold),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Text(widget.listing.place, maxLines: 1),
-          ),
-          RatingBar.builder(
-            ignoreGestures: true,
-            minRating: .5,
-            initialRating: widget.listing.reviewsSum != 0
-                ? widget.listing.reviewsSum / widget.listing.reviewsCount
-                : 0,
-            allowHalfRating: true,
-            itemSize: 22,
-            glow: false,
-            unratedColor: Color(colorPrimary).withOpacity(0.5),
-            itemBuilder: (context, index) =>
-                Icon(Icons.star, color: Color(colorPrimary)),
-            itemCount: 5,
-            onRatingUpdate: (newValue) {},
-          )
+          if (isSuspended && !suspensionRequested)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                ),
+                icon: Icon(Icons.feedback, size: 16),
+                label: Text('Request Unsuspension'.tr(), style: TextStyle(fontSize: 11)),
+                onPressed: _showRequestUnsuspensionDialog,
+              ),
+            ),
+          if (!isSuspended) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Text(widget.listing.place, maxLines: 1),
+            ),
+            RatingBar.builder(
+              ignoreGestures: true,
+              minRating: .5,
+              initialRating: widget.listing.reviewsSum != 0
+                  ? widget.listing.reviewsSum / widget.listing.reviewsCount
+                  : 0,
+              allowHalfRating: true,
+              itemSize: 22,
+              glow: false,
+              unratedColor: Color(colorPrimary).withOpacity(0.5),
+              itemBuilder: (context, index) =>
+                  Icon(Icons.star, color: Color(colorPrimary)),
+              itemCount: 5,
+              onRatingUpdate: (newValue) {},
+            ),
+          ],
         ],
       ),
     );

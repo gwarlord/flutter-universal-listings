@@ -55,6 +55,12 @@ abstract class ListingsRepository {
     required String adminId,
   });
 
+  // Request unsuspension
+  Future<void> requestUnsuspension({
+    required ListingModel listing,
+    required String requestText,
+  });
+
   // Verification
   Future<List<ListingModel>> getUnverifiedListings();
   Future<void> verifyListing(String listingId, String adminId, String reason);

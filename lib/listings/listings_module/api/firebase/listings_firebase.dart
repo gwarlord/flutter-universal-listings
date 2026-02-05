@@ -132,6 +132,9 @@ class ListingsFirebaseUtils extends ListingsRepository {
       isSuspended: false,
       unsuspendedAt: DateTime.now(),
       unsuspendedBy: adminId,
+      unsuspensionRequested: false,
+      unsuspensionRequestText: null,
+      unsuspensionRequestedAt: null,
     );
 
     debugPrint('[ListingsFirebase] Updating Firestore doc ${listing.id} with suspended=false');
@@ -143,6 +146,28 @@ class ListingsFirebaseUtils extends ListingsRepository {
           'suspensionInfo': updatedInfo.toJson(),
         });
     debugPrint('[ListingsFirebase] unsuspendListing COMPLETE: ${listing.id}');
+  }
+
+  @override
+  Future<void> requestUnsuspension({
+    required ListingModel listing,
+    required String requestText,
+  }) async {
+    debugPrint('[ListingsFirebase] requestUnsuspension for listing: ${listing.id}');
+    final currentInfo = listing.suspensionInfo ?? SuspensionInfo(isSuspended: true);
+    final updatedInfo = currentInfo.copyWith(
+      unsuspensionRequested: true,
+      unsuspensionRequestText: requestText,
+      unsuspensionRequestedAt: DateTime.now(),
+    );
+
+    await firestore
+        .collection(cfg.listingsCollection)
+        .doc(listing.id)
+        .update({
+          'suspensionInfo': updatedInfo.toJson(),
+        });
+    debugPrint('[ListingsFirebase] requestUnsuspension COMPLETE');
   }
 
   // ---------------------------
@@ -236,8 +261,7 @@ class ListingsFirebaseUtils extends ListingsRepository {
     for (final doc in result.docs) {
       try {
         final model = _listingFromDoc(doc);
-        // Filter out suspended listings
-        if (model.suspended) continue;
+        // Keep suspended listings visible for owner
         model.isFav = favListingsIDs.contains(doc.id);
         listings.add(model);
       } catch (e) {

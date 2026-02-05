@@ -43,6 +43,11 @@ class SuspensionInfo {
   final String? suspendedBy; // Admin user ID
   final DateTime? unsuspendedAt;
   final String? unsuspendedBy;
+  
+  // Unsuspension request fields
+  final bool unsuspensionRequested;
+  final String? unsuspensionRequestText;
+  final DateTime? unsuspensionRequestedAt;
 
   SuspensionInfo({
     required this.isSuspended,
@@ -52,6 +57,9 @@ class SuspensionInfo {
     this.suspendedBy,
     this.unsuspendedAt,
     this.unsuspendedBy,
+    this.unsuspensionRequested = false,
+    this.unsuspensionRequestText,
+    this.unsuspensionRequestedAt,
   });
 
   factory SuspensionInfo.fromJson(Map<String, dynamic> json) {
@@ -76,6 +84,13 @@ class SuspensionInfo {
               ? DateTime.parse(json['unsuspendedAt'])
               : null,
       unsuspendedBy: json['unsuspendedBy'],
+      unsuspensionRequested: json['unsuspensionRequested'] ?? false,
+      unsuspensionRequestText: json['unsuspensionRequestText'],
+      unsuspensionRequestedAt: json['unsuspensionRequestedAt'] is Timestamp
+          ? (json['unsuspensionRequestedAt'] as Timestamp).toDate()
+          : json['unsuspensionRequestedAt'] != null
+              ? DateTime.parse(json['unsuspensionRequestedAt'])
+              : null,
     );
   }
 
@@ -88,6 +103,9 @@ class SuspensionInfo {
       'suspendedBy': suspendedBy,
       'unsuspendedAt': unsuspendedAt,
       'unsuspendedBy': unsuspendedBy,
+      'unsuspensionRequested': unsuspensionRequested,
+      'unsuspensionRequestText': unsuspensionRequestText,
+      'unsuspensionRequestedAt': unsuspensionRequestedAt,
     };
   }
 
@@ -99,6 +117,9 @@ class SuspensionInfo {
     String? suspendedBy,
     DateTime? unsuspendedAt,
     String? unsuspendedBy,
+    bool? unsuspensionRequested,
+    String? unsuspensionRequestText,
+    DateTime? unsuspensionRequestedAt,
   }) {
     return SuspensionInfo(
       isSuspended: isSuspended ?? this.isSuspended,
@@ -108,6 +129,9 @@ class SuspensionInfo {
       suspendedBy: suspendedBy ?? this.suspendedBy,
       unsuspendedAt: unsuspendedAt ?? this.unsuspendedAt,
       unsuspendedBy: unsuspendedBy ?? this.unsuspendedBy,
+      unsuspensionRequested: unsuspensionRequested ?? this.unsuspensionRequested,
+      unsuspensionRequestText: unsuspensionRequestText ?? this.unsuspensionRequestText,
+      unsuspensionRequestedAt: unsuspensionRequestedAt ?? this.unsuspensionRequestedAt,
     );
   }
 }

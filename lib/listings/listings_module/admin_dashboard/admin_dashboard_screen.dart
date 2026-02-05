@@ -279,6 +279,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
   Widget _buildAllListingsTab() {
     final listings = _getFilteredListings();
+    final unsuspensionRequestCount = suspendedListings
+        .where((l) => l.suspensionInfo?.unsuspensionRequested == true)
+        .length;
+    final subtitleText = unsuspensionRequestCount > 0
+        ? '${allListings.length} total listings • $unsuspensionRequestCount unsuspension ${unsuspensionRequestCount == 1 ? 'request' : 'requests'}'.tr()
+        : '${allListings.length} total listings available'.tr();
+        
     return RefreshIndicator(
       onRefresh: () async {
         _loadAllData();
@@ -287,7 +294,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         children: [
           _buildTabHeader(
             title: 'Listing Management'.tr(),
-            subtitle: '${allListings.length} total listings available'.tr(),
+            subtitle: subtitleText,
             controller: TextEditingController(),
             onChanged: (v) => setState(() => listingSearchQuery = v),
             filterActive: showOnlySuspendedListings,
@@ -825,32 +832,82 @@ class ModernListingCard extends StatelessWidget {
           if (isSuspended && listing.suspensionInfo != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (listing.suspensionInfo!.reason != null)
-                      Text(
-                        'Reason: ${listing.suspensionInfo!.reason!.displayName}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.red),
+              child: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (listing.suspensionInfo!.reason != null)
+                          Text(
+                            'Reason: ${listing.suspensionInfo!.reason!.displayName}',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.red),
+                          ),
+                        if (listing.suspensionInfo!.reasonText != null && listing.suspensionInfo!.reasonText!.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            listing.suspensionInfo!.reasonText!,
+                            style: TextStyle(fontSize: 11, color: Colors.red.shade700),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (listing.suspensionInfo!.unsuspensionRequested) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.orange, width: 2),
                       ),
-                    if (listing.suspensionInfo!.reasonText != null && listing.suspensionInfo!.reasonText!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        listing.suspensionInfo!.reasonText!,
-                        style: TextStyle(fontSize: 11, color: Colors.red.shade700),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.feedback, size: 16, color: Colors.orange),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Unsuspension Request Pending'.tr(),
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange),
+                              ),
+                            ],
+                          ),
+                          if (listing.suspensionInfo!.unsuspensionRequestText != null && listing.suspensionInfo!.unsuspensionRequestText!.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              'Response:'.tr(),
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.orange),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              listing.suspensionInfo!.unsuspensionRequestText!,
+                              style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[300] : Colors.grey[800]),
+                            ),
+                          ],
+                          if (listing.suspensionInfo!.unsuspensionRequestedAt != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Requested: ${DateFormat('MMM d, y h:mm a').format(listing.suspensionInfo!.unsuspensionRequestedAt!)}',
+                              style: TextStyle(fontSize: 10, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                            ),
+                          ],
+                        ],
                       ),
-                    ],
+                    ),
                   ],
-                ),
+                ],
               ),
             ),
         ],
