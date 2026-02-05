@@ -8,6 +8,9 @@ export * from "./email_verification";
 // Export order notification functions
 export * from "./order_notifications";
 
+// Export rental booking notification functions
+export * from "./rental_booking_notifications";
+
 admin.initializeApp();
 const db = admin.firestore();
 const messaging = admin.messaging();

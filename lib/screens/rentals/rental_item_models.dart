@@ -61,6 +61,7 @@ class RentalItemBrowse {
   final String listingId;
   final String unitName;
   final String? description;
+  final String category;
   final String rentalType; // 'general', 'vehicle'
   final double basePrice;
   final String pricingUnit; // 'hourly', 'daily', 'weekly', 'monthly'
@@ -77,6 +78,7 @@ class RentalItemBrowse {
     required this.listingId,
     required this.unitName,
     this.description,
+    this.category = '',
     this.rentalType = 'general',
     this.basePrice = 0.0,
     this.pricingUnit = 'daily',
@@ -95,6 +97,7 @@ class RentalItemBrowse {
       listingId: json['listingId'] ?? '',
       unitName: json['unitName'] ?? '',
       description: json['description'],
+      category: json['category'] ?? '',
       rentalType: json['rentalType'] ?? 'general',
       basePrice: (json['basePrice'] ?? 0).toDouble(),
       pricingUnit: json['pricingUnit'] ?? 'daily',
@@ -114,6 +117,7 @@ class RentalItemBrowse {
       'listingId': listingId,
       'unitName': unitName,
       'description': description,
+      'category': category,
       'rentalType': rentalType,
       'basePrice': basePrice,
       'pricingUnit': pricingUnit,

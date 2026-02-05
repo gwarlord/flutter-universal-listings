@@ -33,7 +33,7 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
   final List<RentalCartItem> _cart = [];
   
   String _searchQuery = '';
-  String _sortBy = 'name'; // 'name', 'price_low', 'price_high'
+  String _selectedCategory = 'all';
 
   @override
   void dispose() {
@@ -118,42 +118,6 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
             ),
           ),
 
-          // Sort options
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Sort by'.tr(),
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                DropdownButton<String>(
-                  value: _sortBy,
-                  items: [
-                    DropdownMenuItem(
-                      value: 'name',
-                      child: Text('Name'.tr()),
-                    ),
-                    DropdownMenuItem(
-                      value: 'price_low',
-                      child: Text('Price: Low to High'.tr()),
-                    ),
-                    DropdownMenuItem(
-                      value: 'price_high',
-                      child: Text('Price: High to Low'.tr()),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _sortBy = value);
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-
           // Rental items grid
           Expanded(
             child: StreamBuilder<List<RentalItemBrowse>>(
@@ -186,6 +150,15 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
                 }
 
                 var items = snapshot.data!;
+                final categories = items
+                    .map((item) => item.category.trim())
+                    .where((c) => c.isNotEmpty)
+                    .toSet()
+                    .toList()
+                  ..sort();
+                final effectiveCategory = categories.contains(_selectedCategory)
+                  ? _selectedCategory
+                  : 'all';
                 
                 // Filter by search
                 if (_searchQuery.isNotEmpty) {
@@ -195,37 +168,69 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
                       .toList();
                 }
 
-                // Sort
-                items.sort((a, b) {
-                  switch (_sortBy) {
-                    case 'price_low':
-                      return a.basePrice.compareTo(b.basePrice);
-                    case 'price_high':
-                      return b.basePrice.compareTo(a.basePrice);
-                    case 'name':
-                    default:
-                      return a.unitName.compareTo(b.unitName);
-                  }
-                });
+                // Filter by category
+                    if (effectiveCategory != 'all') {
+                  items = items
+                      .where((item) => item.category == effectiveCategory)
+                      .toList();
+                }
 
-                return GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.75,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 16,
-                  ),
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    return _buildRentalItemCard(
-                      context,
-                      item,
-                      dark,
-                      primaryColor,
-                    );
-                  },
+                items.sort((a, b) => a.unitName.compareTo(b.unitName));
+
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Category'.tr(),
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          DropdownButton<String>(
+                            value: effectiveCategory,
+                            items: [
+                              DropdownMenuItem(
+                                value: 'all',
+                                child: Text('All Categories'.tr()),
+                              ),
+                              ...categories.map((category) => DropdownMenuItem(
+                                    value: category,
+                                    child: Text(category),
+                                  )),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() => _selectedCategory = value);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.75,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: items.length,
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          return _buildRentalItemCard(
+                            context,
+                            item,
+                            dark,
+                            primaryColor,
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
@@ -393,197 +398,202 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
     final primaryColor = Color(cfg.colorPrimary);
+    final bottomPadding = MediaQuery.of(context).viewInsets.bottom > 0
+        ? MediaQuery.of(context).viewInsets.bottom + 20
+        : MediaQuery.of(context).padding.bottom + 20;
 
     return Container(
       decoration: BoxDecoration(
         color: dark ? Colors.grey.shade900 : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Title
-              Text(
-                widget.item.unitName,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: dark ? Colors.white : Colors.black,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Description
-              if (widget.item.description != null)
+      child: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: bottomPadding,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Title
                 Text(
-                  widget.item.description!,
+                  widget.item.unitName,
                   style: TextStyle(
-                    fontSize: 13,
-                    color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: dark ? Colors.white : Colors.black,
                   ),
                 ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 12),
 
-              // Vehicle details (if applicable)
-              if (widget.item.vehicleDetails != null) ...[
+                // Description
+                if (widget.item.description != null)
+                  Text(
+                    widget.item.description!,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    ),
+                  ),
+                const SizedBox(height: 20),
+
+                // Vehicle details (if applicable)
+                if (widget.item.vehicleDetails != null) ...[
+                  Text(
+                    'Vehicle Details'.tr(),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: dark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${widget.item.vehicleDetails!['make']} ${widget.item.vehicleDetails!['model']} (${widget.item.vehicleDetails!['year']})',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: dark ? Colors.grey.shade300 : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                // Date selection
                 Text(
-                  'Vehicle Details'.tr(),
+                  'Select Rental Period'.tr(),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: dark ? Colors.white : Colors.black,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  '${widget.item.vehicleDetails!['make']} ${widget.item.vehicleDetails!['model']} (${widget.item.vehicleDetails!['year']})',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: dark ? Colors.grey.shade300 : Colors.black87,
+                const SizedBox(height: 12),
+
+                // Start date
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Start Date'.tr(),
+                    style: TextStyle(color: dark ? Colors.white : Colors.black),
+                  ),
+                  subtitle: Text(
+                    DateFormat('MMM dd, yyyy').format(_startDate),
+                    style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
+                  ),
+                  trailing: Icon(Icons.calendar_today, color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
+                  onTap: () => _selectDate(context, true),
+                ),
+
+                // End date
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'End Date'.tr(),
+                    style: TextStyle(color: dark ? Colors.white : Colors.black),
+                  ),
+                  subtitle: Text(
+                    DateFormat('MMM dd, yyyy').format(_endDate),
+                    style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
+                  ),
+                  trailing: Icon(Icons.calendar_today, color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
+                  onTap: () => _selectDate(context, false),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Price summary
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: dark ? Colors.grey.shade800 : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Duration'.tr(),
+                            style: TextStyle(color: dark ? Colors.white : Colors.black),
+                          ),
+                          Text(
+                            '${_getDurationDays()} days',
+                            style: TextStyle(color: dark ? Colors.white : Colors.black),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Price per ${widget.item.pricingUnit}'.tr(),
+                            style: TextStyle(color: dark ? Colors.white : Colors.black),
+                          ),
+                          Text(
+                            '\$${widget.item.basePrice.toStringAsFixed(2)}',
+                            style: TextStyle(color: dark ? Colors.white : Colors.black),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Total'.tr(),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: dark ? Colors.white : Colors.black,
+                            ),
+                          ),
+                          Text(
+                            '\$${_calculateTotal().toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: dark ? Colors.white : Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
+
                 const SizedBox(height: 20),
-              ],
 
-              // Date selection
-              Text(
-                'Select Rental Period'.tr(),
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: dark ? Colors.white : Colors.black,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Start date
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(
-                  'Start Date'.tr(),
-                  style: TextStyle(color: dark ? Colors.white : Colors.black),
-                ),
-                subtitle: Text(
-                  DateFormat('MMM dd, yyyy').format(_startDate),
-                  style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
-                ),
-                trailing: Icon(Icons.calendar_today, color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
-                onTap: () => _selectDate(context, true),
-              ),
-
-              // End date
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(
-                  'End Date'.tr(),
-                  style: TextStyle(color: dark ? Colors.white : Colors.black),
-                ),
-                subtitle: Text(
-                  DateFormat('MMM dd, yyyy').format(_endDate),
-                  style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
-                ),
-                trailing: Icon(Icons.calendar_today, color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
-                onTap: () => _selectDate(context, false),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Price summary
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: dark ? Colors.grey.shade800 : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Duration'.tr(),
-                          style: TextStyle(color: dark ? Colors.white : Colors.black),
-                        ),
-                        Text(
-                          '${_getDurationDays()} days',
-                          style: TextStyle(color: dark ? Colors.white : Colors.black),
-                        ),
-                      ],
+                // Add to cart button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isChecking ? null : _addToCart,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Price per ${widget.item.pricingUnit}'.tr(),
-                          style: TextStyle(color: dark ? Colors.white : Colors.black),
-                        ),
-                        Text(
-                          '\$${widget.item.basePrice.toStringAsFixed(2)}',
-                          style: TextStyle(color: dark ? Colors.white : Colors.black),
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Total'.tr(),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: dark ? Colors.white : Colors.black,
-                          ),
-                        ),
-                        Text(
-                          '\$${_calculateTotal().toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: dark ? Colors.white : Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Add to cart button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isChecking ? null : _addToCart,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    child: _isChecking
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation(Colors.white),
+                            ),
+                          )
+                        : Text('Add to Cart'.tr()),
                   ),
-                  child: _isChecking
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(Colors.white),
-                          ),
-                        )
-                      : Text('Add to Cart'.tr()),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -154,6 +154,22 @@ service cloud.firestore {
         allow create, update, delete: if isSignedIn() &&
           request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID;
       }
+
+      // Rental Catalog Items (Premium Rentals)
+      match /rental_catalog/{itemId} {
+        // Allow read if:
+        // 1. User is the listing author
+        // OR
+        // 2. Rentals are enabled for the listing
+        allow read: if isSignedIn() && (
+          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID ||
+          get(/databases/$(database)/documents/listings/$(listingId)).data.rentalConfig.isRentalEnabled == true
+        );
+
+        // Allow write ONLY if listing author
+        allow create, update, delete: if isSignedIn() &&
+          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID;
+      }
     }
     
     // Categories collection
@@ -225,6 +241,34 @@ service cloud.firestore {
       
       // No deletes allowed
       allow delete: if false;
+    }
+    
+    // Rental Bookings (Premium Rentals Feature)
+    match /rental_bookings/{bookingId} {
+      // Allow read for:
+      // 1. All signed-in users (for availability checking)
+      // 2. Listing owner can see all bookings for their listings
+      // 3. Customer can see their own bookings
+      allow read: if isSignedIn();
+      
+      // Allow create if user is authenticated and is the customer
+      allow create: if isSignedIn() && 
+        request.auth.uid == request.resource.data.customerId;
+      
+      // Allow update by:
+      // 1. Listing owner (managing booking status: confirmed, fulfilled, cancelled)
+      // 2. Customer (cancelling their own bookings)
+      allow update: if isSignedIn() && (
+        request.auth.uid == get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.authorID ||
+        request.auth.uid == resource.data.customerId ||
+        isAdmin()
+      );
+      
+      // Allow delete by listing owner or admin
+      allow delete: if isSignedIn() && (
+        request.auth.uid == get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.authorID ||
+        isAdmin()
+      );
     }
     
     // Stripe customers

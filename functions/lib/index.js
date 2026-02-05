@@ -47,6 +47,8 @@ const mail_1 = __importDefault(require("@sendgrid/mail"));
 __exportStar(require("./email_verification"), exports);
 // Export order notification functions
 __exportStar(require("./order_notifications"), exports);
+// Export rental booking notification functions
+__exportStar(require("./rental_booking_notifications"), exports);
 admin.initializeApp();
 const db = admin.firestore();
 const messaging = admin.messaging();

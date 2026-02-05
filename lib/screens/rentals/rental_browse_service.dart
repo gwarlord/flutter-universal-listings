@@ -1,43 +1,104 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:instaflutter/listings/model/rental_config.dart';
 import 'package:instaflutter/listings/model/rental_booking.dart';
+import 'package:instaflutter/listings/model/rental_catalog_item.dart';
 import 'package:instaflutter/screens/rentals/rental_item_models.dart';
 
 /// Service for managing rental browsing, inventory, and booking operations
 class RentalBrowseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Get available rental units for a listing
+  /// Get available rental items from the catalog for a listing
   Stream<List<RentalItemBrowse>> getAvailableRentalItems(String listingId) {
     return _firestore
-        .collection('rental_units')
-        .where('listingId', isEqualTo: listingId)
-        .where('status', isEqualTo: 'available')
+        .collection('listings')
+        .doc(listingId)
+        .collection('rental_catalog')
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs
-              .map((doc) => RentalItemBrowse.fromJson({
-                    ...doc.data(),
-                    'id': doc.id,
-                  }))
-              .toList();
+          return snapshot.docs.map((doc) {
+            final catalogItem = RentalCatalogItem.fromJson(doc.data() as Map<String, dynamic>, doc.id);
+            // Convert RentalCatalogItem to RentalItemBrowse for backwards compatibility
+            return RentalItemBrowse(
+              id: catalogItem.id,
+              listingId: catalogItem.listingId,
+              unitName: catalogItem.name,
+              description: catalogItem.description,
+              category: catalogItem.category,
+              rentalType: catalogItem.isVehicle ? 'vehicle' : 'general',
+              basePrice: catalogItem.basePrice,
+              pricingUnit: _pricingUnitToString(catalogItem.pricingUnit),
+              currencyCode: 'USD', // Default, will be overridden by listing currency
+              photos: catalogItem.photos,
+              isAvailable: true, // Availability is determined by stock
+              stockQty: catalogItem.stockQty,
+              vehicleDetails: catalogItem.isVehicle ? {
+                'make': catalogItem.make,
+                'model': catalogItem.model,
+                'year': catalogItem.year,
+                'color': catalogItem.color,
+                'licensePlate': catalogItem.licensePlate,
+                'vin': catalogItem.vin,
+              } : null,
+              createdAt: catalogItem.createdAt,
+              updatedAt: catalogItem.updatedAt,
+            );
+          }).toList();
         });
+  }
+
+  String _pricingUnitToString(RentalPricingUnit unit) {
+    switch (unit) {
+      case RentalPricingUnit.hourly:
+        return 'hourly';
+      case RentalPricingUnit.daily:
+        return 'daily';
+      case RentalPricingUnit.weekly:
+        return 'weekly';
+      case RentalPricingUnit.monthly:
+        return 'monthly';
+    }
   }
 
   /// Get single rental item details
   Future<RentalItemBrowse?> getRentalItem(String listingId, String itemId) async {
     try {
       final doc = await _firestore
-          .collection('rental_units')
+          .collection('listings')
+          .doc(listingId)
+          .collection('rental_catalog')
           .doc(itemId)
           .get();
       
       if (!doc.exists) return null;
       
-      return RentalItemBrowse.fromJson({
-        ...doc.data() ?? {},
-        'id': doc.id,
-      });
+      final catalogItem = RentalCatalogItem.fromJson(doc.data() as Map<String, dynamic>, doc.id);
+      // Convert to RentalItemBrowse
+      return RentalItemBrowse(
+        id: catalogItem.id,
+        listingId: catalogItem.listingId,
+        unitName: catalogItem.name,
+        description: catalogItem.description,
+        category: catalogItem.category,
+        rentalType: catalogItem.isVehicle ? 'vehicle' : 'general',
+        basePrice: catalogItem.basePrice,
+        pricingUnit: _pricingUnitToString(catalogItem.pricingUnit),
+        currencyCode: 'USD',
+        photos: catalogItem.photos,
+        isAvailable: true,
+        stockQty: catalogItem.stockQty,
+        vehicleDetails: catalogItem.isVehicle ? {
+          'make': catalogItem.make,
+          'model': catalogItem.model,
+          'year': catalogItem.year,
+          'color': catalogItem.color,
+          'licensePlate': catalogItem.licensePlate,
+          'vin': catalogItem.vin,
+        } : null,
+        createdAt: catalogItem.createdAt,
+        updatedAt: catalogItem.updatedAt,
+      );
     } catch (e) {
       debugPrint('Error fetching rental item: $e');
       return null;

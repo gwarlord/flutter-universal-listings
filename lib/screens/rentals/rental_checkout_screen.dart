@@ -62,12 +62,12 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
     return Scaffold(
       backgroundColor: dark ? Colors.black : Colors.white,
       appBar: AppBar(
-        backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
+        backgroundColor: primaryColor,
         title: Text(
           'Review Rental Booking'.tr(),
-          style: TextStyle(color: dark ? Colors.white : Colors.black),
+          style: const TextStyle(color: Colors.white),
         ),
-        iconTheme: IconThemeData(color: dark ? Colors.white : Colors.black),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -271,7 +271,7 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
                 ),
               ],
 
-              const SizedBox(height: 24),
+              SizedBox(height: MediaQuery.of(context).padding.bottom + 24),
             ],
           ),
         ),
@@ -363,6 +363,16 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
   }
 
   Widget _buildListerCard(bool dark) {
+    // Use authorProfilePic for avatar, fallback to listing photo
+    final avatarUrl = widget.listing.authorProfilePic.isNotEmpty 
+        ? widget.listing.authorProfilePic 
+        : (widget.listing.photo ?? '');
+    
+    // Use authorName, fallback to title owner
+    final displayName = widget.listing.authorName.isNotEmpty 
+        ? widget.listing.authorName 
+        : '${widget.listing.title} Owner'.tr();
+    
     return Card(
       color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
       child: Padding(
@@ -372,11 +382,11 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
             // Avatar
             CircleAvatar(
               radius: 24,
-              backgroundImage: widget.listing.photo != null && widget.listing.photo!.isNotEmpty
-                  ? NetworkImage(widget.listing.photo!)
+              backgroundImage: avatarUrl.isNotEmpty
+                  ? NetworkImage(avatarUrl)
                   : null,
-              child: widget.listing.photo == null || widget.listing.photo!.isEmpty
-                  ? Icon(Icons.person, size: 24)
+              child: avatarUrl.isEmpty
+                  ? const Icon(Icons.person, size: 24)
                   : null,
             ),
             const SizedBox(width: 12),
@@ -386,7 +396,7 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.listing.authorName.isNotEmpty ? widget.listing.authorName : 'Unknown Lister'.tr(),
+                    displayName,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),

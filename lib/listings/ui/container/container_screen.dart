@@ -17,6 +17,7 @@ import 'package:instaflutter/listings/listings_module/my_listings/my_listings_sc
 import 'package:instaflutter/listings/listings_module/booking_services/booking_services_screen.dart';
 import 'package:instaflutter/listings/listings_module/booking/my_bookings_screen.dart';
 import 'package:instaflutter/listings/listings_module/booking/booking_management_screen.dart';
+import 'package:instaflutter/listings/ui/rentals/rental_orders_hub_screen.dart';
 import 'package:instaflutter/listings/ui/subscription/paywall_screen.dart';
 import 'package:instaflutter/listings/ui/subscription/customer_center_screen.dart';
 import 'package:instaflutter/listings/utils/subscription_helper.dart';
@@ -32,7 +33,7 @@ import 'package:instaflutter/listings/listings_module/api/listings_api_manager.d
 import 'package:provider/provider.dart';
 import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 
-enum DrawerSelection { home, conversations, categories, search, orders, profile }
+enum DrawerSelection { home, conversations, categories, search, orders, rentalOrders, profile }
 
 class ContainerWrapperWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -344,6 +345,7 @@ class _ContainerState extends State<ContainerScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // BROWSE SECTION
                   _drawerSectionLabel('Browse'.tr(), isDark),
                   _drawerTile(
                     title: 'Home'.tr(),
@@ -411,6 +413,7 @@ class _ContainerState extends State<ContainerScreen> {
                   ),
 
                   const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
+                  // SHOPPING SECTION
                   _drawerSectionLabel('Shopping'.tr(), isDark),
                   _drawerTile(
                     title: 'My Orders'.tr(),
@@ -428,8 +431,25 @@ class _ContainerState extends State<ContainerScreen> {
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
-                  
-                  // Order Requests (Premium only)
+                  _drawerTile(
+                    title: 'Rental Orders'.tr(),
+                    icon: Icons.calendar_month_rounded,
+                    isSelected: _drawerSelection == DrawerSelection.rentalOrders,
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.read<ContainerBloc>().add(TabSelectedEvent(
+                        appBarTitle: 'Rental Orders'.tr(),
+                        currentTabIndex: 4,
+                        drawerSelection: DrawerSelection.rentalOrders,
+                        currentWidget: RentalOrdersHubScreen(
+                          currentUser: currentUser,
+                          showAppBar: false,
+                        ),
+                      ));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
                   if (isPremiumUser(currentUser))
                     _drawerTile(
                       title: 'Order Requests'.tr(),
@@ -444,6 +464,104 @@ class _ContainerState extends State<ContainerScreen> {
                     ),
 
                   const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
+                  // SELLING SECTION
+                  _drawerSectionLabel('Selling'.tr(), isDark),
+                  _drawerTile(
+                    title: 'My Listings'.tr(),
+                    icon: Icons.list_alt_rounded,
+                    onTap: () {
+                      Navigator.pop(context);
+                      push(context, MyListingsWrapperWidget(currentUser: currentUser));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'My Bookings'.tr(),
+                    icon: Icons.calendar_today_rounded,
+                    onTap: () {
+                      Navigator.pop(context);
+                      push(context, MyBookingsWrapperWidget(currentUser: currentUser));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  if (currentUser.isAdmin || const ['professional', 'premium'].contains(currentUser.subscriptionTier.toLowerCase()))
+                    _drawerTile(
+                      title: 'Booking Requests'.tr(),
+                      icon: Icons.event_note_rounded,
+                      trailing: _tierBadge('PRO', Colors.blue),
+                      onTap: () {
+                        Navigator.pop(context);
+                        push(context, BookingManagementWrapperWidget(currentUser: currentUser));
+                      },
+                      isDark: isDark,
+                      primaryColor: primaryColorValue,
+                    ),
+                  _drawerTile(
+                    title: 'Booking Services'.tr(),
+                    icon: Icons.room_service_rounded,
+                    trailing: !currentUser.hasBookingServices ? _lockIcon() : _tierBadge('PRO', Colors.blue),
+                    onTap: () {
+                      if (currentUser.hasBookingServices) {
+                        _navigateToListingServices(context);
+                      } else {
+                        Navigator.pop(context);
+                        _showUpgradeDialog(context, 'Booking Services', 'Professional');
+                      }
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'Deals & Promotions'.tr(),
+                    icon: Icons.local_offer_rounded,
+                    onTap: () {
+                      Navigator.pop(context);
+                      push(context, DealsPromotionScreen());
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+
+                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
+                  // ANALYTICS SECTION
+                  _drawerSectionLabel('Analytics'.tr(), isDark),
+                  _drawerTile(
+                    title: 'Analytics'.tr(),
+                    icon: Icons.bar_chart_rounded,
+                    trailing: !currentUser.hasBookingServices ? _lockIcon() : _tierBadge('PRO', Colors.blue),
+                    onTap: () {
+                      if (currentUser.hasBookingServices) {
+                        Navigator.pop(context);
+                        push(context, AnalyticsScreen(currentUser: currentUser));
+                      } else {
+                        Navigator.pop(context);
+                        _showUpgradeDialog(context, 'Analytics', 'Professional');
+                      }
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'Advanced Analytics'.tr(),
+                    icon: Icons.analytics_rounded,
+                    trailing: (currentUser.isAdmin || ['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase())) ? _tierBadge('PREMIUM', Colors.purple) : _lockIcon(),
+                    onTap: () {
+                      if (currentUser.isAdmin || ['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase())) {
+                        Navigator.pop(context);
+                        push(context, AdvancedAnalyticsScreen(currentUser: currentUser));
+                      } else {
+                        Navigator.pop(context);
+                        _showUpgradeDialog(context, 'Advanced Analytics', 'Premium');
+                      }
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+
+                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
+                  // ACCOUNT SECTION
                   _drawerSectionLabel('Account'.tr(), isDark),
                   _drawerTile(
                     title: 'Profile'.tr(),
@@ -464,51 +582,21 @@ class _ContainerState extends State<ContainerScreen> {
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
-
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
-                  _drawerSectionLabel('Your Activity'.tr(), isDark),
                   _drawerTile(
-                    title: 'My Listings'.tr(),
-                    icon: Icons.list_alt_rounded,
+                    title: 'Chat Settings'.tr(),
+                    icon: Icons.chat_rounded,
+                    trailing: !currentUser.hasDirectMessaging ? _lockIcon() : _tierBadge('PREMIUM', Colors.purple),
                     onTap: () {
                       Navigator.pop(context);
-                      push(context, MyListingsWrapperWidget(currentUser: currentUser));
+                      if (currentUser.hasDirectMessaging) {
+                        push(context, ChatSettingsScreen(currentUser: currentUser, listingsRepository: listings_api.listingApiManager));
+                      } else {
+                        _showUpgradeDialog(context, 'Chat Settings', 'Premium');
+                      }
                     },
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
-                  _drawerTile(
-                    title: 'Deals & Promotions'.tr(),
-                    icon: Icons.local_offer_rounded,
-                    onTap: () {
-                      Navigator.pop(context);
-                      push(context, DealsPromotionScreen());
-                    },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
-                  ),
-                  _drawerTile(
-                    title: 'My Bookings'.tr(),
-                    icon: Icons.calendar_today_rounded,
-                    onTap: () {
-                      Navigator.pop(context);
-                      push(context, MyBookingsWrapperWidget(currentUser: currentUser));
-                    },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
-                    ),
-                  if (currentUser.isAdmin || const ['professional', 'premium'].contains(currentUser.subscriptionTier.toLowerCase()))
-                    _drawerTile(
-                      title: 'Booking Requests'.tr(),
-                      icon: Icons.event_note_rounded,
-                      onTap: () {
-                        Navigator.pop(context);
-                        push(context, BookingManagementWrapperWidget(currentUser: currentUser));
-                      },
-                      isDark: isDark,
-                      primaryColor: primaryColorValue,
-                    ),
-                  
                   if (currentUser.subscriptionTier.toLowerCase() != 'free')
                     _drawerTile(
                       title: 'Manage Subscription'.tr(),
@@ -522,88 +610,9 @@ class _ContainerState extends State<ContainerScreen> {
                     ),
 
                   const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
-                  _drawerSectionLabel('Upgrades'.tr(), isDark),
-                  
-                  _expansionTile(
-                    title: 'Professional'.tr(),
-                    icon: Icons.star_rounded,
-                    iconColor: Colors.amber,
-                    isDark: isDark,
-                    children: [
-                      _drawerTile(
-                        title: 'Booking Services'.tr(),
-                        icon: Icons.room_service_rounded,
-                        isCompact: true,
-                        trailing: !currentUser.hasBookingServices ? _lockIcon() : _tierBadge('PRO', Colors.blue),
-                        onTap: () {
-                          if (currentUser.hasBookingServices) {
-                            _navigateToListingServices(context);
-                          } else {
-                            Navigator.pop(context);
-                            _showUpgradeDialog(context, 'Booking Services', 'Professional');
-                          }
-                        },
-                        isDark: isDark,
-                        primaryColor: primaryColorValue,
-                      ),
-                      _drawerTile(
-                        title: 'Analytics'.tr(),
-                        icon: Icons.bar_chart_rounded,
-                        isCompact: true,
-                        trailing: !currentUser.hasBookingServices ? _lockIcon() : _tierBadge('PRO', Colors.blue),
-                        onTap: () {
-                          if (currentUser.hasBookingServices) {
-                            Navigator.pop(context);
-                            push(context, AnalyticsScreen(currentUser: currentUser));
-                          } else {
-                            Navigator.pop(context);
-                            _showUpgradeDialog(context, 'Analytics', 'Professional');
-                          }
-                        },
-                        isDark: isDark,
-                        primaryColor: primaryColorValue,
-                      ),
-                    ],
-                  ),
-
-                  _expansionTile(
-                    title: 'Premium'.tr(),
-                    icon: Icons.diamond_rounded,
-                    iconColor: Colors.purple,
-                    isDark: isDark,
-                    children: [
-                      _drawerTile(
-                        title: 'Chat Settings'.tr(),
-                        icon: Icons.chat_rounded,
-                        isCompact: true,
-                        trailing: !currentUser.hasDirectMessaging ? _lockIcon() : _tierBadge('PREMIUM', Colors.purple),
-                        onTap: () {
-                          Navigator.pop(context);
-                          if (currentUser.hasDirectMessaging) {
-                            push(context, ChatSettingsScreen(currentUser: currentUser, listingsRepository: listings_api.listingApiManager)); // Corrected usage of alias
-                          } else {
-                            _showUpgradeDialog(context, 'Chat Settings', 'Premium');
-                          }
-                        },
-                        isDark: isDark,
-                        primaryColor: primaryColorValue,
-                      ),
-                      _drawerTile(
-                        title: 'Advanced Analytics'.tr(),
-                        icon: Icons.analytics_rounded,
-                        isCompact: true,
-                        trailing: (currentUser.isAdmin || ['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase())) ? _tierBadge('PREMIUM', Colors.purple) : _lockIcon(),
-                        onTap: () {
-                          Navigator.pop(context);
-                          if (currentUser.isAdmin || ['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase())) {
-                            push(context, AdvancedAnalyticsScreen(currentUser: currentUser));
-                          }
-                        },
-                        isDark: isDark,
-                        primaryColor: primaryColorValue,
-                      ),
-                    ],
-                  ),
+                  // UPGRADE PLAN CARD
+                  if (currentUser.subscriptionTier.toLowerCase() == 'free')
+                    _buildUpgradePlanCard(isDark, primaryColorValue, context, currentUser),
                 ],
               ),
             ),
@@ -811,5 +820,82 @@ class _ContainerState extends State<ContainerScreen> {
 
   Widget _lockIcon() {
     return const Icon(Icons.lock_outline_rounded, size: 16, color: Colors.grey);
+  }
+
+  Widget _buildUpgradePlanCard(bool isDark, Color primaryColor, BuildContext context, ListingsUser currentUser) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            primaryColor.withOpacity(0.15),
+            primaryColor.withOpacity(0.05),
+          ],
+        ),
+        border: Border.all(
+          color: primaryColor.withOpacity(0.3),
+          width: 1.5,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.pop(context);
+            push(context, PaywallScreen(currentUser: currentUser));
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.star_rounded,
+                      color: primaryColor,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Unlock Premium Features'.tr(),
+                            style: TextStyle(
+                              color: isDark ? Colors.white : Colors.black87,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Access Pro & Premium tools'.tr(),
+                            style: TextStyle(
+                              color: isDark ? Colors.white54 : Colors.black54,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      color: primaryColor,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

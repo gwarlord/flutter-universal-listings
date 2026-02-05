@@ -31,9 +31,9 @@ import 'package:instaflutter/listings/utils/opening_hours_editor.dart';
 import 'package:instaflutter/listings/utils/subscription_helper.dart';
 import 'package:instaflutter/screens/store/catalog_manager_screen.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
-import 'package:instaflutter/listings/ui/rentals/rental_config_editor.dart';
 import 'package:instaflutter/listings/model/rental_config.dart';
 import 'package:instaflutter/listings/ui/rentals/rental_bookings_screen.dart';
+import 'package:instaflutter/screens/rentals/rental_catalog_manager_screen.dart';
 
 class AddListingWrappingWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -1786,31 +1786,54 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
               // Rentals section (Premium-gated)
               if (isPremiumUser(currentUser)) ...[
-                RentalConfigEditor(
-                  initialConfig: _rentalConfig ?? widget.listingToEdit?.rentalConfig,
-                  onConfigChanged: (config) {
-                    debugPrint('🟢 DEBUG [AddListingScreen.onConfigChanged]: Received config: $config');
-                    debugPrint('🟢 DEBUG [AddListingScreen.onConfigChanged]: isRentalEnabled=${config?.isRentalEnabled}, basePrice=${config?.basePrice}');
+                _buildSectionHeader('Rentals'.tr()),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  title: Text(
+                    'Enable Rentals'.tr(),
+                    style: TextStyle(color: dark ? Colors.white : Colors.black),
+                  ),
+                  subtitle: Text(
+                    'Allow customers to rent items from this listing'.tr(),
+                    style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                  ),
+                  value: _rentalConfig?.isRentalEnabled ?? false,
+                  onChanged: (value) {
                     setState(() {
-                      _rentalConfig = config;
-                      debugPrint('🟢 DEBUG [AddListingScreen.onConfigChanged]: _rentalConfig updated to: $_rentalConfig');
+                      if (value) {
+                        // Create a basic rental config when enabling
+                        _rentalConfig = RentalConfig(
+                          isRentalEnabled: true,
+                          rentalType: RentalType.general,
+                          defaultPricingUnit: RentalPricingUnit.daily,
+                          basePrice: 0.0,
+                          termsAndConditions: '',
+                        );
+                      } else {
+                        // Disable rentals
+                        _rentalConfig = _rentalConfig?.copyWith(isRentalEnabled: false);
+                      }
                     });
                   },
+                  activeColor: Color(colorPrimary),
+                  inactiveTrackColor: dark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
                 ),
                 const SizedBox(height: 12),
-                // Manage Rental Bookings button (only when editing and rentals are enabled)
+                // Rental Management buttons (only when editing and rentals are enabled)
                 if (isEdit && (_rentalConfig?.isRentalEnabled ?? false)) ...[  
+                  // Manage Rental Catalog button
                   ElevatedButton.icon(
                     onPressed: () {
-                      push(context, RentalBookingsScreen(
+                      push(context, RentalCatalogManagerScreen(
                         listing: widget.listingToEdit!,
                         currentUser: currentUser,
                       ));
                     },
-                    icon: const Icon(Icons.calendar_month),
-                    label: Text(isEdit ? 'Manage Rental Bookings' : 'Save Listing First'),
+                    icon: const Icon(Icons.inventory_2),
+                    label: Text('Manage Rental Catalog'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isEdit ? Color(colorPrimary) : Colors.grey,
+                      backgroundColor: Color(colorPrimary),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(

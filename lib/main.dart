@@ -78,11 +78,24 @@ Future<void> _showLocalNotification(RemoteMessage message) async {
 
   // Determine notification channel based on type
   final notificationType = data['type'] ?? 'chat';
-  final channelId = notificationType.contains('order') ? 'orders' : 'chat_messages';
-  final channelName = notificationType.contains('order') ? 'Orders' : 'Chat Messages';
-  final channelDescription = notificationType.contains('order') 
-      ? 'Notifications for order updates' 
-      : 'Notifications for new chat messages.';
+  
+  String channelId;
+  String channelName;
+  String channelDescription;
+  
+  if (notificationType.contains('order')) {
+    channelId = 'orders';
+    channelName = 'Orders';
+    channelDescription = 'Notifications for order updates';
+  } else if (notificationType.contains('rental')) {
+    channelId = 'rental_bookings';
+    channelName = 'Rental Bookings';
+    channelDescription = 'Notifications for rental booking updates';
+  } else {
+    channelId = 'chat_messages';
+    channelName = 'Chat Messages';
+    channelDescription = 'Notifications for new chat messages';
+  }
 
   final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
     channelId,
@@ -121,6 +134,14 @@ void _handleNotificationClick(RemoteMessage message) {
   } else if (notificationType == 'new_order' || notificationType == 'order_status_changed') {
     // Store order notification data for navigation after app is ready
     print('🛒 Order notification: orderId=${message.data['orderId']}, status=${message.data['status']}');
+    // Navigation will be handled by the app once it's ready
+  } else if (notificationType == 'new_rental_booking' || 
+             notificationType == 'rental_confirmed' || 
+             notificationType == 'rental_cancelled' ||
+             notificationType == 'rental_started' ||
+             notificationType == 'rental_completed') {
+    // Store rental booking notification data for navigation after app is ready
+    print('🚗 Rental booking notification: bookingId=${message.data['bookingId']}, type=$notificationType');
     // Navigation will be handled by the app once it's ready
   }
 }

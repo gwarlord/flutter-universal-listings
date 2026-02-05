@@ -1,6 +1,7 @@
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -46,6 +47,8 @@ import 'package:instaflutter/widgets/menu/menu_section_widget.dart';
 import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/listings/model/catalog_item.dart';
 import 'package:instaflutter/listings/model/rental_config.dart';
+import 'package:instaflutter/listings/model/rental_catalog_item.dart';
+import 'package:instaflutter/listings/services/rental_catalog_service.dart';
 import 'package:instaflutter/listings/ui/rentals/rental_booking_dialog.dart';
 import 'package:instaflutter/listings/ui/rentals/rental_bookings_screen.dart';
 import 'package:instaflutter/screens/store/store_browse_screen.dart';
@@ -132,6 +135,10 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   final StoreService _storeService = StoreService();
   Stream<List<CatalogItem>>? _catalogStream;
 
+  // Rentals catalog
+  final RentalCatalogService _rentalCatalogService = RentalCatalogService();
+  Stream<List<RentalCatalogItem>>? _rentalCatalogStream;
+
   bool get _canEditOrDelete =>
       currentUser.userID == listing.authorID || currentUser.isAdmin;
 
@@ -162,6 +169,9 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
         listing.listerTierSnapshot == 'premium') {
       _catalogStream = _storeService.getCatalogItems(listing.id).map((items) => items.take(6).toList());
     }
+
+    // Initialize rental catalog stream once (prevents flashing)
+    _rentalCatalogStream = _rentalCatalogService.getRentalCatalogItems(listing.id);
     
     if (listing.storeEnabled && listing.storeUrl.isNotEmpty) {
       _fetchStorePreview(listing.storeUrl);
@@ -351,7 +361,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   pinned: true,
                   elevation: 0,
                   stretch: true,
-                  backgroundColor: dark ? Colors.black : Colors.white,
+                  backgroundColor: dark ? Colors.black : primaryColor,
                   leading: _buildHeaderCircleButton(
                     icon: Icons.arrow_back,
                     onTap: () => Navigator.pop(context),
@@ -1172,73 +1182,47 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.1),
+            color: isDark ? Colors.grey.shade900 : Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: primaryColor.withOpacity(0.3)),
+            border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Base Price
-              _rentalInfoRow(
-                icon: Icons.attach_money,
-                label: 'Base Price'.tr(),
-                value: '\$${rentalConfig.basePrice.toStringAsFixed(2)} per ${rentalConfig.defaultPricingUnit.toString().split('.').last}',
-                primaryColor: primaryColor,
-              ),
-              const SizedBox(height: 12),
-              
-              // Rental Type
-              _rentalInfoRow(
-                icon: Icons.category,
-                label: 'Type'.tr(),
-                value: rentalConfig.rentalType.toString().split('.').last,
-                primaryColor: primaryColor,
-              ),
-              const SizedBox(height: 12),
+          child: StreamBuilder<List<RentalCatalogItem>>(
+            stream: _rentalCatalogStream,
+            initialData: const [],
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  (snapshot.data == null || snapshot.data!.isEmpty)) {
+                return Row(
+                  children: [
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(primaryColor),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Loading rental catalog...'.tr(),
+                      style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+                    ),
+                  ],
+                );
+              }
 
-              // Buffer Minutes
-              _rentalInfoRow(
-                icon: Icons.schedule,
-                label: 'Buffer Time'.tr(),
-                value: '${rentalConfig.bufferMinutes} minutes',
-                primaryColor: primaryColor,
-              ),
+              final items = snapshot.data ?? [];
 
-              // Deposit (if required)
-              if (rentalConfig.requiresDeposit) ...[
-                const SizedBox(height: 12),
-                _rentalInfoRow(
-                  icon: Icons.security,
-                  label: 'Deposit Required'.tr(),
-                  value: '\$${rentalConfig.depositAmount?.toStringAsFixed(2) ?? '0.00'}',
-                  primaryColor: primaryColor,
-                ),
-              ],
-
-              // License (if required)
-              if (rentalConfig.requiresLicense) ...[
-                const SizedBox(height: 12),
-                _rentalInfoRow(
-                  icon: Icons.card_membership,
-                  label: 'Driver License Required'.tr(),
-                  value: 'Yes'.tr(),
-                  primaryColor: primaryColor,
-                ),
-              ],
-
-              // Terms and Conditions
-              if (rentalConfig.termsAndConditions != null && rentalConfig.termsAndConditions!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Column(
+              if (items.isEmpty) {
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.description, size: 20, color: primaryColor),
+                        Icon(Icons.inventory_2_outlined, color: primaryColor),
                         const SizedBox(width: 8),
                         Text(
-                          'Terms & Conditions'.tr(),
+                          'Rental catalog coming soon'.tr(),
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: isDark ? Colors.white : Colors.black87,
@@ -1246,55 +1230,108 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        rentalConfig.termsAndConditions!,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-                          height: 1.5,
+                    const SizedBox(height: 6),
+                    Text(
+                      'This listing hasn’t added rental items yet. Check back soon.'.tr(),
+                      style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: null,
+                        icon: const Icon(Icons.shopping_cart),
+                        label: Text('Browse Rentals'.tr()),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor.withOpacity(0.4),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
                   ],
-                ),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        // Book Rental Button - Opens rental browse screen with cart experience
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => RentalBrowseScreen(
-                    listing: listing,
-                    rentalConfig: rentalConfig,
-                    currentUser: widget.currentUser,
+                );
+              }
+
+              final categories = items
+                  .map((e) => e.category.trim())
+                  .where((c) => c.isNotEmpty)
+                  .toSet()
+                  .toList();
+              final minPrice = items.map((e) => e.basePrice).reduce(min);
+              final previewPhotos = items.expand((e) => e.photos).take(3).toList();
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      _buildRentalPhotoStack(previewPhotos, isDark, primaryColor),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Explore rental items'.tr(),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${items.length} items • From \$${minPrice.toStringAsFixed(2)}'.tr(),
+                              style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  if (categories.isNotEmpty)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: categories.take(4).map((category) {
+                        return _buildRentalStatChip(category, isDark, primaryColor);
+                      }).toList(),
+                    ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RentalBrowseScreen(
+                              listing: listing,
+                              rentalConfig: rentalConfig,
+                              currentUser: widget.currentUser,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.shopping_cart),
+                      label: Text('Browse Rentals'.tr()),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
-            icon: const Icon(Icons.shopping_cart),
-            label: const Text('Browse & Book Rentals'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
           ),
         ),
       ],
@@ -1327,6 +1364,59 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildRentalStatChip(String label, bool isDark, Color primaryColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey.shade800 : primaryColor.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.grey.shade700 : primaryColor.withOpacity(0.2),
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: isDark ? Colors.white70 : primaryColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRentalPhotoStack(List<String> photos, bool isDark, Color primaryColor) {
+    if (photos.isEmpty) {
+      return CircleAvatar(
+        radius: 20,
+        backgroundColor: isDark ? Colors.grey.shade800 : primaryColor.withOpacity(0.12),
+        child: Icon(Icons.inventory_2_outlined, color: primaryColor, size: 18),
+      );
+    }
+
+    final displayPhotos = photos.take(3).toList();
+    return SizedBox(
+      width: 72,
+      height: 40,
+      child: Stack(
+        children: List.generate(displayPhotos.length, (index) {
+          final leftOffset = index * 20.0;
+          return Positioned(
+            left: leftOffset,
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+              child: CircleAvatar(
+                radius: 16,
+                backgroundImage: NetworkImage(displayPhotos[index]),
+              ),
+            ),
+          );
+        }),
+      ),
     );
   }
 
