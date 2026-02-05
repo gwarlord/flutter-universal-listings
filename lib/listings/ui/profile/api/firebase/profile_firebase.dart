@@ -8,6 +8,7 @@ import 'package:flutter_native_image_v2/flutter_native_image_v2.dart';
 
 import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:instaflutter/listings/model/suspension_info.dart';
 import 'package:instaflutter/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_repository.dart';
 import 'package:path/path.dart' as path;
@@ -90,19 +91,51 @@ class ProfileFirebaseUtils extends ProfileRepository {
   }
 
   @override
-  Future<void> suspendUser({required ListingsUser user}) async {
+  Future<void> suspendUser({
+    required ListingsUser user,
+    SuspensionInfo? suspensionInfo,
+    required String adminId,
+  }) async {
+    final info = suspensionInfo ?? SuspensionInfo(
+      isSuspended: true,
+      suspendedAt: DateTime.now(),
+      suspendedBy: adminId,
+    );
+    
+    final updatedInfo = info.copyWith(
+      isSuspended: true,
+      suspendedAt: info.suspendedAt ?? DateTime.now(),
+      suspendedBy: adminId,
+    );
+
     await firestore
         .collection(usersCollection)
         .doc(user.userID)
-        .update({'suspended': true});
+        .update({
+          'suspended': true,
+          'suspensionInfo': updatedInfo.toJson(),
+        });
   }
 
   @override
-  Future<void> unsuspendUser({required ListingsUser user}) async {
+  Future<void> unsuspendUser({
+    required ListingsUser user,
+    required String adminId,
+  }) async {
+    final currentInfo = user.suspensionInfo ?? SuspensionInfo(isSuspended: true);
+    final updatedInfo = currentInfo.copyWith(
+      isSuspended: false,
+      unsuspendedAt: DateTime.now(),
+      unsuspendedBy: adminId,
+    );
+
     await firestore
         .collection(usersCollection)
         .doc(user.userID)
-        .update({'suspended': false});
+        .update({
+          'suspended': false,
+          'suspensionInfo': updatedInfo.toJson(),
+        });
   }
 
   @override

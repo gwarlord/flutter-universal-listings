@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:instaflutter/listings/model/suspension_info.dart';
 
 abstract class ProfileRepository {
   /// Updates the [currentUser] object in the database.
@@ -21,11 +22,18 @@ abstract class ProfileRepository {
   /// get all suspended users
   Future<List<ListingsUser>> getSuspendedUsers();
 
-  /// suspend a user account
-  Future<void> suspendUser({required ListingsUser user});
+  /// suspend a user account with optional reason
+  Future<void> suspendUser({
+    required ListingsUser user,
+    SuspensionInfo? suspensionInfo,
+    required String adminId,
+  });
 
   /// unsuspend a user account
-  Future<void> unsuspendUser({required ListingsUser user});
+  Future<void> unsuspendUser({
+    required ListingsUser user,
+    required String adminId,
+  });
 
   /// get all users, optionally filtered by search query
   Future<List<ListingsUser>> getAllUsers({String? searchQuery});

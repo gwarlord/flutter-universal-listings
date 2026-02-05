@@ -18,8 +18,9 @@ class LoadingEvent extends AdminEvent {}
 
 class SuspendUserEvent extends AdminEvent {
   ListingsUser user;
+  SuspensionInfo? suspensionInfo;
 
-  SuspendUserEvent({required this.user});
+  SuspendUserEvent({required this.user, this.suspensionInfo});
 }
 
 class UnsuspendUserEvent extends AdminEvent {

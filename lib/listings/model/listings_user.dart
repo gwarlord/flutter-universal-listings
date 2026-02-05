@@ -3,11 +3,13 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:instaflutter/core/model/user.dart';
 import 'package:instaflutter/listings/listings_app_config.dart';
+import 'package:instaflutter/listings/model/suspension_info.dart';
 
 class ListingsUser extends User {
   bool isAdmin;
   String subscriptionTier;
   bool suspended;
+  SuspensionInfo? suspensionInfo;
   DateTime? subscriptionExpiresAt;
   String? revenueCatCustomerId;
   String countryCode;
@@ -30,6 +32,7 @@ class ListingsUser extends User {
     this.isAdmin = false,
     this.subscriptionTier = 'free',
     this.suspended = false,
+    this.suspensionInfo,
     this.subscriptionExpiresAt,
     this.revenueCatCustomerId,
     this.countryCode = '',
@@ -71,6 +74,9 @@ class ListingsUser extends User {
       isAdmin: parsedJson['isAdmin'] ?? false,
       subscriptionTier: parsedJson['subscriptionTier']?.toString() ?? 'free',
       suspended: parsedJson['suspended'] ?? false,
+      suspensionInfo: parsedJson['suspensionInfo'] != null
+          ? SuspensionInfo.fromJson(parsedJson['suspensionInfo'] as Map<String, dynamic>)
+          : null,
       subscriptionExpiresAt: parsedJson['subscriptionExpiresAt'] != null
           ? (parsedJson['subscriptionExpiresAt'] is Timestamp
               ? (parsedJson['subscriptionExpiresAt'] as Timestamp).toDate()
@@ -106,6 +112,7 @@ class ListingsUser extends User {
       'isAdmin': isAdmin,
       'subscriptionTier': subscriptionTier,
       'suspended': suspended,
+      'suspensionInfo': suspensionInfo?.toJson(),
       'countryCode': countryCode,
       'gender': gender,
       'ageRange': ageRange,

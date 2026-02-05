@@ -10,6 +10,7 @@ import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 import 'package:instaflutter/listings/listings_module/admin_dashboard/admin_bloc.dart';
+import 'package:instaflutter/listings/listings_module/admin_dashboard/suspension_reason_dialog.dart';
 import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
@@ -451,16 +452,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   // --- Confirmation Dialogs ---
 
   void _showSuspendUserConfirmation(ListingsUser user) async {
-    final result = await _showModernActionDialog(
-      context,
-      title: 'Suspend User?'.tr(),
-      content: 'Are you sure you want to suspend ${user.fullName()}? They will no longer be able to log in.'.tr(),
-      isDestructive: true,
-      actionLabel: 'Suspend'.tr(),
+    final suspensionInfo = await showDialog(
+      context: context,
+      builder: (_) => SuspensionReasonDialog(userName: user.fullName()),
     );
-    if (result == true) {
-      if (!mounted) return;
-      context.read<AdminBloc>().add(SuspendUserEvent(user: user));
+    
+    if (suspensionInfo != null && mounted) {
+      context.read<AdminBloc>().add(
+        SuspendUserEvent(
+          user: user,
+          suspensionInfo: suspensionInfo,
+        ),
+      );
     }
   }
 
@@ -694,6 +697,36 @@ class ModernUserCard extends StatelessWidget {
                       _buildBadge(user.subscriptionTier.toUpperCase(), Color(colorPrimary), isDark),
                   ],
                 ),
+                // Show suspension details if suspended
+                if (isSuspended && user.suspensionInfo != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (user.suspensionInfo!.reason != null)
+                          Text(
+                            'Reason: ${user.suspensionInfo!.reason!.displayName}',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.red),
+                          ),
+                        if (user.suspensionInfo!.reasonText != null && user.suspensionInfo!.reasonText!.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            user.suspensionInfo!.reasonText!,
+                            style: TextStyle(fontSize: 11, color: Colors.red.shade700),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

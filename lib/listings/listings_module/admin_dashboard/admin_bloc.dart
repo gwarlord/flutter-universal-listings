@@ -1,6 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:instaflutter/listings/model/suspension_info.dart';
 import 'package:instaflutter/listings/listings_module/api/listings_repository.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_repository.dart';
 
@@ -43,7 +44,11 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
     });
 
     on<SuspendUserEvent>((event, emit) async {
-      await profileRepository.suspendUser(user: event.user);
+      await profileRepository.suspendUser(
+        user: event.user,
+        suspensionInfo: event.suspensionInfo,
+        adminId: currentUser.userID,
+      );
       if (!suspendedUsers.any((u) => u.userID == event.user.userID)) {
         suspendedUsers.add(event.user);
       }
@@ -52,7 +57,10 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
     });
 
     on<UnsuspendUserEvent>((event, emit) async {
-      await profileRepository.unsuspendUser(user: event.user);
+      await profileRepository.unsuspendUser(
+        user: event.user,
+        adminId: currentUser.userID,
+      );
       suspendedUsers.removeWhere((u) => u.userID == event.user.userID);
       if (!allUsers.any((u) => u.userID == event.user.userID)) {
         allUsers.add(event.user);
