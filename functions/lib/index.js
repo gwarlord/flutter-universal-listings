@@ -51,6 +51,8 @@ __exportStar(require("./order_notifications"), exports);
 __exportStar(require("./rental_booking_notifications"), exports);
 // Export user suspension notification functions
 __exportStar(require("./user_suspension_notifications"), exports);
+// Export listing suspension notification functions
+__exportStar(require("./listing_suspension_notifications"), exports);
 admin.initializeApp();
 const db = admin.firestore();
 const messaging = admin.messaging();

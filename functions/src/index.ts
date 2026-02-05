@@ -14,6 +14,9 @@ export * from "./rental_booking_notifications";
 // Export user suspension notification functions
 export * from "./user_suspension_notifications";
 
+// Export listing suspension notification functions
+export * from "./listing_suspension_notifications";
+
 admin.initializeApp();
 const db = admin.firestore();
 const messaging = admin.messaging();
