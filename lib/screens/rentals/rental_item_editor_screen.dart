@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -807,6 +808,19 @@ class _RentalItemEditorScreenState extends State<RentalItemEditorScreen> {
         item: item,
         currentUser: widget.currentUser,
       );
+
+      // If this is a vehicle rental, update the listing's rentalConfig to vehicle type
+      if (_isVehicle && widget.listing.rentalConfig != null) {
+        final updatedConfig = widget.listing.rentalConfig!.copyWith(
+          rentalType: RentalType.vehicle,
+        );
+        await FirebaseFirestore.instance
+            .collection('listings')
+            .doc(widget.listing.id)
+            .update({
+              'rentalConfig': updatedConfig.toJson(),
+            });
+      }
 
       if (mounted) {
         showSnackBar(context, 'Rental item saved successfully'.tr());
