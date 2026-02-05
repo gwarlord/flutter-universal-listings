@@ -48,6 +48,12 @@ export const onRentalBookingCreated = functions.firestore
         ? listingDoc.data()?.title
         : "Your listing";
 
+      // Get rental type to determine emoji
+      const listingData = listingDoc.data();
+      const rentalConfig = listingData?.rentalConfig || {};
+      const isVehicleRental = rentalConfig.rentalType === "vehicle";
+      const notificationEmoji = isVehicleRental ? "🚗" : "📦";
+
       // Get customer name
       const customerDoc = await admin
         .firestore()
@@ -68,7 +74,7 @@ export const onRentalBookingCreated = functions.firestore
       const message = {
         token: fcmToken,
         notification: {
-          title: "🚗 New Rental Booking",
+          title: `${notificationEmoji} New Rental Booking`,
           body: `${customerName} requested a rental from ${listingTitle} (${dateRange})`,
         },
         data: {
@@ -138,6 +144,13 @@ export const onRentalBookingStatusChanged = functions.firestore
         ? listingDoc.data()?.title
         : "A rental";
 
+      // Get rental type to determine emoji
+      const listingData = listingDoc.data();
+      const rentalConfig = listingData?.rentalConfig || {};
+      const isVehicleRental = rentalConfig.rentalType === "vehicle";
+      const vehicleEmoji = isVehicleRental ? "🚘" : "📦";
+      const startEmoji = isVehicleRental ? "🚘" : "📤";
+
       switch (after.status) {
         case "confirmed":
           // Notify customer that booking was confirmed
@@ -158,7 +171,7 @@ export const onRentalBookingStatusChanged = functions.firestore
         case "active":
           // Notify customer that rental period has started
           recipientId = after.customerId;
-          title = "🚘 Rental Started";
+          title = `${startEmoji} Rental Started`;
           body = `Your rental period for ${listingTitle} has started. Enjoy!`;
           notificationType = "rental_started";
           break;
