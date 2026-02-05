@@ -122,12 +122,13 @@ class _RentalItemEditorScreenState extends State<RentalItemEditorScreen> {
     return Scaffold(
       backgroundColor: dark ? Colors.black : Colors.white,
       appBar: AppBar(
-        backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
+        backgroundColor: Color(cfg.colorPrimary),
+        elevation: 4,
         title: Text(
           widget.item == null ? 'Add Rental Item'.tr() : 'Edit Rental Item'.tr(),
-          style: TextStyle(color: dark ? Colors.white : Colors.black),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
-        iconTheme: IconThemeData(color: dark ? Colors.white : Colors.black),
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           if (_isSaving || _isUploading)
             const Padding(
@@ -143,8 +144,8 @@ class _RentalItemEditorScreenState extends State<RentalItemEditorScreen> {
               onPressed: _saveItem,
               child: Text(
                 'Save'.tr(),
-                style: TextStyle(
-                  color: Color(cfg.colorPrimary),
+                style: const TextStyle(
+                  color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
