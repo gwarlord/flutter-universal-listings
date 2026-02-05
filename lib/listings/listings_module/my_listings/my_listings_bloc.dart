@@ -44,6 +44,13 @@ class MyListingsBloc extends Bloc<MyListingsEvent, MyListingsState> {
       myListings.remove(event.listing);
       emit(MyListingsReadyState(myListings: myListings));
     });
+    on<ListingHiddenToggled>((event, emit) async {
+      event.listing.hidden = !event.listing.hidden;
+      myListings.firstWhere((element) => element.id == event.listing.id).hidden =
+          event.listing.hidden;
+      await listingsRepository.publishListing(event.listing);
+      emit(ListingHiddenToggleState(listing: event.listing));
+    });
     on<LoadingEvent>((event, emit) => emit(LoadingState()));
   }
 }

@@ -17,4 +17,10 @@ class ListingFavToggleState extends MyListingsState {
   ListingFavToggleState({required this.listing, required this.updatedUser});
 }
 
+class ListingHiddenToggleState extends MyListingsState {
+  ListingModel listing;
+
+  ListingHiddenToggleState({required this.listing});
+}
+
 class LoadingState extends MyListingsState {}

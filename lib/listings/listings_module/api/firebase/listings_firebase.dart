@@ -236,8 +236,9 @@ class ListingsFirebaseUtils extends ListingsRepository {
     for (final doc in result.docs) {
       try {
         final model = _listingFromDoc(doc);
-        // Filter out suspended listings
+        // Filter out suspended and hidden listings
         if (model.suspended) continue;
+        if (model.hidden) continue;
         model.isFav = favListingsIDs.contains(doc.id);
         listings.add(model);
       } catch (e, s) {
@@ -285,8 +286,9 @@ class ListingsFirebaseUtils extends ListingsRepository {
     for (final doc in result.docs) {
       try {
         final model = _listingFromDoc(doc);
-        // Filter out suspended listings
+        // Filter out suspended and hidden listings
         if (model.suspended) continue;
+        if (model.hidden) continue;
         model.isFav = favListingsIDs.contains(doc.id);
         listings.add(model);
       } catch (e, s) {
@@ -323,7 +325,7 @@ class ListingsFirebaseUtils extends ListingsRepository {
     final List<ListingModel> listings = [];
     for (final listingID in favListingsIDs) {
       final ListingModel? listingModel = await getListing(listingID: listingID);
-      if (listingModel != null && !listingModel.suspended) {
+      if (listingModel != null && !listingModel.suspended && !listingModel.hidden) {
         listingModel.isFav = true;
         listings.add(listingModel);
       }
@@ -735,8 +737,9 @@ class ListingsFirebaseUtils extends ListingsRepository {
       return model;
     }).toList();
 
-    // Filter expired featured listings
+    // Filter expired featured listings and hidden listings
     return all.where((m) {
+      if (m.hidden) return false; // Filter out hidden listings
       if (m.featuredUntil == null) return true; // No expiration
       return m.featuredUntil! > now;
     }).toList();

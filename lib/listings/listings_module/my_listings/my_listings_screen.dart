@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:instaflutter/listings/model/suspension_info.dart';
 import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 import 'package:instaflutter/listings/listings_module/add_listing/add_listing_screen.dart';
@@ -79,6 +80,10 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 _listings
                     .firstWhere((element) => element.id == state.listing.id)
                     .isFav = state.listing.isFav;
+              } else if (state is ListingHiddenToggleState) {
+                _listings
+                    .firstWhere((element) => element.id == state.listing.id)
+                    .hidden = state.listing.hidden;
               } else if (state is LoadingState) {
                 isLoading = true;
               }
@@ -156,57 +161,64 @@ class _MyListingCardState extends State<MyListingCard> {
           'Request Unsuspension'.tr(),
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (widget.listing.suspensionInfo?.reason != null) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Suspension Reason:'.tr(),
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (widget.listing.suspensionInfo?.reason != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.listing.suspensionInfo!.reason!.displayName,
-                      style: TextStyle(color: Colors.red, fontSize: 13),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Suspension Reason:'.tr(),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.listing.suspensionInfo!.reason!.displayName,
+                          style: TextStyle(color: Colors.red, fontSize: 13),
+                        ),
+                        if (widget.listing.suspensionInfo!.reasonText != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.listing.suspensionInfo!.reasonText!,
+                            style: TextStyle(color: Colors.red.shade700, fontSize: 12),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
                     ),
-                    if (widget.listing.suspensionInfo!.reasonText != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.listing.suspensionInfo!.reasonText!,
-                        style: TextStyle(color: Colors.red.shade700, fontSize: 12),
-                      ),
-                    ],
-                  ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                Text(
+                  'Explain why this listing should be unsuspended:'.tr(),
+                  style: TextStyle(fontSize: 14, color: isDark ? Colors.grey[400] : Colors.grey[700]),
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            Text(
-              'Explain why this listing should be unsuspended:'.tr(),
-              style: TextStyle(fontSize: 14, color: isDark ? Colors.grey[400] : Colors.grey[700]),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    hintText: 'Provide details about your response...'.tr(),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    filled: true,
+                    fillColor: isDark ? Colors.grey[800] : Colors.grey[100],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              maxLines: 4,
-              decoration: InputDecoration(
-                hintText: 'Provide details about your response...'.tr(),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                filled: true,
-                fillColor: isDark ? Colors.grey[800] : Colors.grey[100],
-              ),
-            ),
-          ],
+          ),
         ),
         actions: [
           TextButton(
@@ -317,6 +329,30 @@ class _MyListingCardState extends State<MyListingCard> {
                       ),
                     ),
                   ),
+                if (!isSuspended && widget.listing.hidden)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.visibility_off, color: Colors.grey, size: 32),
+                          const SizedBox(height: 4),
+                          Text(
+                            'HIDDEN'.tr(),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 if (!isSuspended)
                   Positioned(
                     top: 0,
@@ -366,23 +402,45 @@ class _MyListingCardState extends State<MyListingCard> {
             ),
           if (!isSuspended) ...[
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
               child: Text(widget.listing.place, maxLines: 1),
             ),
-            RatingBar.builder(
-              ignoreGestures: true,
-              minRating: .5,
-              initialRating: widget.listing.reviewsSum != 0
-                  ? widget.listing.reviewsSum / widget.listing.reviewsCount
-                  : 0,
-              allowHalfRating: true,
-              itemSize: 22,
-              glow: false,
-              unratedColor: Color(colorPrimary).withOpacity(0.5),
-              itemBuilder: (context, index) =>
-                  Icon(Icons.star, color: Color(colorPrimary)),
-              itemCount: 5,
-              onRatingUpdate: (newValue) {},
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.listing.hidden ? 'Hidden'.tr() : 'Visible'.tr(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: widget.listing.hidden
+                            ? Colors.orange
+                            : Colors.green,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Transform.scale(
+                    scale: 0.8,
+                    child: Switch(
+                      value: !widget.listing.hidden,
+                      activeColor: Color(colorPrimary),
+                      activeTrackColor: Color(colorPrimary).withOpacity(0.5),
+                      inactiveThumbColor: isDarkMode(context) 
+                          ? Colors.grey.shade600 
+                          : Colors.grey.shade400,
+                      inactiveTrackColor: isDarkMode(context) 
+                          ? Colors.grey.shade800 
+                          : Colors.grey.shade300,
+                      onChanged: (value) => context
+                          .read<MyListingsBloc>()
+                          .add(ListingHiddenToggled(listing: widget.listing)),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ],
