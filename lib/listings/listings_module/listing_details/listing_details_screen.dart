@@ -54,6 +54,8 @@ import 'package:instaflutter/listings/ui/rentals/rental_booking_dialog.dart';
 import 'package:instaflutter/listings/ui/rentals/rental_bookings_screen.dart';
 import 'package:instaflutter/screens/store/store_browse_screen.dart';
 import 'package:instaflutter/screens/rentals/rental_browse_screen.dart';
+import 'package:instaflutter/listings/utils/caribbean_countries.dart';
+import 'package:instaflutter/listings/utils/world_countries.dart';
 
 import 'package:metadata_fetch/metadata_fetch.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -233,6 +235,18 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
       default:
         return '\$';
     }
+  }
+
+  String _countryFlagEmoji(String? code) {
+    if (code == null || code.trim().isEmpty) return '';
+    final upper = code.trim().toUpperCase();
+    if (upper.length != 2) return '';
+
+    const int flagOffset = 0x1F1E6;
+    const int asciiOffset = 0x41;
+    final int first = upper.codeUnitAt(0) - asciiOffset + flagOffset;
+    final int second = upper.codeUnitAt(1) - asciiOffset + flagOffset;
+    return String.fromCharCode(first) + String.fromCharCode(second);
   }
 
   Future<void> _checkAuthorPremiumStatus() async {
@@ -929,6 +943,10 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   }
 
   Widget _buildMediaGallery() {
+    final countryName =
+        CaribbeanCountries.byCode(listing.countryCode)?.name ?? WorldCountries.byCode(listing.countryCode)?.name ?? '';
+    final countryFlag = _countryFlagEmoji(listing.countryCode);
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -984,7 +1002,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
         ),
         if (_mediaList.length > 1)
           Positioned(
-            bottom: 24,
+            bottom: 12,
             right: 16,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -994,6 +1012,22 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
               ),
               child: Text(
                 '${_pageIndex + 1} / ${_mediaList.length}',
+                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        if (countryName.isNotEmpty)
+          Positioned(
+            bottom: 12,
+            left: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                countryFlag.isNotEmpty ? '$countryFlag $countryName' : countryName,
                 style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
               ),
             ),
@@ -1454,6 +1488,13 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   }
 
   Widget _buildMapSection(bool isDark) {
+    final place = listing.place.trim();
+    final countryName =
+        CaribbeanCountries.byCode(listing.countryCode)?.name ?? WorldCountries.byCode(listing.countryCode)?.name ?? '';
+    final locationLabel = place.isNotEmpty && countryName.isNotEmpty
+        ? '$place, $countryName'
+        : (place.isNotEmpty ? place : countryName);
+
     return Stack(
       children: [
         ClipRRect(
@@ -1499,7 +1540,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    listing.place,
+                    locationLabel.isNotEmpty ? locationLabel : 'Location'.tr(),
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,

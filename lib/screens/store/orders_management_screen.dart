@@ -5,6 +5,7 @@ import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/order_request.dart';
 import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/listings/utils/subscription_helper.dart';
@@ -28,6 +29,7 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
   final StoreService _storeService = StoreService();
   late TabController _tabController;
   final Map<String, ListingsUser> _customerCache = {};
+  final Map<String, ListingModel> _listingCache = {};
 
   // Use a special marker for active orders (both pending and confirmed)
   static const String _activeOrdersMarker = 'ACTIVE';
@@ -221,104 +223,175 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
   }
 
   Widget _buildOrderCard(OrderRequest order, bool dark) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      color: dark ? Colors.grey.shade900 : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => _viewOrderDetail(order),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header: Customer name and status
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _getOrderPreviewData(order),
+      builder: (context, previewSnapshot) {
+        final previewData = previewSnapshot.data ?? {};
+        final firstItemImage = previewData['firstItemImage'] as String?;
+        final listingTitle = previewData['listingTitle'] as String? ?? 'Order ${order.id.substring(0, 8)}';
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          color: dark ? Colors.grey.shade900 : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: InkWell(
+            onTap: () => _viewOrderDetail(order),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: FutureBuilder<ListingsUser?>(
-                      future: _getCustomer(order.customerId),
-                      builder: (context, snapshot) {
-                        final customer = snapshot.data;
-                        return Text(
-                          customer?.fullName() ?? 'Loading...'.tr(),
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: dark ? Colors.white : Colors.black87,
+                  // Header: Customer name and status
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: FutureBuilder<ListingsUser?>(
+                          future: _getCustomer(order.customerId),
+                          builder: (context, snapshot) {
+                            final customer = snapshot.data;
+                            return Text(
+                              customer?.fullName() ?? 'Loading...'.tr(),
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: dark ? Colors.white : Colors.black87,
                           ),
                         );
                       },
                     ),
                   ),
-                  _buildStatusChip(order.status, dark),
-                ],
-              ),
-              const SizedBox(height: 8),
+                      _buildStatusChip(order.status, dark),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
 
-              // Item count and total
-              Row(
-                children: [
-                  Icon(Icons.shopping_bag_outlined, size: 16, color: dark ? Colors.white70 : Colors.black54),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${order.items.length} ${order.items.length == 1 ? 'item' : 'items'}'.tr(),
-                    style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
-                  ),
-                  const SizedBox(width: 16),
-                  Icon(Icons.attach_money, size: 16, color: dark ? Colors.white70 : Colors.black54),
-                  Text(
-                    _formatCurrency(order.estimatedTotal, order.currencyCode),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Color(cfg.colorPrimary),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
+                  // Image and order info
+                  Row(
+                    children: [
+                      // Image thumbnail
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+                          child: firstItemImage != null && firstItemImage.isNotEmpty
+                              ? Image.network(
+                                  firstItemImage,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(
+                                      Icons.shopping_bag,
+                                      color: dark ? Colors.white38 : Colors.black38,
+                                    );
+                                  },
+                                )
+                              : Icon(
+                                  Icons.shopping_bag,
+                                  color: dark ? Colors.white38 : Colors.black38,
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
 
-              // Date
-              Row(
-                children: [
-                  Icon(Icons.calendar_today, size: 16, color: dark ? Colors.white70 : Colors.black54),
-                  const SizedBox(width: 4),
-                  Text(
-                    order.createdAt != null
-                        ? DateFormat('MMM d, y • h:mm a').format(order.createdAt!.toDate())
-                        : '',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: dark ? Colors.white54 : Colors.black45,
-                    ),
+                      // Order info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              listingTitle,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: dark ? Colors.white : Colors.black,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(Icons.shopping_bag_outlined, size: 14, color: dark ? Colors.white54 : Colors.black54),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${order.items.length} item${order.items.length != 1 ? 's' : ''}',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: dark ? Colors.white54 : Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                  const SizedBox(height: 12),
 
-              // Fulfillment method
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(
-                    order.fulfillment.method == FulfillmentMethod.pickup
-                        ? Icons.store_outlined
-                        : Icons.local_shipping_outlined,
-                    size: 16,
-                    color: dark ? Colors.white70 : Colors.black54,
+                  // Total and date
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today, size: 14, color: dark ? Colors.white54 : Colors.black54),
+                          const SizedBox(width: 4),
+                          Text(
+                            order.createdAt != null
+                                ? DateFormat('MMM d, y • h:mm a').format(order.createdAt!.toDate())
+                                : '',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: dark ? Colors.white54 : Colors.black45,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        _formatCurrency(order.estimatedTotal, order.currencyCode),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(cfg.colorPrimary),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    order.fulfillment.method == FulfillmentMethod.pickup ? 'Pickup'.tr() : 'Delivery'.tr(),
-                    style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                  const SizedBox(height: 8),
+
+                  // Fulfillment method
+                  Row(
+                    children: [
+                      Icon(
+                        order.fulfillment.method == FulfillmentMethod.pickup
+                            ? Icons.store_outlined
+                            : order.fulfillment.method == FulfillmentMethod.dineIn
+                                ? Icons.restaurant_outlined
+                                : Icons.local_shipping_outlined,
+                        size: 16,
+                        color: dark ? Colors.white70 : Colors.black54,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        order.fulfillment.method == FulfillmentMethod.pickup
+                            ? 'Pickup'.tr()
+                            : order.fulfillment.method == FulfillmentMethod.dineIn
+                                ? 'Dining In'.tr()
+                                : 'Delivery'.tr(),
+                        style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -406,6 +479,59 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
     return null;
   }
 
+  Future<ListingModel?> _getListingCached(String listingId) async {
+    if (_listingCache.containsKey(listingId)) {
+      return _listingCache[listingId];
+    }
+
+    try {
+      final doc = await FirebaseFirestore.instance.collection('listings').doc(listingId).get();
+
+      if (doc.exists) {
+        final listing = ListingModel.fromJson(doc.data()!);
+        _listingCache[listingId] = listing;
+        return listing;
+      }
+    } catch (e) {
+      // Ignore error
+    }
+
+    return null;
+  }
+
+  Future<Map<String, dynamic>> _getOrderPreviewData(OrderRequest order) async {
+    final result = <String, dynamic>{};
+    
+    // Get listing title
+    final listing = await _getListingCached(order.listingId);
+    result['listingTitle'] = listing?.title ?? 'Order ${order.id.substring(0, 8)}';
+    
+    // Get first item image
+    if (order.items.isNotEmpty) {
+      try {
+        final firstItemId = order.items.first.itemId;
+        final itemDoc = await FirebaseFirestore.instance
+            .collection('listings')
+            .doc(order.listingId)
+            .collection('catalog_items')
+            .doc(firstItemId)
+            .get();
+        
+        if (itemDoc.exists) {
+          final itemData = itemDoc.data();
+          final photos = itemData?['photos'] as List?;
+          if (photos != null && photos.isNotEmpty) {
+            result['firstItemImage'] = photos.first;
+          }
+        }
+      } catch (e) {
+        // Ignore error, will show default icon
+      }
+    }
+    
+    return result;
+  }
+
   void _viewOrderDetail(OrderRequest order) {
     Navigator.push(
       context,
@@ -413,6 +539,7 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
         builder: (context) => OrderDetailScreen(
           order: order,
           currentUser: widget.currentUser,
+          viewAsLister: true,
         ),
       ),
     );

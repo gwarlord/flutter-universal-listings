@@ -44,6 +44,19 @@ class _CartScreenState extends State<CartScreen> {
   bool _isSubmitting = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Auto-select the first enabled fulfillment method
+    if (widget.listing.storePickupEnabled) {
+      _fulfillmentMethod = FulfillmentMethod.pickup;
+    } else if (widget.listing.storeDeliveryEnabled) {
+      _fulfillmentMethod = FulfillmentMethod.delivery;
+    } else if (widget.listing.storeDineInEnabled) {
+      _fulfillmentMethod = FulfillmentMethod.dineIn;
+    }
+  }
+
+  @override
   void dispose() {
     _addressController.dispose();
     _notesController.dispose();
@@ -135,6 +148,35 @@ class _CartScreenState extends State<CartScreen> {
                             }
                           },
                         ),
+                      if (widget.listing.storeDineInEnabled)
+                        RadioListTile<FulfillmentMethod>(
+                          title: Text('Dining In'.tr()),
+                          value: FulfillmentMethod.dineIn,
+                          groupValue: _fulfillmentMethod,
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => _fulfillmentMethod = value);
+                            }
+                          },
+                        ),
+
+                      // Table number for dine-in
+                      if (_fulfillmentMethod == FulfillmentMethod.dineIn) ...[
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _notesController,
+                          style: TextStyle(color: dark ? Colors.white : Colors.black),
+                          decoration: InputDecoration(
+                            labelText: 'Table number / seating info (optional)'.tr(),
+                            labelStyle: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                            hintText: 'e.g., Table 5, Booth 2'.tr(),
+                            hintStyle: TextStyle(color: dark ? Colors.white38 : Colors.black26),
+                            border: const OutlineInputBorder(),
+                            filled: true,
+                            fillColor: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+                          ),
+                        ),
+                      ],
 
                       // Delivery address
                       if (_fulfillmentMethod == FulfillmentMethod.delivery) ...[

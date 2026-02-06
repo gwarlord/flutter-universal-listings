@@ -187,6 +187,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                   builder: (context) => OrderDetailScreen(
                     order: order,
                     currentUser: widget.currentUser,
+                    viewAsLister: false,
                   ),
                 ),
               );
@@ -281,7 +282,9 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                           Icon(
                             order.fulfillment.method.value == 'pickup'
                                 ? Icons.store
-                                : Icons.local_shipping,
+                                : order.fulfillment.method.value == 'dine_in'
+                                    ? Icons.restaurant
+                                    : Icons.local_shipping,
                             size: 16,
                             color: dark ? Colors.white54 : Colors.black54,
                           ),
@@ -289,7 +292,9 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                           Text(
                             order.fulfillment.method.value == 'pickup'
                                 ? 'Pickup'
-                                : 'Delivery',
+                                : order.fulfillment.method.value == 'dine_in'
+                                    ? 'Dining In'
+                                    : 'Delivery',
                             style: TextStyle(
                               fontSize: 13,
                               color: dark ? Colors.white54 : Colors.black54,

@@ -431,25 +431,6 @@ class _ContainerState extends State<ContainerScreen> {
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
-                  _drawerTile(
-                    title: 'Rental Orders'.tr(),
-                    icon: Icons.calendar_month_rounded,
-                    isSelected: _drawerSelection == DrawerSelection.rentalOrders,
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.read<ContainerBloc>().add(TabSelectedEvent(
-                        appBarTitle: 'Rental Orders'.tr(),
-                        currentTabIndex: 4,
-                        drawerSelection: DrawerSelection.rentalOrders,
-                        currentWidget: RentalOrdersHubScreen(
-                          currentUser: currentUser,
-                          showAppBar: false,
-                        ),
-                      ));
-                    },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
-                  ),
                   if (isPremiumUser(currentUser))
                     _drawerTile(
                       title: 'Order Requests'.tr(),
@@ -462,6 +443,25 @@ class _ContainerState extends State<ContainerScreen> {
                       isDark: isDark,
                       primaryColor: primaryColorValue,
                     ),
+                  _drawerTile(
+                    title: 'Rentals'.tr(),
+                    icon: Icons.calendar_month_rounded,
+                    isSelected: _drawerSelection == DrawerSelection.rentalOrders,
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.read<ContainerBloc>().add(TabSelectedEvent(
+                        appBarTitle: 'Rentals'.tr(),
+                        currentTabIndex: 4,
+                        drawerSelection: DrawerSelection.rentalOrders,
+                        currentWidget: RentalOrdersHubScreen(
+                          currentUser: currentUser,
+                          showAppBar: false,
+                        ),
+                      ));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
 
                   const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
                   // SELLING SECTION

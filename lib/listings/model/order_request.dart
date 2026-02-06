@@ -22,7 +22,8 @@ enum OrderStatus {
 /// Fulfillment method
 enum FulfillmentMethod {
   pickup('pickup'),
-  delivery('delivery');
+  delivery('delivery'),
+  dineIn('dine_in');
 
   final String value;
   const FulfillmentMethod(this.value);
@@ -127,6 +128,7 @@ class OrderRequest {
   final String currencyCode;
   final FulfillmentInfo fulfillment;
   final String? notes;
+  final String? listerNotes;
   final String? channelId; // Chat channel ID
   final Timestamp? createdAt;
   final Timestamp? updatedAt;
@@ -142,6 +144,7 @@ class OrderRequest {
     this.currencyCode = 'USD',
     required this.fulfillment,
     this.notes,
+    this.listerNotes,
     this.channelId,
     this.createdAt,
     this.updatedAt,
@@ -162,6 +165,7 @@ class OrderRequest {
       currencyCode: json['currencyCode'] ?? 'USD',
       fulfillment: FulfillmentInfo.fromJson(json['fulfillment'] ?? {}),
       notes: json['notes'],
+      listerNotes: json['listerNotes'],
       channelId: json['channelId'],
       createdAt: json['createdAt'],
       updatedAt: json['updatedAt'],
@@ -180,6 +184,7 @@ class OrderRequest {
       'currencyCode': currencyCode,
       'fulfillment': fulfillment.toJson(),
       'notes': notes,
+      'listerNotes': listerNotes,
       'channelId': channelId,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
@@ -197,6 +202,7 @@ class OrderRequest {
     String? currencyCode,
     FulfillmentInfo? fulfillment,
     String? notes,
+    String? listerNotes,
     String? channelId,
     Timestamp? createdAt,
     Timestamp? updatedAt,
@@ -212,6 +218,7 @@ class OrderRequest {
       currencyCode: currencyCode ?? this.currencyCode,
       fulfillment: fulfillment ?? this.fulfillment,
       notes: notes ?? this.notes,
+      listerNotes: listerNotes ?? this.listerNotes,
       channelId: channelId ?? this.channelId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

@@ -19,11 +19,13 @@ import 'package:instaflutter/screens/store/order_chat_helper.dart';
 class OrderDetailScreen extends StatefulWidget {
   final OrderRequest order;
   final ListingsUser currentUser;
+  final bool viewAsLister;
 
   const OrderDetailScreen({
     Key? key,
     required this.order,
     required this.currentUser,
+    this.viewAsLister = false,
   }) : super(key: key);
 
   @override
@@ -44,8 +46,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     // CRITICAL: Verify Premium access only for listers viewing order requests
     // Customers can always view their own orders
-    final isLister = widget.currentUser.userID == widget.order.listerId;
-    if (isLister && !isPremiumUser(widget.currentUser)) {
+    if (widget.viewAsLister && !isPremiumUser(widget.currentUser)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         showSnackBar(context, '🔒 Premium subscription required');
         Navigator.pop(context);
@@ -204,14 +205,18 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       Icon(
                         widget.order.fulfillment.method == FulfillmentMethod.pickup
                             ? Icons.store_outlined
-                            : Icons.local_shipping_outlined,
+                            : widget.order.fulfillment.method == FulfillmentMethod.dineIn
+                                ? Icons.restaurant_outlined
+                                : Icons.local_shipping_outlined,
                         color: dark ? Colors.white70 : Colors.black54,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         widget.order.fulfillment.method == FulfillmentMethod.pickup
                             ? 'Pickup'.tr()
-                            : 'Delivery'.tr(),
+                            : widget.order.fulfillment.method == FulfillmentMethod.dineIn
+                                ? 'Dining In'.tr()
+                                : 'Delivery'.tr(),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -357,6 +362,20 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Text(
                   _currentOrder.notes!,
+                  style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                ),
+              ),
+            ),
+          ],
+          if (_currentOrder.listerNotes != null && _currentOrder.listerNotes!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _buildSectionTitle('Seller Note'.tr(), dark),
+            Card(
+              color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  _currentOrder.listerNotes!,
                   style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
                 ),
               ),
@@ -653,9 +672,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Widget? _buildActionButtons(bool dark) {
-    // Check if current user is the customer or the lister
-    final isCustomer = widget.currentUser.userID == _currentOrder.customerId;
-    final isLister = widget.currentUser.userID == _currentOrder.listerId;
+    // Use viewAsLister parameter to determine which actions to show
+    // This handles cases where user might be both customer and lister
+    final isLister = widget.viewAsLister;
+    final isCustomer = !widget.viewAsLister;
 
     // Customer can only cancel requested orders
     if (isCustomer && _currentOrder.status == OrderStatus.requested) {
@@ -699,6 +719,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       return null;
     }
 
+    final isDineIn = _currentOrder.fulfillment.method == FulfillmentMethod.dineIn;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
       decoration: BoxDecoration(
@@ -716,7 +738,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _isUpdating ? null : () => _updateStatus(OrderStatus.declined),
+                    onPressed: _isUpdating
+                        ? null
+                        : () async {
+                            final notes = await _promptDeclineNotes();
+                            if (notes == null) {
+                              return;
+                            }
+                            await _updateStatus(OrderStatus.declined, listerNotes: notes);
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -731,14 +761,18 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _isUpdating ? null : () => _updateStatus(OrderStatus.confirmed),
+                    onPressed: _isUpdating
+                        ? null
+                        : () => _updateStatus(
+                              isDineIn ? OrderStatus.fulfilled : OrderStatus.confirmed,
+                            ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: isDineIn ? Colors.green : Colors.blue,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text(
-                      'Confirm'.tr(),
+                      isDineIn ? 'Mark Fulfilled'.tr() : 'Confirm'.tr(),
                       style: const TextStyle(fontSize: 16, color: Colors.white),
                     ),
                   ),
@@ -763,11 +797,58 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  Future<void> _updateStatus(OrderStatus newStatus) async {
+  Future<String?> _promptDeclineNotes() async {
+    final controller = TextEditingController();
+
+    return showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        final dark = isDarkMode(dialogContext);
+        return AlertDialog(
+          backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
+          title: Text(
+            'Decline Order'.tr(),
+            style: TextStyle(color: dark ? Colors.white : Colors.black),
+          ),
+          content: TextField(
+            controller: controller,
+            maxLines: 4,
+            textInputAction: TextInputAction.newline,
+            style: TextStyle(color: dark ? Colors.white : Colors.black87),
+            decoration: InputDecoration(
+              hintText: 'Add a note for the customer'.tr(),
+              hintStyle: TextStyle(color: dark ? Colors.white54 : Colors.black45),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: dark ? Colors.white24 : Colors.black12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Color(cfg.colorPrimary)),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text('Cancel'.tr(), style: TextStyle(color: dark ? Colors.white70 : Colors.black54)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: Text('Decline'.tr(), style: const TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _updateStatus(OrderStatus newStatus, {String? listerNotes}) async {
     setState(() => _isUpdating = true);
 
     try {
-      final isCustomer = widget.currentUser.userID == _currentOrder.customerId;
+      final isCustomer = !widget.viewAsLister;
       
       // Customer can only cancel their order
       if (isCustomer && newStatus == OrderStatus.cancelled) {
@@ -784,6 +865,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           requestId: widget.order.id,
           status: newStatus,
           currentUser: widget.currentUser,
+          listerNotes: listerNotes,
         );
       }
 

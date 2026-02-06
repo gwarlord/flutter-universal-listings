@@ -201,6 +201,7 @@ class StoreService {
     required String requestId,
     required OrderStatus status,
     required ListingsUser currentUser,
+    String? listerNotes,
   }) async {
     // Get order request
     final orderDoc = await _firestore.collection('order_requests').doc(requestId).get();
@@ -221,13 +222,24 @@ class StoreService {
     }
 
     // Update status
-    await _firestore.collection('order_requests').doc(requestId).update({
+    final updateData = <String, dynamic>{
       'status': status.value,
       'updatedAt': Timestamp.now(),
-    });
+    };
+    if (listerNotes != null && listerNotes.trim().isNotEmpty) {
+      updateData['listerNotes'] = listerNotes.trim();
+    }
+    await _firestore.collection('order_requests').doc(requestId).update(updateData);
 
     // If confirmed, decrement inventory
     if (status == OrderStatus.confirmed) {
+      await _decrementInventoryOnConfirm(order);
+    }
+
+    // Dine-in orders can be fulfilled directly from requested
+    if (status == OrderStatus.fulfilled &&
+        order.fulfillment.method == FulfillmentMethod.dineIn &&
+        order.status == OrderStatus.requested) {
       await _decrementInventoryOnConfirm(order);
     }
   }
@@ -377,11 +389,13 @@ class StoreService {
     required String listingId,
     required bool pickupEnabled,
     required bool deliveryEnabled,
+    required bool dineInEnabled,
     required int leadTimeHours,
   }) async {
     await _firestore.collection('listings').doc(listingId).update({
       'storePickupEnabled': pickupEnabled,
       'storeDeliveryEnabled': deliveryEnabled,
+      'storeDineInEnabled': dineInEnabled,
       'storeLeadTimeHours': leadTimeHours,
       'updatedAt': Timestamp.now(),
     });

@@ -29,6 +29,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
   
   late bool _pickupEnabled;
   late bool _deliveryEnabled;
+  late bool _dineInEnabled;
   late int _leadTimeHours;
   
   bool _isSaving = false;
@@ -38,12 +39,13 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
     super.initState();
     _pickupEnabled = widget.listing.storePickupEnabled;
     _deliveryEnabled = widget.listing.storeDeliveryEnabled;
+    _dineInEnabled = widget.listing.storeDineInEnabled;
     _leadTimeHours = widget.listing.storeLeadTimeHours;
   }
 
   Future<void> _saveSettings() async {
     // Validate at least one fulfillment method is enabled
-    if (!_pickupEnabled && !_deliveryEnabled) {
+    if (!_pickupEnabled && !_deliveryEnabled && !_dineInEnabled) {
       showSnackBar(context, 'At least one fulfillment method must be enabled'.tr());
       return;
     }
@@ -55,6 +57,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
       final updatedListing = widget.listing;
       updatedListing.storePickupEnabled = _pickupEnabled;
       updatedListing.storeDeliveryEnabled = _deliveryEnabled;
+      updatedListing.storeDineInEnabled = _dineInEnabled;
       updatedListing.storeLeadTimeHours = _leadTimeHours;
 
       // Save to Firestore
@@ -62,6 +65,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
         listingId: widget.listing.id,
         pickupEnabled: _pickupEnabled,
         deliveryEnabled: _deliveryEnabled,
+        dineInEnabled: _dineInEnabled,
         leadTimeHours: _leadTimeHours,
       );
 
@@ -195,6 +199,52 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                           const SizedBox(height: 4),
                           Text(
                             'You deliver orders to customer addresses'.tr(),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Dining In Option
+            Card(
+              color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Checkbox(
+                      value: _dineInEnabled,
+                      onChanged: (value) {
+                        setState(() => _dineInEnabled = value ?? false);
+                      },
+                      activeColor: Color(cfg.colorPrimary),
+                      side: BorderSide(
+                        color: dark ? Colors.white : Colors.grey,
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Dining In'.tr(),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: dark ? Colors.white : Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Customers order for dining in at your location'.tr(),
                             style: TextStyle(
                               fontSize: 12,
                               color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
