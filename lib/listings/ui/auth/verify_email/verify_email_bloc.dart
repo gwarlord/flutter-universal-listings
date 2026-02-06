@@ -66,5 +66,22 @@ class VerifyEmailBloc extends Bloc<VerifyEmailEvent, VerifyEmailState> {
       }
       emit(VerifyEmailInitial());
     });
+
+    on<VerifyWithLinkEvent>((event, emit) async {
+      emit(CheckingVerificationState());
+      try {
+        // Try to log in. If successful, it means verification is already done
+        _authenticationBloc.add(
+          LoginWithEmailAndPasswordEvent(
+            email: event.email,
+            password: event.password,
+          ),
+        );
+        emit(VerifySuccessState(message: 'Checking verification status...'));
+      } catch (e) {
+        emit(VerifyFailureState(errorMessage: 'Login failed. Please try again.'));
+      }
+      emit(VerifyEmailInitial());
+    });
   }
 }

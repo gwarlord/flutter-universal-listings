@@ -24,6 +24,7 @@ import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 import 'package:instaflutter/listings/listings_module/add_listing/add_listing_screen.dart';
 import 'package:instaflutter/listings/listings_module/add_review/add_review_screen.dart';
+import 'package:instaflutter/listings/listings_module/reviews/manage_reviews_screen.dart';
 import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
 import 'package:instaflutter/listings/listings_module/listing_details/listing_details_bloc.dart';
 import 'package:instaflutter/listings/listings_module/booking/booking_bloc.dart';
@@ -429,74 +430,132 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Title and Verified Badge
+                        // Logo, Title, Rating, and Badges - Compact Layout
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(
-                                listing.title,
-                                style: const TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: -0.5,
+                            // Logo on the left
+                            if (listing.logo.isNotEmpty) ...[
+                              GestureDetector(
+                                onTap: () => push(context, FullScreenImageViewer(
+                                  galleryImagesList: [listing.logo],
+                                  index: 0,
+                                  imageUrl: '',
+                                )),
+                                child: Hero(
+                                  tag: listing.logo,
+                                  child: CircleAvatar(
+                                    radius: 40,
+                                    backgroundImage: NetworkImage(listing.logo),
+                                  ),
                                 ),
                               ),
-                            ),
-                            if (listing.verified) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: primaryColor.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: primaryColor, width: 1.2),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.verified, color: primaryColor, size: 18),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Verified',
-                                      style: TextStyle(
-                                        color: primaryColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                        letterSpacing: 0.2,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        // Rating Summary and Tap Count
-                        Row(
-                          children: [
-                            Icon(Icons.star, size: 16, color: primaryColor),
-                            const SizedBox(width: 4),
-                            Text(
-                              reviews.isEmpty ? 'New'.tr() : _calculateAverageRating(),
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            if (reviews.isNotEmpty) ...[
-                              const SizedBox(width: 4),
-                              Text('(${reviews.length})', style: TextStyle(color: dark ? Colors.grey : Colors.grey.shade600)),
-                            ],
-                            if (listing.tapCount > 0) ...[
                               const SizedBox(width: 16),
-                              TapCountDisplay(tapCount: listing.tapCount),
                             ],
+                            // Title, Rating, and Badges on the right
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Title with Verified badge
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          listing.title,
+                                          style: const TextStyle(
+                                            fontSize: 28,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: -0.5,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          if (listing.verified)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: primaryColor.withOpacity(0.12),
+                                                borderRadius: BorderRadius.circular(16),
+                                                border: Border.all(color: primaryColor, width: 1.2),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.verified, color: primaryColor, size: 18),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    'Verified',
+                                                    style: TextStyle(
+                                                      color: primaryColor,
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 13,
+                                                      letterSpacing: 0.2,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          if (_authorIsPremium == true && listing.verified)
+                                            const SizedBox(height: 4),
+                                          if (_authorIsPremium == true)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.amber.withOpacity(0.08),
+                                                borderRadius: BorderRadius.circular(16),
+                                                border: Border.all(color: Colors.amber.withOpacity(0.35), width: 1.0),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.star, color: Colors.amber.shade400, size: 18),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    'Premium Listing'.tr(),
+                                                    style: TextStyle(
+                                                      color: Colors.amber.shade700.withOpacity(0.7),
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 13,
+                                                      letterSpacing: 0.2,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  // Rating Summary and Tap Count
+                                  Row(
+                                    children: [
+                                      Icon(Icons.star, size: 16, color: primaryColor),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        reviews.isEmpty ? 'New'.tr() : _calculateAverageRating(),
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                      if (reviews.isNotEmpty) ...[
+                                        const SizedBox(width: 4),
+                                        Text('(${reviews.length})', style: TextStyle(color: dark ? Colors.grey : Colors.grey.shade600)),
+                                      ],
+                                      if (listing.tapCount > 0) ...[
+                                        const SizedBox(width: 16),
+                                        TapCountDisplay(tapCount: listing.tapCount),
+                                      ],
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
-                        Divider(height: 48, thickness: 1, color: dividerColor),
-                        // Author Info (only show if there's content to display)
-                        if (listing.logo.isNotEmpty || _authorIsPremium == true) ...[
-                          _buildAuthorSection(dark),
-                          Divider(height: 48, thickness: 1, color: dividerColor),
-                        ],
+                        Divider(height: 32, thickness: 1, color: dividerColor),
                         // Tap (Vouch) Section
                         if (currentUser.userID != listing.authorID) ...[
                           TapVouchButton(
@@ -784,6 +843,36 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   },
                 ),
               ),
+            if (_canEditOrDelete)
+              PopupMenuItem(
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.rate_review, color: Color(cfg.colorPrimary)),
+                  title: Text(
+                    'Manage Reviews'.tr(),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                      fontFamily: 'Roboto',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await push(
+                      context,
+                      ManageReviewsScreen(
+                        listing: listing,
+                        currentUser: currentUser,
+                      ),
+                    );
+                    // Reload reviews after returning
+                    context.read<ListingDetailsBloc>().add(LoadingEvent());
+                    context.read<ListingDetailsBloc>().add(GetListingReviewsEvent());
+                  },
+                ),
+              ),
             if (currentUser.userID != listing.authorID)
               PopupMenuItem(
                 child: ListTile(
@@ -909,62 +998,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
               ),
             ),
           ),
-      ],
-    );
-  }
-
-  Widget _buildAuthorSection(bool isDark) {
-    return Row(
-      children: [
-        if (listing.logo.isNotEmpty) ...[
-          GestureDetector(
-            onTap: () => push(context, FullScreenImageViewer(
-              galleryImagesList: [listing.logo],
-              index: 0,
-              imageUrl: '',
-            )),
-            child: Hero(
-              tag: listing.logo,
-              child: CircleAvatar(
-                radius: 43,
-                backgroundImage: NetworkImage(listing.logo),
-              ),
-            ),
-          ),
-          const SizedBox(width: 24),
-        ],
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (_authorIsPremium == true)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.amber.withOpacity(0.35), width: 1.0),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.star, color: Colors.amber.shade400, size: 18),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Premium Listing'.tr(),
-                        style: TextStyle(
-                          color: Colors.amber.shade700.withOpacity(0.7),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
       ],
     );
   }

@@ -1,9 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/listings_app_config.dart';
+import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   final ListingsUser currentUser;
@@ -17,6 +20,7 @@ class SubscriptionScreen extends StatefulWidget {
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
   bool _isLoading = false;
   String _selectedBillingPeriod = 'monthly'; // monthly or yearly
+  late ListingsUser currentUser;
 
   final List<Map<String, dynamic>> _tiers = [
     {
@@ -67,6 +71,30 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    currentUser = widget.currentUser;
+  }
+
+  Future<void> _refreshUserData() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection(usersCollection)
+          .doc(currentUser.userID)
+          .get(const GetOptions(source: Source.server));
+
+      if (!doc.exists) return;
+      final freshUser = ListingsUser.fromJson(doc.data()!);
+      if (!mounted) return;
+      setState(() => currentUser = freshUser);
+      context.read<AuthenticationBloc>().add(UpdateAuthUserEvent(freshUser));
+    } catch (e) {
+      if (!mounted) return;
+      showSnackBar(context, 'Failed to refresh subscription'.tr());
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
 
@@ -77,9 +105,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator.adaptive())
-          : SingleChildScrollView(
-              child: Column(
-                children: [
+          : RefreshIndicator(
+              onRefresh: _refreshUserData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
                   const SizedBox(height: 24),
                   Text(
                     'Unlock Premium Features'.tr(),
@@ -124,7 +155,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   ..._tiers.map((tier) => _buildTierCard(tier, dark)),
                   
                   const SizedBox(height: 32),
-                ],
+                  ],
+                ),
               ),
             ),
     );
@@ -156,7 +188,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   }
 
   Widget _buildTierCard(Map<String, dynamic> tier, bool dark) {
-    final isCurrentPlan = widget.currentUser.subscriptionTier.toLowerCase() == tier['tier'];
+    final isCurrentPlan = currentUser.subscriptionTier.toLowerCase() == tier['tier'];
     final isPopular = tier['popular'] == true;
     final price = _selectedBillingPeriod == 'monthly'
         ? tier['monthlyPrice']

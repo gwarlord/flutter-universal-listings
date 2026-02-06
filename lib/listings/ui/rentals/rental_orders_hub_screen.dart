@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/model/rental_booking.dart';
@@ -48,9 +47,14 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = isDarkMode(context);
+    final theme = Theme.of(context);
+    final surface = theme.colorScheme.surface;
+    final isDark = theme.brightness == Brightness.dark;
+    final onSurface = theme.colorScheme.onSurface;
     final tabBar = TabBar(
       controller: _tabController,
+      labelColor: Color(cfg.colorPrimary),
+      unselectedLabelColor: isDark ? Colors.white : onSurface.withOpacity(0.7),
       tabs: [
         Tab(text: 'My Rentals'.tr()),
         if (_showListerTab) Tab(text: 'Manage Rentals'.tr()),
@@ -68,22 +72,22 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
           ? TabBarView(
               controller: _tabController,
               children: [
-                _buildCustomerTab(isDark),
-                if (_showListerTab) _buildListerTab(isDark),
+                _buildCustomerTab(),
+                if (_showListerTab) _buildListerTab(),
               ],
             )
           : Column(
               children: [
                 Container(
-                  color: isDark ? Colors.grey.shade900 : Colors.white,
+                  color: surface,
                   child: tabBar,
                 ),
                 Expanded(
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      _buildCustomerTab(isDark),
-                      if (_showListerTab) _buildListerTab(isDark),
+                      _buildCustomerTab(),
+                      if (_showListerTab) _buildListerTab(),
                     ],
                   ),
                 ),
@@ -92,17 +96,23 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     );
   }
 
-  Widget _buildCustomerTab(bool isDark) {
+  Widget _buildCustomerTab() {
+    final theme = Theme.of(context);
+    final surfaceVariant = theme.colorScheme.surfaceVariant;
+    final outline = theme.colorScheme.outline;
+    final onSurface = theme.colorScheme.onSurface;
+    final onSurfaceMuted = onSurface.withOpacity(0.7);
+    final onSurfaceFaint = onSurface.withOpacity(0.5);
+
     return Column(
       children: [
         // Filter toggle
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: isDark ? Colors.grey.shade900 : Colors.grey.shade100,
             border: Border(
               bottom: BorderSide(
-                color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                color: outline,
                 width: 1,
               ),
             ),
@@ -115,7 +125,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: onSurface,
                 ),
               ),
               TextButton.icon(
@@ -169,14 +179,14 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                       Icon(
                         Icons.event_busy,
                         size: 64,
-                        color: isDark ? Colors.white54 : Colors.black54,
+                        color: onSurfaceFaint,
                       ),
                       const SizedBox(height: 16),
                       Text(
                         _showHistory ? 'No rental history'.tr() : 'No active rentals'.tr(),
                         style: TextStyle(
                           fontSize: 18,
-                          color: isDark ? Colors.white70 : Colors.black54,
+                          color: onSurfaceMuted,
                         ),
                       ),
                     ],
@@ -198,10 +208,10 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     );
   }
 
-  Widget _buildListerTab(bool isDark) {
+  Widget _buildListerTab() {
     return Column(
       children: [
-        _buildStatusFilter(isDark),
+        _buildStatusFilter(),
         Expanded(
           child: StreamBuilder<List<RentalBooking>>(
             stream: _rentalService.getListerBookings(widget.currentUser.userID),
@@ -224,7 +234,6 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
 
               if (bookings.isEmpty) {
                 return _buildEmptyState(
-                  isDark,
                   Icons.event_busy,
                   'No bookings'.tr(),
                   'Rental requests will appear here.'.tr(),
@@ -245,7 +254,14 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     );
   }
 
-  Widget _buildStatusFilter(bool isDark) {
+  Widget _buildStatusFilter() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surfaceVariant = theme.colorScheme.surfaceVariant;
+    final outline = theme.colorScheme.outline;
+    final onSurface = theme.colorScheme.onSurface;
+    final onSurfaceMuted = onSurface.withOpacity(0.7);
+    final primary = theme.colorScheme.primary;
     final options = <String>[
       'all',
       'pending',
@@ -267,19 +283,18 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
               label: Text(status == 'all' ? 'All'.tr() : status.capitalize()),
               selected: isSelected,
               onSelected: (_) => setState(() => _selectedStatus = status),
-              selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
+              selectedColor: primary.withOpacity(0.2),
               labelStyle: TextStyle(
-                color: isSelected
-                    ? Theme.of(context).primaryColor
-                    : (isDark ? Colors.white70 : Colors.black87),
+                color: isSelected ? primary : onSurfaceMuted,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
-              backgroundColor: isDark ? Colors.grey.shade900 : Colors.grey.shade100,
+              backgroundColor:
+                  isDark ? Colors.grey[850] : surfaceVariant,
               shape: StadiumBorder(
                 side: BorderSide(
                   color: isSelected
-                      ? Theme.of(context).primaryColor
-                      : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+                      ? primary
+                      : (isDark ? Colors.grey[700]! : outline),
                 ),
               ),
             ),
@@ -290,6 +305,10 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
   }
 
   Widget _buildCustomerBookingCard(BuildContext context, RentalBooking booking) {
+    final theme = Theme.of(context);
+    final surface = theme.colorScheme.surface;
+    final surfaceVariant = theme.colorScheme.surfaceVariant;
+    final onSurface = theme.colorScheme.onSurface;
     final statusStyle = _statusStyle(booking.status);
     final canCancel = booking.status == RentalBookingStatus.pending ||
         booking.status == RentalBookingStatus.confirmed ||
@@ -305,6 +324,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
+          color: surface,
           child: InkWell(
             onTap: () => _navigateToDetail(booking),
             borderRadius: BorderRadius.circular(12),
@@ -329,6 +349,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                         _formatCurrency(booking.totalAmount, currencyCode),
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
+                              color: onSurface,
                             ),
                       ),
                     ],
@@ -341,16 +362,16 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                         child: Container(
                           width: 56,
                           height: 56,
-                          color: Colors.grey.shade200,
+                          color: surfaceVariant,
                           child: imageUrl != null && imageUrl.isNotEmpty
                               ? Image.network(
                                   imageUrl,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
-                                    return Icon(Icons.image, color: Colors.grey.shade500);
+                                    return Icon(Icons.image, color: onSurface.withOpacity(0.4));
                                   },
                                 )
-                              : Icon(Icons.image, color: Colors.grey.shade500),
+                              : Icon(Icons.image, color: onSurface.withOpacity(0.4)),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -399,7 +420,10 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
   }
 
   Future<void> _confirmCancelBooking(BuildContext context, RentalBooking booking) async {
-    final isDark = isDarkMode(context);
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final isDark = theme.brightness == Brightness.dark;
+    final fillColor = isDark ? Colors.grey[850] : Colors.grey[100];
     final reasonController = TextEditingController();
     bool showError = false;
 
@@ -407,10 +431,10 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+          backgroundColor: theme.colorScheme.surface,
           title: Text(
             'Cancel booking?'.tr(),
-            style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            style: TextStyle(color: onSurface),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -418,18 +442,18 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
             children: [
               Text(
                 'Please share a brief reason for cancellation.'.tr(),
-                style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
+                style: TextStyle(color: onSurface.withOpacity(0.8)),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: reasonController,
-                style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                style: TextStyle(color: onSurface),
                 maxLines: 3,
                 decoration: InputDecoration(
                   hintText: 'e.g., Schedule change'.tr(),
-                  hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+                  hintStyle: TextStyle(color: onSurface.withOpacity(0.6)),
                   filled: true,
-                  fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                  fillColor: fillColor,
                   border: const OutlineInputBorder(),
                   errorText: showError ? 'Reason is required'.tr() : null,
                 ),
@@ -446,7 +470,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
               onPressed: () => Navigator.pop(context),
               child: Text(
                 'Keep'.tr(),
-                style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
+                style: TextStyle(color: onSurface.withOpacity(0.8)),
               ),
             ),
             ElevatedButton(
@@ -479,7 +503,10 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
   }
 
   Future<void> _confirmDeclineBooking(BuildContext context, RentalBooking booking) async {
-    final isDark = isDarkMode(context);
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final isDark = theme.brightness == Brightness.dark;
+    final fillColor = isDark ? Colors.grey[850] : Colors.grey[100];
     final reasonController = TextEditingController();
     bool showError = false;
 
@@ -487,10 +514,10 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+          backgroundColor: theme.colorScheme.surface,
           title: Text(
             'Decline booking?'.tr(),
-            style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            style: TextStyle(color: onSurface),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -498,18 +525,18 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
             children: [
               Text(
                 'Please share a brief reason for declining.'.tr(),
-                style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
+                style: TextStyle(color: onSurface.withOpacity(0.8)),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: reasonController,
-                style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                style: TextStyle(color: onSurface),
                 maxLines: 3,
                 decoration: InputDecoration(
                   hintText: 'e.g., Not available'.tr(),
-                  hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+                  hintStyle: TextStyle(color: onSurface.withOpacity(0.6)),
                   filled: true,
-                  fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                  fillColor: fillColor,
                   border: const OutlineInputBorder(),
                   errorText: showError ? 'Reason is required'.tr() : null,
                 ),
@@ -526,7 +553,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
               onPressed: () => Navigator.pop(context),
               child: Text(
                 'Keep'.tr(),
-                style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
+                style: TextStyle(color: onSurface.withOpacity(0.8)),
               ),
             ),
             ElevatedButton(
@@ -559,14 +586,23 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
   }
 
   Widget _buildListerBookingCard(BuildContext context, RentalBooking booking) {
+    final theme = Theme.of(context);
+    final surface = theme.colorScheme.surface;
+    final surfaceVariant = theme.colorScheme.surfaceVariant;
+    final onSurface = theme.colorScheme.onSurface;
     final statusStyle = _statusStyle(booking.status);
-    return FutureBuilder<String>(
-      future: _getListingCurrencyCode(booking.listingId),
+    
+    return FutureBuilder<_RentalItemPreview>(
+      future: _fetchRentalItemPreview(booking),
       builder: (context, snapshot) {
-        final currencyCode = snapshot.data ?? 'USD';
+        final preview = snapshot.data;
+        final imageUrl = preview?.imageUrl;
+        final title = preview?.title ?? 'Rental Item'.tr();
+        final currencyCode = preview?.currencyCode ?? 'USD';
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
+          color: surface,
           child: InkWell(
             onTap: () => _navigateToDetail(booking),
             borderRadius: BorderRadius.circular(12),
@@ -591,11 +627,45 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                         _formatCurrency(booking.totalAmount, currencyCode),
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
+                              color: onSurface,
                             ),
                       ),
                     ],
                   ),
                   const Divider(height: 24),
+                  Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          color: surfaceVariant,
+                          child: imageUrl != null && imageUrl.isNotEmpty
+                              ? Image.network(
+                                  imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(Icons.image, color: onSurface.withOpacity(0.4));
+                                  },
+                                )
+                              : Icon(Icons.image, color: onSurface.withOpacity(0.4)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   Text(
                     'Start: ${_formatDateTime(context, booking.startTime)}',
                     style: Theme.of(context).textTheme.bodySmall,
@@ -613,6 +683,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                             onPressed: () => _confirmDeclineBooking(context, booking),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.red,
+                              side: const BorderSide(color: Colors.red),
                             ),
                             child: Text('Decline'.tr()),
                           ),
@@ -621,6 +692,12 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () => _updateStatus(booking, RentalBookingStatus.confirmed),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                            ),
                             child: Text('Confirm'.tr()),
                           ),
                         ),
@@ -636,12 +713,16 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     );
   }
 
-  Widget _buildEmptyState(bool isDark, IconData icon, String title, String subtitle) {
+  Widget _buildEmptyState(IconData icon, String title, String subtitle) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final onSurfaceMuted = onSurface.withOpacity(0.7);
+    final onSurfaceFaint = onSurface.withOpacity(0.5);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 72, color: isDark ? Colors.grey.shade700 : Colors.grey.shade400),
+          Icon(icon, size: 72, color: onSurfaceFaint),
           const SizedBox(height: 16),
           Text(
             title,
@@ -650,7 +731,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
           const SizedBox(height: 6),
           Text(
             subtitle,
-            style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+            style: TextStyle(color: onSurfaceMuted),
           ),
         ],
       ),

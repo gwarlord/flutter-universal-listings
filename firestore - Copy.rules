@@ -170,16 +170,6 @@ service cloud.firestore {
         allow create, update, delete: if isSignedIn() &&
           request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID;
       }
-
-      // Rental Units (Premium Rentals)
-      match /rental_units/{unitId} {
-        // Allow read for all signed-in users (needed for viewing booking details)
-        allow read: if isSignedIn();
-
-        // Allow write ONLY if listing author
-        allow create, update, delete: if isSignedIn() &&
-          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID;
-      }
     }
     
     // Categories collection
@@ -198,38 +188,7 @@ service cloud.firestore {
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if isSignedIn() && request.auth.uid == request.resource.data.authorID;
-      // Allow update by:
-      // 1. Review author (can edit their own review)
-      // 2. Admin (can hide/unhide reviews via moderation)
-      allow update: if isSignedIn() && (
-        request.auth.uid == resource.data.authorID || 
-        isAdmin()
-      );
-      allow delete: if isSignedIn() && (request.auth.uid == resource.data.authorID || isAdmin());
-    }
-    
-    // Review Removal Requests collection (Review Moderation)
-    match /review_removal_requests/{requestId} {
-      // Allow read if:
-      // 1. User is the lister who created the request
-      // 2. User is an admin
-      allow read: if isSignedIn() && (
-        request.auth.uid == resource.data.listerId || 
-        isAdmin()
-      );
-      
-      // Allow create if:
-      // 1. User is authenticated and is the lister (listerId must match auth.uid)
-      // 2. Status must be 'PENDING' on creation
-      allow create: if isSignedIn() && 
-        request.auth.uid == request.resource.data.listerId &&
-        request.resource.data.status == 'PENDING';
-      
-      // Allow update only by admins (for approving/rejecting requests)
-      allow update: if isAdmin();
-      
-      // Allow delete only by admins
-      allow delete: if isAdmin();
+      allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.authorID || isAdmin());
     }
     
     // Mail collection

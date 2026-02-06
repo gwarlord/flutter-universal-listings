@@ -152,12 +152,10 @@ void main() async {
   await dotenv.load(fileName: ".env");
   await EasyLocalization.ensureInitialized();
   await Firebase.initializeApp();
-  // Temporarily disabled App Check for testing verification codes
-  // TODO: Re-enable App Check before production
-  // await FirebaseAppCheck.instance.activate(
-  //   androidProvider: AndroidProvider.debug,
-  // );
-  // await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: AndroidProvider.debug,
+  );
+  await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
 
   // Handle deep links for Firebase email verification
   final appLinks = AppLinks();

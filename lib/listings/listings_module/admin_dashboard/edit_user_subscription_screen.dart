@@ -20,6 +20,7 @@ class _EditUserSubscriptionScreenState extends State<EditUserSubscriptionScreen>
   bool _isLoading = false;
   bool _isSaving = false;
   ListingsUser? _loadedUser;
+  String? _loadedUserDocId;
   String _selectedTier = 'free';
   String? _error;
 
@@ -61,6 +62,7 @@ class _EditUserSubscriptionScreenState extends State<EditUserSubscriptionScreen>
       final user = ListingsUser.fromJson(data);
       setState(() {
         _loadedUser = user;
+        _loadedUserDocId = doc.id;
         _selectedTier = (user.subscriptionTier.isNotEmpty ? user.subscriptionTier : 'free').toLowerCase();
         if (!_tiers.contains(_selectedTier)) {
           _selectedTier = 'free';
@@ -76,7 +78,7 @@ class _EditUserSubscriptionScreenState extends State<EditUserSubscriptionScreen>
   }
 
   Future<void> _saveTier() async {
-    if (_loadedUser == null) return;
+    if (_loadedUser == null || _loadedUserDocId == null) return;
     setState(() {
       _isSaving = true;
       _error = null;
@@ -84,7 +86,7 @@ class _EditUserSubscriptionScreenState extends State<EditUserSubscriptionScreen>
     try {
       await FirebaseFirestore.instance
           .collection(usersCollection)
-          .doc(_loadedUser!.userID)
+          .doc(_loadedUserDocId)
           .set({'subscriptionTier': _selectedTier}, SetOptions(merge: true));
       
       setState(() {

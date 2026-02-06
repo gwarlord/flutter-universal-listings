@@ -21,3 +21,10 @@ class VerifyCodeEvent extends VerifyEmailEvent {
     required this.password,
   });
 }
+
+class VerifyWithLinkEvent extends VerifyEmailEvent {
+  final String email;
+  final String password;
+
+  VerifyWithLinkEvent({required this.email, required this.password});
+}

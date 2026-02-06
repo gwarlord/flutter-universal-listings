@@ -104,7 +104,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                 } else if (state is CheckingVerificationState) {
                   context.read<LoadingCubit>().showLoading(
                         context,
-                        'Verifying code...'.tr(),
+                        'Verifying...'.tr(),
                         false,
                         Color(colorPrimary),
                       );
@@ -158,7 +158,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                         ).tr(),
                         const SizedBox(height: 16),
                         Text(
-                          'A 6-digit verification code has been sent to:',
+                          'A verification email has been sent to:',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 16,
@@ -179,7 +179,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                         ),
                         const SizedBox(height: 24),
                         Text(
-                          'Enter the code below to verify your account.',
+                          'Once you have clicked the link in your email, tap "I have verified" or enter the 6-digit code below.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 14,
@@ -189,6 +189,44 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                           ),
                         ).tr(),
                         const SizedBox(height: 32),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.verified_user, color: Colors.white),
+                          label: const Text(
+                            'I have verified',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ).tr(),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: Colors.green,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14.0),
+                            ),
+                          ),
+                          onPressed: () {
+                            context.read<VerifyEmailBloc>().add(
+                                  VerifyWithLinkEvent(
+                                    email: widget.email,
+                                    password: widget.password,
+                                  ),
+                                );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(child: Divider(color: Colors.grey)),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Text('OR', style: TextStyle(color: Colors.grey)),
+                            ),
+                            Expanded(child: Divider(color: Colors.grey)),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
                         TextFormField(
                           controller: _codeController,
                           keyboardType: TextInputType.number,
@@ -236,7 +274,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                             counterText: '',
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
                         ElevatedButton.icon(
                           icon: const Icon(Icons.check_circle, color: Colors.white),
                           label: const Text(
@@ -280,7 +318,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                             color: isDarkMode(context) ? Colors.white : Color(colorPrimary),
                           ),
                           label: Text(
-                            'Resend code',
+                            'Resend email',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,

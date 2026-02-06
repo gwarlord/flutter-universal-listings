@@ -12,6 +12,10 @@ class CustomerRentalsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final onSurfaceMuted = onSurface.withOpacity(0.7);
+    final onSurfaceFaint = onSurface.withOpacity(0.5);
     final rentalService = RentalService();
 
     return Scaffold(
@@ -36,11 +40,14 @@ class CustomerRentalsScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.event_busy, size: 80, color: Colors.grey[400]),
+                  Icon(Icons.event_busy, size: 80, color: onSurfaceFaint),
                   const SizedBox(height: 16),
                   Text(
                     'No rentals yet',
-                    style: Theme.of(context).textTheme.titleLarge,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(color: onSurfaceMuted),
                   ),
                 ],
               ),
@@ -90,8 +97,13 @@ class CustomerRentalsScreen extends StatelessWidget {
         break;
     }
 
+    final theme = Theme.of(context);
+    final surface = theme.colorScheme.surface;
+    final onSurfaceMuted = theme.colorScheme.onSurface.withOpacity(0.7);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      color: surface,
       child: InkWell(
         onTap: () {
           // Navigate to detail screen
@@ -125,11 +137,17 @@ class CustomerRentalsScreen extends StatelessWidget {
               const Divider(height: 24),
               Text(
                 'Start: ${_formatDateTime(context, booking.startTime)}',
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: onSurfaceMuted),
               ),
               Text(
                 'End: ${_formatDateTime(context, booking.endTime)}',
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: onSurfaceMuted),
               ),
             ],
           ),

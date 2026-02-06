@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../model/rental_booking.dart';
+import '../../model/rental_unit.dart';
+import '../../model/rental_catalog_item.dart';
+import '../../services/rental_service.dart';
+import '../../services/rental_catalog_service.dart';
 
-class RentalBookingDetailScreen extends StatelessWidget {
+class RentalBookingDetailScreen extends StatefulWidget {
   final RentalBooking booking;
 
   const RentalBookingDetailScreen({
@@ -10,14 +14,191 @@ class RentalBookingDetailScreen extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<RentalBookingDetailScreen> createState() => _RentalBookingDetailScreenState();
+}
+
+class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
+  final RentalService _rentalService = RentalService();
+  final RentalCatalogService _catalogService = RentalCatalogService();
+
+  RentalBooking get booking => widget.booking;
+
+  Future<Map<String, dynamic>> _fetchItemData() async {
+    // Try rental_units first
+    final unit = await _rentalService.getRentalUnit(booking.listingId, booking.rentalUnitId);
+    if (unit != null) {
+      return {
+        'name': unit.unitName,
+        'photos': unit.photoUrls,
+      };
+    }
+
+    // Fall back to rental_catalog
+    final catalogItem = await _catalogService.getRentalItem(booking.listingId, booking.rentalUnitId);
+    if (catalogItem != null) {
+      return {
+        'name': catalogItem.name,
+        'photos': catalogItem.photos,
+      };
+    }
+
+    return {};
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Booking Details'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 80),
         children: [
+          // Item image
+          FutureBuilder<Map<String, dynamic>>(
+            future: _fetchItemData(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: Theme.of(context).colorScheme.surfaceVariant,
+                  ),
+                  child: const Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: Theme.of(context).colorScheme.surfaceVariant,
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Error: ${snapshot.error}',
+                          style: TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              final data = snapshot.data ?? {};
+              final name = data['name'] as String?;
+              final photos = data['photos'] as List<String>?;
+
+              if (name == null || name.isEmpty) {
+                return Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: Theme.of(context).colorScheme.surfaceVariant,
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.image_not_supported,
+                          size: 48,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(height: 8),
+                        Text('Rental item not found'),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              if (photos == null || photos.isEmpty) {
+                return Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: Theme.of(context).colorScheme.surfaceVariant,
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.image_not_supported,
+                          size: 48,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(height: 8),
+                        Text('No photos available'),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      photos.first,
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 200,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            color: Theme.of(context).colorScheme.surfaceVariant,
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.image_not_supported,
+                                  size: 48,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(height: 8),
+                                Text('Failed to load image'),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    name,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              );
+            },
+          ),
           // Status card
           _buildStatusCard(context),
           const SizedBox(height: 16),
@@ -27,7 +208,6 @@ class RentalBookingDetailScreen extends StatelessWidget {
             context,
             title: 'Booking Information',
             children: [
-              _buildInfoRow(context, 'Booking ID', booking.id),
               _buildInfoRow(
                 context,
                 'Start',
@@ -125,6 +305,8 @@ class RentalBookingDetailScreen extends StatelessWidget {
   }
 
   Widget _buildStatusCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     Color statusColor;
     IconData statusIcon;
 
@@ -156,7 +338,7 @@ class RentalBookingDetailScreen extends StatelessWidget {
     }
 
     return Card(
-      color: statusColor.withOpacity(0.1),
+      color: statusColor.withOpacity(isDark ? 0.2 : 0.1),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -179,7 +361,7 @@ class RentalBookingDetailScreen extends StatelessWidget {
                     Text(
                       'OVERDUE FOR RETURN',
                       style: TextStyle(
-                        color: Colors.red[900],
+                        color: isDark ? Colors.red[300] : Colors.red[900],
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -198,7 +380,10 @@ class RentalBookingDetailScreen extends StatelessWidget {
     required String title,
     required List<Widget> children,
   }) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
     return Card(
+      color: theme.colorScheme.surface,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -208,6 +393,7 @@ class RentalBookingDetailScreen extends StatelessWidget {
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: onSurface,
                   ),
             ),
             const SizedBox(height: 12),
@@ -225,6 +411,9 @@ class RentalBookingDetailScreen extends StatelessWidget {
     TextStyle? valueStyle,
     Color? valueColor,
   }) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final onSurfaceMuted = onSurface.withOpacity(0.7);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -233,7 +422,7 @@ class RentalBookingDetailScreen extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
+                  color: onSurfaceMuted,
                 ),
           ),
           Text(
@@ -241,7 +430,7 @@ class RentalBookingDetailScreen extends StatelessWidget {
             style: valueStyle ??
                 Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: valueColor,
+                      color: valueColor ?? onSurface,
                     ),
           ),
         ],
@@ -254,7 +443,10 @@ class RentalBookingDetailScreen extends StatelessWidget {
     String title,
     dynamic evidence, // RentalEvidence
   ) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
     return Card(
+      color: theme.colorScheme.surface,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -264,11 +456,18 @@ class RentalBookingDetailScreen extends StatelessWidget {
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: onSurface,
                   ),
             ),
             const SizedBox(height: 12),
             // TODO: Display evidence media, checklist, damage reports
-            Text('Evidence details would be displayed here'),
+            Text(
+              'Evidence details would be displayed here',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: onSurface),
+            ),
           ],
         ),
       ),

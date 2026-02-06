@@ -103,20 +103,22 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       debugPrint('apiManager.loginWithEmailAndPassword $e $s');
       switch (e.code) {
         case 'invalid-email':
-          return 'Email address is malformed.';
+          return 'Email address is malformed.'.tr();
         case 'wrong-password':
-          return 'Wrong password.';
+          return 'Wrong password.'.tr();
         case 'user-not-found':
-          return 'No user corresponding to the given email address.';
+          return 'No user corresponding to the given email address.'.tr();
         case 'user-disabled':
-          return 'This user has been disabled.';
+          return 'This user has been disabled.'.tr();
         case 'too-many-requests':
-          return 'Too many attempts to sign in as this user.';
+          return 'Too many attempts to sign in as this user. Please try again later.'.tr();
+        case 'invalid-credential':
+          return 'Invalid email or password.'.tr();
       }
-      return 'Unexpected firebase error, Please try again.';
+      return 'Authentication failed. Please check your credentials and try again.'.tr();
     } catch (e, s) {
       debugPrint('apiManager.loginWithEmailAndPassword $e $s');
-      return 'Login failed, Please try again.';
+      return 'Login failed, Please try again.'.tr();
     }
   }
 
@@ -155,7 +157,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           requestedScopes: [apple.Scope.email, apple.Scope.fullName])
     ]);
     if (appleCredential.error != null) {
-      return 'Couldn\'t login with apple.';
+      return 'Couldn\'t login with apple.'.tr();
     }
 
     if (appleCredential.status == apple.AuthorizationStatus.authorized) {
@@ -168,7 +170,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       );
       return await _handleAppleLogin(credential, appleCredential.credential!);
     } else {
-      return 'Couldn\'t login with apple.';
+      return 'Couldn\'t login with apple.'.tr();
     }
   }
 
@@ -179,7 +181,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
       if (googleUser == null) {
-        return 'Google sign in cancelled.';
+        return 'Google sign in cancelled.'.tr();
       }
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
@@ -379,6 +381,20 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       debugPrint('User ID: ${user.userID}, Email: ${user.email}');
       String? errorMessage = await _createNewUser(user);
       if (errorMessage == null) {
+        // Send verification email
+        try {
+          final currentUser = auth.FirebaseAuth.instance.currentUser;
+          if (currentUser != null && !currentUser.emailVerified) {
+            debugPrint('📧 Sending verification email to ${currentUser.email}...');
+            await currentUser.sendEmailVerification();
+            debugPrint('✅ Verification email sent successfully');
+          }
+        } catch (e) {
+          debugPrint('⚠️ Failed to send verification email: $e');
+          // Don't fail signup just because email couldn't be sent
+          // User can request verification from login screen
+        }
+        
         // Note: Email verification now uses code-based system via Cloud Function
         // Keep user signed in so they can call Cloud Functions
         // They will be signed out if they try to access the app without verifying

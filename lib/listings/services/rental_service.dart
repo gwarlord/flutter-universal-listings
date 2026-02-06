@@ -46,9 +46,14 @@ class RentalService {
 
   /// Get a single rental unit
   Future<RentalUnit?> getRentalUnit(String listingId, String unitId) async {
-    final doc = await _rentalUnitsRef(listingId).doc(unitId).get();
-    if (!doc.exists) return null;
-    return RentalUnit.fromJson(doc.data() as Map<String, dynamic>, doc.id);
+    try {
+      final doc = await _rentalUnitsRef(listingId).doc(unitId).get();
+      if (!doc.exists) return null;
+      return RentalUnit.fromJson(doc.data() as Map<String, dynamic>, doc.id);
+    } catch (e) {
+      // Silently fail if permission denied or other error
+      return null;
+    }
   }
 
   // ============= AVAILABILITY CHECKING =============

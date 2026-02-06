@@ -12,7 +12,9 @@ import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 import 'package:instaflutter/listings/listings_module/admin_dashboard/admin_bloc.dart';
 import 'package:instaflutter/listings/listings_module/admin_dashboard/suspension_reason_dialog.dart';
+import 'package:instaflutter/listings/listings_module/admin_dashboard/review_removal_requests_screen.dart';
 import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
+import 'package:instaflutter/listings/services/review_removal_request_service.dart';
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -68,12 +70,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   bool vHighRating = false;
   String vCountryCode = '';
 
+  // Review removal requests
+  final ReviewRemovalRequestService _reviewRequestService =
+      ReviewRemovalRequestService();
+  int _pendingReviewRequestsCount = 0;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     currentUser = widget.currentUser;
     _loadAllData();
+    _loadPendingRequestsCount();
 
     _tabController.addListener(() {
       if (_tabController.index == 2 && unverifiedListings.isEmpty) {
@@ -91,6 +99,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     context.read<AdminBloc>().add(GetSuspendedUsersEvent());
     context.read<AdminBloc>().add(GetAllListingsEvent());
     context.read<AdminBloc>().add(GetSuspendedListingsEvent());
+  }
+
+  Future<void> _loadPendingRequestsCount() async {
+    final count = await _reviewRequestService.getPendingRequestsCount();
+    if (mounted) {
+      setState(() {
+        _pendingReviewRequestsCount = count;
+      });
+    }
+  }
+
+  Future<void> _navigateToReviewRequests() async {
+    await push(
+      context,
+      ReviewRemovalRequestsScreen(currentUser: currentUser),
+    );
+    // Reload count after returning
+    _loadPendingRequestsCount();
   }
 
   void _searchUsers(String query) {
@@ -123,6 +149,45 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       appBar: AppBar(
         title: Text('Admin Console'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
+        actions: [
+          // Review Removal Requests Button with Badge
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.report_problem),
+                tooltip: 'Review Removal Requests'.tr(),
+                onPressed: _navigateToReviewRequests,
+              ),
+              if (_pendingReviewRequestsCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Text(
+                      _pendingReviewRequestsCount > 99
+                          ? '99+'
+                          : _pendingReviewRequestsCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Platform.isIOS ? Color(colorPrimary) : Colors.white,

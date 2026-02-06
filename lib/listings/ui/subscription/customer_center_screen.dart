@@ -172,6 +172,11 @@ class _CustomerCenterScreenState extends State<CustomerCenterScreen> {
     }
   }
 
+  Future<void> _refreshData() async {
+    await _loadCustomerInfo();
+    await _loadReminderSetting();
+  }
+
   Future<void> _updateReminderDays(int days) async {
     setState(() => _isSavingReminder = true);
     try {
@@ -226,11 +231,14 @@ class _CustomerCenterScreenState extends State<CustomerCenterScreen> {
         ],
       ),
       backgroundColor: dark ? Colors.grey[900] : Colors.white,
-      body: _isLoading
+        body: _isLoading
           ? const Center(child: CircularProgressIndicator.adaptive())
           : _errorMessage != null
-              ? _buildErrorView(dark)
-              : _buildCustomerCenterView(),
+            ? _buildErrorView(dark)
+            : RefreshIndicator(
+              onRefresh: _refreshData,
+              child: _buildCustomerCenterView(),
+            ),
     );
   }
 
@@ -294,6 +302,7 @@ class _CustomerCenterScreenState extends State<CustomerCenterScreen> {
     }
 
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       child: Container(
         color: dark ? Colors.grey[900] : Colors.white,
         child: Column(
@@ -312,7 +321,8 @@ class _CustomerCenterScreenState extends State<CustomerCenterScreen> {
 
   Widget _buildNoSubscriptionView() {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return Center(
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(

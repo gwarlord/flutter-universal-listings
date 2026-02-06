@@ -347,9 +347,31 @@ class ListingsFirebaseUtils extends ListingsRepository {
     final List<ListingReviewModel> reviews = [];
     for (final doc in result.docs) {
       try {
-        reviews.add(ListingReviewModel.fromJson(doc.data()));
+        final review = ListingReviewModel.fromDoc(doc);
+        // Only include reviews that are not explicitly hidden
+        if (!review.isHidden) {
+          reviews.add(review);
+        }
       } catch (e, s) {
         debugPrint('FireStoreUtils.getReviews failed to parse object ${doc.id} $e $s');
+      }
+    }
+    return reviews;
+  }
+
+  /// Get all reviews including hidden ones (admin only)
+  Future<List<ListingReviewModel>> getAllReviews({required String listingID}) async {
+    final result = await firestore
+        .collection(cfg.reviewCollection)
+        .where('listingID', isEqualTo: listingID)
+        .get();
+
+    final List<ListingReviewModel> reviews = [];
+    for (final doc in result.docs) {
+      try {
+        reviews.add(ListingReviewModel.fromDoc(doc));
+      } catch (e, s) {
+        debugPrint('FireStoreUtils.getAllReviews failed to parse object ${doc.id} $e $s');
       }
     }
     return reviews;

@@ -169,11 +169,12 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
   }
 
   Widget _buildOrderCard(OrderRequest order, bool dark, BuildContext context) {
-    return FutureBuilder<ListingModel?>(
-      future: _getListingCached(order.listingId),
-      builder: (context, listingSnapshot) {
-        final listing = listingSnapshot.data;
-        final listingTitle = listing?.title ?? 'Order ${order.id.substring(0, 8)}';
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _getOrderPreviewData(order),
+      builder: (context, previewSnapshot) {
+        final previewData = previewSnapshot.data ?? {};
+        final listingTitle = previewData['listingTitle'] as String? ?? 'Order ${order.id.substring(0, 8)}';
+        final firstItemImage = previewData['firstItemImage'] as String?;
 
         return Card(
           color: dark ? Colors.grey.shade900 : Colors.white,
@@ -195,78 +196,114 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Order ID and Status
+                  // Status badge and price
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      _buildStatusBadge(order.status),
+                      Text(
+                        '${_getCurrencySymbol(order.currencyCode)}${order.estimatedTotal.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: dark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 24),
+                  
+                  // Image and order info
+                  Row(
+                    children: [
+                      // Image thumbnail
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+                          child: firstItemImage != null && firstItemImage.isNotEmpty
+                              ? Image.network(
+                                  firstItemImage,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(
+                                      Icons.shopping_bag,
+                                      color: dark ? Colors.white38 : Colors.black38,
+                                    );
+                                  },
+                                )
+                              : Icon(
+                                  Icons.shopping_bag,
+                                  color: dark ? Colors.white38 : Colors.black38,
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      
+                      // Order info
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Order #${order.id.substring(0, 8).toUpperCase()}',
+                              listingTitle,
                               style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
                                 color: dark ? Colors.white : Colors.black,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              listingTitle,
+                              'Order #${order.id.substring(0, 8).toUpperCase()}',
                               style: TextStyle(
-                                fontSize: 14,
-                                color: dark ? Colors.white70 : Colors.black54,
+                                fontSize: 13,
+                                color: dark ? Colors.white54 : Colors.black54,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
-                      _buildStatusBadge(order.status),
                     ],
                   ),
                   const SizedBox(height: 12),
 
-                  // Items count and total
+                  // Items count and fulfillment
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        '${order.items.length} item${order.items.length != 1 ? 's' : ''}'.tr(),
-                        style: TextStyle(color: dark ? Colors.white54 : Colors.black54),
-                      ),
-                      Text(
-                        '${_getCurrencySymbol(order.currencyCode)}${order.estimatedTotal.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(cfg.colorPrimary),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Fulfillment info
-                  Row(
-                    children: [
-                      Icon(
-                        order.fulfillment.method.value == 'pickup'
-                            ? Icons.store
-                            : Icons.local_shipping,
-                        size: 16,
-                        color: dark ? Colors.white54 : Colors.black54,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          order.fulfillment.method.value == 'pickup'
-                              ? 'Pickup'
-                              : 'Delivery',
-                          style: TextStyle(color: dark ? Colors.white54 : Colors.black54),
-                        ),
+                      Row(
+                        children: [
+                          Icon(
+                            order.fulfillment.method.value == 'pickup'
+                                ? Icons.store
+                                : Icons.local_shipping,
+                            size: 16,
+                            color: dark ? Colors.white54 : Colors.black54,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            order.fulfillment.method.value == 'pickup'
+                                ? 'Pickup'
+                                : 'Delivery',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: dark ? Colors.white54 : Colors.black54,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '• ${order.items.length} item${order.items.length != 1 ? 's' : ''}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: dark ? Colors.white54 : Colors.black54,
+                            ),
+                          ),
+                        ],
                       ),
                       Text(
                         _formatDate(order.createdAt),
@@ -357,6 +394,39 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
     }
 
     return null;
+  }
+
+  Future<Map<String, dynamic>> _getOrderPreviewData(OrderRequest order) async {
+    final result = <String, dynamic>{};
+    
+    // Get listing title
+    final listing = await _getListingCached(order.listingId);
+    result['listingTitle'] = listing?.title ?? 'Order ${order.id.substring(0, 8)}';
+    
+    // Get first item image
+    if (order.items.isNotEmpty) {
+      try {
+        final firstItemId = order.items.first.itemId;
+        final itemDoc = await FirebaseFirestore.instance
+            .collection('listings')
+            .doc(order.listingId)
+            .collection('catalog_items')
+            .doc(firstItemId)
+            .get();
+        
+        if (itemDoc.exists) {
+          final itemData = itemDoc.data();
+          final photos = itemData?['photos'] as List?;
+          if (photos != null && photos.isNotEmpty) {
+            result['firstItemImage'] = photos.first;
+          }
+        }
+      } catch (e) {
+        // Ignore error, will show default icon
+      }
+    }
+    
+    return result;
   }
 
   String _formatDate(Timestamp? timestamp) {

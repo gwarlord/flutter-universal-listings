@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/listings/utils/caribbean_countries.dart';
 import 'package:instaflutter/listings/utils/country_search_dialog.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -60,6 +62,24 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     super.initState();
     user = widget.user;
     _countryCode = user.countryCode.isEmpty ? null : user.countryCode;
+  }
+
+  Future<void> _refreshUserData() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection(usersCollection)
+          .doc(user.userID)
+          .get(const GetOptions(source: Source.server));
+
+      if (!doc.exists) return;
+      final freshUser = ListingsUser.fromJson(doc.data()!);
+      if (!mounted) return;
+      setState(() => user = freshUser);
+      context.read<AuthenticationBloc>().add(UpdateAuthUserEvent(freshUser));
+    } catch (e) {
+      if (!mounted) return;
+      showSnackBar(context, 'Failed to refresh account details'.tr());
+    }
   }
 
   @override
@@ -140,14 +160,17 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
           }
         },
         builder: (context, state) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-            child: Form(
-              key: _key,
-              autovalidateMode: _validate,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          return RefreshIndicator(
+            onRefresh: _refreshUserData,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              child: Form(
+                key: _key,
+                autovalidateMode: _validate,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   Text('SUBSCRIPTION'.tr(), style: titleStyle),
                   const SizedBox(height: 12),
                   Card(
@@ -311,7 +334,8 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                ],
+                  ],
+                ),
               ),
             ),
           );

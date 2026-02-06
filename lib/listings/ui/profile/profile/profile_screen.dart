@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/core/utils/helper.dart';
@@ -49,6 +51,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     currentUser = widget.currentUser;
+  }
+
+  Future<void> _refreshUserData() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection(usersCollection)
+          .doc(currentUser.userID)
+          .get(const GetOptions(source: Source.server));
+
+      if (!doc.exists) return;
+      final freshUser = ListingsUser.fromJson(doc.data()!);
+      if (!mounted) return;
+      setState(() => currentUser = freshUser);
+      context.read<AuthenticationBloc>().add(UpdateAuthUserEvent(freshUser));
+    } catch (e) {
+      if (!mounted) return;
+      showSnackBar(context, 'Failed to refresh profile'.tr());
+    }
   }
 
   @override
@@ -126,9 +146,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
                   ),
                 ],
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
+                child: RefreshIndicator(
+                  onRefresh: _refreshUserData,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Column(
+                      children: [
                       Padding(
                         padding:
                             const EdgeInsets.only(top: 32.0, left: 32, right: 32),
@@ -462,7 +485,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                       ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );

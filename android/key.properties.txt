@@ -1,0 +1,5 @@
+properties
+storePassword=12Averatec~
+keyPassword=12Averatec~
+keyAlias=upload
+storeFile=upload-keystore.jks
