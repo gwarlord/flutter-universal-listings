@@ -52,6 +52,19 @@ service cloud.firestore {
       allow update: if isSignedIn() && (request.auth.uid == resource.data.authorID || isAdmin());
       allow read: if true;
       allow delete: if isAdmin();
+      
+      match /redemptions/{userId} {
+        // Allow users to read their own redemption documents
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        // Allow users to create/update their own redemption documents
+        allow create, update: if isSignedIn() && request.auth.uid == userId;
+        // Allow deal author and admins to read all redemptions
+        allow read: if isSignedIn() && (
+          request.auth.uid == get(/databases/$(database)/documents/deal_ads/$(adId)).data.authorID ||
+          isAdmin()
+        );
+        allow delete: if false; // Never delete redemption records (audit trail)
+      }
     }
     
     // Users collection
@@ -76,6 +89,11 @@ service cloud.firestore {
         allow create: if isSignedIn();
         allow update: if isOwner(userId) || isAdmin();
         allow delete: if isOwner(userId) || isAdmin();
+      }
+      
+      match /savedDeals/{dealId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update, delete: if isOwner(userId);
       }
     }
     
@@ -139,13 +157,11 @@ service cloud.firestore {
         // 1. User is the listing author (can always read their own catalog)
         // OR
         // 2. Listing is public (storeEnabled=true, storeMode includes internal_catalog, listerTierSnapshot=premium)
-        allow read: if isSignedIn() && (
-          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID ||
+        allow read: if (isSignedIn() && request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID) ||
           (get(/databases/$(database)/documents/listings/$(listingId)).data.storeEnabled == true &&
            (get(/databases/$(database)/documents/listings/$(listingId)).data.storeMode == 'internal_catalog' ||
             get(/databases/$(database)/documents/listings/$(listingId)).data.storeMode == 'both') &&
-           get(/databases/$(database)/documents/listings/$(listingId)).data.listerTierSnapshot == 'premium')
-        );
+           get(/databases/$(database)/documents/listings/$(listingId)).data.listerTierSnapshot == 'premium');
         
         // Allow write ONLY if:
         // 1. User is authenticated and is the listing author
@@ -266,22 +282,38 @@ service cloud.firestore {
         get(/databases/$(database)/documents/listings/$(request.resource.data.listingId)).data.storeEnabled == true &&
         get(/databases/$(database)/documents/listings/$(request.resource.data.listingId)).data.listerTierSnapshot == 'premium';
       
-      // Allow read for all signed-in users
+      // Allow read for:
+      // 1. Customer who placed the order
+      // 2. Lister who owns the listing
+      // 3. Admins
       // Note: Queries with where('listerId'|'customerId') + orderBy('createdAt') require a composite index
       // The index is auto-created by Firestore when you first run the query in the app
-      // If permission denied, check Firebase Console > Firestore > Indexes for the required index
-      allow read: if isSignedIn();
+      // If permission denied persists after deploying this rule, allow 1-2 minutes for propagation
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.customerId ||
+        request.auth.uid == resource.data.listerId ||
+        isAdmin()
+      );
       
       // Allow update by:
       // 1. Lister (managing order status: confirmed, fulfilled, declined)
       // 2. Customer (cancelling their own pending orders)
+      // CRITICAL: Shipping field updates MUST go through Cloud Function for RevenueCat verification
+      // This prevents direct client-side writes to shipping field
       allow update: if isSignedIn() && (
         request.auth.uid == resource.data.listerId ||
         request.auth.uid == resource.data.customerId
-      );
+      ) && !hasShippingFieldChange();
       
       // No deletes allowed
       allow delete: if false;
+    }
+    
+    // Helper function to check if shipping field is being modified
+    function hasShippingFieldChange() {
+      let oldShipping = resource.data.get('shipping', null);
+      let newShipping = request.resource.data.get('shipping', null);
+      return oldShipping != newShipping;
     }
     
     // Rental Bookings (Premium Rentals Feature)

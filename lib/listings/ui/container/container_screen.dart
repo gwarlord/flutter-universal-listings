@@ -27,6 +27,9 @@ import 'package:instaflutter/listings/listings_module/analytics/analytics_screen
 import 'package:instaflutter/listings/listings_module/analytics/advanced_analytics_screen.dart';
 import 'package:instaflutter/listings/listings_module/chat_settings/chat_settings_screen.dart';
 import 'package:instaflutter/listings/ui/profile/profile/profile_screen.dart';
+import 'package:instaflutter/listings/listings_module/listing_details/listing_details_screen.dart';
+import 'package:instaflutter/listings/services/deep_link_service.dart';
+import 'package:instaflutter/main.dart' as main_entry;
 import '../deals/deals_promotion_screen.dart';
 import '../deals/ad_review_approval_screen.dart';
 import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart' as listings_api; // Corrected import with alias
@@ -93,6 +96,54 @@ class _ContainerState extends State<ContainerScreen> {
       provisional: false,
       sound: true,
     );
+    
+    // Handle pending deep link navigation
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _handlePendingDeepLink();
+    });
+  }
+
+  /// Handle pending deep link after the screen is built
+  Future<void> _handlePendingDeepLink() async {
+    final pendingListingId = main_entry.getPendingListingId();
+    
+    if (pendingListingId != null) {
+      print('🔗 Navigating to pending listing: $pendingListingId');
+      
+      try {
+        // Fetch the listing
+        final deepLinkService = DeepLinkService();
+        final listing = await deepLinkService.getListingById(pendingListingId);
+        
+        if (listing != null && mounted) {
+          // Navigate to listing details
+          await push(
+            context,
+            ListingDetailsWrappingWidget(
+              listing: listing,
+              currentUser: widget.user,
+            ),
+          );
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Listing not found or has been removed.'.tr()),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } catch (e) {
+        print('❌ Error navigating to listing: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to open listing. Please try again.'.tr()),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   void _navigateToListingServices(BuildContext context) {

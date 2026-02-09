@@ -5,6 +5,7 @@ import 'package:instaflutter/listings/model/categories_model.dart';
 import 'package:instaflutter/listings/model/filter_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listing_review_model.dart';
+import 'package:instaflutter/listings/model/paged_reviews_result.dart';
 import 'package:instaflutter/listings/model/suspension_info.dart';
 
 abstract class ListingsRepository {
@@ -42,6 +43,17 @@ abstract class ListingsRepository {
   // Reviews
   Future<void> postReview({required ListingReviewModel reviewModel});
   Future<List<ListingReviewModel>> getReviews({required String listingID});
+  
+  /// Get reviews with pagination support
+  /// [limit] - Maximum number of reviews to fetch (default: 10)
+  /// [startAfterCreatedAt] - Cursor for pagination (createdAt timestamp)
+  /// [descending] - Sort order (default: true = newest first)
+  Future<PagedReviewsResult> getReviewsPaged({
+    required String listingID,
+    int limit = 10,
+    int? startAfterCreatedAt,
+    bool descending = true,
+  });
 
   // Admin / moderation
   Future<void> approveListing({required ListingModel listingModel});

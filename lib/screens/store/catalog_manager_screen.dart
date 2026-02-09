@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/core/utils/helper.dart';
@@ -36,17 +37,45 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
   void initState() {
     super.initState();
     
-    // CRITICAL: Verify Premium access
-    if (!isPremiumUser(widget.currentUser)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        showSnackBar(context, '🔒 Premium subscription required');
+    // Sync subscription status and verify Premium access
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndSyncPremiumAccess();
+    });
+  }
+
+  Future<void> _checkAndSyncPremiumAccess() async {
+    // Use local subscription tier (already synced with RevenueCat during auth)
+    final isPremium = widget.currentUser.isPremium || 
+                      widget.currentUser.isProfessional ||
+                      widget.currentUser.isAdmin;
+    
+    if (!isPremium) {
+      if (mounted) {
+        showSnackBar(context, '🔒 Premium subscription required'.tr());
         Navigator.pop(context);
-      });
+      }
     } else {
-      // Migrate listings tier snapshots (one-time, runs silently)
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _runMigration();
+      // Update listing's tier snapshot to reflect current user tier
+      await _updateListingTierSnapshot();
+      // User is premium - run migration
+      _runMigration();
+    }
+  }
+
+  /// Update the listing's tier snapshot to match current user's tier
+  Future<void> _updateListingTierSnapshot() async {
+    try {
+      final currentTier = widget.currentUser.subscriptionTier.toLowerCase();
+      await FirebaseFirestore.instance
+          .collection('listings')
+          .doc(widget.listing.id)
+          .update({
+        'listerTierSnapshot': currentTier,
+        'updatedAt': Timestamp.now(),
       });
+      print('✅ Updated listing tier snapshot to: $currentTier');
+    } catch (e) {
+      print('⚠️ Could not update listing tier snapshot: $e');
     }
   }
 

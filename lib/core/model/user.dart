@@ -90,10 +90,14 @@ class User with ChangeNotifier {
 class UserSettings {
   bool allowPushNotifications;
   int subscriptionReminderDays;
+  bool bookingEmailReminders;
+  bool bookingPushReminders;
 
   UserSettings({
     this.allowPushNotifications = true,
     this.subscriptionReminderDays = 3,
+    this.bookingEmailReminders = true,
+    this.bookingPushReminders = true,
   });
 
   factory UserSettings.fromJson(Map<dynamic, dynamic> parsedJson) {
@@ -108,6 +112,8 @@ class UserSettings {
     return UserSettings(
       allowPushNotifications: parsedJson['allowPushNotifications'] ?? true,
       subscriptionReminderDays: parsedReminderDays,
+      bookingEmailReminders: parsedJson['bookingEmailReminders'] ?? true,
+      bookingPushReminders: parsedJson['bookingPushReminders'] ?? true,
     );
   }
 
@@ -115,6 +121,8 @@ class UserSettings {
     return {
       'allowPushNotifications': allowPushNotifications,
       'subscriptionReminderDays': subscriptionReminderDays,
+      'bookingEmailReminders': bookingEmailReminders,
+      'bookingPushReminders': bookingPushReminders,
     };
   }
 }

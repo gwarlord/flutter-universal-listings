@@ -53,6 +53,11 @@ exports.onListingSuspended = functions.firestore
     }
     const listing = after;
     const listingTitle = listing.title || "Your listing";
+    const suspensionInfo = listing.suspensionInfo || {};
+    const reasonKey = suspensionInfo.reason;
+    const reasonText = suspensionInfo.reasonText;
+    const reasonLabel = reasonKey ? formatSuspensionReason(reasonKey) : "";
+    const reasonDetail = reasonText || reasonLabel;
     // Get lister/author details
     try {
         const listerDoc = await admin
@@ -77,12 +82,14 @@ exports.onListingSuspended = functions.firestore
         const message = {
             notification: {
                 title: "🚫 Listing Suspended",
-                body: `"${listingTitle}" has been suspended and is no longer visible to customers.`,
+                body: `"${listingTitle}" has been suspended and is no longer visible to customers.${reasonDetail ? ` Reason: ${reasonDetail}.` : ""}`,
             },
             data: {
                 type: "listing_suspended",
                 listingId: listingId,
                 listingTitle: listingTitle,
+                reason: reasonKey || "",
+                reasonText: reasonText || "",
                 timestamp: new Date().toISOString(),
             },
             token: lister.pushToken,
@@ -156,3 +163,23 @@ exports.onListingUnsuspended = functions.firestore
         return null;
     }
 });
+const formatSuspensionReason = (reasonKey) => {
+    switch (reasonKey) {
+        case "breachOfPolicy":
+            return "Breach of Policy";
+        case "suspiciousActivity":
+            return "Suspicious Activity";
+        case "violentOrHarassiveBehavior":
+            return "Violent or Harassing Behavior";
+        case "fraudulent":
+            return "Fraudulent Activity";
+        case "spamOrMislabeling":
+            return "Spam or Mislabeling";
+        case "paymentIssues":
+            return "Payment Issues";
+        case "otherViolation":
+            return "Other Violation";
+        default:
+            return "Other Violation";
+    }
+};

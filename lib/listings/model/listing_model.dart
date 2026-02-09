@@ -64,6 +64,9 @@ class ListingModel {
   String? storeCurrencyCode; // Defaults to listing.currencyCode
   bool storeDeliveryEnabled;
   bool storePickupEnabled;
+  bool storeDineInEnabled; // Dining in at restaurant
+  bool storeShippingEnabled; // Shipping/carrier fulfillment
+  double storeShippingFee; // Shipping cost (0 for free shipping)
   int storeLeadTimeHours; // Minimum lead time for orders
   Timestamp? storeUpdatedAt;
   
@@ -165,6 +168,9 @@ class ListingModel {
     String? storeCurrencyCode,
     this.storeDeliveryEnabled = false,
     this.storePickupEnabled = true,
+    this.storeDineInEnabled = false,
+    this.storeShippingEnabled = false,
+    this.storeShippingFee = 0.0,
     this.storeLeadTimeHours = 24,
     this.storeUpdatedAt,
     this.listerTierSnapshot = 'free',
@@ -252,6 +258,9 @@ class ListingModel {
       storeCurrencyCode: json['storeCurrencyCode'] ?? json['currencyCode'] ?? 'USD',
       storeDeliveryEnabled: json['storeDeliveryEnabled'] ?? false,
       storePickupEnabled: json['storePickupEnabled'] ?? true,
+      storeDineInEnabled: json['storeDineInEnabled'] ?? false,
+      storeShippingEnabled: json['storeShippingEnabled'] ?? false,
+      storeShippingFee: (json['storeShippingFee'] ?? 0).toDouble(),
       storeLeadTimeHours: json['storeLeadTimeHours'] ?? 24,
       storeUpdatedAt: json['storeUpdatedAt'],
       listerTierSnapshot: json['listerTierSnapshot'] ?? 'free',
@@ -336,6 +345,9 @@ class ListingModel {
       'storeCurrencyCode': storeCurrencyCode,
       'storeDeliveryEnabled': storeDeliveryEnabled,
       'storePickupEnabled': storePickupEnabled,
+      'storeDineInEnabled': storeDineInEnabled,
+      'storeShippingEnabled': storeShippingEnabled,
+      'storeShippingFee': storeShippingFee,
       'storeLeadTimeHours': storeLeadTimeHours,
       'storeUpdatedAt': storeUpdatedAt,
       'listerTierSnapshot': listerTierSnapshot,

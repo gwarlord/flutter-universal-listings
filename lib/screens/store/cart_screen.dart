@@ -36,6 +36,7 @@ class _CartScreenState extends State<CartScreen> {
   final OrderChatHelper _chatHelper = OrderChatHelper();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _shippingInstructionsController = TextEditingController();
 
   FulfillmentMethod _fulfillmentMethod = FulfillmentMethod.pickup;
   DateTime? _preferredDate;
@@ -53,6 +54,8 @@ class _CartScreenState extends State<CartScreen> {
       _fulfillmentMethod = FulfillmentMethod.delivery;
     } else if (widget.listing.storeDineInEnabled) {
       _fulfillmentMethod = FulfillmentMethod.dineIn;
+    } else if (widget.listing.storeShippingEnabled) {
+      _fulfillmentMethod = FulfillmentMethod.shipping;
     }
   }
 
@@ -60,11 +63,22 @@ class _CartScreenState extends State<CartScreen> {
   void dispose() {
     _addressController.dispose();
     _notesController.dispose();
+    _shippingInstructionsController.dispose();
     super.dispose();
   }
 
   double get _subtotal {
     return widget.cartItems.fold(0, (sum, item) => sum + item.total);
+  }
+
+  double get _shippingCost {
+    return _fulfillmentMethod == FulfillmentMethod.shipping 
+        ? widget.listing.storeShippingFee 
+        : 0.0;
+  }
+
+  double get _total {
+    return _subtotal + _shippingCost;
   }
 
   @override
@@ -159,8 +173,54 @@ class _CartScreenState extends State<CartScreen> {
                             }
                           },
                         ),
+                      if (widget.listing.storeShippingEnabled)
+                        RadioListTile<FulfillmentMethod>(
+                          title: Text('Shipping'.tr()),
+                          value: FulfillmentMethod.shipping,
+                          groupValue: _fulfillmentMethod,
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => _fulfillmentMethod = value);
+                            }
+                          },
+                        ),
 
-                      // Table number for dine-in
+                      // Shipping address
+                      if (_fulfillmentMethod == FulfillmentMethod.shipping) ...[
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _addressController,
+                          style: TextStyle(color: dark ? Colors.white : Colors.black),
+                          maxLines: 3,
+                          decoration: InputDecoration(
+                            labelText: 'Shipping Address *'.tr(),
+                            labelStyle: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                            hintText: 'Street address, city, state, postal code'.tr(),
+                            hintStyle: TextStyle(color: dark ? Colors.white38 : Colors.black26),
+                            border: const OutlineInputBorder(),
+                            filled: true,
+                            fillColor: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Location pinning button for shipping
+                        _buildLocationPinButton(dark),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _shippingInstructionsController,
+                          style: TextStyle(color: dark ? Colors.white : Colors.black),
+                          maxLines: 3,
+                          decoration: InputDecoration(
+                            labelText: 'Shipping Instructions (Optional)'.tr(),
+                            labelStyle: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                            hintText: 'e.g., Leave at front door, signature required'.tr(),
+                            hintStyle: TextStyle(color: dark ? Colors.white38 : Colors.black26),
+                            border: const OutlineInputBorder(),
+                            filled: true,
+                            fillColor: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+                          ),
+                        ),
+                      ],
                       if (_fulfillmentMethod == FulfillmentMethod.dineIn) ...[
                         const SizedBox(height: 16),
                         TextField(
@@ -379,24 +439,77 @@ class _CartScreenState extends State<CartScreen> {
 
   Widget _buildSubtotalRow(bool dark) {
     final currencyCode = widget.listing.storeCurrencyCode ?? widget.listing.currencyCode;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(
-          'Subtotal'.tr(),
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: dark ? Colors.white : Colors.black,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Subtotal'.tr(),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: dark ? Colors.white70 : Colors.black54,
+              ),
+            ),
+            Text(
+              _formatCurrency(_subtotal, currencyCode),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: dark ? Colors.white70 : Colors.black54,
+              ),
+            ),
+          ],
         ),
-        Text(
-          _formatCurrency(_subtotal, currencyCode),
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Color(colorPrimary),
+        if (_shippingCost > 0) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Shipping'.tr(),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: dark ? Colors.white70 : Colors.black54,
+                ),
+              ),
+              Text(
+                _formatCurrency(_shippingCost, currencyCode),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Color(colorPrimary),
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 12),
+          const Divider(height: 0),
+          const SizedBox(height: 12),
+        ],
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Total'.tr(),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: dark ? Colors.white : Colors.black,
+              ),
+            ),
+            Text(
+              _formatCurrency(_total, currencyCode),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(colorPrimary),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -577,6 +690,12 @@ class _CartScreenState extends State<CartScreen> {
       return;
     }
 
+    // Validate shipping address
+    if (_fulfillmentMethod == FulfillmentMethod.shipping && _addressController.text.trim().isEmpty) {
+      showSnackBar(context, 'Please enter shipping address'.tr());
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     try {
@@ -600,6 +719,19 @@ class _CartScreenState extends State<CartScreen> {
         preferredAt: _preferredDate,
       );
 
+      // Create shipping info if shipping method is selected
+      ShippingInfo? shippingInfo;
+      if (_fulfillmentMethod == FulfillmentMethod.shipping) {
+        shippingInfo = ShippingInfo(
+          address: _addressController.text.trim(),
+          latitude: _deliveryLatitude,
+          longitude: _deliveryLongitude,
+          instructions: _shippingInstructionsController.text.trim().isEmpty 
+              ? null 
+              : _shippingInstructionsController.text.trim(),
+        );
+      }
+
       // Create order request
       final orderRequest = OrderRequest(
         id: '', // Will be set by service
@@ -608,9 +740,10 @@ class _CartScreenState extends State<CartScreen> {
         customerId: widget.currentUser!.userID,
         status: OrderStatus.requested,
         items: orderItems,
-        estimatedTotal: _subtotal,
+        estimatedTotal: _total,
         currencyCode: widget.listing.storeCurrencyCode ?? widget.listing.currencyCode,
         fulfillment: fulfillment,
+        shipping: shippingInfo,
         notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
       );
 

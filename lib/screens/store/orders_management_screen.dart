@@ -10,6 +10,7 @@ import 'package:instaflutter/listings/model/order_request.dart';
 import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/listings/utils/subscription_helper.dart';
 import 'package:instaflutter/screens/store/order_detail_screen.dart';
+import 'package:instaflutter/screens/store/shipping_tracking_display.dart';
 
 /// Orders management screen for Premium listers
 class OrdersManagementScreen extends StatefulWidget {
@@ -381,9 +382,17 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
                             ? 'Pickup'.tr()
                             : order.fulfillment.method == FulfillmentMethod.dineIn
                                 ? 'Dining In'.tr()
-                                : 'Delivery'.tr(),
+                                : order.fulfillment.method == FulfillmentMethod.shipping
+                                    ? 'Shipping'.tr()
+                                    : 'Delivery'.tr(),
                         style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
                       ),
+                      // Show tracking chip if order has shipping tracking
+                      if (order.fulfillment.method == FulfillmentMethod.shipping &&
+                          order.shipping?.trackingNumber != null) ...[
+                        const SizedBox(width: 8),
+                        const ShippingTrackingChip(),
+                      ],
                     ],
                   ),
                 ],

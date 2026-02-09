@@ -6,6 +6,7 @@ import 'package:instaflutter/listings/model/categories_model.dart';
 import 'package:instaflutter/listings/model/filter_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listing_review_model.dart';
+import 'package:instaflutter/listings/model/paged_reviews_result.dart';
 import 'package:instaflutter/listings/model/suspension_info.dart';
 
 class ListingsLocalData extends ListingsRepository {
@@ -81,6 +82,16 @@ class ListingsLocalData extends ListingsRepository {
 
   @override
   Future<List<ListingReviewModel>> getReviews({required String listingID}) async => [];
+
+  @override
+  Future<PagedReviewsResult> getReviewsPaged({
+    required String listingID,
+    int limit = 10,
+    int? startAfterCreatedAt,
+    bool descending = true,
+  }) async {
+    return PagedReviewsResult.empty();
+  }
 
   @override
   Future<PlaceDetails?> getPlaceDetails(Prediction prediction) async => null;

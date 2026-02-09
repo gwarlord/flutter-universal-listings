@@ -25,6 +25,7 @@ import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 import 'package:instaflutter/listings/listings_module/add_listing/add_listing_screen.dart';
 import 'package:instaflutter/listings/listings_module/add_review/add_review_screen.dart';
 import 'package:instaflutter/listings/listings_module/reviews/manage_reviews_screen.dart';
+import 'package:instaflutter/listings/listings_module/listing_details/all_reviews_screen.dart';
 import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
 import 'package:instaflutter/listings/listings_module/listing_details/listing_details_bloc.dart';
 import 'package:instaflutter/listings/listings_module/booking/booking_bloc.dart';
@@ -48,6 +49,7 @@ import 'package:instaflutter/widgets/menu/menu_section_widget.dart';
 import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/listings/model/catalog_item.dart';
 import 'package:instaflutter/listings/model/rental_config.dart';
+import 'package:instaflutter/listings/services/deep_link_service.dart';
 import 'package:instaflutter/listings/model/rental_catalog_item.dart';
 import 'package:instaflutter/listings/services/rental_catalog_service.dart';
 import 'package:instaflutter/listings/ui/rentals/rental_booking_dialog.dart';
@@ -406,6 +408,12 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                           margin: const EdgeInsets.only(right: 8),
                         );
                       },
+                    ),
+                    _buildHeaderCircleButton(
+                      icon: Icons.share,
+                      onTap: () => _shareListing(),
+                      isDark: dark,
+                      margin: const EdgeInsets.only(right: 8),
                     ),
                     _buildHeaderCircleMenu(dark, adaptiveTextColor),
                   ],
@@ -1600,7 +1608,17 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 16),
                   child: OutlinedButton(
-                    onPressed: () {}, // Show all reviews
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AllReviewsScreen(
+                            listingId: listing.id,
+                            listingTitle: listing.title,
+                          ),
+                        ),
+                      );
+                    },
                     child: Text('Show all reviews'.tr()),
                   ),
                 ),
@@ -1864,6 +1882,36 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     _mapController = controller;
     if (isDarkMode(context)) {
       _mapController?.setMapStyle('[{"featureType":"all","elementType":"geometry","stylers":[{"color":"#242f3e"}]}]'); // Simplified for brevity
+    }
+  }
+
+  /// Share this listing via deep link
+  Future<void> _shareListing() async {
+    try {
+      final deepLinkService = DeepLinkService();
+      
+      // Get the share position for iPad popover
+      final RenderBox? box = context.findRenderObject() as RenderBox?;
+      final Rect? sharePositionOrigin = box != null
+          ? box.localToGlobal(Offset.zero) & box.size
+          : null;
+      
+      // Share the listing
+      await deepLinkService.shareListing(
+        listing,
+        sharePositionOrigin: sharePositionOrigin,
+      );
+    } catch (e) {
+      print('❌ Error sharing listing: $e');
+      // Show error message to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to share listing. Please try again.'.tr()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

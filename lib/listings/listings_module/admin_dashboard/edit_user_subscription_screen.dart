@@ -84,17 +84,46 @@ class _EditUserSubscriptionScreenState extends State<EditUserSubscriptionScreen>
       _error = null;
     });
     try {
+      // Update user's subscription tier and expiration
+      final isPaidTier = _selectedTier != 'free';
+      final updateData = <String, dynamic>{
+        'subscriptionTier': _selectedTier,
+        // Set far future expiration for paid tiers (100 years), null for free
+        'subscriptionExpiresAt': isPaidTier 
+            ? Timestamp.fromDate(DateTime.now().add(const Duration(days: 36500)))
+            : null,
+      };
+      
       await FirebaseFirestore.instance
           .collection(usersCollection)
           .doc(_loadedUserDocId)
-          .set({'subscriptionTier': _selectedTier}, SetOptions(merge: true));
+          .set(updateData, SetOptions(merge: true));
+      
+      // Update all listings owned by this user with new tier snapshot
+      final listingsQuery = await FirebaseFirestore.instance
+          .collection('listings')
+          .where('authorID', isEqualTo: _loadedUserDocId)
+          .get();
+      
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in listingsQuery.docs) {
+        batch.update(doc.reference, {
+          'listerTierSnapshot': _selectedTier,
+          'updatedAt': Timestamp.now(),
+        });
+      }
+      
+      if (listingsQuery.docs.isNotEmpty) {
+        await batch.commit();
+        print('✅ Updated ${listingsQuery.docs.length} listings with new tier snapshot');
+      }
       
       setState(() {
         _loadedUser!.subscriptionTier = _selectedTier;
         _isSaving = false;
       });
       if (!mounted) return;
-      showSnackBar(context, 'Subscription updated to'.tr() + ' ${_selectedTier.toUpperCase()}');
+      showSnackBar(context, 'Subscription updated to ${_selectedTier.toUpperCase()} (${listingsQuery.docs.length} listings updated)'.tr());
     } catch (e) {
       setState(() {
         _error = 'Failed to update subscription.'.tr();

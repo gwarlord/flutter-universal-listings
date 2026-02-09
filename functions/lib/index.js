@@ -43,17 +43,22 @@ exports.recomputeAllTapCounts = exports.onTapDeleted = exports.onTapCreated = ex
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
+// Initialize Firebase Admin before any imports that use it
+admin.initializeApp();
 // Export email verification functions
 __exportStar(require("./email_verification"), exports);
 // Export order notification functions
 __exportStar(require("./order_notifications"), exports);
+// Export order tracking functions
+__exportStar(require("./order_tracking"), exports);
 // Export rental booking notification functions
 __exportStar(require("./rental_booking_notifications"), exports);
 // Export user suspension notification functions
 __exportStar(require("./user_suspension_notifications"), exports);
 // Export listing suspension notification functions
 __exportStar(require("./listing_suspension_notifications"), exports);
-admin.initializeApp();
+// Export booking reminder functions
+__exportStar(require("./booking_reminders"), exports);
 const db = admin.firestore();
 const messaging = admin.messaging();
 // Set your SendGrid API key in Functions config: firebase functions:config:set sendgrid.key="YOUR_KEY"

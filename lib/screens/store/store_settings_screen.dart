@@ -26,10 +26,13 @@ class StoreSettingsScreen extends StatefulWidget {
 
 class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
   final StoreService _storeService = StoreService();
+  late TextEditingController _shippingFeeController;
   
   late bool _pickupEnabled;
   late bool _deliveryEnabled;
   late bool _dineInEnabled;
+  late bool _shippingEnabled;
+  late double _shippingFee;
   late int _leadTimeHours;
   
   bool _isSaving = false;
@@ -40,12 +43,21 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
     _pickupEnabled = widget.listing.storePickupEnabled;
     _deliveryEnabled = widget.listing.storeDeliveryEnabled;
     _dineInEnabled = widget.listing.storeDineInEnabled;
+    _shippingEnabled = widget.listing.storeShippingEnabled;
+    _shippingFee = widget.listing.storeShippingFee;
     _leadTimeHours = widget.listing.storeLeadTimeHours;
+    _shippingFeeController = TextEditingController(text: _shippingFee > 0 ? _shippingFee.toString() : '');
+  }
+
+  @override
+  void dispose() {
+    _shippingFeeController.dispose();
+    super.dispose();
   }
 
   Future<void> _saveSettings() async {
     // Validate at least one fulfillment method is enabled
-    if (!_pickupEnabled && !_deliveryEnabled && !_dineInEnabled) {
+    if (!_pickupEnabled && !_deliveryEnabled && !_dineInEnabled && !_shippingEnabled) {
       showSnackBar(context, 'At least one fulfillment method must be enabled'.tr());
       return;
     }
@@ -58,6 +70,8 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
       updatedListing.storePickupEnabled = _pickupEnabled;
       updatedListing.storeDeliveryEnabled = _deliveryEnabled;
       updatedListing.storeDineInEnabled = _dineInEnabled;
+      updatedListing.storeShippingEnabled = _shippingEnabled;
+      updatedListing.storeShippingFee = _shippingFee;
       updatedListing.storeLeadTimeHours = _leadTimeHours;
 
       // Save to Firestore
@@ -66,6 +80,8 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
         pickupEnabled: _pickupEnabled,
         deliveryEnabled: _deliveryEnabled,
         dineInEnabled: _dineInEnabled,
+        shippingEnabled: _shippingEnabled,
+        shippingFee: _shippingFee,
         leadTimeHours: _leadTimeHours,
       );
 
@@ -98,7 +114,12 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
         iconTheme: IconThemeData(color: dark ? Colors.white : Colors.black),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: 16 + MediaQuery.of(context).viewInsets.bottom + 50,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -257,7 +278,118 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 12),
+
+            // Shipping Option
+            Card(
+              color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Checkbox(
+                      value: _shippingEnabled,
+                      onChanged: (value) {
+                        setState(() => _shippingEnabled = value ?? false);
+                      },
+                      activeColor: Color(cfg.colorPrimary),
+                      side: BorderSide(
+                        color: dark ? Colors.white : Colors.grey,
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Shipping'.tr(),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: dark ? Colors.white : Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Orders sent via carrier with tracking'.tr(),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Shipping Fee (shown only when shipping is enabled)
+            if (_shippingEnabled) ...[
+              Card(
+                color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Shipping Fee (Optional)'.tr(),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: dark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              style: TextStyle(color: dark ? Colors.white : Colors.black),
+                              onChanged: (value) {
+                                setState(() {
+                                  _shippingFee = double.tryParse(value) ?? 0.0;
+                                });
+                              },
+                              decoration: InputDecoration(
+                                labelText: 'Fee amount'.tr(),
+                                labelStyle: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                                hintText: '0.00'.tr(),
+                                hintStyle: TextStyle(color: dark ? Colors.white38 : Colors.black26),
+                                border: const OutlineInputBorder(),
+                                filled: true,
+                                fillColor: dark ? Colors.grey.shade800 : Colors.white,
+                                prefixText: '${widget.listing.storeCurrencyCode ?? 'USD'} ',
+                                prefixStyle: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: dark ? Colors.white70 : Colors.black54,
+                                ),
+                              ),
+                              controller: _shippingFeeController,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Leave empty or 0 for free shipping'.tr(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
 
             // Lead Time Section
             Text(

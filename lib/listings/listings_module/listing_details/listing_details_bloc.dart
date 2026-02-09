@@ -23,9 +23,13 @@ class ListingDetailsBloc
     required this.profileRepository,
   }) : super(ListingDetailsInitial()) {
     on<GetListingReviewsEvent>((event, emit) async {
-      List<ListingReviewModel> reviews =
-          await listingsRepository.getReviews(listingID: listing.id);
-      emit(ReviewsFetchedState(reviews: reviews));
+      // Fetch only a limited number of reviews (5) for the details page
+      final pagedResult = await listingsRepository.getReviewsPaged(
+        listingID: listing.id,
+        limit: 5,
+        descending: true,
+      );
+      emit(ReviewsFetchedState(reviews: pagedResult.reviews));
     });
     on<ListingFavUpdatedEvent>((event, emit) async {
       listing.isFav = !listing.isFav;

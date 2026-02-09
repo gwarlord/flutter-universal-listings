@@ -25,6 +25,7 @@ import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
 import 'package:instaflutter/listings/ui/profile/account_details/account_details_screen.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:instaflutter/listings/ui/profile/contact_us/contact_us_screen.dart';
+import 'package:instaflutter/listings/ui/deals/saved_deals_screen.dart';
 import 'package:instaflutter/listings/ui/profile/settings/settings_screen.dart';
 import 'package:instaflutter/listings/ui/profile/profile/profile_bloc.dart';
 import 'package:instaflutter/core/ui/theme/theme_cubit.dart';
@@ -370,6 +371,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               iconColor: Theme.of(context).colorScheme.primary,
                               title: 'My Favorites'.tr(),
                               onTap: () => push(context, FavoriteListingsWrapperWidget(currentUser: currentUser)),
+                            ),
+                            _modernListTile(
+                              context,
+                              icon: Icons.local_offer_outlined,
+                              iconColor: Theme.of(context).colorScheme.primary,
+                              title: 'Saved Deals'.tr(),
+                              onTap: () => push(context, SavedDealsScreen(currentUser: currentUser)),
                             ),
                             _modernListTile(
                               context,

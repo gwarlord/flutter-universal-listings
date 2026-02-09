@@ -10,6 +10,7 @@ import 'package:instaflutter/listings/model/order_request.dart';
 import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/screens/store/order_detail_screen.dart';
+import 'package:instaflutter/screens/store/shipping_tracking_display.dart';
 
 /// Screen for customers to view their order history
 class CustomerOrdersScreen extends StatefulWidget {
@@ -294,7 +295,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                 ? 'Pickup'
                                 : order.fulfillment.method.value == 'dine_in'
                                     ? 'Dining In'
-                                    : 'Delivery',
+                                    : 'Shipping',
                             style: TextStyle(
                               fontSize: 13,
                               color: dark ? Colors.white54 : Colors.black54,
@@ -308,6 +309,12 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                               color: dark ? Colors.white54 : Colors.black54,
                             ),
                           ),
+                          // Show tracking chip if order has shipping tracking
+                          if (order.fulfillment.method.value == 'shipping' &&
+                              order.shipping?.trackingNumber != null) ...[
+                            const SizedBox(width: 8),
+                            const ShippingTrackingChip(),
+                          ],
                         ],
                       ),
                       Text(

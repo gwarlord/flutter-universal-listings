@@ -23,7 +23,8 @@ enum OrderStatus {
 enum FulfillmentMethod {
   pickup('pickup'),
   delivery('delivery'),
-  dineIn('dine_in');
+  dineIn('dine_in'),
+  shipping('shipping');
 
   final String value;
   const FulfillmentMethod(this.value);
@@ -77,6 +78,104 @@ class FulfillmentInfo {
   }
 }
 
+/// Tracking status enum
+enum TrackingStatus {
+  unknown('UNKNOWN'),
+  labelCreated('LABEL_CREATED'),
+  inTransit('IN_TRANSIT'),
+  outForDelivery('OUT_FOR_DELIVERY'),
+  delivered('DELIVERED');
+
+  final String value;
+  const TrackingStatus(this.value);
+
+  static TrackingStatus fromString(String? value) {
+    if (value == null) return TrackingStatus.unknown;
+    return TrackingStatus.values.firstWhere(
+      (e) => e.value == value,
+      orElse: () => TrackingStatus.unknown,
+    );
+  }
+}
+
+/// Shipping information (populated when fulfillmentMethod == SHIPPING)
+/// Contains both customer's shipping details and lister's tracking info
+class ShippingInfo {
+  // Customer-provided shipping details
+  final String? address; // Shipping address
+  final double? latitude; // Pinned location latitude
+  final double? longitude; // Pinned location longitude
+  final String? instructions; // Additional shipping instructions
+
+  // Lister-provided tracking information
+  final String? carrierName; // e.g., "FedEx", "UPS", "DHL"
+  final String? trackingNumber;
+  final String? trackingUrl;
+  final TrackingStatus status;
+  final DateTime? updatedAt;
+  final String? updatedBy; // User ID of lister who updated it
+
+  ShippingInfo({
+    this.address,
+    this.latitude,
+    this.longitude,
+    this.instructions,
+    this.carrierName,
+    this.trackingNumber,
+    this.trackingUrl,
+    this.status = TrackingStatus.unknown,
+    this.updatedAt,
+    this.updatedBy,
+  });
+
+  factory ShippingInfo.fromJson(Map<String, dynamic> json) {
+    return ShippingInfo(
+      address: json['address'],
+      latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
+      longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
+      instructions: json['instructions'],
+      carrierName: json['carrierName'],
+      trackingNumber: json['trackingNumber'],
+      trackingUrl: json['trackingUrl'],
+      status: TrackingStatus.fromString(json['status']),
+      updatedAt: json['updatedAt'] != null
+          ? (json['updatedAt'] is Timestamp
+              ? (json['updatedAt'] as Timestamp).toDate()
+              : DateTime.tryParse(json['updatedAt'].toString()))
+          : null,
+      updatedBy: json['updatedBy'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'address': address,
+      'latitude': latitude,
+      'longitude': longitude,
+      'instructions': instructions,
+      'carrierName': carrierName,
+      'trackingNumber': trackingNumber,
+      'trackingUrl': trackingUrl,
+      'status': status.value,
+      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'updatedBy': updatedBy,
+    };
+  }
+
+  /// Returns true if tracking info is complete (required fields populated)
+  bool get isComplete => trackingNumber != null && trackingNumber!.isNotEmpty && 
+                         trackingUrl != null && trackingUrl!.isNotEmpty;
+
+  /// Returns true if shipping address is complete
+  bool get hasDeliveryAddress => address != null && address!.isNotEmpty;
+
+  /// Returns true if at least one shipping field is set
+  bool get hasData => address != null || latitude != null || longitude != null ||
+                      instructions != null || carrierName != null || 
+                      trackingNumber != null || trackingUrl != null;
+}
+
+
 /// Order item
 class OrderItem {
   final String itemId;
@@ -127,6 +226,7 @@ class OrderRequest {
   final double estimatedTotal;
   final String currencyCode;
   final FulfillmentInfo fulfillment;
+  final ShippingInfo? shipping; // Only populated when fulfillment.method == SHIPPING
   final String? notes;
   final String? listerNotes;
   final String? channelId; // Chat channel ID
@@ -143,6 +243,7 @@ class OrderRequest {
     required this.estimatedTotal,
     this.currencyCode = 'USD',
     required this.fulfillment,
+    this.shipping,
     this.notes,
     this.listerNotes,
     this.channelId,
@@ -164,6 +265,7 @@ class OrderRequest {
       estimatedTotal: (json['estimatedTotal'] ?? 0).toDouble(),
       currencyCode: json['currencyCode'] ?? 'USD',
       fulfillment: FulfillmentInfo.fromJson(json['fulfillment'] ?? {}),
+      shipping: json['shipping'] != null ? ShippingInfo.fromJson(json['shipping'] as Map<String, dynamic>) : null,
       notes: json['notes'],
       listerNotes: json['listerNotes'],
       channelId: json['channelId'],
@@ -183,6 +285,7 @@ class OrderRequest {
       'estimatedTotal': estimatedTotal,
       'currencyCode': currencyCode,
       'fulfillment': fulfillment.toJson(),
+      'shipping': shipping?.toJson(),
       'notes': notes,
       'listerNotes': listerNotes,
       'channelId': channelId,
@@ -201,6 +304,7 @@ class OrderRequest {
     double? estimatedTotal,
     String? currencyCode,
     FulfillmentInfo? fulfillment,
+    ShippingInfo? shipping,
     String? notes,
     String? listerNotes,
     String? channelId,
@@ -217,6 +321,7 @@ class OrderRequest {
       estimatedTotal: estimatedTotal ?? this.estimatedTotal,
       currencyCode: currencyCode ?? this.currencyCode,
       fulfillment: fulfillment ?? this.fulfillment,
+      shipping: shipping ?? this.shipping,
       notes: notes ?? this.notes,
       listerNotes: listerNotes ?? this.listerNotes,
       channelId: channelId ?? this.channelId,

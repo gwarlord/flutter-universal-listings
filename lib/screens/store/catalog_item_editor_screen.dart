@@ -78,6 +78,25 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
     super.dispose();
   }
 
+  InputDecoration _inputDecoration({
+    required String label,
+    String? hint,
+    String? prefix,
+    required bool dark,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(color: dark ? Colors.white : Colors.black87),
+      hintText: hint,
+      hintStyle: TextStyle(color: dark ? Colors.white70 : Colors.black45),
+      border: const OutlineInputBorder(),
+      filled: true,
+      fillColor: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+      prefixText: prefix,
+      prefixStyle: TextStyle(color: dark ? Colors.white : Colors.black87),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
@@ -126,12 +145,9 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
               TextFormField(
                 controller: _nameController,
                 style: TextStyle(color: dark ? Colors.white : Colors.black),
-                decoration: InputDecoration(
-                  labelText: 'Item Name *'.tr(),
-                  labelStyle: const TextStyle(color: Colors.white),
-                  border: const OutlineInputBorder(),
-                  filled: true,
-                  fillColor: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+                decoration: _inputDecoration(
+                  label: 'Item Name *'.tr(),
+                  dark: dark,
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -146,13 +162,10 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
               TextFormField(
                 controller: _categoryController,
                 style: TextStyle(color: dark ? Colors.white : Colors.black),
-                decoration: InputDecoration(
-                  labelText: 'Category (Optional)'.tr(),
-                  labelStyle: const TextStyle(color: Colors.white),
-                  border: const OutlineInputBorder(),
-                  filled: true,
-                  fillColor: dark ? Colors.grey.shade900 : Colors.grey.shade50,
-                  hintText: 'e.g., Appetizers, Beverages, Electronics'.tr(),
+                decoration: _inputDecoration(
+                  label: 'Category (Optional)'.tr(),
+                  hint: 'e.g., Appetizers, Beverages, Electronics'.tr(),
+                  dark: dark,
                 ),
               ),
               const SizedBox(height: 16),
@@ -162,12 +175,9 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
                 controller: _descriptionController,
                 style: TextStyle(color: dark ? Colors.white : Colors.black),
                 maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: 'Description (Optional)'.tr(),
-                  labelStyle: const TextStyle(color: Colors.white),
-                  border: const OutlineInputBorder(),
-                  filled: true,
-                  fillColor: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+                decoration: _inputDecoration(
+                  label: 'Description (Optional)'.tr(),
+                  dark: dark,
                 ),
               ),
               const SizedBox(height: 16),
@@ -177,13 +187,10 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
                 controller: _priceController,
                 style: TextStyle(color: dark ? Colors.white : Colors.black),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: 'Price *'.tr(),
-                  labelStyle: const TextStyle(color: Colors.white),
-                  border: const OutlineInputBorder(),
-                  filled: true,
-                  fillColor: dark ? Colors.grey.shade900 : Colors.grey.shade50,
-                  prefixText: getCurrencySymbol(widget.listing.currencyCode),
+                decoration: _inputDecoration(
+                  label: 'Price *'.tr(),
+                  prefix: getCurrencySymbol(widget.listing.currencyCode),
+                  dark: dark,
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -220,12 +227,9 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
                   controller: _stockQtyController,
                   style: TextStyle(color: dark ? Colors.white : Colors.black),
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: 'Stock Quantity'.tr(),
-                    labelStyle: const TextStyle(color: Colors.white),
-                    border: const OutlineInputBorder(),
-                    filled: true,
-                    fillColor: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+                  decoration: _inputDecoration(
+                    label: 'Stock Quantity'.tr(),
+                    dark: dark,
                   ),
                 ),
               ],
@@ -445,7 +449,7 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
 
       final itemId = widget.item?.id ?? _uuid.v4();
 
-      // Upload photos
+      // Upload photos (with delay to avoid Firebase App Check rate limiting)
       for (final photoFile in _newPhotoFiles) {
         final url = await _storeService.uploadCatalogMedia(
           listingId: widget.listing.id,
@@ -454,9 +458,13 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
           isVideo: false,
         );
         uploadedPhotos.add(url);
+        // Add delay between uploads to allow App Check token to be cached
+        if (_newPhotoFiles.indexOf(photoFile) < _newPhotoFiles.length - 1) {
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
       }
 
-      // Upload videos
+      // Upload videos (with delay to avoid Firebase App Check rate limiting)
       for (final videoFile in _newVideoFiles) {
         final url = await _storeService.uploadCatalogMedia(
           listingId: widget.listing.id,
@@ -465,6 +473,10 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
           isVideo: true,
         );
         uploadedVideos.add(url);
+        // Add delay between uploads to allow App Check token to be cached
+        if (_newVideoFiles.indexOf(videoFile) < _newVideoFiles.length - 1) {
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
       }
 
       // Create/update item

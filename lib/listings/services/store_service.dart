@@ -55,12 +55,12 @@ class StoreService {
     required CatalogItem item,
     required ListingsUser currentUser,
   }) async {
-    // CRITICAL: Verify Premium tier
+    // CRITICAL: Verify Premium tier (user must be premium to manage catalog)
     if (!isPremiumUser(currentUser)) {
       throw Exception('🔒 Mini Store is a Premium feature. Upgrade to manage catalog items.');
     }
 
-    // Verify listing ownership and tier
+    // Verify listing ownership
     final listing = await _firestore.collection('listings').doc(listingId).get();
     if (!listing.exists) {
       throw Exception('Listing not found');
@@ -71,9 +71,16 @@ class StoreService {
       throw Exception('You do not have permission to manage this listing\'s catalog');
     }
 
-    final listerTierSnapshot = listingData['listerTierSnapshot'] as String? ?? 'free';
-    if (listerTierSnapshot != 'premium') {
-      throw Exception('🔒 This listing must be from a Premium user to use Mini Store');
+    // Update listing's tier snapshot to reflect current user tier
+    // This ensures the snapshot stays in sync if user upgrades
+    final currentTierSnapshot = currentUser.subscriptionTier.toLowerCase();
+    try {
+      await _firestore.collection('listings').doc(listingId).update({
+        'listerTierSnapshot': currentTierSnapshot,
+        'updatedAt': Timestamp.now(),
+      });
+    } catch (e) {
+      print('⚠️ Could not update tier snapshot: $e');
     }
 
     // Set timestamps
@@ -390,14 +397,54 @@ class StoreService {
     required bool pickupEnabled,
     required bool deliveryEnabled,
     required bool dineInEnabled,
+    required bool shippingEnabled,
+    required double shippingFee,
     required int leadTimeHours,
   }) async {
     await _firestore.collection('listings').doc(listingId).update({
       'storePickupEnabled': pickupEnabled,
       'storeDeliveryEnabled': deliveryEnabled,
       'storeDineInEnabled': dineInEnabled,
+      'storeShippingEnabled': shippingEnabled,
+      'storeShippingFee': shippingFee,
       'storeLeadTimeHours': leadTimeHours,
       'updatedAt': Timestamp.now(),
     });
+  }
+
+  /// Set or update order tracking information
+  /// Verifies user has CaribTap Pro entitlement server-side
+  /// Sends email notification to customer
+  Future<Map<String, dynamic>> setOrderTracking({
+    required String orderId,
+    required String trackingNumber,
+    required String trackingUrl,
+    String? carrierName,
+    String? status,
+  }) async {
+    try {
+      final callable = _functions.httpsCallable('setOrderTracking');
+      final result = await callable.call({
+        'orderId': orderId,
+        'carrierName': carrierName,
+        'trackingNumber': trackingNumber,
+        'trackingUrl': trackingUrl,
+        'status': status ?? 'UNKNOWN',
+      });
+      
+      return Map<String, dynamic>.from(result.data);
+    } catch (e) {
+      throw Exception('Failed to set order tracking: $e');
+    }
+  }
+
+  /// Resend tracking email to customer
+  Future<void> sendTrackingEmail(String orderId) async {
+    try {
+      final callable = _functions.httpsCallable('sendTrackingEmail');
+      await callable.call({'orderId': orderId});
+    } catch (e) {
+      throw Exception('Failed to send tracking email: $e');
+    }
   }
 }

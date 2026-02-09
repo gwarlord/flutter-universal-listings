@@ -24,12 +24,16 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late ListingsUser user;
   late bool _allowPushNotifications;
+  late bool _bookingEmailReminders;
+  late bool _bookingPushReminders;
 
   @override
   void initState() {
     super.initState();
     user = widget.user;
     _allowPushNotifications = user.settings.allowPushNotifications;
+    _bookingEmailReminders = user.settings.bookingEmailReminders;
+    _bookingPushReminders = user.settings.bookingPushReminders;
   }
 
   @override
@@ -94,6 +98,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       const SizedBox(height: 32),
+                      Text('BOOKING REMINDERS'.tr(), style: titleStyle),
+                      const SizedBox(height: 12),
+                      Card(
+                        color: cardColor,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(
+                            color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            _buildSettingSwitch(
+                              context,
+                              title: 'Email Reminders'.tr(),
+                              subtitle: 'Get email reminders before your bookings'.tr(),
+                              icon: Icons.email_outlined,
+                              value: _bookingEmailReminders,
+                              onChanged: (bool newValue) {
+                                setState(() => _bookingEmailReminders = newValue);
+                                context.read<SettingsBloc>().add(SettingsChangedEvent());
+                              },
+                            ),
+                            const Divider(height: 1, indent: 50),
+                            _buildSettingSwitch(
+                              context,
+                              title: 'Push Reminders'.tr(),
+                              subtitle: 'Get push notifications before your bookings'.tr(),
+                              icon: Icons.alarm_outlined,
+                              value: _bookingPushReminders,
+                              onChanged: (bool newValue) {
+                                setState(() => _bookingPushReminders = newValue);
+                                context.read<SettingsBloc>().add(SettingsChangedEvent());
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 32),
                       Text('ACCOUNT SECURITY'.tr(), style: titleStyle),
                       const SizedBox(height: 12),
                       Card(
@@ -136,6 +180,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           onPressed: () {
                             user.settings.allowPushNotifications = _allowPushNotifications;
+                            user.settings.bookingEmailReminders = _bookingEmailReminders;
+                            user.settings.bookingPushReminders = _bookingPushReminders;
                             context.read<LoadingCubit>().showLoading(
                                   context,
                                   'Saving changes...'.tr(),

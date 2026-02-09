@@ -27,6 +27,164 @@ import 'package:instaflutter/listings/services/deal_ad_service.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import '../../ui/deals/deals_feed_screen.dart';
 
+// Country filter selection dialog widget
+class _HomeCountrySelectionDialog extends StatefulWidget {
+  final List<String> selectedCountries;
+  final Function(List<String>) onConfirm;
+
+  const _HomeCountrySelectionDialog({
+    required this.selectedCountries,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_HomeCountrySelectionDialog> createState() => _HomeCountrySelectionDialogState();
+}
+
+class _HomeCountrySelectionDialogState extends State<_HomeCountrySelectionDialog> {
+  late List<String> tempSelectedCountries;
+  late TextEditingController searchController;
+  String searchQuery = '';
+  late final List<CaribbeanCountry> sortedCountries;
+
+  @override
+  void initState() {
+    super.initState();
+    tempSelectedCountries = List<String>.from(widget.selectedCountries);
+    searchController = TextEditingController();
+    sortedCountries = CaribbeanCountries.all.toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  List<CaribbeanCountry> getFilteredCountries() {
+    if (searchQuery.isEmpty) return sortedCountries;
+    return sortedCountries
+        .where((country) => country.name.toLowerCase().contains(searchQuery.toLowerCase()))
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
+    
+    return AlertDialog(
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      title: Text(
+        'Select Countries'.tr(),
+        style: TextStyle(
+          fontSize: 16, 
+          fontWeight: FontWeight.bold,
+          color: isDark ? Colors.white : Colors.black,
+        ),
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Search field
+            TextField(
+              controller: searchController,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+              decoration: InputDecoration(
+                hintText: 'Search countries...'.tr(),
+                hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+                prefixIcon: Icon(Icons.search, color: Color(cfg.colorPrimary)),
+                suffixIcon: searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Icons.clear, color: isDark ? Colors.white54 : Colors.black54),
+                        onPressed: () {
+                          searchController.clear();
+                          setState(() {
+                            searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: isDark ? Colors.black26 : Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  searchQuery = value;
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+            Flexible(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 400),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: getFilteredCountries().length,
+                  itemBuilder: (context, index) {
+                    final country = getFilteredCountries()[index];
+                    final isSelected = tempSelectedCountries.contains(country.code);
+
+                    return Theme(
+                      data: ThemeData(
+                        unselectedWidgetColor: isDark ? Colors.white70 : Colors.black54,
+                      ),
+                      child: CheckboxListTile(
+                        title: Text(
+                          country.name,
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                        ),
+                        activeColor: Color(cfg.colorPrimary), 
+                        checkColor: Colors.white,
+                        value: isSelected,
+                        onChanged: (bool? newValue) {
+                          setState(() {
+                            if (newValue == true) {
+                              tempSelectedCountries.add(country.code);
+                            } else if (newValue == false) {
+                              tempSelectedCountries.remove(country.code);
+                            }
+                          });
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Cancel'.tr(), style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(cfg.colorPrimary), 
+          ),
+          onPressed: () {
+            widget.onConfirm(tempSelectedCountries);
+            Navigator.of(context).pop();
+          },
+          child: Text(
+            'Save'.tr(),
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class HomeWrapperWidget extends StatelessWidget {
   final ListingsUser currentUser;
   final GlobalKey<HomeScreenState> homeKey;
@@ -299,84 +457,15 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   void _showCountrySelectionDialog(BuildContext context) {
-    List<String> tempSelectedCountries = [..._selectedCountryCodes];
-
-    final sortedCountries = CaribbeanCountries.all.toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            final isDark = isDarkMode(context);
-            return AlertDialog(
-              backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-              title: Text(
-                'Select Countries (Max 5)'.tr(),
-                style: TextStyle(
-                  fontSize: 16, 
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
-              ),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: sortedCountries.length,
-                  itemBuilder: (context, index) {
-                    final country = sortedCountries[index];
-                    final isSelected = tempSelectedCountries.contains(country.code);
-
-                    return Theme(
-                      data: ThemeData(
-                        unselectedWidgetColor: isDark ? Colors.white70 : Colors.black54,
-                      ),
-                      child: CheckboxListTile(
-                        title: Text(
-                          country.name,
-                          style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                        ),
-                        activeColor: Color(cfg.colorPrimary), 
-                        checkColor: Colors.white,
-                        value: isSelected,
-                        onChanged: (bool? newValue) {
-                          setDialogState(() {
-                            if (newValue == true && tempSelectedCountries.length < 5) {
-                              tempSelectedCountries.add(country.code);
-                            } else if (newValue == false) {
-                              tempSelectedCountries.remove(country.code);
-                            }
-                          });
-                        },
-                        enabled: isSelected || tempSelectedCountries.length < 5,
-                      ),
-                    );
-                  },
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text('Cancel'.tr(), style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(cfg.colorPrimary), 
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _selectedCountryCodes = tempSelectedCountries;
-                    });
-                    Navigator.of(context).pop();
-                  },
-                  child: Text(
-                    'Save'.tr(),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
-            );
+        return _HomeCountrySelectionDialog(
+          selectedCountries: _selectedCountryCodes,
+          onConfirm: (selectedCountries) {
+            setState(() {
+              _selectedCountryCodes = selectedCountries;
+            });
           },
         );
       },

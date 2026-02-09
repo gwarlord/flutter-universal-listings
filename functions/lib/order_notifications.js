@@ -44,6 +44,7 @@ exports.onOrderCreated = functions.firestore
     .onCreate(async (snap, context) => {
     const order = snap.data();
     const orderId = context.params.orderId;
+    const orderNumber = orderId.slice(0, 8).toUpperCase();
     try {
         // Get lister's user document to fetch FCM token
         const listerDoc = await admin
@@ -75,11 +76,12 @@ exports.onOrderCreated = functions.firestore
             token: fcmToken,
             notification: {
                 title: "🛒 New Order Request",
-                body: `You have a new order for ${listingTitle}`,
+                body: `Order #${orderNumber}: ${listingTitle}`,
             },
             data: {
                 type: "new_order",
                 orderId: orderId,
+                orderNumber: orderNumber,
                 listingId: order.listingId,
                 channelId: order.channelId || "",
                 click_action: "FLUTTER_NOTIFICATION_CLICK",
@@ -118,6 +120,7 @@ exports.onOrderStatusChanged = functions.firestore
     const before = change.before.data();
     const after = change.after.data();
     const orderId = context.params.orderId;
+    const orderNumber = orderId.slice(0, 8).toUpperCase();
     // Check if status changed
     if (before.status === after.status) {
         return null;
@@ -141,19 +144,19 @@ exports.onOrderStatusChanged = functions.firestore
             case "confirmed":
                 emoji = "✅";
                 title = "Order Confirmed";
-                body = `Your order for ${listingTitle} has been confirmed!`;
+                body = `Order #${orderNumber} for ${listingTitle} has been confirmed!`;
                 recipientId = after.customerId;
                 break;
             case "declined":
                 emoji = "❌";
                 title = "Order Declined";
-                body = `Your order for ${listingTitle} was declined.`;
+                body = `Order #${orderNumber} for ${listingTitle} was declined.`;
                 recipientId = after.customerId;
                 break;
             case "fulfilled":
                 emoji = "📦";
                 title = "Order Fulfilled";
-                body = `Your order for ${listingTitle} is ready!`;
+                body = `Order #${orderNumber} for ${listingTitle} is ready!`;
                 recipientId = after.customerId;
                 break;
             case "cancelled":
@@ -162,12 +165,12 @@ exports.onOrderStatusChanged = functions.firestore
                 // Determine who cancelled it and notify accordingly
                 if (before.status === "requested") {
                     // Customer cancelling their pending order - notify lister
-                    body = `An order for ${listingTitle} was cancelled.`;
+                    body = `Order #${orderNumber} for ${listingTitle} was cancelled.`;
                     recipientId = after.listerId;
                 }
                 else {
                     // Lister declining - notify customer
-                    body = `Your order for ${listingTitle} was cancelled.`;
+                    body = `Order #${orderNumber} for ${listingTitle} was cancelled.`;
                     recipientId = after.customerId;
                 }
                 break;
@@ -200,6 +203,7 @@ exports.onOrderStatusChanged = functions.firestore
             data: {
                 type: "order_status_changed",
                 orderId: orderId,
+                orderNumber: orderNumber,
                 status: after.status,
                 listingId: after.listingId,
                 channelId: after.channelId || "",

@@ -2,11 +2,17 @@ import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import sgMail from "@sendgrid/mail";
 
+// Initialize Firebase Admin before any imports that use it
+admin.initializeApp();
+
 // Export email verification functions
 export * from "./email_verification";
 
 // Export order notification functions
 export * from "./order_notifications";
+
+// Export order tracking functions
+export * from "./order_tracking";
 
 // Export rental booking notification functions
 export * from "./rental_booking_notifications";
@@ -17,7 +23,9 @@ export * from "./user_suspension_notifications";
 // Export listing suspension notification functions
 export * from "./listing_suspension_notifications";
 
-admin.initializeApp();
+// Export booking reminder functions
+export * from "./booking_reminders";
+
 const db = admin.firestore();
 const messaging = admin.messaging();
 

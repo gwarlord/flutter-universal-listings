@@ -14,6 +14,7 @@ import 'package:instaflutter/listings/model/categories_model.dart';
 import 'package:instaflutter/listings/model/filter_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listing_review_model.dart';
+import 'package:instaflutter/listings/model/paged_reviews_result.dart';
 import 'package:instaflutter/listings/model/suspension_info.dart';
 import 'package:path/path.dart' as path;
 
@@ -342,6 +343,7 @@ class ListingsFirebaseUtils extends ListingsRepository {
     final result = await firestore
         .collection(cfg.reviewCollection)
         .where('listingID', isEqualTo: listingID)
+        .orderBy('createdAt', descending: true)
         .get();
 
     final List<ListingReviewModel> reviews = [];
@@ -375,6 +377,67 @@ class ListingsFirebaseUtils extends ListingsRepository {
       }
     }
     return reviews;
+  }
+
+  @override
+  Future<PagedReviewsResult> getReviewsPaged({
+    required String listingID,
+    int limit = 10,
+    int? startAfterCreatedAt,
+    bool descending = true,
+  }) async {
+    try {
+      // Build query with pagination
+      Query<Map<String, dynamic>> query = firestore
+          .collection(cfg.reviewCollection)
+          .where('listingID', isEqualTo: listingID)
+          .orderBy('createdAt', descending: descending)
+          .limit(limit + 1); // Fetch one extra to check if there are more
+
+      // Add cursor if provided
+      if (startAfterCreatedAt != null) {
+        query = query.startAfter([startAfterCreatedAt]);
+      }
+
+      final result = await query.get();
+      
+      final List<ListingReviewModel> reviews = [];
+      bool hasMore = false;
+
+      // Check if we have more than the requested limit
+      if (result.docs.length > limit) {
+        hasMore = true;
+      }
+
+      // Parse reviews (excluding the extra one if present)
+      final docsToProcess = result.docs.take(limit);
+      for (final doc in docsToProcess) {
+        try {
+          final review = ListingReviewModel.fromDoc(doc);
+          // Only include reviews that are not explicitly hidden
+          if (!review.isHidden) {
+            reviews.add(review);
+          }
+        } catch (e, s) {
+          debugPrint('FireStoreUtils.getReviewsPaged failed to parse object ${doc.id} $e $s');
+        }
+      }
+
+      // Get the cursor for the next page
+      int? nextCursor;
+      if (hasMore && reviews.isNotEmpty) {
+        nextCursor = reviews.last.createdAt;
+      }
+
+      return PagedReviewsResult(
+        reviews: reviews,
+        nextCursorCreatedAt: nextCursor,
+        hasMore: hasMore,
+      );
+    } catch (e, s) {
+      debugPrint('FireStoreUtils.getReviewsPaged error: $e $s');
+      return PagedReviewsResult.empty();
+    }
   }
 
   @override

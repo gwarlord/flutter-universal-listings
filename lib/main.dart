@@ -10,7 +10,8 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:app_links/app_links.dart';
 import 'package:instaflutter/listings/main.dart' as listings_app; // Added alias
-import 'package:instaflutter/core/utils/helper.dart';
+import 'package:instaflutter/listings/services/deep_link_service.dart';
+import 'package:instaflutter/listings/services/deal_notification_service.dart';
 
 // Global navigator key for navigation without context
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -57,6 +58,70 @@ Future<void> _handleFirebaseEmailVerificationLink(String? link) async {
   }
 }
 
+// Handle listing deep links
+Future<void> _handleListingDeepLink(String? link) async {
+  if (link == null) return;
+  
+  try {
+    print('🔗 Processing listing deep link: $link');
+    
+    // Parse the listing ID from the URL
+    final listingId = DeepLinkService.parseListingIdFromUrl(link);
+    
+    if (listingId == null) {
+      print('⚠️ No listing ID found in deep link: $link');
+      return;
+    }
+    
+    print('📋 Listing ID extracted: $listingId');
+    
+    // Import needed for navigation
+    final deepLinkService = DeepLinkService();
+    
+    // Fetch the listing by ID
+    final listing = await deepLinkService.getListingById(listingId);
+    
+    if (listing == null) {
+      print('❌ Listing not found: $listingId');
+      if (navigatorKey.currentContext != null) {
+        showSnackBar(
+          navigatorKey.currentContext!, 
+          'Listing not found or has been removed.'.tr()
+        );
+      }
+      return;
+    }
+    
+    print('✅ Listing found: ${listing.title}');
+    
+    // Navigate to listing details screen
+    // Note: This requires the user to be logged in and the app to be initialized
+    // The navigation will be handled after the app is fully loaded
+    
+    // Store the pending navigation to be handled after app initialization
+    _pendingListingId = listingId;
+    
+  } catch (e) {
+    print('❌ Error processing listing deep link: $e');
+    if (navigatorKey.currentContext != null) {
+      showSnackBar(
+        navigatorKey.currentContext!, 
+        'Failed to open listing. Please try again.'.tr()
+      );
+    }
+  }
+}
+
+// Store pending listing navigation
+String? _pendingListingId;
+
+// Get and clear pending listing ID
+String? getPendingListingId() {
+  final id = _pendingListingId;
+  _pendingListingId = null;
+  return id;
+}
+
 // Show snackbar
 void showSnackBar(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(
@@ -91,6 +156,10 @@ Future<void> _showLocalNotification(RemoteMessage message) async {
     channelId = 'rental_bookings';
     channelName = 'Rental Bookings';
     channelDescription = 'Notifications for rental booking updates';
+  } else if (notificationType == 'booking_reminder') {
+    channelId = 'booking_reminders';
+    channelName = 'Booking Reminders';
+    channelDescription = 'Reminders for upcoming bookings';
   } else {
     channelId = 'chat_messages';
     channelName = 'Chat Messages';
@@ -143,6 +212,10 @@ void _handleNotificationClick(RemoteMessage message) {
     // Store rental booking notification data for navigation after app is ready
     print('🚗 Rental booking notification: bookingId=${message.data['bookingId']}, type=$notificationType');
     // Navigation will be handled by the app once it's ready
+  } else if (notificationType == 'booking_reminder') {
+    // Handle booking reminder notification
+    print('⏰ Booking reminder notification: bookingId=${message.data['bookingId']}, reminderType=${message.data['reminderType']}');
+    // Navigation will be handled by the app once it's ready - navigate to booking detail
   }
 }
 
@@ -152,18 +225,40 @@ void main() async {
   await dotenv.load(fileName: ".env");
   await EasyLocalization.ensureInitialized();
   await Firebase.initializeApp();
-  await FirebaseAppCheck.instance.activate(
-    androidProvider: AndroidProvider.debug,
-  );
+  
+  // Initialize Firebase App Check (in production, use proper attestation)
+  try {
+    await FirebaseAppCheck.instance.activate();
+  } catch (e) {
+    // App Check may fail in development, continue gracefully
+    print('ℹ️ Firebase App Check activation note: $e');
+  }
+  
   await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
 
-  // Handle deep links for Firebase email verification
+  // Initialize deal notification service
+  try {
+    await DealNotificationService.initializeNotifications();
+    print('✅ Deal notification service initialized');
+  } catch (e) {
+    print('⚠️ Deal notification service initialization error: $e');
+  }
+
+  // Handle deep links for Firebase email verification and listing sharing
   final appLinks = AppLinks();
   
   // Listen for incoming links while app is running
   appLinks.uriLinkStream.listen((uri) {
     print('🔗 Deep link received: $uri');
-    _handleFirebaseEmailVerificationLink(uri.toString());
+    final url = uri.toString();
+    
+    // Check if it's a listing deep link
+    if (DeepLinkService.isListingDeepLink(url)) {
+      _handleListingDeepLink(url);
+    } else {
+      // Handle other deep links (e.g., email verification)
+      _handleFirebaseEmailVerificationLink(url);
+    }
   }, onError: (err) {
     print('❌ Deep link error: $err');
   });
@@ -173,7 +268,15 @@ void main() async {
     final initialUri = await appLinks.getInitialAppLink();
     if (initialUri != null) {
       print('🔗 Initial deep link: $initialUri');
-      await _handleFirebaseEmailVerificationLink(initialUri.toString());
+      final url = initialUri.toString();
+      
+      // Check if it's a listing deep link
+      if (DeepLinkService.isListingDeepLink(url)) {
+        await _handleListingDeepLink(url);
+      } else {
+        // Handle other deep links (e.g., email verification)
+        await _handleFirebaseEmailVerificationLink(url);
+      }
     }
   } catch (err) {
     print('❌ Error getting initial link: $err');

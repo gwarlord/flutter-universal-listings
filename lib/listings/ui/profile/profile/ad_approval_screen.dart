@@ -141,9 +141,18 @@ class _AdApprovalScreenState extends State<AdApprovalScreen> {
                     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: ListTile(
                       leading: ad.mediaUrl.isNotEmpty
-                          ? (ad.mediaType == 'image'
-                              ? Image.network(ad.mediaUrl, width: 48, height: 48, fit: BoxFit.cover)
-                              : _VideoThumbnailWidget(videoUrl: ad.mediaUrl, thumbnailUrl: ad.thumbnailUrl))
+                          ? GestureDetector(
+                              onTap: () {
+                                if (ad.mediaType == 'image') {
+                                  _showFullImage(ad.mediaUrl);
+                                } else {
+                                  _showFullVideo(ad.mediaUrl);
+                                }
+                              },
+                              child: ad.mediaType == 'image'
+                                  ? Image.network(ad.mediaUrl, width: 48, height: 48, fit: BoxFit.cover)
+                                  : _VideoThumbnailWidget(videoUrl: ad.mediaUrl, thumbnailUrl: ad.thumbnailUrl),
+                            )
                           : const Icon(Icons.image, size: 48),
                       // ...existing code...
                       title: Text(
@@ -213,5 +222,42 @@ class _AdApprovalScreenState extends State<AdApprovalScreen> {
     controller.setLooping(true);
     if (autoPlay) controller.play();
     return controller;
+  }
+
+  void _showFullImage(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFullVideo(String videoUrl) {
+    final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+    showDialog(
+      context: context,
+      builder: (context) => DialogVideoPlayer(controller: controller),
+    );
   }
 }

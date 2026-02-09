@@ -14,6 +14,8 @@ import 'package:instaflutter/listings/model/order_request.dart';
 import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/listings/utils/subscription_helper.dart';
 import 'package:instaflutter/screens/store/order_chat_helper.dart';
+import 'package:instaflutter/screens/store/shipping_tracking_card.dart';
+import 'package:instaflutter/screens/store/shipping_tracking_display.dart';
 
 /// Order detail screen with status management actions
 class OrderDetailScreen extends StatefulWidget {
@@ -161,29 +163,89 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ..._currentOrder.items.map((item) => _buildItemCard(item, dark)),
           const SizedBox(height: 16),
 
-          // Total
+          // Total with shipping breakdown
           Card(
             color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    'Total'.tr(),
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: dark ? Colors.white : Colors.black,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Subtotal'.tr(),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: dark ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                      Text(
+                        _formatCurrency(_currentOrder.items.fold(0.0, (sum, item) {
+                          return sum + (item.qty * item.unitPrice);
+                        })),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: dark ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    _formatCurrency(widget.order.estimatedTotal),
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(cfg.colorPrimary),
+                  if (_currentOrder.fulfillment.method == FulfillmentMethod.shipping && _currentOrder.shipping?.hasData == true) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Shipping Fee'.tr(),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: dark ? Colors.white70 : Colors.black54,
+                          ),
+                        ),
+                        Text(
+                          _formatCurrency(
+                            _currentOrder.estimatedTotal - 
+                            _currentOrder.items.fold(0.0, (sum, item) {
+                              return sum + (item.qty * item.unitPrice);
+                            })
+                          ),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(cfg.colorPrimary),
+                          ),
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 12),
+                    Divider(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                    const SizedBox(height: 12),
+                  ],
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total'.tr(),
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: dark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      Text(
+                        _formatCurrency(widget.order.estimatedTotal),
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(cfg.colorPrimary),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -207,7 +269,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             ? Icons.store_outlined
                             : widget.order.fulfillment.method == FulfillmentMethod.dineIn
                                 ? Icons.restaurant_outlined
-                                : Icons.local_shipping_outlined,
+                                : widget.order.fulfillment.method == FulfillmentMethod.shipping
+                                    ? Icons.local_shipping_outlined
+                                    : Icons.delivery_dining_outlined,
                         color: dark ? Colors.white70 : Colors.black54,
                       ),
                       const SizedBox(width: 8),
@@ -216,7 +280,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             ? 'Pickup'.tr()
                             : widget.order.fulfillment.method == FulfillmentMethod.dineIn
                                 ? 'Dining In'.tr()
-                                : 'Delivery'.tr(),
+                                : widget.order.fulfillment.method == FulfillmentMethod.shipping
+                                    ? 'Shipping'.tr()
+                                    : 'Delivery'.tr(),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -282,6 +348,75 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       ),
                     ),
                   ],
+
+                  // Shipping details (address, instructions)
+                  if (_currentOrder.fulfillment.method == FulfillmentMethod.shipping && _currentOrder.shipping != null) ...[
+                    if (_currentOrder.shipping?.address != null) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on,
+                              size: 16, color: dark ? Colors.white70 : Colors.black54),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Shipping Address'.tr(),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: dark ? Colors.white54 : Colors.black45,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _currentOrder.shipping!.address!,
+                                  style: TextStyle(
+                                    color: dark ? Colors.white70 : Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (_currentOrder.shipping?.instructions != null) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Icon(Icons.info_outline,
+                              size: 16, color: dark ? Colors.white70 : Colors.black54),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Instructions'.tr(),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: dark ? Colors.white54 : Colors.black45,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _currentOrder.shipping!.instructions!,
+                                  style: TextStyle(
+                                    color: dark ? Colors.white70 : Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+
                   if (_currentOrder.fulfillment.preferredAt != null) ...[
                     const SizedBox(height: 8),
                     Row(
@@ -351,6 +486,26 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
             ),
           ),
+
+          // Shipping Tracking Section (only for SHIPPING orders)
+          if (_currentOrder.fulfillment.method == FulfillmentMethod.shipping) ...[
+            const SizedBox(height: 16),
+            
+            // Show saved tracking info to everyone (lister and customer)
+            if (_currentOrder.shipping?.trackingNumber != null)
+              ShippingTrackingDisplay(order: _currentOrder),
+            
+            // Show editable form to lister (below the display if tracking exists)
+            if (widget.viewAsLister) ...[
+              if (_currentOrder.shipping?.trackingNumber != null)
+                const SizedBox(height: 16),
+              ShippingTrackingCard(
+                order: _currentOrder,
+                currentUser: widget.currentUser,
+                onTrackingUpdated: _loadOrderDetails,
+              ),
+            ],
+          ],
 
           // Notes
           if (_currentOrder.notes != null && _currentOrder.notes!.isNotEmpty) ...[

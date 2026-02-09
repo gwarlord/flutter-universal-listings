@@ -21,6 +21,11 @@ class BookingModel {
   DateTime createdAt;
   DateTime updatedAt;
   Map<String, String> customAnswers; // ✅ question -> answer
+  
+  // Reminder tracking fields
+  DateTime? reminder24hSentAt;
+  DateTime? reminder1hSentAt;
+  String? timezone; // IANA timezone string (e.g., "America/Port_of_Spain")
 
   BookingModel({
     this.id = '',
@@ -45,6 +50,9 @@ class BookingModel {
     Map<String, String>? customAnswers,
     DateTime? createdAt,
     DateTime? updatedAt,
+    this.reminder24hSentAt,
+    this.reminder1hSentAt,
+    this.timezone,
   })  : createdAt = createdAt ?? DateTime.now(),
       updatedAt = updatedAt ?? DateTime.now(),
       customAnswers = customAnswers ?? {};
@@ -81,6 +89,13 @@ class BookingModel {
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'] as String)
           : DateTime.now(),
+      reminder24hSentAt: json['reminder24hSentAt'] != null
+          ? DateTime.parse(json['reminder24hSentAt'] as String)
+          : null,
+      reminder1hSentAt: json['reminder1hSentAt'] != null
+          ? DateTime.parse(json['reminder1hSentAt'] as String)
+          : null,
+      timezone: json['timezone'] as String?,
     );
   }
 
@@ -108,6 +123,9 @@ class BookingModel {
       'customAnswers': customAnswers,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'reminder24hSentAt': reminder24hSentAt?.toIso8601String(),
+      'reminder1hSentAt': reminder1hSentAt?.toIso8601String(),
+      'timezone': timezone,
     };
   }
 
