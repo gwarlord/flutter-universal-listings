@@ -162,6 +162,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   bool get isEdit => widget.listingToEdit != null;
   String? _countryCode;
   bool _verified = false;
+  bool _isPublished = false; // Toggle to control if listing is public
   bool _bookingEnabled = false;
   bool _allowQuantitySelection = false;
   bool _useTimeBlocks = false;
@@ -186,6 +187,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
       _selectedCurrencyCode = widget.listingToEdit?.currencyCode ?? 'USD';
       _isLoadingListing = true;
       _rentalConfig = widget.listingToEdit?.rentalConfig;
+      _isPublished = true; // Existing listings are public by default
+    } else {
+      _isPublished = false; // New listings start as draft
     }
     super.initState();
     currentUser = widget.currentUser;
@@ -1262,6 +1266,27 @@ class _AddListingScreenState extends State<AddListingScreen> {
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           elevation: 0,
+          actions: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(colorPrimary),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+                onPressed: _isFetchingPlaceDetails ? null : _postListing,
+                icon: const Icon(Icons.save, size: 18),
+                label: Text(
+                  _isPublished 
+                    ? (isEdit ? 'Save'.tr() : 'Publish'.tr())
+                    : 'Save Draft'.tr(),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -1269,7 +1294,38 @@ class _AddListingScreenState extends State<AddListingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildSectionHeader('Basic Information'.tr()),
+              // Publish toggle inline with "Basic Information" header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildSectionHeader('Basic Information'.tr()),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 24, 4, 12),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _isPublished ? 'Public'.tr() : 'Draft'.tr(),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: _isPublished ? Colors.green : Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Switch(
+                          value: _isPublished,
+                          onChanged: (value) {
+                            setState(() => _isPublished = value);
+                          },
+                          activeColor: Colors.green,
+                          inactiveThumbColor: Colors.grey,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
               TextField(
                 controller: _titleController,
                 textInputAction: TextInputAction.next,
@@ -1442,7 +1498,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
               DescriptionEditor(
                 initialText: _description,
                 onChanged: (text) {
-                  setState(() => _description = text);
+                  // Update description value without setState to avoid build-phase errors
+                  _description = text;
+                  // Schedule a rebuild after the current frame completes
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() {});
+                    }
+                  });
                 },
                 maxCharacters: 2000,
                 draftKey: isEdit 
@@ -1975,21 +2038,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
               ),
 
               const SizedBox(height: 40),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  backgroundColor: Color(colorPrimary),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 4,
-                  shadowColor: Color(colorPrimary).withOpacity(0.4),
-                ),
-                onPressed: _isFetchingPlaceDetails ? null : _postListing,
-                child: Text(
-                  isEdit ? 'Save Changes'.tr() : 'Post Listing'.tr(),
-                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 40),
             ],
           ),
         ),
@@ -2029,10 +2077,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
       return;
     }
 
-    // Show loading overlay
+    // Show loading overlay with appropriate message based on toggle state
     context.read<LoadingCubit>().showLoading(
       context,
-      isEdit ? 'Saving listing...'.tr() : 'Posting listing...'.tr(),
+      _isPublished 
+        ? (isEdit ? 'Saving listing...'.tr() : 'Publishing listing...'.tr())
+        : 'Saving as draft...'.tr(),
       false,
       Color(colorPrimary),
     );
