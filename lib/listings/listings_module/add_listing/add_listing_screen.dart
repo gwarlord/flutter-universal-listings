@@ -224,7 +224,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
 
   void _populateListingData(ListingModel l) {
-    debugPrint('*** DEBUG: _populateListingData called. _placeManuallySelected=[0m$_placeManuallySelected');
     _titleController.text = l.title;
     _description = l.description;
     _priceController.text = l.price.toString();
@@ -1484,7 +1483,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
                                   : (isEdit
                                       ? (widget.listingToEdit?.place ?? 'Select Place'.tr())
                                       : 'Select Place'.tr());
-                      debugPrint('*** DEBUG: Location field display: $displayText');
                       return Text(
                         displayText,
                         maxLines: 1,

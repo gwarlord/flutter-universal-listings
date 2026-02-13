@@ -178,9 +178,6 @@ class ListingsFirebaseUtils extends ListingsRepository {
 
   @override
   Future<List<CategoriesModel>> getCategories() async {
-    debugPrint('getCategories() called');
-    debugPrint('categoriesCollection value = "${cfg.categoriesCollection}"');
-
     try {
       final filteredSnap = await firestore
           .collection(cfg.categoriesCollection)
