@@ -8,6 +8,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:flutter/services.dart';
 
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:location/location.dart' as loc;
@@ -62,6 +63,11 @@ String? validateConfirmPassword(String? password, String? confirmPassword) {
   } else {
     return null;
   }
+}
+
+void triggerHapticLight() {
+  // Safe to call on both platforms; no-op on unsupported devices.
+  HapticFeedback.selectionClick();
 }
 //helper method to show progress
 void showProgress(BuildContext context, String message, bool isDismissible, Color colorPrimary) {

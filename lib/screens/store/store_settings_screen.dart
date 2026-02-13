@@ -57,6 +57,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
   }
 
   Future<void> _saveSettings() async {
+    triggerHapticLight();
     // Validate at least one fulfillment method is enabled
     if (!_pickupEnabled && !_deliveryEnabled && !_dineInEnabled && !_shippingEnabled) {
       showSnackBar(context, 'At least one fulfillment method must be enabled'.tr());
@@ -153,6 +154,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                     Checkbox(
                       value: _pickupEnabled,
                       onChanged: (value) {
+                        triggerHapticLight();
                         setState(() => _pickupEnabled = value ?? false);
                       },
                       activeColor: Color(cfg.colorPrimary),
@@ -199,6 +201,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                     Checkbox(
                       value: _deliveryEnabled,
                       onChanged: (value) {
+                        triggerHapticLight();
                         setState(() => _deliveryEnabled = value ?? false);
                       },
                       activeColor: Color(cfg.colorPrimary),
@@ -245,6 +248,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                     Checkbox(
                       value: _dineInEnabled,
                       onChanged: (value) {
+                        triggerHapticLight();
                         setState(() => _dineInEnabled = value ?? false);
                       },
                       activeColor: Color(cfg.colorPrimary),
@@ -291,6 +295,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                     Checkbox(
                       value: _shippingEnabled,
                       onChanged: (value) {
+                        triggerHapticLight();
                         setState(() => _shippingEnabled = value ?? false);
                       },
                       activeColor: Color(cfg.colorPrimary),
@@ -535,6 +540,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                       label: '$_leadTimeHours hours',
                       activeColor: Color(cfg.colorPrimary),
                       onChanged: (value) {
+                        triggerHapticLight();
                         setState(() => _leadTimeHours = value.toInt());
                       },
                     ),

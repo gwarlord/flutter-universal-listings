@@ -1,11 +1,10 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:gal/gal.dart';
 import 'package:instaflutter/core/model/user.dart';
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
 import 'package:instaflutter/core/utils/helper.dart';
@@ -13,7 +12,6 @@ import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/listings/api/firebase/table_mode_firebase.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/table_mode_models.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -586,18 +584,6 @@ class _TableQRScreen extends StatelessWidget {
 
   Future<void> _saveQRImage(BuildContext context, String qrData) async {
     try {
-      PermissionStatus? photosStatus;
-      PermissionStatus? storageStatus;
-
-      if (Platform.isIOS || Platform.isAndroid) {
-        photosStatus = await Permission.photos.request();
-        storageStatus = await Permission.storage.request();
-      }
-
-      final hasPermission = (photosStatus?.isGranted ?? false) ||
-          (photosStatus?.isLimited ?? false) ||
-          (storageStatus?.isGranted ?? false);
-
       final painter = QrPainter(
         data: qrData,
         version: QrVersions.auto,
@@ -617,29 +603,19 @@ class _TableQRScreen extends StatelessWidget {
       final safeName = 'table_${table.tableName}_${DateTime.now().millisecondsSinceEpoch}'
           .replaceAll(RegExp(r'[^A-Za-z0-9_-]+'), '_');
 
-      final result = await ImageGallerySaver.saveImage(
-        bytes,
-        quality: 100,
-        name: safeName,
-        isReturnImagePathOfIOS: true,
-      );
-
-      debugPrint('Save QR result: $result');
-      final isSuccess = result is Map &&
-          (result['isSuccess'] == true || result['success'] == true || result['filePath'] != null);
-      if (isSuccess) {
-        showSnackBar(context, 'QR image saved to gallery'.tr());
-      } else {
-        if (!hasPermission) {
-          showSnackBar(context, 'Storage permission required'.tr());
-          await openAppSettings();
-        } else {
-          showSnackBar(context, 'Failed to save QR image'.tr());
-        }
-      }
+      await Gal.putImageBytes(bytes, album: 'CaribTap');
+      showSnackBar(context, 'QR image saved to gallery'.tr());
     } catch (e) {
       debugPrint('Save QR error: $e');
-      showSnackBar(context, 'Failed to save QR image'.tr());
+      if (e is GalException) {
+        if (e.type == GalExceptionType.accessDenied) {
+          showSnackBar(context, 'Storage permission required'.tr());
+        } else {
+          showSnackBar(context, 'Failed to save QR image: ${e.type}'.tr());
+        }
+      } else {
+        showSnackBar(context, 'Failed to save QR image'.tr());
+      }
     }
   }
 

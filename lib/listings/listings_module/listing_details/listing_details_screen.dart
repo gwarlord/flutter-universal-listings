@@ -2002,6 +2002,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   }
 
   Future<void> _handleTapToggle() async {
+    triggerHapticLight();
     setState(() {
       _isTapLoading = true;
     });

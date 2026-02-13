@@ -78,6 +78,7 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
   }
 
   void _save() {
+    triggerHapticLight();
     final settings = DealSettings(
       redemptionType: _redemptionType,
       promoCode: _redemptionType == 'PROMO_CODE' ? _promoCodeController.text : null,
@@ -224,6 +225,7 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                           Switch(
                             value: _scheduleAt != null,
                             onChanged: (value) {
+                              triggerHapticLight();
                               setState(() {
                                 if (value) {
                                   _scheduleAt = DateTime.now().add(const Duration(days: 1));
@@ -311,6 +313,7 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                         value: 'PROMO_CODE',
                         groupValue: _redemptionType,
                         onChanged: (value) {
+                          triggerHapticLight();
                           setState(() => _redemptionType = value!);
                         },
                         activeColor: primaryColor,
@@ -340,6 +343,7 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                         value: 'IN_APP_CLAIM',
                         groupValue: _redemptionType,
                         onChanged: (value) {
+                          triggerHapticLight();
                           setState(() => _redemptionType = value!);
                         },
                         activeColor: primaryColor,
@@ -448,6 +452,7 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                           Switch(
                             value: _hasRedemptionLimit,
                             onChanged: (value) {
+                              triggerHapticLight();
                               setState(() => _hasRedemptionLimit = value);
                             },
                             activeColor: primaryColor,
@@ -518,6 +523,7 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                           Switch(
                             value: _hasPerUserLimit,
                             onChanged: (value) {
+                              triggerHapticLight();
                               setState(() => _hasPerUserLimit = value);
                             },
                             activeColor: primaryColor,
