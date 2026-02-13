@@ -290,10 +290,29 @@ class CollaborationFirebase extends CollaborationRepository {
           .where('isActive', isEqualTo: true)
           .get();
 
-      return snapshot.docs
-          .map((doc) =>
-              AssignedListingModel.fromJson(doc.id, doc.data()))
-          .toList();
+      final listings = <AssignedListingModel>[];
+      for (var doc in snapshot.docs) {
+        try {
+          final listingId = doc.id;
+          // Fetch the listing title from the listings collection
+          final listingDoc =
+              await _firestore.collection('listings').doc(listingId).get();
+          final title = listingDoc.data()?['title'] ?? 'Listing';
+
+          listings.add(
+            AssignedListingModel.fromJson(
+              listingId,
+              doc.data(),
+              title: title,
+            ),
+          );
+        } catch (e) {
+          // If we can't fetch the title, use the listingId as fallback
+          listings.add(AssignedListingModel.fromJson(doc.id, doc.data()));
+        }
+      }
+
+      return listings;
     } catch (e, s) {
       debugPrint('CollaborationFirebase.getAssignedListings error: $e $s');
       return [];
@@ -313,12 +332,33 @@ class CollaborationFirebase extends CollaborationRepository {
         .where('isActive', isEqualTo: true)
         .snapshots()
         .listen(
-      (snapshot) {
+      (snapshot) async {
         try {
-          final listings = snapshot.docs
-              .map((doc) =>
-                  AssignedListingModel.fromJson(doc.id, doc.data()))
-              .toList();
+          final listings = <AssignedListingModel>[];
+          for (var doc in snapshot.docs) {
+            try {
+              final listingId = doc.id;
+              // Fetch the listing title from the listings collection
+              final listingDoc = await _firestore
+                  .collection('listings')
+                  .doc(listingId)
+                  .get();
+              final title = listingDoc.data()?['title'] ?? 'Listing';
+              
+              listings.add(
+                AssignedListingModel.fromJson(
+                  listingId,
+                  doc.data(),
+                  title: title,
+                ),
+              );
+            } catch (e) {
+              // If we can't fetch the title, use the listingId as fallback
+              listings.add(
+                AssignedListingModel.fromJson(doc.id, doc.data()),
+              );
+            }
+          }
           if (!controller.isClosed) {
             controller.add(listings);
           }

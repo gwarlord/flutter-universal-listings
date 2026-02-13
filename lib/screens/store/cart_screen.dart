@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
@@ -13,6 +14,7 @@ import 'package:instaflutter/screens/store/order_chat_helper.dart';
 import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/listings/api/firebase/table_mode_firebase.dart';
 import 'package:instaflutter/listings/model/table_mode_models.dart';
+import 'package:instaflutter/listings/ui/table_mode/qr_scanner_screen.dart';
 
 /// Cart screen for reviewing and submitting orders
 class CartScreen extends StatefulWidget {
@@ -39,12 +41,21 @@ class _CartScreenState extends State<CartScreen> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _shippingInstructionsController = TextEditingController();
+  final TextEditingController _tableCodeController = TextEditingController();
+  final TextEditingController _tableSeatingInfoController = TextEditingController();
 
   FulfillmentMethod _fulfillmentMethod = FulfillmentMethod.pickup;
   DateTime? _preferredDate;
   double? _deliveryLatitude;
   double? _deliveryLongitude;
   bool _isSubmitting = false;
+  
+  // Table mode variables
+  String? _scannedTableId;
+  String? _scannedTableName;
+  String? _scannedTableSecret;
+  String? _scannedListingId;
+  bool _isScanning = false;
 
   @override
   void initState() {
@@ -66,6 +77,8 @@ class _CartScreenState extends State<CartScreen> {
     _addressController.dispose();
     _notesController.dispose();
     _shippingInstructionsController.dispose();
+    _tableCodeController.dispose();
+    _tableSeatingInfoController.dispose();
     super.dispose();
   }
 
@@ -225,13 +238,67 @@ class _CartScreenState extends State<CartScreen> {
                       ],
                       if (_fulfillmentMethod == FulfillmentMethod.dineIn) ...[
                         const SizedBox(height: 16),
+                        // QR Code Scanner button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton.icon(
+                            onPressed: _isScanning ? null : _scanTableQRCode,
+                            icon: _isScanning
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : const Icon(Icons.qr_code_2, color: Colors.white),
+                            label: Text(
+                              _scannedTableId != null 
+                                  ? 'Table Scanned: $_scannedTableName'.tr()
+                                  : 'Scan Table QR Code'.tr(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _scannedTableId != null
+                                  ? Colors.green
+                                  : (colorPrimary != 0 ? Color(colorPrimary) : Colors.blue),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (_scannedTableId != null) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              border: Border.all(color: Colors.green),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'Table $_scannedTableName has been scanned. You can also add additional seating info below.'.tr(),
+                              style: const TextStyle(
+                                color: Colors.green,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
                         TextField(
-                          controller: _notesController,
+                          controller: _tableSeatingInfoController,
                           style: TextStyle(color: dark ? Colors.white : Colors.black),
                           decoration: InputDecoration(
-                            labelText: 'Table number / seating info (optional)'.tr(),
+                            labelText: 'Additional seating info (optional)'.tr(),
                             labelStyle: TextStyle(color: dark ? Colors.white70 : Colors.black54),
-                            hintText: 'e.g., Table 5, Booth 2'.tr(),
+                            hintText: 'e.g., Special requests, dietary notes'.tr(),
                             hintStyle: TextStyle(color: dark ? Colors.white38 : Colors.black26),
                             border: const OutlineInputBorder(),
                             filled: true,
@@ -619,6 +686,118 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
+  String? _buildOrderNotes() {
+    String notes = '';
+    
+    // Add scanned table info if available
+    if (_scannedTableId != null && _fulfillmentMethod == FulfillmentMethod.dineIn) {
+      notes += 'Scanned Table: $_scannedTableName\n';
+    }
+    
+    // Add table seating info if provided (for dine-in)
+    if (_tableSeatingInfoController.text.trim().isNotEmpty && _fulfillmentMethod == FulfillmentMethod.dineIn) {
+      if (notes.isNotEmpty) notes += '\n';
+      notes += 'Seating Info: ${_tableSeatingInfoController.text.trim()}\n';
+    }
+    
+    // Add additional notes if provided
+    if (_notesController.text.trim().isNotEmpty) {
+      if (notes.isNotEmpty) notes += '\n';
+      notes += _notesController.text.trim();
+    }
+    
+    return notes.trim().isEmpty ? null : notes.trim();
+  }
+
+  Future<void> _scanTableQRCode() async {
+    setState(() => _isScanning = true);
+    
+    try {
+      final result = await Navigator.of(context).push<String>(
+        MaterialPageRoute(
+          builder: (context) => QRScannerScreen(),
+          fullscreenDialog: true,
+        ),
+      );
+
+      if (result != null && mounted) {
+        await _parseTableQRCode(result);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isScanning = false);
+      }
+    }
+  }
+
+  Future<void> _parseTableQRCode(String qrData) async {
+    try {
+      debugPrint('📋 Parsing QR data: $qrData');
+      
+      // Parse deep link: caribtap://table?listingId=X&tableId=Y&tableName=Z&secret=W
+      if (qrData.contains('caribtap://table')) {
+        debugPrint('✅ Deep link detected');
+        final uri = Uri.parse(qrData);
+        final tableId = uri.queryParameters['tableId'];
+        final rawTableName = uri.queryParameters['tableName'];
+        // Decode the table name from URI encoding
+        final tableName = rawTableName != null ? Uri.decodeComponent(rawTableName) : null;
+        final secret = uri.queryParameters['secret'];
+        final listingId = uri.queryParameters['listingId'];
+
+        debugPrint('📌 Parsed: tableId=$tableId, tableName=$tableName, secret=$secret, listingId=$listingId');
+
+        if (tableId != null && secret != null && listingId != null) {
+          // Check if listing matches
+          if (listingId != widget.listing.id) {
+            showSnackBar(context, 'This QR code is for a different store'.tr());
+            return;
+          }
+          
+          final displayName = tableName?.isNotEmpty == true ? tableName! : 'Table $tableId';
+          
+          // Create table session via Cloud Function
+          try {
+            showProgress(context, 'Creating table session...'.tr(), false, Color(colorPrimary));
+            
+            final sessionId = await tableModeRepository.createTableSession(
+              listingId: listingId,
+              mode: 'QR',
+              tableId: tableId,
+              secret: secret,
+            );
+            
+            hideProgress();
+            
+            setState(() {
+              _scannedTableId = tableId;
+              _scannedTableName = displayName;
+              _scannedTableSecret = secret;
+              _scannedListingId = listingId;
+              _tableCodeController.text = 'Table: $displayName (Scanned)';
+            });
+            
+            debugPrint('✅ Table session created: $sessionId');
+            showSnackBar(context, 'Table scanned successfully: $displayName'.tr());
+          } catch (e) {
+            hideProgress();
+            debugPrint('❌ Failed to create table session: $e');
+            showSnackBar(context, 'Failed to create table session. Please try again.'.tr());
+          }
+        } else {
+          debugPrint('❌ Missing tableId, secret, or listingId');
+          showSnackBar(context, 'Invalid QR code format - missing table data'.tr());
+        }
+      } else {
+        debugPrint('❌ Not a table deep link: $qrData');
+        showSnackBar(context, 'Invalid QR code - Not a table QR code'.tr());
+      }
+    } catch (e) {
+      debugPrint('❌ Error parsing QR code: $e');
+      showSnackBar(context, 'Error parsing QR code: $e'.tr());
+    }
+  }
+
   Future<void> _pickDateTime() async {
     final dark = isDarkMode(context);
     
@@ -701,16 +880,24 @@ class _CartScreenState extends State<CartScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      // Build order items
-      final orderItems = widget.cartItems.map((cartItem) {
-        return OrderItem(
+      // Build order items with item types fetched from catalog
+      final List<OrderItem> orderItems = [];
+      for (final cartItem in widget.cartItems) {
+        // Fetch the catalog item to get its type
+        final catalogItem = await _storeService.getCatalogItem(
+          widget.listing.id, 
+          cartItem.itemId,
+        );
+        
+        orderItems.add(OrderItem(
           itemId: cartItem.itemId,
           name: cartItem.name,
           qty: cartItem.qty,
           unitPrice: cartItem.unitPrice,
           variant: cartItem.variant,
-        );
-      }).toList();
+          itemType: catalogItem?.type.value ?? 'product',
+        ));
+      }
 
       // Create fulfillment info
       final fulfillment = FulfillmentInfo(
@@ -746,7 +933,7 @@ class _CartScreenState extends State<CartScreen> {
         currencyCode: widget.listing.storeCurrencyCode ?? widget.listing.currencyCode,
         fulfillment: fulfillment,
         shipping: shippingInfo,
-        notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+        notes: _buildOrderNotes(),
       );
 
       // Create order via service
@@ -775,10 +962,10 @@ class _CartScreenState extends State<CartScreen> {
           orderUpdates['tableSessionId'] = activeSession.sessionId;
           orderUpdates['tableId'] = activeSession.tableId;
           orderUpdates['tableName'] = activeSession.tableName;
-          print('✅ Order tagged with table session: ${activeSession.tableName}');
+          debugPrint('✅ Order tagged with table session: ${activeSession.tableName}');
         }
       } catch (e) {
-        print('⚠️ Could not check table session: $e');
+        debugPrint('⚠️ Could not check table session: $e');
         // Continue with order creation even if table session check fails
       }
 

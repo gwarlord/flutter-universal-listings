@@ -44,6 +44,9 @@ export * from "./chat_notifications";
 // Export table mode functions
 export * from "./tableMode";
 
+// Export brand functions
+export * from "./brand_functions";
+
 const db = admin.firestore();
 const messaging = admin.messaging();
 

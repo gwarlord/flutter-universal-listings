@@ -11,6 +11,8 @@ import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/model/order_request.dart';
+import 'package:instaflutter/listings/model/table_mode_models.dart';
+import 'package:instaflutter/listings/api/firebase/table_mode_firebase.dart';
 import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/listings/utils/subscription_helper.dart';
 import 'package:instaflutter/screens/store/order_chat_helper.dart';
@@ -40,6 +42,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   ListingsUser? _customer;
   bool _isUpdating = false;
   late OrderRequest _currentOrder;
+  TableSessionModel? _tableSession;
+  bool _isSummonCooldown = false;
+  int _summonCooldownSeconds = 0;
 
   @override
   void initState() {
@@ -57,6 +62,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     _loadOrderDetails();
     _loadCustomer();
+    _loadTableSession();
   }
 
   Future<void> _loadOrderDetails() async {
@@ -92,6 +98,37 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
+  Future<void> _loadTableSession() async {
+    try {
+      final orderDoc = await FirebaseFirestore.instance
+          .collection('order_requests')
+          .doc(widget.order.id)
+          .get();
+      
+      if (orderDoc.exists) {
+        final tableSessionId = orderDoc.data()?['tableSessionId'] as String?;
+        
+        if (tableSessionId != null) {
+          final sessionDoc = await FirebaseFirestore.instance
+              .collection('table_sessions')
+              .doc(tableSessionId)
+              .get();
+          
+          if (sessionDoc.exists && mounted) {
+            final session = TableSessionModel.fromJson(sessionDoc.id, sessionDoc.data()!);
+            setState(() {
+              _tableSession = session;
+              _isSummonCooldown = session.isSummonOnCooldown;
+              _summonCooldownSeconds = session.remainingSummonCooldownSeconds;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading table session: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
@@ -114,9 +151,40 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('order_requests')
+            .doc(widget.order.id)
+            .snapshots(),
+        builder: (context, snapshot) {
+          // Update order if snapshot has data
+          if (snapshot.hasData && snapshot.data!.exists) {
+            final updatedOrder = OrderRequest.fromJson(snapshot.data!.data() as Map<String, dynamic>);
+            if (updatedOrder.status != _currentOrder.status) {
+              // Schedule state update after build
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _currentOrder = updatedOrder;
+                  });
+                }
+              });
+            } else {
+              _currentOrder = updatedOrder;
+            }
+          }
+
+          return _buildOrderContent(dark);
+        },
+      ),
+      bottomNavigationBar: _buildActionButtons(dark),
+    );
+  }
+
+  Widget _buildOrderContent(bool dark) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
           // Order ID
           Text(
             'Order #${_currentOrder.id.substring(0, 8).toUpperCase()}',
@@ -537,6 +605,97 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ),
           ],
 
+          // Table Mode Actions (for customers in active table sessions)
+          if (!widget.viewAsLister && 
+              _tableSession != null && 
+              _tableSession!.status == TableSessionStatus.ACTIVE &&
+              (_currentOrder.status == OrderStatus.confirmed ||
+               _currentOrder.status == OrderStatus.preparing ||
+               _currentOrder.status == OrderStatus.ready ||
+               _currentOrder.status == OrderStatus.served)) ...[
+            const SizedBox(height: 16),
+            _buildSectionTitle('Table Service'.tr(), dark),
+            Card(
+              color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Waiter info
+                    if (_tableSession!.assignedStaff.isNotEmpty) ...[
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundImage: NetworkImage(_tableSession!.assignedStaff.first.photoUrl),
+                            backgroundColor: Colors.grey.shade300,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Your ${_tableSession!.assignedStaff.first.role.toLowerCase()}'.tr(),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: dark ? Colors.white54 : Colors.black54,
+                                  ),
+                                ),
+                                Text(
+                                  _tableSession!.assignedStaff.first.firstName,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: dark ? Colors.white : Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Divider(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                      const SizedBox(height: 16),
+                    ],
+                    // Summon Waiter button
+                    ElevatedButton.icon(
+                      onPressed: _isSummonCooldown ? null : _summonWaiter,
+                      icon: Icon(_isSummonCooldown ? Icons.timer : Icons.pan_tool),
+                      label: Text(
+                        _isSummonCooldown 
+                            ? 'Wait ${_summonCooldownSeconds}s'.tr()
+                            : 'Summon Waiter'.tr(),
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _isSummonCooldown ? Colors.grey : Color(cfg.colorPrimary),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Request Bill button
+                    OutlinedButton.icon(
+                      onPressed: _requestBill,
+                      icon: const Icon(Icons.receipt_long),
+                      label: Text('Request Bill'.tr(), style: const TextStyle(fontSize: 16)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Color(cfg.colorPrimary),
+                        side: BorderSide(color: Color(cfg.colorPrimary), width: 2),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
           // Date
           const SizedBox(height: 16),
           Text(
@@ -547,10 +706,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ),
           ),
         ],
-      ),
-      bottomNavigationBar: _buildActionButtons(dark),
-    );
-  }
+      );
+    }
 
   Widget _buildSectionTitle(String title, bool dark) {
     return Padding(
@@ -729,6 +886,21 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         label = 'Confirmed'.tr();
         icon = Icons.check_circle_outline;
         break;
+      case OrderStatus.preparing:
+        color = Colors.purple;
+        label = 'Preparing'.tr();
+        icon = Icons.restaurant_menu;
+        break;
+      case OrderStatus.ready:
+        color = Colors.teal;
+        label = 'Ready'.tr();
+        icon = Icons.done_all;
+        break;
+      case OrderStatus.served:
+        color = Colors.indigo;
+        label = 'Served'.tr();
+        icon = Icons.room_service;
+        break;
       case OrderStatus.fulfilled:
         color = Colors.green;
         label = 'Fulfilled'.tr();
@@ -864,13 +1036,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       );
     }
 
-    // Lister can decline/confirm requested orders or fulfill confirmed orders
+    // Lister can perform various status updates
     if (!isLister) {
       return null;
     }
 
-    if (_currentOrder.status != OrderStatus.requested &&
-        _currentOrder.status != OrderStatus.confirmed) {
+    // No actions for declined, cancelled, or fulfilled orders
+    if (_currentOrder.status == OrderStatus.declined ||
+        _currentOrder.status == OrderStatus.cancelled ||
+        _currentOrder.status == OrderStatus.fulfilled) {
       return null;
     }
 
@@ -888,68 +1062,132 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ),
         ],
       ),
-      child: _currentOrder.status == OrderStatus.requested
-          ? Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _isUpdating
-                        ? null
-                        : () async {
-                            final notes = await _promptDeclineNotes();
-                            if (notes == null) {
-                              return;
-                            }
-                            await _updateStatus(OrderStatus.declined, listerNotes: notes);
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Text(
-                      'Decline'.tr(),
-                      style: const TextStyle(fontSize: 16, color: Colors.white),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _isUpdating
-                        ? null
-                        : () => _updateStatus(
-                              isDineIn ? OrderStatus.fulfilled : OrderStatus.confirmed,
-                            ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDineIn ? Colors.green : Colors.blue,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Text(
-                      isDineIn ? 'Mark Fulfilled'.tr() : 'Confirm'.tr(),
-                      style: const TextStyle(fontSize: 16, color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          : SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isUpdating ? null : () => _updateStatus(OrderStatus.fulfilled),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Text(
-                  'Mark Fulfilled'.tr(),
-                  style: const TextStyle(fontSize: 16, color: Colors.white),
-                ),
-              ),
-            ),
+      child: _buildListerActionButtons(isDineIn, dark),
     );
+  }
+
+  Widget _buildListerActionButtons(bool isDineIn, bool dark) {
+    // Requested: Decline or Confirm/Fulfill
+    if (_currentOrder.status == OrderStatus.requested) {
+      return Row(
+        children: [
+          Expanded(
+            child: ElevatedButton(
+              onPressed: _isUpdating
+                  ? null
+                  : () async {
+                      final notes = await _promptDeclineNotes();
+                      if (notes == null) return;
+                      await _updateStatus(OrderStatus.declined, listerNotes: notes);
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text('Decline'.tr(), style: const TextStyle(fontSize: 16, color: Colors.white)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: _isUpdating
+                  ? null
+                  : () => _updateStatus(
+                        isDineIn ? OrderStatus.confirmed : OrderStatus.confirmed,
+                      ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text('Confirm'.tr(), style: const TextStyle(fontSize: 16, color: Colors.white)),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Confirmed: Start Preparing (for dine-in) or Mark Fulfilled (for other methods)
+    if (_currentOrder.status == OrderStatus.confirmed) {
+      if (isDineIn) {
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _isUpdating ? null : () => _updateStatus(OrderStatus.preparing),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text('Start Preparing'.tr(), style: const TextStyle(fontSize: 16, color: Colors.white)),
+          ),
+        );
+      } else {
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _isUpdating ? null : () => _updateStatus(OrderStatus.fulfilled),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text('Mark Fulfilled'.tr(), style: const TextStyle(fontSize: 16, color: Colors.white)),
+          ),
+        );
+      }
+    }
+
+    // Preparing: Mark as Ready
+    if (_currentOrder.status == OrderStatus.preparing) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: _isUpdating ? null : () => _updateStatus(OrderStatus.ready),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.teal,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: Text('Mark Ready'.tr(), style: const TextStyle(fontSize: 16, color: Colors.white)),
+        ),
+      );
+    }
+
+    // Ready: Mark as Served
+    if (_currentOrder.status == OrderStatus.ready) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: _isUpdating ? null : () => _updateStatus(OrderStatus.served),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.indigo,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: Text('Mark Served'.tr(), style: const TextStyle(fontSize: 16, color: Colors.white)),
+        ),
+      );
+    }
+
+    // Served: Mark as Fulfilled
+    if (_currentOrder.status == OrderStatus.served) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: _isUpdating ? null : () => _updateStatus(OrderStatus.fulfilled),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: Text('Mark Fulfilled'.tr(), style: const TextStyle(fontSize: 16, color: Colors.white)),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   Future<String?> _promptDeclineNotes() async {
@@ -1048,6 +1286,147 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       }
     }
   }
+
+  Future<void> _summonWaiter() async {
+    if (_tableSession == null) return;
+
+    final purpose = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        final dark = isDarkMode(dialogContext);
+        return AlertDialog(
+          backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
+          title: Text(
+            'Summon Waiter'.tr(),
+            style: TextStyle(color: dark ? Colors.white : Colors.black),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.help_outline, color: Color(cfg.colorPrimary)),
+                title: Text('Need Assistance'.tr()),
+                onTap: () => Navigator.pop(dialogContext, 'ASSISTANCE'),
+                contentPadding: EdgeInsets.zero,
+              ),
+              ListTile(
+                leading: Icon(Icons.fastfood, color: Color(cfg.colorPrimary)),
+                title: Text('Ready to Order'.tr()),
+                onTap: () => Navigator.pop(dialogContext, 'ORDER'),
+                contentPadding: EdgeInsets.zero,
+              ),
+              ListTile(
+                leading: Icon(Icons.cleaning_services, color: Color(cfg.colorPrimary)),
+                title: Text('Table Needs Cleaning'.tr()),
+                onTap: () => Navigator.pop(dialogContext, 'CLEANING'),
+                contentPadding: EdgeInsets.zero,
+              ),
+              ListTile(
+                leading: Icon(Icons.chat_bubble_outline, color: Color(cfg.colorPrimary)),
+                title: Text('General Request'.tr()),
+                onTap: () => Navigator.pop(dialogContext, 'GENERAL'),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (purpose == null) return;
+
+    try {
+      showProgress(context, 'Summoning waiter...'.tr(), false, Color(cfg.colorPrimary));
+      
+      await tableModeRepository.summonWaiter(
+        sessionId: _tableSession!.sessionId,
+        purpose: purpose,
+      );
+
+      hideProgress();
+      
+      // Reload table session to update cooldown
+      await _loadTableSession();
+      
+      if (mounted) {
+        showSnackBar(context, 'Waiter summoned successfully!'.tr());
+      }
+    } catch (e) {
+      hideProgress();
+      if (mounted) {
+        showSnackBar(context, e.toString().replaceAll('Exception: ', ''));
+      }
+    }
+  }
+
+  Future<void> _requestBill() async {
+    if (_tableSession == null) return;
+
+    final method = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        final dark = isDarkMode(dialogContext);
+        return AlertDialog(
+          backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
+          title: Text(
+            'Request Bill'.tr(),
+            style: TextStyle(color: dark ? Colors.white : Colors.black),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'How would you like to pay?'.tr(),
+                style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Icon(Icons.money, color: Color(cfg.colorPrimary)),
+                title: Text('Cash'.tr()),
+                onTap: () => Navigator.pop(dialogContext, 'CASH'),
+                contentPadding: EdgeInsets.zero,
+              ),
+              ListTile(
+                leading: Icon(Icons.credit_card, color: Color(cfg.colorPrimary)),
+                title: Text('Card'.tr()),
+                onTap: () => Navigator.pop(dialogContext, 'CARD'),
+                contentPadding: EdgeInsets.zero,
+              ),
+              ListTile(
+                leading: Icon(Icons.account_balance_wallet, color: Color(cfg.colorPrimary)),
+                title: Text('Digital Payment'.tr()),
+                onTap: () => Navigator.pop(dialogContext, 'DIGITAL'),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (method == null) return;
+
+    try {
+      showProgress(context, 'Requesting bill...'.tr(), false, Color(cfg.colorPrimary));
+      
+      await tableModeRepository.requestBill(
+        sessionId: _tableSession!.sessionId,
+        paymentMethod: method,
+      );
+
+      hideProgress();
+      
+      if (mounted) {
+        showSnackBar(context, 'Bill requested successfully! Your waiter will be with you shortly.'.tr());
+      }
+    } catch (e) {
+      hideProgress();
+      if (mounted) {
+        showSnackBar(context, e.toString().replaceAll('Exception: ', ''));
+      }
+    }
+  }
+
   void _openChat() {
     if (_currentOrder.channelId == null) return;
 

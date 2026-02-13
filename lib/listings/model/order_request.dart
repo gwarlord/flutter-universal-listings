@@ -4,6 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 enum OrderStatus {
   requested('requested'),
   confirmed('confirmed'),
+  preparing('preparing'),      // Restaurant: meal being prepared
+  ready('ready'),              // Restaurant: ready to serve / pickup ready
+  served('served'),            // Restaurant: served to table
   declined('declined'),
   fulfilled('fulfilled'),
   cancelled('cancelled');
@@ -15,6 +18,24 @@ enum OrderStatus {
     return OrderStatus.values.firstWhere(
       (e) => e.value == value,
       orElse: () => OrderStatus.requested,
+    );
+  }
+}
+
+/// Order type (determined by items in order)
+enum OrderType {
+  food('food'),           // All items are food/drink
+  general('general'),     // All items are products/services
+  mixed('mixed');         // Contains both food and non-food items
+
+  final String value;
+  const OrderType(this.value);
+
+  static OrderType fromString(String? value) {
+    if (value == null) return OrderType.general;
+    return OrderType.values.firstWhere(
+      (e) => e.value == value,
+      orElse: () => OrderType.general,
     );
   }
 }
@@ -183,6 +204,7 @@ class OrderItem {
   final int qty;
   final double unitPrice;
   final Map<String, dynamic>? variant; // SKU, size, color, etc.
+  final String itemType; // 'food_drink', 'product', 'service' from CatalogItemType
 
   OrderItem({
     required this.itemId,
@@ -190,6 +212,7 @@ class OrderItem {
     required this.qty,
     required this.unitPrice,
     this.variant,
+    this.itemType = 'product', // Default to product for backwards compatibility
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
@@ -199,6 +222,7 @@ class OrderItem {
       qty: json['qty'] ?? 1,
       unitPrice: (json['unitPrice'] ?? 0).toDouble(),
       variant: json['variant'] != null ? Map<String, dynamic>.from(json['variant']) : null,
+      itemType: json['itemType'] ?? 'product',
     );
   }
 
@@ -209,6 +233,7 @@ class OrderItem {
       'qty': qty,
       'unitPrice': unitPrice,
       'variant': variant,
+      'itemType': itemType,
     };
   }
 
@@ -230,6 +255,7 @@ class OrderRequest {
   final String? notes;
   final String? listerNotes;
   final String? channelId; // Chat channel ID
+  final OrderType orderType; // Food, General, or Mixed based on items
   final Timestamp? createdAt;
   final Timestamp? updatedAt;
 
@@ -247,21 +273,23 @@ class OrderRequest {
     this.notes,
     this.listerNotes,
     this.channelId,
+    OrderType? orderType,
     this.createdAt,
     this.updatedAt,
-  });
+  }) : orderType = orderType ?? _determineOrderType(items);
 
   factory OrderRequest.fromJson(Map<String, dynamic> json) {
+    final items = (json['items'] as List?)
+            ?.map((e) => OrderItem.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [];
     return OrderRequest(
       id: json['id'] ?? '',
       listingId: json['listingId'] ?? '',
       listerId: json['listerId'] ?? '',
       customerId: json['customerId'] ?? '',
       status: OrderStatus.fromString(json['status'] ?? 'requested'),
-      items: (json['items'] as List?)
-              ?.map((e) => OrderItem.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      items: items,
       estimatedTotal: (json['estimatedTotal'] ?? 0).toDouble(),
       currencyCode: json['currencyCode'] ?? 'USD',
       fulfillment: FulfillmentInfo.fromJson(json['fulfillment'] ?? {}),
@@ -269,6 +297,7 @@ class OrderRequest {
       notes: json['notes'],
       listerNotes: json['listerNotes'],
       channelId: json['channelId'],
+      orderType: OrderType.fromString(json['orderType']),
       createdAt: json['createdAt'],
       updatedAt: json['updatedAt'],
     );
@@ -289,6 +318,7 @@ class OrderRequest {
       'notes': notes,
       'listerNotes': listerNotes,
       'channelId': channelId,
+      'orderType': orderType.value,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
     };
@@ -308,6 +338,7 @@ class OrderRequest {
     String? notes,
     String? listerNotes,
     String? channelId,
+    OrderType? orderType,
     Timestamp? createdAt,
     Timestamp? updatedAt,
   }) {
@@ -325,8 +356,33 @@ class OrderRequest {
       notes: notes ?? this.notes,
       listerNotes: listerNotes ?? this.listerNotes,
       channelId: channelId ?? this.channelId,
+      orderType: orderType ?? this.orderType,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
+  }
+
+  /// Determine order type based on item types
+  static OrderType _determineOrderType(List<OrderItem> items) {
+    if (items.isEmpty) return OrderType.general;
+    
+    bool hasFood = false;
+    bool hasNonFood = false;
+    
+    for (final item in items) {
+      if (item.itemType == 'food_drink') {
+        hasFood = true;
+      } else {
+        hasNonFood = true;
+      }
+    }
+    
+    if (hasFood && hasNonFood) {
+      return OrderType.mixed;
+    } else if (hasFood) {
+      return OrderType.food;
+    } else {
+      return OrderType.general;
+    }
   }
 }

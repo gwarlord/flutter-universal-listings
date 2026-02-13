@@ -229,9 +229,45 @@
                                    ]
                     },
                     {
-                        "collectionGroup":  "events",
-                        "queryScope":  "COLLECTION_GROUP",
+                        "collectionGroup":  "table_sessions",
+                        "queryScope":  "COLLECTION",
                         "fields":  [
+                                       {
+                                           "fieldPath":  "customerUid",
+                                           "order":  "ASCENDING"
+                                       },
+                                       {
+                                           "fieldPath":  "listingId",
+                                           "order":  "ASCENDING"
+                                       },
+                                       {
+                                           "fieldPath":  "createdAt",
+                                           "order":  "ASCENDING"
+                                       }
+                                   ]
+                    },
+                    {
+                        "collectionGroup":  "listings",
+                        "queryScope":  "COLLECTION",
+                        "fields":  [
+                                       {
+                                           "fieldPath":  "brandId",
+                                           "order":  "ASCENDING"
+                                       },
+                                       {
+                                           "fieldPath":  "createdAt",
+                                           "order":  "DESCENDING"
+                                       }
+                                   ]
+                    },
+                    {
+                        "collectionGroup":  "table_sessions",
+                        "queryScope":  "COLLECTION",
+                        "fields":  [
+                                       {
+                                           "fieldPath":  "listingId",
+                                           "order":  "ASCENDING"
+                                       },
                                        {
                                            "fieldPath":  "createdAt",
                                            "order":  "DESCENDING"

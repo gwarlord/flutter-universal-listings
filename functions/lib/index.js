@@ -71,6 +71,8 @@ __exportStar(require("./deal_ad_notifications"), exports);
 __exportStar(require("./chat_notifications"), exports);
 // Export table mode functions
 __exportStar(require("./tableMode"), exports);
+// Export brand functions
+__exportStar(require("./brand_functions"), exports);
 const db = admin.firestore();
 const messaging = admin.messaging();
 // Set your SendGrid API key in Functions config: firebase functions:config:set sendgrid.key="YOUR_KEY"

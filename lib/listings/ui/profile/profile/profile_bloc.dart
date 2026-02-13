@@ -65,7 +65,11 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         AuthProviders? authProvider =
             await (profileRepository as ProfileFirebaseUtils)
                 .getUserAuthProvider();
-        emit(ReauthRequiredState(authProvider: authProvider!));
+        if (authProvider != null) {
+          emit(ReauthRequiredState(authProvider: authProvider));
+        } else {
+          emit(DeleteUserConfirmationState());
+        }
       } else {
         emit(DeleteUserConfirmationState());
       }

@@ -165,6 +165,7 @@ class CollaboratorModel {
 
 class AssignedListingModel {
   String listingId;
+  String title;
   String ownerUid;
   bool isActive;
   DateTime addedAt;
@@ -173,6 +174,7 @@ class AssignedListingModel {
 
   AssignedListingModel({
     required this.listingId,
+    required this.title,
     required this.ownerUid,
     required this.isActive,
     required this.addedAt,
@@ -183,9 +185,11 @@ class AssignedListingModel {
   factory AssignedListingModel.fromJson(
     String listingId,
     Map<String, dynamic> json,
-  ) {
+    {String? title,
+  }) {
     return AssignedListingModel(
       listingId: listingId,
+      title: title ?? 'Listing',
       ownerUid: json['ownerUid'] ?? '',
       isActive: json['isActive'] ?? true,
       addedAt: (json['addedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),

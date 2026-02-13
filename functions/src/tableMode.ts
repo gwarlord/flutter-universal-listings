@@ -331,7 +331,7 @@ export const upsertTable = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
   }
 
-  const { listingId, tableId, tableName, tableCodePublic } = data;
+  const { listingId, tableId, tableName, tableCodePublic, regenerateSecret } = data;
 
   if (!listingId || !tableName) {
     throw new functions.https.HttpsError("invalid-argument", "listingId and tableName are required");
@@ -354,16 +354,24 @@ export const upsertTable = functions.https.onCall(async (data, context) => {
 
   if (tableId) {
     // Update existing table
+    const updateData: any = {
+      tableName,
+      tableCodePublic: tableCodePublic || tableId.substring(0, 6).toUpperCase(),
+      updatedAt: now,
+    };
+
+    // Regenerate secret if requested
+    if (regenerateSecret === true) {
+      updateData.tableSecret = generateSecureRandom(32);
+      functions.logger.info("Table secret regenerated", { listingId, tableId });
+    }
+
     await db
       .collection("listings")
       .doc(listingId)
       .collection("tables")
       .doc(tableId)
-      .update({
-        tableName,
-        tableCodePublic: tableCodePublic || tableId.substring(0, 6).toUpperCase(),
-        updatedAt: now,
-      });
+      .update(updateData);
 
     functions.logger.info("Table updated", { listingId, tableId });
     return { success: true, tableId };
@@ -613,13 +621,15 @@ export const assignWaiterToSession = functions.https.onCall(async (data, context
   }
 
   // Update session
-  const wasActive = sessionData?.status === "ACTIVE";
   const updates: any = {
     assignedStaff,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
 
-  if (sessionData?.status === "PENDING") {
+  const isPending = sessionData?.status === "PENDING";
+  const isActive = sessionData?.status === "ACTIVE";
+
+  if (isPending) {
     updates.status = "ACTIVE";
     updates.activatedAt = admin.firestore.FieldValue.serverTimestamp();
   }
@@ -627,14 +637,16 @@ export const assignWaiterToSession = functions.https.onCall(async (data, context
   await db.collection("table_sessions").doc(sessionId).update(updates);
 
   // Log events
-  if (sessionData?.status === "PENDING") {
+  if (isPending) {
     await logSessionEvent(sessionId, "SESSION_ACTIVATED", context.auth.uid, "OWNER", {});
+    await logSessionEvent(sessionId, "WAITER_ASSIGNED", context.auth.uid, "OWNER", {
+      waiterUids,
+    });
+  } else if (isActive) {
+    await logSessionEvent(sessionId, "WAITER_REASSIGNED", context.auth.uid, "OWNER", {
+      waiterUids,
+    });
   }
-
-  const eventType = wasActive ? "WAITER_REASSIGNED" : "WAITER_ASSIGNED";
-  await logSessionEvent(sessionId, eventType, context.auth.uid, "OWNER", {
-    waiterUids,
-  });
 
   // Notify customer
   const customerUid = sessionData?.customerUid;

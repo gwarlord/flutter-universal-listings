@@ -336,6 +336,12 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
                   Icons.more_vert,
                   color: dark ? Colors.white70 : Colors.black54,
                 ),
+                color: dark ? Colors.grey.shade900 : Colors.white,
+                surfaceTintColor: Colors.transparent,
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 onSelected: (value) {
                   if (value == 'edit') {
                     _editItem(item);
@@ -350,9 +356,18 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
                     value: 'edit',
                     child: Row(
                       children: [
-                        const Icon(Icons.edit, size: 20),
+                        Icon(
+                          Icons.edit,
+                          size: 20,
+                          color: dark ? Colors.white70 : Colors.black87,
+                        ),
                         const SizedBox(width: 8),
-                        Text('Edit'.tr()),
+                        Text(
+                          'Edit'.tr(),
+                          style: TextStyle(
+                            color: dark ? Colors.white : Colors.black87,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -363,9 +378,15 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
                         Icon(
                           item.isAvailable ? Icons.visibility_off : Icons.visibility,
                           size: 20,
+                          color: dark ? Colors.white70 : Colors.black87,
                         ),
                         const SizedBox(width: 8),
-                        Text(item.isAvailable ? 'Mark Unavailable'.tr() : 'Mark Available'.tr()),
+                        Text(
+                          item.isAvailable ? 'Mark Unavailable'.tr() : 'Mark Available'.tr(),
+                          style: TextStyle(
+                            color: dark ? Colors.white : Colors.black87,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -373,9 +394,18 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
                     value: 'delete',
                     child: Row(
                       children: [
-                        const Icon(Icons.delete, size: 20, color: Colors.red),
+                        Icon(
+                          Icons.delete,
+                          size: 20,
+                          color: dark ? Colors.red.shade300 : Colors.red,
+                        ),
                         const SizedBox(width: 8),
-                        Text('Delete'.tr(), style: const TextStyle(color: Colors.red)),
+                        Text(
+                          'Delete'.tr(),
+                          style: TextStyle(
+                            color: dark ? Colors.red.shade300 : Colors.red,
+                          ),
+                        ),
                       ],
                     ),
                   ),

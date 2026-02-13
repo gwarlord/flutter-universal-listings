@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:instaflutter/core/model/user.dart';
@@ -33,12 +34,16 @@ class _StaffTableSessionsScreenState extends State<StaffTableSessionsScreen>
   List<TableSessionModel> _pendingSessions = [];
   List<TableSessionModel> _activeSessions = [];
   List<TableSessionModel> _closedSessions = [];
+  
+  // Cache staff list to reduce Firebase reads (avoids App Check rate limits)
+  List<StaffMember>? _cachedStaffList;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _startListening();
+    _loadStaffList(); // Preload staff list
   }
 
   @override
@@ -71,12 +76,16 @@ class _StaffTableSessionsScreenState extends State<StaffTableSessionsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
     return Scaffold(
       appBar: AppBar(
         title: Text('Table Sessions'.tr()),
         backgroundColor: Color(colorPrimary),
         bottom: TabBar(
           controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: isDark ? Colors.white.withOpacity(0.6) : Colors.white70,
+          indicatorColor: Colors.white,
           tabs: [
             Tab(
               text: 'Pending'.tr(),
@@ -117,6 +126,8 @@ class _StaffTableSessionsScreenState extends State<StaffTableSessionsScreen>
     bool isPending = false,
     bool isActive = false,
   }) {
+    final isDark = isDarkMode(context);
+    
     if (sessions.isEmpty) {
       return Center(
         child: Column(
@@ -129,7 +140,7 @@ class _StaffTableSessionsScreenState extends State<StaffTableSessionsScreen>
                       ? Icons.check_circle
                       : Icons.history,
               size: 64,
-              color: Colors.grey.shade400,
+              color: isDark ? Colors.grey.shade700 : Colors.grey.shade400,
             ),
             const SizedBox(height: 16),
             Text(
@@ -138,7 +149,10 @@ class _StaffTableSessionsScreenState extends State<StaffTableSessionsScreen>
                   : isActive
                       ? 'No active sessions'.tr()
                       : 'No closed sessions'.tr(),
-              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+              style: TextStyle(
+                fontSize: 16,
+                color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+              ),
             ),
           ],
         ),
@@ -164,21 +178,115 @@ class _StaffTableSessionsScreenState extends State<StaffTableSessionsScreen>
   }
 
   Future<void> _assignWaiter(TableSessionModel session) async {
-    // TODO: In a real implementation, you'd fetch available staff from Firestore
-    // For now, use current user as the waiter
+    // Fetch available staff (owner + collaborators)
+    final selectedWaiters = await _showStaffSelectionDialog();
+    
+    if (selectedWaiters == null || selectedWaiters.isEmpty) {
+      return;
+    }
+
     showProgress(context, 'Assigning waiter...'.tr(), false, Color(colorPrimary));
 
     try {
       await _repository.assignWaiterToSession(
         sessionId: session.sessionId,
-        waiterUids: [widget.currentUser.userID],
+        waiterUids: selectedWaiters.map((s) => s.uid).toList(),
       );
 
       hideProgress();
       showSnackBar(context, 'Waiter assigned successfully!'.tr());
     } catch (e) {
       hideProgress();
-      showSnackBar(context, e.toString().replaceAll('Exception: ', ''));
+      // Better error handling for App Check failures
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      if (errorMsg.contains('Too many attempts') || errorMsg.contains('App Check')) {
+        showSnackBar(context, 'Too many requests. Please wait a moment and try again.'.tr());
+      } else {
+        showSnackBar(context, errorMsg);
+      }
+    }
+  }
+
+  Future<List<StaffMember>?> _showStaffSelectionDialog() async {
+    // Use cached list if available to avoid App Check rate limits
+    if (_cachedStaffList != null && _cachedStaffList!.isNotEmpty) {
+      return await showDialog<List<StaffMember>>(
+        context: context,
+        builder: (context) => _StaffSelectionDialog(staffList: _cachedStaffList!),
+      );
+    }
+
+    // Otherwise load fresh (with loading indicator)
+    showProgress(context, 'Loading staff...'.tr(), false, Color(colorPrimary));
+    await _loadStaffList();
+    hideProgress();
+
+    if (_cachedStaffList == null || _cachedStaffList!.isEmpty) {
+      showSnackBar(context, 'No available staff found'.tr());
+      return null;
+    }
+
+    return await showDialog<List<StaffMember>>(
+      context: context,
+      builder: (context) => _StaffSelectionDialog(staffList: _cachedStaffList!),
+    );
+  }
+
+  Future<void> _loadStaffList() async {
+    try {
+      // Fetch owner
+      final ownerSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.listing.authorID)
+          .get();
+      
+      final staffList = <StaffMember>[];
+      
+      if (ownerSnap.exists) {
+        final ownerData = ownerSnap.data()!;
+        staffList.add(StaffMember(
+          uid: widget.listing.authorID,
+          name: '${ownerData['firstName'] ?? ''} ${ownerData['lastName'] ?? ''}'.trim(),
+          role: 'Owner',
+          photoUrl: ownerData['profilePictureURL'] ?? '',
+        ));
+      }
+
+      // Fetch collaborators with table management permissions
+      final collabsSnap = await FirebaseFirestore.instance
+          .collection('listings')
+          .doc(widget.listing.id)
+          .collection('collaborators')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      for (final collabDoc in collabsSnap.docs) {
+        final collabData = collabDoc.data();
+        final permissions = collabData['permissions'] as Map<String, dynamic>? ?? {};
+        
+        // Only include collaborators with order/chat management permissions
+        if (permissions['manageOrders'] == true || permissions['manageChats'] == true) {
+          final userSnap = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(collabDoc.id)
+              .get();
+          
+          if (userSnap.exists) {
+            final userData = userSnap.data()!;
+            staffList.add(StaffMember(
+              uid: collabDoc.id,
+              name: '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim(),
+              role: 'Staff',
+              photoUrl: userData['profilePictureURL'] ?? '',
+            ));
+          }
+        }
+      }
+
+      _cachedStaffList = staffList;
+    } catch (e) {
+      debugPrint('Error loading staff list: $e');
+      // Don't show error if this is background preload
     }
   }
 
@@ -197,11 +305,25 @@ class _StaffTableSessionsScreenState extends State<StaffTableSessionsScreen>
   }
 
   Future<void> _closeSession(TableSessionModel session) async {
+    final isDark = isDarkMode(context);
+    
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Close Session?'.tr()),
-        content: Text('Close ${session.tableName} session for ${session.customerName}?'.tr()),
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        title: Text(
+          'Close Session?'.tr(),
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+        content: Text(
+          'Close ${session.tableName} session for ${session.customerName}?'.tr(),
+          style: TextStyle(
+            color: isDark ? Colors.grey[300] : Colors.black87,
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -254,8 +376,11 @@ class _SessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
+    
     return Card(
       elevation: 2,
+      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -266,11 +391,17 @@ class _SessionCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 24,
+                  backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
                   backgroundImage: session.customerPhotoUrl.isNotEmpty
                       ? NetworkImage(session.customerPhotoUrl)
                       : null,
                   child: session.customerPhotoUrl.isEmpty
-                      ? Text(session.customerName[0].toUpperCase())
+                      ? Text(
+                          session.customerName[0].toUpperCase(),
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        )
                       : null,
                 ),
                 const SizedBox(width: 12),
@@ -280,16 +411,17 @@ class _SessionCard extends StatelessWidget {
                     children: [
                       Text(
                         session.tableName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
                         ),
                       ),
                       Text(
                         session.customerName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey,
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
                         ),
                       ),
                     ],
@@ -299,10 +431,10 @@ class _SessionCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: isPending
-                        ? Colors.orange.shade100
+                        ? (isDark ? Colors.orange.shade900 : Colors.orange.shade100)
                         : isActive
-                            ? Colors.green.shade100
-                            : Colors.grey.shade200,
+                            ? (isDark ? Colors.green.shade900 : Colors.green.shade100)
+                            : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -311,10 +443,10 @@ class _SessionCard extends StatelessWidget {
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: isPending
-                          ? Colors.orange.shade900
+                          ? (isDark ? Colors.orange.shade200 : Colors.orange.shade900)
                           : isActive
-                              ? Colors.green.shade900
-                              : Colors.grey.shade700,
+                              ? (isDark ? Colors.green.shade200 : Colors.green.shade900)
+                              : (isDark ? Colors.grey.shade300 : Colors.grey.shade700),
                     ),
                   ),
                 ),
@@ -326,12 +458,18 @@ class _SessionCard extends StatelessWidget {
             // Time info
             Text(
               'Started: ${_formatTime(session.createdAt)}'.tr(),
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+              ),
             ),
             if (session.activatedAt != null)
               Text(
                 'Activated: ${_formatTime(session.activatedAt!)}'.tr(),
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
               ),
 
             // Assigned staff (if any)
@@ -341,16 +479,26 @@ class _SessionCard extends StatelessWidget {
                 spacing: 8,
                 children: session.assignedStaff.map((staff) {
                   return Chip(
+                    backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
                     avatar: CircleAvatar(
+                      backgroundColor: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
                       backgroundImage: staff.photoUrl.isNotEmpty
                           ? NetworkImage(staff.photoUrl)
                           : null,
                       child: staff.photoUrl.isEmpty
-                          ? Text(staff.firstName[0])
+                          ? Text(
+                              staff.firstName[0],
+                              style: TextStyle(
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                            )
                           : null,
                     ),
                     label: Text(staff.firstName),
-                    labelStyle: const TextStyle(fontSize: 12),
+                    labelStyle: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
                   );
                 }).toList(),
               ),
@@ -408,3 +556,156 @@ class _SessionCard extends StatelessWidget {
     return DateFormat('MMM d, HH:mm').format(time);
   }
 }
+
+// ============================================================================
+// STAFF MEMBER MODEL
+// ============================================================================
+
+class StaffMember {
+  final String uid;
+  final String name;
+  final String role;
+  final String photoUrl;
+
+  StaffMember({
+    required this.uid,
+    required this.name,
+    required this.role,
+    required this.photoUrl,
+  });
+}
+
+// ============================================================================
+// STAFF SELECTION DIALOG
+// ============================================================================
+
+class _StaffSelectionDialog extends StatefulWidget {
+  final List<StaffMember> staffList;
+
+  const _StaffSelectionDialog({required this.staffList});
+
+  @override
+  State<_StaffSelectionDialog> createState() => _StaffSelectionDialogState();
+}
+
+class _StaffSelectionDialogState extends State<_StaffSelectionDialog> {
+  final Set<String> _selectedUids = {};
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
+    
+    return AlertDialog(
+      backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: Text(
+        'Assign Waiter(s)'.tr(),
+        style: TextStyle(
+          color: isDark ? Colors.white : Colors.black87,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Select one or more staff members to assign'.tr(),
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: widget.staffList.length,
+                itemBuilder: (context, index) {
+                  final staff = widget.staffList[index];
+                  final isSelected = _selectedUids.contains(staff.uid);
+                  
+                  return CheckboxListTile(
+                    value: isSelected,
+                    onChanged: (selected) {
+                      setState(() {
+                        if (selected == true) {
+                          _selectedUids.add(staff.uid);
+                        } else {
+                          _selectedUids.remove(staff.uid);
+                        }
+                      });
+                    },
+                    title: Text(
+                      staff.name.isEmpty ? 'User ${staff.uid.substring(0, 6)}' : staff.name,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: Text(
+                      staff.role,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                    ),
+                    secondary: CircleAvatar(
+                      backgroundColor: Color(colorPrimary).withOpacity(0.2),
+                      backgroundImage: staff.photoUrl.isNotEmpty
+                          ? NetworkImage(staff.photoUrl)
+                          : null,
+                      child: staff.photoUrl.isEmpty
+                          ? Icon(
+                              Icons.person,
+                              color: Color(colorPrimary),
+                            )
+                          : null,
+                    ),
+                    activeColor: Color(colorPrimary),
+                    contentPadding: EdgeInsets.zero,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancel'.tr(),
+            style: TextStyle(
+              color: isDark ? Colors.grey[300] : Colors.black54,
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: _selectedUids.isEmpty
+              ? null
+              : () {
+                  final selected = widget.staffList
+                      .where((s) => _selectedUids.contains(s.uid))
+                      .toList();
+                  Navigator.pop(context, selected);
+                },
+          child: Text(
+            'Assign (${_selectedUids.length})'.tr(),
+            style: TextStyle(
+              color: _selectedUids.isEmpty
+                  ? Colors.grey
+                  : Color(colorPrimary),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+

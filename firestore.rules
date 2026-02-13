@@ -537,5 +537,30 @@ service cloud.firestore {
         allow write: if false;
       }
     }
+
+    // ========================================================================
+    // MULTI-LOCATION BRANDS
+    // ========================================================================
+
+    // Brands collection - for organizing multiple listings under one brand
+    match /brands/{brandId} {
+      // All authenticated users can read brands
+      allow read: if isSignedIn();
+      
+      // Any authenticated user can create a brand (owned by creator)
+      allow create: if isSignedIn();
+      
+      // Only owner or admin can update
+      allow update: if isSignedIn() && (
+        request.auth.uid == resource.data.ownerUid || 
+        isAdmin()
+      );
+      
+      // Only owner or admin can delete
+      allow delete: if isSignedIn() && (
+        request.auth.uid == resource.data.ownerUid || 
+        isAdmin()
+      );
+    }
   }
 }

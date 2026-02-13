@@ -12,6 +12,7 @@ import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/listings/api/firebase/table_mode_firebase.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/table_mode_models.dart';
+import 'package:instaflutter/listings/ui/table_mode/staff_table_sessions_screen.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -153,6 +154,23 @@ class _StaffTablesScreenState extends State<StaffTablesScreen> {
       appBar: AppBar(
         title: Text('Tables & QR Codes'.tr()),
         backgroundColor: Color(colorPrimary),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.group),
+            tooltip: 'Active Sessions'.tr(),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => StaffTableSessionsScreen(
+                    listing: widget.listing,
+                    currentUser: widget.currentUser,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -214,7 +232,7 @@ class _StaffTablesScreenState extends State<StaffTablesScreen> {
             leading: CircleAvatar(
               backgroundColor: table.isActive ? Colors.green : Colors.grey,
               child: Text(
-                table.tableCodePublic,
+                'T${index + 1}',
                 style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
             ),
@@ -434,7 +452,7 @@ class _TableNameDialogState extends State<_TableNameDialog> {
 // TABLE QR SCREEN
 // ============================================================================
 
-class _TableQRScreen extends StatelessWidget {
+class _TableQRScreen extends StatefulWidget {
   final ListingModel listing;
   final TableModel table;
 
@@ -444,19 +462,128 @@ class _TableQRScreen extends StatelessWidget {
   });
 
   @override
+  State<_TableQRScreen> createState() => _TableQRScreenState();
+}
+
+class _TableQRScreenState extends State<_TableQRScreen> {
+  late TableModel _currentTable;
+  bool _isRegenerating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentTable = widget.table;
+  }
+
+  Future<void> _regenerateQRCode() async {
+    if (_isRegenerating) return;
+
+    final isDark = isDarkMode(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        title: Text(
+          'Regenerate QR Code'.tr(),
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Generate a new QR code for this table? The old code will no longer work.'.tr(),
+          style: TextStyle(
+            color: isDark ? Colors.white70 : Colors.black54,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Cancel'.tr(),
+              style: TextStyle(
+                color: isDark ? Colors.grey[300] : Colors.black54,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Regenerate'.tr(),
+              style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isRegenerating = true);
+
+    try {
+      showProgress(context, 'Regenerating QR code...'.tr(), false, Color(colorPrimary));
+      
+      // Call upsertTable with regenerateSecret flag to get a new QR code
+      await tableModeRepository.upsertTable(
+        listingId: widget.listing.id,
+        tableId: _currentTable.tableId,
+        tableName: _currentTable.tableName,
+        regenerateSecret: true,
+      );
+
+      // Reload the table to get the new secret
+      final updatedTable = await tableModeRepository.getTable(
+        listingId: widget.listing.id,
+        tableId: _currentTable.tableId,
+      );
+
+      hideProgress();
+
+      if (updatedTable != null) {
+        setState(() => _currentTable = updatedTable);
+        showSnackBar(context, 'QR code regenerated successfully!'.tr());
+      } else {
+        showSnackBar(context, 'Failed to load updated QR code'.tr());
+      }
+    } catch (e) {
+      hideProgress();
+      showSnackBar(context, 'Error: ${e.toString()}'.tr());
+    } finally {
+      setState(() => _isRegenerating = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = isDarkMode(context);
-    final qrData = table.generateQRPayload(listing.id);
+    final qrData = _currentTable.generateQRPayload(widget.listing.id);
 
     return Scaffold(
       backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
-        title: Text(table.tableName),
+        title: Text(_currentTable.tableName),
         backgroundColor: Color(colorPrimary),
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
             onPressed: () => _shareQR(context, qrData),
+          ),
+          IconButton(
+            icon: _isRegenerating 
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.refresh),
+            onPressed: _isRegenerating ? null : _regenerateQRCode,
+            tooltip: 'Regenerate QR Code'.tr(),
           ),
         ],
       ),
@@ -466,7 +593,7 @@ class _TableQRScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              table.tableName,
+              _currentTable.tableName,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -476,7 +603,7 @@ class _TableQRScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Table Code: ${table.tableCodePublic}'.tr(),
+              'Table Code: ${_currentTable.tableCodePublic}'.tr(),
               style: TextStyle(
                 fontSize: 16,
                 color: isDark ? Colors.grey[400] : Colors.grey[600],
@@ -506,6 +633,10 @@ class _TableQRScreen extends StatelessWidget {
                 version: QrVersions.auto,
                 size: 300,
                 backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+                errorCorrectionLevel: QrErrorCorrectLevel.H, // Highest error correction
+                gapless: false,
+                padding: const EdgeInsets.all(0),
               ),
             ),
 
@@ -566,7 +697,7 @@ class _TableQRScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '3. Or customers can manually enter: ${table.tableCodePublic}'.tr(),
+                      '3. Or customers can manually enter: ${_currentTable.tableCodePublic}'.tr(),
                       style: TextStyle(
                         fontSize: 14,
                         color: isDark ? Colors.grey[300] : Colors.grey[800],
@@ -600,7 +731,7 @@ class _TableQRScreen extends StatelessWidget {
       }
 
       final bytes = byteData.buffer.asUint8List();
-      final safeName = 'table_${table.tableName}_${DateTime.now().millisecondsSinceEpoch}'
+      final safeName = 'table_${_currentTable.tableName}_${DateTime.now().millisecondsSinceEpoch}'
           .replaceAll(RegExp(r'[^A-Za-z0-9_-]+'), '_');
 
       await Gal.putImageBytes(bytes, album: 'CaribTap');
@@ -622,8 +753,8 @@ class _TableQRScreen extends StatelessWidget {
   Future<void> _shareQR(BuildContext context, String qrData) async {
     try {
       await Share.share(
-        'Join ${table.tableName} at ${listing.title}\n\nTable Code: ${table.tableCodePublic}\n\nOr scan QR: $qrData',
-        subject: '${table.tableName} - ${listing.title}',
+        'Join ${_currentTable.tableName} at ${widget.listing.title}\n\nTable Code: ${_currentTable.tableCodePublic}\n\nOr scan QR: $qrData',
+        subject: '${_currentTable.tableName} - ${widget.listing.title}',
       );
     } catch (e) {
       showSnackBar(context, 'Failed to share'.tr());

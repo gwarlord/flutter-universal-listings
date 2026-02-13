@@ -40,6 +40,7 @@ import 'package:instaflutter/listings/listings_module/api/firebase/tap_firebase.
 import 'package:instaflutter/listings/ui/collaboration/collaborators_management_screen.dart';
 import 'package:instaflutter/listings/ui/collaboration/chat_scope_integration.dart';
 import 'package:instaflutter/listings/listings_module/api/collaboration_api_manager.dart';
+import 'package:instaflutter/screens/brand/more_locations_section.dart';
 import 'package:instaflutter/listings/model/tap_model.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -941,6 +942,17 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     ),
                   ),
                 ),
+                // Show other brand locations if listing is part of a brand
+                if (listing.brandId != null && listing.brandId!.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 140),
+                      child: MoreLocationsSection(
+                        currentListing: listing,
+                        brandId: listing.brandId!,
+                      ),
+                    ),
+                  ),
               ],
             ),
             bottomSheet: _buildStickyBottomBar(dark, primaryColor),

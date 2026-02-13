@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // ============================================================================
@@ -83,7 +84,8 @@ class TableModel {
 
   // Generate QR payload (deep link)
   String generateQRPayload(String listingId) {
-    return 'caribtap://table?listingId=$listingId&tableId=$tableId&secret=$tableSecret';
+    final encodedTableName = Uri.encodeComponent(tableName);
+    return 'caribtap://table?listingId=$listingId&tableId=$tableId&tableName=$encodedTableName&secret=$tableSecret';
   }
 }
 

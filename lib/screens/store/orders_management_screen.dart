@@ -9,6 +9,7 @@ import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/order_request.dart';
 import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/listings/utils/subscription_helper.dart';
+import 'package:instaflutter/listings/ui/table_mode/staff_table_sessions_screen.dart';
 import 'package:instaflutter/screens/store/order_detail_screen.dart';
 import 'package:instaflutter/screens/store/shipping_tracking_display.dart';
 
@@ -26,23 +27,41 @@ class OrdersManagementScreen extends StatefulWidget {
 }
 
 class _OrdersManagementScreenState extends State<OrdersManagementScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final StoreService _storeService = StoreService();
   late TabController _tabController;
   final Map<String, ListingsUser> _customerCache = {};
   final Map<String, ListingModel> _listingCache = {};
 
+  // Toggle between food and general orders
+  bool _isShowingFoodOrders = true;
+
   // Use a special marker for active orders (both pending and confirmed)
   static const String _activeOrdersMarker = 'ACTIVE';
   static const String _allOrdersMarker = 'ALL';
   
-  final List<dynamic> _statusFilters = [
-    _activeOrdersMarker, // Active Orders (Pending + Confirmed with visual separation)
+  // Food order statuses (with detailed kitchen workflow)
+  final List<dynamic> _foodStatusFilters = [
+    _activeOrdersMarker, // Active Orders (Pending + Confirmed + Preparing + Ready + Served)
+    OrderStatus.preparing,
+    OrderStatus.ready,
+    OrderStatus.served,
     OrderStatus.fulfilled,
     OrderStatus.declined,
     OrderStatus.cancelled,
     _allOrdersMarker, // All orders including history
   ];
+
+  // General order statuses (simpler workflow)
+  final List<dynamic> _generalStatusFilters = [
+    _activeOrdersMarker, // Active Orders (Pending + Confirmed)
+    OrderStatus.fulfilled,
+    OrderStatus.declined,
+    OrderStatus.cancelled,
+    _allOrdersMarker, // All orders including history
+  ];
+
+  List<dynamic> get _statusFilters => _isShowingFoodOrders ? _foodStatusFilters : _generalStatusFilters;
 
   @override
   void initState() {
@@ -65,6 +84,28 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
     super.dispose();
   }
 
+  void _switchOrderType(bool isFoodOrders) {
+    setState(() {
+      if (_isShowingFoodOrders != isFoodOrders) {
+        _isShowingFoodOrders = isFoodOrders;
+        // Recreate TabController with new length
+        _tabController.dispose();
+        _tabController = TabController(length: _statusFilters.length, vsync: this, initialIndex: 0);
+      }
+    });
+  }
+
+  /// Check if an order should be displayed based on the current Food/General filter
+  bool _shouldShowOrder(OrderRequest order) {
+    if (_isShowingFoodOrders) {
+      // Show food or mixed orders when viewing Food tab
+      return order.orderType == OrderType.food || order.orderType == OrderType.mixed;
+    } else {
+      // Show general or mixed orders when viewing General tab
+      return order.orderType == OrderType.general || order.orderType == OrderType.mixed;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
@@ -78,19 +119,99 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
           style: TextStyle(color: dark ? Colors.white : Colors.black),
         ),
         iconTheme: IconThemeData(color: dark ? Colors.white : Colors.black),
+        actions: [
+          // Toggle between Food and General orders
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            decoration: BoxDecoration(
+              color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _switchOrderType(true),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _isShowingFoodOrders ? Color(cfg.colorPrimary) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.restaurant_menu,
+                            size: 18,
+                            color: _isShowingFoodOrders ? Colors.white : (dark ? Colors.white54 : Colors.black45),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Food'.tr(),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _isShowingFoodOrders ? Colors.white : (dark ? Colors.white54 : Colors.black45),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _switchOrderType(false),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: !_isShowingFoodOrders ? Color(cfg.colorPrimary) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.shopping_bag,
+                            size: 18,
+                            color: !_isShowingFoodOrders ? Colors.white : (dark ? Colors.white54 : Colors.black45),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'General'.tr(),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: !_isShowingFoodOrders ? Colors.white : (dark ? Colors.white54 : Colors.black45),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.table_restaurant),
+            tooltip: 'Table Sessions'.tr(),
+            onPressed: () => _navigateToTableSessions(context, dark),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
           labelColor: Color(cfg.colorPrimary),
           unselectedLabelColor: dark ? Colors.white54 : Colors.black45,
           indicatorColor: Color(cfg.colorPrimary),
-          tabs: [
-            Tab(text: 'Active Orders'.tr()),
-            Tab(text: 'Fulfilled'.tr()),
-            Tab(text: 'Declined'.tr()),
-            Tab(text: 'Cancelled'.tr()),
-            Tab(text: 'All'.tr()),
-          ],
+          tabs: _buildTabLabels(),
         ),
       ),
       body: TabBarView(
@@ -98,6 +219,29 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
         children: _statusFilters.map((status) => _buildOrderList(status, dark)).toList(),
       ),
     );
+  }
+
+  List<Widget> _buildTabLabels() {
+    if (_isShowingFoodOrders) {
+      return [
+        Tab(text: 'Active'.tr()),
+        Tab(text: 'Preparing'.tr()),
+        Tab(text: 'Ready'.tr()),
+        Tab(text: 'Served'.tr()),
+        Tab(text: 'Fulfilled'.tr()),
+        Tab(text: 'Declined'.tr()),
+        Tab(text: 'Cancelled'.tr()),
+        Tab(text: 'All'.tr()),
+      ];
+    } else {
+      return [
+        Tab(text: 'Active'.tr()),
+        Tab(text: 'Fulfilled'.tr()),
+        Tab(text: 'Declined'.tr()),
+        Tab(text: 'Cancelled'.tr()),
+        Tab(text: 'All'.tr()),
+      ];
+    }
   }
 
   Widget _buildOrderList(dynamic statusFilter, bool dark) {
@@ -123,12 +267,36 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
 
         var orders = snapshot.data ?? [];
 
-        // Filter for Active Orders tab - show both Pending and Confirmed with visual separation
+        // Filter by order type (Food, General, or Mixed) based on current tab
+        orders = orders.where(_shouldShowOrder).toList();
+
+        // Filter for Active Orders tab - show Pending, Confirmed, and additional statuses based on type
         if (statusFilter == _activeOrdersMarker) {
+          // Filter to only include active statuses based on order type
+          if (_isShowingFoodOrders) {
+            // Food orders: include detailed kitchen workflow
+            orders = orders.where((o) => 
+              o.status == OrderStatus.requested ||
+              o.status == OrderStatus.confirmed ||
+              o.status == OrderStatus.preparing ||
+              o.status == OrderStatus.ready ||
+              o.status == OrderStatus.served
+            ).toList();
+          } else {
+            // General orders: simple workflow (just pending and confirmed)
+            orders = orders.where((o) => 
+              o.status == OrderStatus.requested ||
+              o.status == OrderStatus.confirmed
+            ).toList();
+          }
+          
           final pending = orders.where((o) => o.status == OrderStatus.requested).toList();
           final confirmed = orders.where((o) => o.status == OrderStatus.confirmed).toList();
+          final preparing = _isShowingFoodOrders ? orders.where((o) => o.status == OrderStatus.preparing).toList() : [];
+          final ready = _isShowingFoodOrders ? orders.where((o) => o.status == OrderStatus.ready).toList() : [];
+          final served = _isShowingFoodOrders ? orders.where((o) => o.status == OrderStatus.served).toList() : [];
 
-          if (pending.isEmpty && confirmed.isEmpty) {
+          if (pending.isEmpty && confirmed.isEmpty && preparing.isEmpty && ready.isEmpty && served.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -179,14 +347,70 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Colors.green.shade600,
+                      color: Colors.blue.shade600,
                     ),
                   ),
                 ),
                 ...confirmed.map((order) => _buildOrderCard(order, dark)),
               ],
+              // Preparing Orders section
+              if (preparing.isNotEmpty) ...[
+                if (pending.isNotEmpty || confirmed.isNotEmpty) const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12, left: 4),
+                  child: Text(
+                    'Preparing'.tr(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.purple.shade600,
+                    ),
+                  ),
+                ),
+                ...preparing.map((order) => _buildOrderCard(order, dark)),
+              ],
+              // Ready Orders section
+              if (ready.isNotEmpty) ...[
+                if (pending.isNotEmpty || confirmed.isNotEmpty || preparing.isNotEmpty) const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12, left: 4),
+                  child: Text(
+                    'Ready'.tr(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.teal.shade600,
+                    ),
+                  ),
+                ),
+                ...ready.map((order) => _buildOrderCard(order, dark)),
+              ],
+              // Served Orders section
+              if (served.isNotEmpty) ...[
+                if (pending.isNotEmpty || confirmed.isNotEmpty || preparing.isNotEmpty || ready.isNotEmpty) const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12, left: 4),
+                  child: Text(
+                    'Served'.tr(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.indigo.shade600,
+                    ),
+                  ),
+                ),
+                ...served.map((order) => _buildOrderCard(order, dark)),
+              ],
             ],
           );
+        }
+
+        // Filter orders for specific status tabs (client-side verification)
+        if (statusFilter != null && 
+            statusFilter != _activeOrdersMarker && 
+            statusFilter != _allOrdersMarker &&
+            statusFilter is OrderStatus) {
+          orders = orders.where((o) => o.status == statusFilter).toList();
         }
 
         if (orders.isEmpty) {
@@ -230,6 +454,8 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
         final previewData = previewSnapshot.data ?? {};
         final firstItemImage = previewData['firstItemImage'] as String?;
         final listingTitle = previewData['listingTitle'] as String? ?? 'Order ${order.id.substring(0, 8)}';
+        final isTableMode = previewData['isTableMode'] as bool? ?? false;
+        final tableName = previewData['tableName'] as String?;
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -364,7 +590,7 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
                   ),
                   const SizedBox(height: 8),
 
-                  // Fulfillment method
+                  // Fulfillment method and table mode indicator
                   Row(
                     children: [
                       Icon(
@@ -387,6 +613,78 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
                                     : 'Delivery'.tr(),
                         style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
                       ),
+                      // Show Table Mode indicator ONLY for dine-in orders WITH table sessions
+                      if (order.fulfillment.method == FulfillmentMethod.dineIn && isTableMode) ...[
+                        const SizedBox(width: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Color(cfg.colorPrimary).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: Color(cfg.colorPrimary).withOpacity(0.4),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.table_restaurant,
+                                size: 14,
+                                color: Color(cfg.colorPrimary),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                tableName ?? 'Table Mode'.tr(),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(cfg.colorPrimary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      // Show Mixed order indicator for orders with both food and general items
+                      if (order.orderType == OrderType.mixed) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: Colors.amber.withOpacity(0.4),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                '🍽️',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                              const SizedBox(width: 2),
+                              const Text(
+                                '🛍️',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Mixed'.tr(),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.amber.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       // Show tracking chip if order has shipping tracking
                       if (order.fulfillment.method == FulfillmentMethod.shipping &&
                           order.shipping?.trackingNumber != null) ...[
@@ -416,6 +714,18 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
       case OrderStatus.confirmed:
         color = Colors.blue;
         label = 'Confirmed'.tr();
+        break;
+      case OrderStatus.preparing:
+        color = Colors.purple;
+        label = 'Preparing'.tr();
+        break;
+      case OrderStatus.ready:
+        color = Colors.teal;
+        label = 'Ready'.tr();
+        break;
+      case OrderStatus.served:
+        color = Colors.indigo;
+        label = 'Served'.tr();
         break;
       case OrderStatus.fulfilled:
         color = Colors.green;
@@ -515,6 +825,25 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
     final listing = await _getListingCached(order.listingId);
     result['listingTitle'] = listing?.title ?? 'Order ${order.id.substring(0, 8)}';
     
+    // Check if order has table mode data
+    try {
+      final orderDoc = await FirebaseFirestore.instance
+          .collection('order_requests')
+          .doc(order.id)
+          .get();
+      
+      if (orderDoc.exists) {
+        final data = orderDoc.data();
+        if (data?['tableSessionId'] != null) {
+          result['isTableMode'] = true;
+          result['tableName'] = data?['tableName'];
+          result['tableId'] = data?['tableId'];
+        }
+      }
+    } catch (e) {
+      // Ignore error
+    }
+    
     // Get first item image
     if (order.items.isNotEmpty) {
       try {
@@ -552,5 +881,156 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
         ),
       ),
     );
+  }
+
+  Future<void> _navigateToTableSessions(BuildContext context, bool dark) async {
+    // Show loading immediately
+    showProgress(context, 'Loading...'.tr(), false, Color(cfg.colorPrimary));
+    
+    try {
+      // Get user's listings
+      final listingsQuery = await FirebaseFirestore.instance
+          .collection('listings')
+          .where('authorID', isEqualTo: widget.currentUser.userID)
+          .get();
+
+      if (listingsQuery.docs.isEmpty) {
+        hideProgress();
+        showSnackBar(context, 'No listings found'.tr());
+        return;
+      }
+
+      // Check each listing for tables in parallel
+      final tableChecks = await Future.wait(
+        listingsQuery.docs.map((doc) async {
+          final tablesSnap = await FirebaseFirestore.instance
+              .collection('listings')
+              .doc(doc.id)
+              .collection('tables')
+              .limit(1)
+              .get();
+          
+          return {
+            'hasTables': tablesSnap.docs.isNotEmpty,
+            'doc': doc,
+          };
+        })
+      );
+
+      // Filter listings with tables
+      final tableModeListings = tableChecks
+          .where((check) => check['hasTables'] == true)
+          .map((check) {
+            final doc = check['doc'] as QueryDocumentSnapshot<Map<String, dynamic>>;
+            final data = doc.data();
+            data['id'] = doc.id;
+            return ListingModel.fromJson(data);
+          })
+          .toList();
+
+      hideProgress();
+
+      if (tableModeListings.isEmpty) {
+        showSnackBar(context, 'No listings with tables. Create tables first from Store Settings.'.tr());
+        return;
+      }
+
+      // If only one listing, navigate directly
+      if (tableModeListings.length == 1) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => StaffTableSessionsScreen(
+              listing: tableModeListings.first,
+              currentUser: widget.currentUser,
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Show selection dialog for multiple listings
+      final selectedListing = await showDialog<ListingModel>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: dark ? Colors.grey[900] : Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Select Listing'.tr(),
+            style: TextStyle(
+              color: dark ? Colors.white : Colors.black87,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: tableModeListings.length,
+              itemBuilder: (context, index) {
+                final listing = tableModeListings[index];
+                return ListTile(
+                  leading: listing.photos.isNotEmpty
+                      ? CircleAvatar(
+                          backgroundImage: NetworkImage(listing.photos.first),
+                        )
+                      : CircleAvatar(
+                          backgroundColor: Color(cfg.colorPrimary).withOpacity(0.2),
+                          child: Icon(
+                            Icons.restaurant,
+                            color: Color(cfg.colorPrimary),
+                          ),
+                        ),
+                  title: Text(
+                    listing.title,
+                    style: TextStyle(
+                      color: dark ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  subtitle: Text(
+                    listing.place,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: dark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                  onTap: () => Navigator.pop(context, listing),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel'.tr(),
+                style: TextStyle(
+                  color: dark ? Colors.grey[300] : Colors.black54,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (selectedListing != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => StaffTableSessionsScreen(
+              listing: selectedListing,
+              currentUser: widget.currentUser,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      hideProgress();
+      showSnackBar(context, 'Error loading listings: ${e.toString()}'.tr());
+    }
   }
 }

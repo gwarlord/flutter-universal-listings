@@ -29,6 +29,7 @@ import 'package:instaflutter/listings/listings_module/chat_settings/chat_setting
 import 'package:instaflutter/listings/ui/profile/profile/profile_screen.dart';
 import 'package:instaflutter/listings/listings_module/listing_details/listing_details_screen.dart';
 import 'package:instaflutter/listings/services/deep_link_service.dart';
+import 'package:instaflutter/screens/brand/my_brands_screen.dart';
 import 'package:instaflutter/main.dart' as main_entry;
 import '../deals/deals_promotion_screen.dart';
 import '../deals/ad_review_approval_screen.dart';
@@ -536,6 +537,16 @@ class _ContainerState extends State<ContainerScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       push(context, MyListingsWrapperWidget(currentUser: currentUser));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'My Brands'.tr(),
+                    icon: Icons.storefront_rounded,
+                    onTap: () {
+                      Navigator.pop(context);
+                      push(context, MyBrandsScreen(currentUser: currentUser));
                     },
                     isDark: isDark,
                     primaryColor: primaryColorValue,

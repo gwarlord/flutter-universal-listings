@@ -122,6 +122,18 @@ Order ID: ${order.id}
         statusEmoji = '✅';
         statusText = 'CONFIRMED';
         break;
+      case OrderStatus.preparing:
+        statusEmoji = '👨‍🍳';
+        statusText = 'PREPARING';
+        break;
+      case OrderStatus.ready:
+        statusEmoji = '🔔';
+        statusText = 'READY';
+        break;
+      case OrderStatus.served:
+        statusEmoji = '🍽️';
+        statusText = 'SERVED';
+        break;
       case OrderStatus.declined:
         statusEmoji = '❌';
         statusText = 'DECLINED';

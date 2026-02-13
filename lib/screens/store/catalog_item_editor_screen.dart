@@ -42,6 +42,7 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
 
   bool _isAvailable = true;
   bool _trackStock = false;
+  CatalogItemType _itemType = CatalogItemType.product;
   List<String> _photos = [];
   List<String> _videos = [];
   List<File> _newPhotoFiles = [];
@@ -63,6 +64,7 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
     if (item != null) {
       _isAvailable = item.isAvailable;
       _trackStock = item.trackStock;
+      _itemType = item.type;
       _photos = List.from(item.photos);
       _videos = List.from(item.videos);
     }
@@ -166,6 +168,75 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
                   label: 'Category (Optional)'.tr(),
                   hint: 'e.g., Appetizers, Beverages, Electronics'.tr(),
                   dark: dark,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Item Type Selector
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: dark ? Colors.grey.shade700 : Colors.grey.shade400,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Item Type *'.tr(),
+                        style: TextStyle(
+                          color: dark ? Colors.white70 : Colors.black54,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    DropdownButton<CatalogItemType>(
+                      value: _itemType,
+                      dropdownColor: dark ? Colors.grey.shade800 : Colors.white,
+                      style: TextStyle(
+                        color: dark ? Colors.white : Colors.black87,
+                        fontSize: 16,
+                      ),
+                      underline: const SizedBox(),
+                      items: [
+                        DropdownMenuItem(
+                          value: CatalogItemType.foodDrink,
+                          child: Row(
+                            children: [
+                              const Text('🍽️ ', style: TextStyle(fontSize: 18)),
+                              Text('Food/Drink'.tr()),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: CatalogItemType.product,
+                          child: Row(
+                            children: [
+                              const Text('🛍️ ', style: TextStyle(fontSize: 18)),
+                              Text('Product'.tr()),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: CatalogItemType.service,
+                          child: Row(
+                            children: [
+                              const Text('⚙️ ', style: TextStyle(fontSize: 18)),
+                              Text('Service'.tr()),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _itemType = value);
+                        }
+                      },
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
@@ -482,7 +553,7 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
       // Create/update item
       final item = CatalogItem(
         id: itemId,
-        type: widget.item?.type ?? CatalogItemType.product, // Default to product if not editing
+        type: _itemType, // Use selected item type
         category: _categoryController.text.trim(),
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim().isEmpty 

@@ -61,6 +61,7 @@ class TableModeFirebase implements TableModeRepository {
     String? tableId,
     required String tableName,
     String? tableCodePublic,
+    bool regenerateSecret = false,
   }) async {
     try {
       final callable = _functions.httpsCallable('upsertTable');
@@ -69,6 +70,7 @@ class TableModeFirebase implements TableModeRepository {
         if (tableId != null) 'tableId': tableId,
         'tableName': tableName,
         if (tableCodePublic != null) 'tableCodePublic': tableCodePublic,
+        if (regenerateSecret) 'regenerateSecret': true,
       });
 
       return result.data['tableId'] as String;

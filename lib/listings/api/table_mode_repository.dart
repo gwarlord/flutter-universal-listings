@@ -24,11 +24,13 @@ abstract class TableModeRepository {
   // ========================================================================
 
   /// Create or update a table (Premium required)
+  /// Set regenerateSecret to true to generate a new QR code
   Future<String> upsertTable({
     required String listingId,
     String? tableId,
     required String tableName,
     String? tableCodePublic,
+    bool regenerateSecret = false,
   });
 
   /// Deactivate or activate a table (Premium required)

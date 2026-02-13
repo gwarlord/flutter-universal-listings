@@ -7,6 +7,7 @@ import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/model/order_request.dart';
+import 'package:instaflutter/listings/model/table_mode_models.dart';
 import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/screens/store/order_detail_screen.dart';
@@ -85,84 +86,87 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
               customerId: widget.currentUser.userID,
             ),
             builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.shopping_bag_outlined,
-                  size: 64,
-                  color: dark ? Colors.white54 : Colors.black54,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'No orders yet'.tr(),
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: dark ? Colors.white70 : Colors.black54,
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.shopping_bag_outlined,
+                        size: 64,
+                        color: dark ? Colors.white54 : Colors.black54,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No orders yet'.tr(),
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: dark ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Orders you place will appear here'.tr(),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: dark ? Colors.white54 : Colors.black45,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Orders you place will appear here'.tr(),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: dark ? Colors.white54 : Colors.black45,
+                );
+              }
+
+              var allOrders = snapshot.data!;
+
+              // Filter orders based on toggle
+              final filteredOrders = _showHistory
+                  ? allOrders
+                  : allOrders
+                      .where((o) =>
+                          o.status == OrderStatus.requested ||
+                          o.status == OrderStatus.confirmed ||
+                          o.status == OrderStatus.preparing ||
+                          o.status == OrderStatus.ready ||
+                          o.status == OrderStatus.served)
+                      .toList();
+
+              if (filteredOrders.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.shopping_bag_outlined,
+                        size: 64,
+                        color: dark ? Colors.white54 : Colors.black54,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _showHistory ? 'No order history'.tr() : 'No active orders'.tr(),
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: dark ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-          );
-        }
+                );
+              }
 
-        var allOrders = snapshot.data!;
-        
-        // Filter orders based on toggle
-        final filteredOrders = _showHistory 
-            ? allOrders
-            : allOrders
-                .where((o) => 
-                    o.status == OrderStatus.requested || 
-                    o.status == OrderStatus.confirmed)
-                .toList();
-
-        if (filteredOrders.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.shopping_bag_outlined,
-                  size: 64,
-                  color: dark ? Colors.white54 : Colors.black54,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  _showHistory ? 'No order history'.tr() : 'No active orders'.tr(),
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: dark ? Colors.white70 : Colors.black54,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(12),
-          itemCount: filteredOrders.length,
-          itemBuilder: (context, index) {
-            final order = filteredOrders[index];
-            return _buildOrderCard(order, dark, context);
-          },
-        );
-      },
+              return ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: filteredOrders.length,
+                itemBuilder: (context, index) {
+                  final order = filteredOrders[index];
+                  return _buildOrderCard(order, dark, context);
+                },
+              );
+            },
           ),
         ),
       ],
@@ -174,8 +178,18 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
       future: _getOrderPreviewData(order),
       builder: (context, previewSnapshot) {
         final previewData = previewSnapshot.data ?? {};
-        final listingTitle = previewData['listingTitle'] as String? ?? 'Order ${order.id.substring(0, 8)}';
+        final listingTitle =
+            previewData['listingTitle'] as String? ?? 'Order ${order.id.substring(0, 8)}';
         final firstItemImage = previewData['firstItemImage'] as String?;
+        final isTableMode = previewData['tableSessionId'] != null;
+        final tableName = previewData['tableName'] as String?;
+        final assignedStaff = previewData['assignedStaff'] as List<AssignedStaff>? ?? [];
+        final isOrderActive =
+            order.status == OrderStatus.requested || 
+            order.status == OrderStatus.confirmed ||
+            order.status == OrderStatus.preparing ||
+            order.status == OrderStatus.ready ||
+            order.status == OrderStatus.served;
 
         return Card(
           color: dark ? Colors.grey.shade900 : Colors.white,
@@ -213,8 +227,31 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                       ),
                     ],
                   ),
+
+                  // Assigned waiter info (only for active table mode orders)
+                  if (isTableMode && isOrderActive && assignedStaff.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 12,
+                          backgroundImage: NetworkImage(assignedStaff.first.photoUrl),
+                          backgroundColor: Colors.grey.shade300,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Your waiter: ${assignedStaff.first.firstName}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: dark ? Colors.white70 : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
                   const Divider(height: 24),
-                  
+
                   // Image and order info
                   Row(
                     children: [
@@ -243,7 +280,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      
+
                       // Order info
                       Expanded(
                         child: Column(
@@ -278,44 +315,68 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Icon(
-                            order.fulfillment.method.value == 'pickup'
-                                ? Icons.store
-                                : order.fulfillment.method.value == 'dine_in'
-                                    ? Icons.restaurant
-                                    : Icons.local_shipping,
-                            size: 16,
-                            color: dark ? Colors.white54 : Colors.black54,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            order.fulfillment.method.value == 'pickup'
-                                ? 'Pickup'
-                                : order.fulfillment.method.value == 'dine_in'
-                                    ? 'Dining In'
-                                    : 'Shipping',
-                            style: TextStyle(
-                              fontSize: 13,
+                      Flexible(
+                        child: Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            // Fulfillment method icon and text
+                            Icon(
+                              order.fulfillment.method.value == 'pickup'
+                                  ? Icons.store
+                                  : order.fulfillment.method.value == 'dine_in'
+                                      ? Icons.restaurant
+                                      : Icons.local_shipping,
+                              size: 16,
                               color: dark ? Colors.white54 : Colors.black54,
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '• ${order.items.length} item${order.items.length != 1 ? 's' : ''}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: dark ? Colors.white54 : Colors.black54,
+                            Text(
+                              order.fulfillment.method.value == 'pickup'
+                                  ? 'Pickup'
+                                  : order.fulfillment.method.value == 'dine_in'
+                                      ? 'Dining In'
+                                      : 'Shipping',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: dark ? Colors.white54 : Colors.black54,
+                              ),
                             ),
-                          ),
-                          // Show tracking chip if order has shipping tracking
-                          if (order.fulfillment.method.value == 'shipping' &&
-                              order.shipping?.trackingNumber != null) ...[
-                            const SizedBox(width: 8),
-                            const ShippingTrackingChip(),
+
+                            // Table name chip (if applicable and active)
+                            if (isTableMode && isOrderActive)
+                              Container(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Color(cfg.colorPrimary).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  tableName ?? 'Table',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(cfg.colorPrimary),
+                                  ),
+                                ),
+                              ),
+
+                            // Item count
+                            Text(
+                              '• ${order.items.length} item${order.items.length != 1 ? 's' : ''}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: dark ? Colors.white54 : Colors.black54,
+                              ),
+                            ),
+
+                            // Show tracking chip if order has shipping tracking
+                            if (order.fulfillment.method.value == 'shipping' &&
+                                order.shipping?.trackingNumber != null)
+                              const ShippingTrackingChip(),
                           ],
-                        ],
+                        ),
                       ),
                       Text(
                         _formatDate(order.createdAt),
@@ -342,14 +403,29 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
 
     switch (status) {
       case OrderStatus.requested:
-        bgColor = Colors.orange.shade100;
-        textColor = Colors.orange.shade900;
+        bgColor = Colors.yellow.shade100;
+        textColor = Colors.yellow.shade800;
         label = 'Pending'.tr();
         break;
       case OrderStatus.confirmed:
         bgColor = Colors.blue.shade100;
         textColor = Colors.blue.shade900;
         label = 'Confirmed'.tr();
+        break;
+      case OrderStatus.preparing:
+        bgColor = Colors.purple.shade100;
+        textColor = Colors.purple.shade900;
+        label = 'Preparing'.tr();
+        break;
+      case OrderStatus.ready:
+        bgColor = Colors.teal.shade100;
+        textColor = Colors.teal.shade900;
+        label = 'Ready'.tr();
+        break;
+      case OrderStatus.served:
+        bgColor = Colors.indigo.shade100;
+        textColor = Colors.indigo.shade900;
+        label = 'Served'.tr();
         break;
       case OrderStatus.fulfilled:
         bgColor = Colors.green.shade100;
@@ -410,11 +486,11 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
 
   Future<Map<String, dynamic>> _getOrderPreviewData(OrderRequest order) async {
     final result = <String, dynamic>{};
-    
+
     // Get listing title
     final listing = await _getListingCached(order.listingId);
     result['listingTitle'] = listing?.title ?? 'Order ${order.id.substring(0, 8)}';
-    
+
     // Get first item image
     if (order.items.isNotEmpty) {
       try {
@@ -425,7 +501,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
             .collection('catalog_items')
             .doc(firstItemId)
             .get();
-        
+
         if (itemDoc.exists) {
           final itemData = itemDoc.data();
           final photos = itemData?['photos'] as List?;
@@ -437,7 +513,34 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
         // Ignore error, will show default icon
       }
     }
-    
+
+    // Check if this order is associated with a table session
+    try {
+      final orderDoc =
+          await FirebaseFirestore.instance.collection('order_requests').doc(order.id).get();
+
+      if (orderDoc.exists) {
+        final orderData = orderDoc.data();
+        final tableSessionId = orderData?['tableSessionId'] as String?;
+        result['tableSessionId'] = tableSessionId;
+        result['tableName'] = orderData?['tableName'];
+        result['tableId'] = orderData?['tableId'];
+
+        if (tableSessionId != null) {
+          final sessionDoc = await FirebaseFirestore.instance
+              .collection('table_sessions')
+              .doc(tableSessionId)
+              .get();
+          if (sessionDoc.exists) {
+            final session = TableSessionModel.fromJson(sessionDoc.id, sessionDoc.data()!);
+            result['assignedStaff'] = session.assignedStaff;
+          }
+        }
+      }
+    } catch (e) {
+      // Ignore error
+    }
+
     return result;
   }
 
@@ -448,7 +551,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
 
   String _getCurrencySymbol(String? currencyCode) {
     if (currencyCode == null || currencyCode.isEmpty) return '\$';
-    
+
     final currencySymbols = {
       'USD': '\$',
       'EUR': '€',
@@ -459,7 +562,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
       'INR': '₹',
       'JMD': 'J\$',
     };
-    
+
     return currencySymbols[currencyCode] ?? '\$';
   }
 }

@@ -265,6 +265,10 @@ class ListingModel {
   /// Rentals (Premium Feature)
   RentalConfig? rentalConfig;
 
+  /// Multi-Location Brands
+  String? brandId; // Links this listing to a brand (location-scoped)
+  String? locationLabel; // Custom label like "KFC – Maraval" (optional)
+
   /// UI-only
   bool isFav = false;
 
@@ -348,6 +352,8 @@ class ListingModel {
     List<Map<String, dynamic>>? menuUploads,
     List<Map<String, dynamic>>? menuSections,
     this.rentalConfig,
+    this.brandId,
+    this.locationLabel,
     })  : menuCurrencyCode = menuCurrencyCode ?? currencyCode,
         storeCurrencyCode = storeCurrencyCode ?? currencyCode,
         menuUploads = menuUploads ?? [],
@@ -456,6 +462,8 @@ class ListingModel {
         menuUpdatedAt: json['menuUpdatedAt'],
         menuUploads: (json['menuUploads'] as List?)?.map((e) => Map<String, dynamic>.from(e)).toList() ?? [],
         menuSections: (json['menuSections'] as List?)?.map((e) => Map<String, dynamic>.from(e)).toList() ?? [],
+        brandId: json['brandId'],
+        locationLabel: json['locationLabel'],
         rentalConfig: json['rentalConfig'] != null 
             ? RentalConfig.fromJson(json['rentalConfig'] as Map<String, dynamic>)
             : null,
@@ -543,6 +551,8 @@ class ListingModel {
         'menuUploads': menuUploads,
         'menuSections': menuSections,
         'rentalConfig': rentalConfig?.toJson(),
+        'brandId': brandId,
+        'locationLabel': locationLabel,
     };
   }
 
@@ -658,6 +668,8 @@ class ListingModel {
       tapCount: tapCount ?? this.tapCount,
       tapBadge: tapBadge ?? this.tapBadge,
       rentalConfig: rentalConfig ?? this.rentalConfig,
+      brandId: brandId ?? this.brandId,
+      locationLabel: locationLabel ?? this.locationLabel,
       countryCode: countryCode ?? this.countryCode,
     );
   }

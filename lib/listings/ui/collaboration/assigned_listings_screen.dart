@@ -149,7 +149,7 @@ class AssignedListingTile extends StatelessWidget {
           ),
         ),
         title: Text(
-          listing.listingId,
+          listing.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(color: dark ? Colors.white : Colors.black87),
