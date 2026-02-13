@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:instaflutter/constants.dart';
+import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/listings_module/api/collaboration_api_manager.dart';
 import 'package:instaflutter/listings/model/collaboration_model.dart';
 
@@ -118,21 +119,43 @@ class _CollaboratorsManagementScreenState
   }
 
   void _removeCollaborator(CollaboratorModel collaborator) async {
+    final isDark = isDarkMode(context);
+    
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove Collaborator'),
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        title: Text(
+          'Remove Collaborator',
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
         content: Text(
           'Are you sure you want to remove ${collaborator.displayName ?? collaborator.uid}?',
+          style: TextStyle(
+            color: isDark ? Colors.grey[300] : Colors.black87,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: isDark ? Colors.grey[400] : Colors.black54,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Remove'),
+            child: Text(
+              'Remove',
+              style: TextStyle(
+                color: Colors.red,
+              ),
+            ),
           ),
         ],
       ),
@@ -235,6 +258,7 @@ class _CollaboratorsManagementScreenState
                               ),
                             )
                           : ListView.builder(
+                              padding: const EdgeInsets.only(bottom: 100),
                               itemCount: collaborators.length,
                               itemBuilder: (context, index) {
                                 final collab = collaborators[index];
@@ -316,38 +340,73 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
+    
     return Dialog(
+      backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+      surfaceTintColor: Colors.transparent,
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 'Add Collaborator',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
               const SizedBox(height: 24),
               TextField(
                 controller: emailController,
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Enter email or UID',
-                  prefixIcon: const Icon(Icons.email),
+                  hintStyle: TextStyle(
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                  prefixIcon: Icon(
+                    Icons.email,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                  filled: true,
+                  fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: isDark ? Colors.blue[400]! : Colors.blue[600]!,
+                      width: 2,
+                    ),
                   ),
                 ),
                 enabled: !isLoading,
               ),
               const SizedBox(height: 24),
-              const Align(
+              Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Permissions',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -421,6 +480,16 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
                   });
                 },
               ),
+              _PermissionToggle(
+                label: 'Manage Table Mode',
+                value: permissions.manageTableMode,
+                onChanged: (value) {
+                  setState(() {
+                    permissions =
+                        permissions.copyWith(manageTableMode: value);
+                  });
+                },
+              ),
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -429,7 +498,12 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
                     onPressed: isLoading
                         ? null
                         : () => Navigator.pop(context),
-                    child: const Text('Cancel'),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.black54,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
@@ -513,6 +587,9 @@ class _CollaboratorTileState extends State<CollaboratorTile> {
       case 'changeFulfillment':
         updated = permissions.copyWith(changeFulfillment: value);
         break;
+      case 'manageTableMode':
+        updated = permissions.copyWith(manageTableMode: value);
+        break;
       default:
         return;
     }
@@ -523,8 +600,11 @@ class _CollaboratorTileState extends State<CollaboratorTile> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
+    
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: isDark ? Colors.grey[900] : Colors.white,
       child: Column(
         children: [
           ListTile(
@@ -540,27 +620,53 @@ class _CollaboratorTileState extends State<CollaboratorTile> {
             ),
             title: Text(
               widget.collaborator.displayName ?? widget.collaborator.uid,
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black87,
+              ),
             ),
             subtitle: Text(
               '${permissions.enabledPermissions.length} permissions',
+              style: TextStyle(
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
             ),
-            trailing: PopupMenuButton<String>(
-              enabled: widget.canManage,
-              onSelected: (value) {
-                if (value == 'remove') {
-                  widget.onRemove();
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'remove',
-                  child: Text('Remove'),
+            trailing: Theme(
+              data: Theme.of(context).copyWith(
+                popupMenuTheme: PopupMenuThemeData(
+                  color: isDark ? Colors.grey[800] : Colors.white,
+                  surfaceTintColor: Colors.transparent,
+                  textStyle: TextStyle(
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-              ],
-              child: Icon(
-                Icons.more_vert,
-                color:
-                    widget.canManage ? null : Colors.grey,
+              ),
+              child: PopupMenuButton<String>(
+                enabled: widget.canManage,
+                onSelected: (value) {
+                  if (value == 'remove') {
+                    widget.onRemove();
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'remove',
+                    child: Text(
+                      'Remove',
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ),
+                ],
+                child: Icon(
+                  Icons.more_vert,
+                  color: widget.canManage
+                      ? (isDark ? Colors.grey[400] : Colors.grey[600])
+                      : Colors.grey,
+                ),
               ),
             ),
             onTap: widget.canManage
@@ -614,6 +720,12 @@ class _CollaboratorTileState extends State<CollaboratorTile> {
                     onChanged: (value) =>
                         _updatePermission('changeFulfillment', value),
                   ),
+                  _PermissionToggle(
+                    label: 'Manage Table Mode',
+                    value: permissions.manageTableMode,
+                    onChanged: (value) =>
+                        _updatePermission('manageTableMode', value),
+                  ),
                 ],
               ),
             ),
@@ -641,10 +753,17 @@ class _PermissionToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
+    
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label),
+        Text(
+          label,
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
         Switch(
           value: value,
           onChanged: onChanged,

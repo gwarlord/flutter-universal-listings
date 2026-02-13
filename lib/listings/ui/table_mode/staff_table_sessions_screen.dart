@@ -357,7 +357,7 @@ class _StaffTableSessionsScreenState extends State<StaffTableSessionsScreen>
 // SESSION CARD WIDGET
 // ============================================================================
 
-class _SessionCard extends StatelessWidget {
+class _SessionCard extends StatefulWidget {
   final TableSessionModel session;
   final bool isPending;
   final bool isActive;
@@ -373,6 +373,13 @@ class _SessionCard extends StatelessWidget {
     required this.onAcknowledgeSummon,
     required this.onCloseSession,
   });
+
+  @override
+  State<_SessionCard> createState() => _SessionCardState();
+}
+
+class _SessionCardState extends State<_SessionCard> {
+  bool _expandedRequests = false;
 
   @override
   Widget build(BuildContext context) {
@@ -392,12 +399,12 @@ class _SessionCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 24,
                   backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                  backgroundImage: session.customerPhotoUrl.isNotEmpty
-                      ? NetworkImage(session.customerPhotoUrl)
+                  backgroundImage: widget.session.customerPhotoUrl.isNotEmpty
+                      ? NetworkImage(widget.session.customerPhotoUrl)
                       : null,
-                  child: session.customerPhotoUrl.isEmpty
+                  child: widget.session.customerPhotoUrl.isEmpty
                       ? Text(
-                          session.customerName[0].toUpperCase(),
+                          widget.session.customerName[0].toUpperCase(),
                           style: TextStyle(
                             color: isDark ? Colors.white : Colors.black87,
                           ),
@@ -410,7 +417,7 @@ class _SessionCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        session.tableName,
+                        widget.session.tableName,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -418,7 +425,7 @@ class _SessionCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        session.customerName,
+                        widget.session.customerName,
                         style: TextStyle(
                           fontSize: 14,
                           color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
@@ -430,21 +437,21 @@ class _SessionCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isPending
+                    color: widget.isPending
                         ? (isDark ? Colors.orange.shade900 : Colors.orange.shade100)
-                        : isActive
+                        : widget.isActive
                             ? (isDark ? Colors.green.shade900 : Colors.green.shade100)
                             : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    session.status.value,
+                    widget.session.status.value,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: isPending
+                      color: widget.isPending
                           ? (isDark ? Colors.orange.shade200 : Colors.orange.shade900)
-                          : isActive
+                          : widget.isActive
                               ? (isDark ? Colors.green.shade200 : Colors.green.shade900)
                               : (isDark ? Colors.grey.shade300 : Colors.grey.shade700),
                     ),
@@ -457,15 +464,15 @@ class _SessionCard extends StatelessWidget {
 
             // Time info
             Text(
-              'Started: ${_formatTime(session.createdAt)}'.tr(),
+              'Started: ${_formatTime(widget.session.createdAt)}'.tr(),
               style: TextStyle(
                 fontSize: 12,
                 color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
               ),
             ),
-            if (session.activatedAt != null)
+            if (widget.session.activatedAt != null)
               Text(
-                'Activated: ${_formatTime(session.activatedAt!)}'.tr(),
+                'Activated: ${_formatTime(widget.session.activatedAt!)}'.tr(),
                 style: TextStyle(
                   fontSize: 12,
                   color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -473,11 +480,11 @@ class _SessionCard extends StatelessWidget {
               ),
 
             // Assigned staff (if any)
-            if (session.assignedStaff.isNotEmpty) ...[
+            if (widget.session.assignedStaff.isNotEmpty) ...[
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
-                children: session.assignedStaff.map((staff) {
+                children: widget.session.assignedStaff.map((staff) {
                   return Chip(
                     backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
                     avatar: CircleAvatar(
@@ -504,24 +511,30 @@ class _SessionCard extends StatelessWidget {
               ),
             ],
 
+            // Pending requests section
+            if (widget.isActive) ...[
+              const SizedBox(height: 12),
+              _buildRequestsSection(context, isDark),
+            ],
+
             // Actions
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                if (isPending)
+                if (widget.isPending)
                   ElevatedButton.icon(
-                    onPressed: onAssignWaiter,
+                    onPressed: widget.onAssignWaiter,
                     icon: const Icon(Icons.person_add, size: 16),
                     label: Text('Assign Waiter'.tr()),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                   ),
-                if (isActive) ...[
+                if (widget.isActive) ...[
                   OutlinedButton.icon(
-                    onPressed: onAcknowledgeSummon,
+                    onPressed: widget.onAcknowledgeSummon,
                     icon: const Icon(Icons.check, size: 16),
                     label: Text('Acknowledge'.tr()),
                     style: OutlinedButton.styleFrom(
@@ -529,7 +542,15 @@ class _SessionCard extends StatelessWidget {
                     ),
                   ),
                   OutlinedButton.icon(
-                    onPressed: onCloseSession,
+                    onPressed: () => _reassignWaiter(),
+                    icon: const Icon(Icons.person, size: 16),
+                    label: Text('Change Waiter'.tr()),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: widget.onCloseSession,
                     icon: const Icon(Icons.close, size: 16),
                     label: Text('Close'.tr()),
                     style: OutlinedButton.styleFrom(
@@ -546,6 +567,189 @@ class _SessionCard extends StatelessWidget {
     );
   }
 
+  Widget _buildRequestsSection(BuildContext context, bool isDark) {
+    final repository = tableModeRepository;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header with expand/collapse
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              setState(() {
+                _expandedRequests = !_expandedRequests;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Icon(
+                    _expandedRequests ? Icons.expand_less : Icons.expand_more,
+                    color: Color(colorPrimary),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Customer Requests'.tr(),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(colorPrimary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        
+        // Requests list (expanded)
+        if (_expandedRequests)
+          StreamBuilder<List<SessionEventModel>>(
+            stream: repository.streamSessionEvents(sessionId: widget.session.sessionId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: SizedBox(
+                    height: 30,
+                    child: Center(
+                      child: SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Color(colorPrimary)),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(
+                    'Error loading requests'.tr(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.red,
+                    ),
+                  ),
+                );
+              }
+
+              final events = snapshot.data ?? [];
+              
+              // Filter for pending requests (not yet acknowledged)
+              final pendingRequests = events
+                  .where((e) => e.type == SessionEventType.WAITER_SUMMONED || 
+                                e.type == SessionEventType.BILL_REQUESTED)
+                  .toList();
+
+              if (pendingRequests.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(
+                    'No pending requests'.tr(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    ),
+                  ),
+                );
+              }
+
+              return Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: pendingRequests.map((event) {
+                    return _buildRequestItem(event, isDark);
+                  }).toList(),
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildRequestItem(SessionEventModel event, bool isDark) {
+    final isSummon = event.type == SessionEventType.WAITER_SUMMONED;
+    final requestColor = isSummon ? Colors.blue : Colors.amber;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isDark ? requestColor.shade900.withOpacity(0.3) : requestColor.shade50,
+        border: Border.all(
+          color: requestColor.shade200,
+          width: 1,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Request type and time
+          Row(
+            children: [
+              Icon(
+                isSummon ? Icons.person_add : Icons.receipt,
+                size: 16,
+                color: requestColor.shade600,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                isSummon ? 'Waiter Summon'.tr() : 'Bill Request'.tr(),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: requestColor.shade700,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                _formatTime(event.createdAt),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+          
+          // Details
+          if (isSummon && event.metadata != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Purpose: ${event.metadata?['purpose'] ?? 'N/A'}'.tr(),
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+              ),
+            ),
+          ] else if (!isSummon && event.metadata != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Payment: ${event.metadata?['paymentMethod'] ?? 'N/A'}'.tr(),
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   String _formatTime(DateTime time) {
     final now = DateTime.now();
     final diff = now.difference(time);
@@ -554,6 +758,68 @@ class _SessionCard extends StatelessWidget {
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     return DateFormat('MMM d, HH:mm').format(time);
+  }
+
+  Future<void> _reassignWaiter() async {
+    final parentState = context.findAncestorStateOfType<_StaffTableSessionsScreenState>();
+    if (parentState == null) return;
+
+    final availableStaff = parentState._cachedStaffList ?? [];
+    if (availableStaff.isEmpty) {
+      showSnackBar(context, 'No staff available to assign'.tr());
+      return;
+    }
+
+    final selectedStaff = await showDialog<List<StaffMember>>(
+      context: context,
+      builder: (context) => _StaffSelectionDialog(staffList: availableStaff),
+    );
+
+    if (selectedStaff == null || selectedStaff.isEmpty) return;
+
+    final isDark = isDarkMode(context);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        title: Text(
+          'Change Waiter?'.tr(),
+          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+        ),
+        content: Text(
+          'Replace current waiter(s) with ${selectedStaff.map((s) => s.name).join(', ')}?'.tr(),
+          style: TextStyle(color: isDark ? Colors.grey[300] : Colors.black87),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel'.tr()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Change'.tr()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    showProgress(context, 'Reassigning waiter...'.tr(), false, Color(colorPrimary));
+
+    try {
+      await tableModeRepository.assignWaiterToSession(
+        sessionId: widget.session.sessionId,
+        waiterUids: selectedStaff.map((s) => s.uid).toList(),
+      );
+
+      hideProgress();
+      showSnackBar(context, 'Waiter changed successfully!'.tr());
+    } catch (e) {
+      hideProgress();
+      showSnackBar(context, e.toString().replaceAll('Exception: ', ''));
+    }
   }
 }
 

@@ -80,7 +80,7 @@ async function sendPushNotification(
   try {
     functions.logger.info("🔔 Attempting to send push notification", { userId, title, body });
     
-    // Get user's FCM token
+    // Get user's FCM token(s)
     const userDoc = await db.collection("users").doc(userId).get();
     if (!userDoc.exists) {
       functions.logger.warn("❌ User not found for push notification", { userId });
@@ -90,27 +90,44 @@ async function sendPushNotification(
     const userData = userDoc.data();
     functions.logger.info("✅ User found", { userId, hasSettings: !!userData });
 
-    const pushToken = userData?.pushToken;
-    functions.logger.info("📱 Token check", { userId, hasToken: !!pushToken, tokenLength: pushToken?.length });
+    // Support both new (fcmTokens array) and legacy (pushToken string) field names
+    let tokens: string[] = [];
     
-    if (!pushToken) {
-      functions.logger.warn("❌ No push token for user", { userId, userData: userData });
+    // New format: array of FCM tokens
+    if (Array.isArray(userData?.fcmTokens) && userData.fcmTokens.length > 0) {
+      tokens = userData.fcmTokens;
+    }
+    // Legacy format: single pushToken string
+    else if (userData?.pushToken && typeof userData.pushToken === "string" && userData.pushToken.trim().length > 0) {
+      tokens = [userData.pushToken];
+    }
+
+    functions.logger.info("📱 Token check", { userId, tokenCount: tokens.length, hasLegacyToken: !!userData?.pushToken, hasNewTokens: !!userData?.fcmTokens });
+    
+    if (tokens.length === 0) {
+      functions.logger.warn("❌ No push tokens for user", { userId });
       return;
     }
 
-    // Send notification
-    const message: admin.messaging.Message = {
+    // Send notification using multicast (supports multiple tokens and provides better error handling)
+    const message: admin.messaging.MulticastMessage = {
       notification: {
         title,
         body,
       },
       data: data || {},
-      token: pushToken,
+      tokens: tokens,
     };
 
-    functions.logger.info("📤 Sending message", { message });
-    const messageId = await messaging.send(message);
-    functions.logger.info("✅ Push notification sent successfully", { userId, title, messageId });
+    functions.logger.info("📤 Sending message to", { userId, tokenCount: tokens.length });
+    const response = await messaging.sendMulticast(message);
+    functions.logger.info("✅ Push notification sent", { 
+      userId, 
+      title, 
+      successCount: response.successCount,
+      failureCount: response.failureCount,
+      tokenCount: tokens.length
+    });
   } catch (error) {
     functions.logger.error("❌ Error sending push notification", { error, userId, title });
   }

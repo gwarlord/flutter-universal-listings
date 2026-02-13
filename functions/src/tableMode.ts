@@ -111,7 +111,7 @@ async function canManageTableMode(listingId: string, uid: string): Promise<boole
   const isAdmin = await isAdminUser(uid);
   if (isAdmin) return true;
 
-  return await hasCollaboratorPermission(listingId, uid, "manageOrders", "manageChats");
+  return await hasCollaboratorPermission(listingId, uid, "manageTableMode");
 }
 
 /**
@@ -179,10 +179,22 @@ async function sendPushNotification(
 ): Promise<void> {
   try {
     const userSnap = await db.collection("users").doc(recipientUid).get();
-    const fcmTokens = userSnap.data()?.fcmTokens || [];
+    const userData = userSnap.data();
+    
+    // Support both new (fcmTokens array) and legacy (pushToken string) field names
+    let fcmTokens: string[] = [];
+    
+    // New format: array of FCM tokens
+    if (Array.isArray(userData?.fcmTokens) && userData.fcmTokens.length > 0) {
+      fcmTokens = userData.fcmTokens;
+    }
+    // Legacy format: single pushToken string
+    else if (userData?.pushToken && typeof userData.pushToken === "string" && userData.pushToken.trim().length > 0) {
+      fcmTokens = [userData.pushToken];
+    }
 
     if (fcmTokens.length === 0) {
-      functions.logger.info("No FCM tokens for user", { recipientUid });
+      functions.logger.info("No FCM tokens for user", { recipientUid, hasLegacyToken: !!userData?.pushToken, hasNewTokens: !!userData?.fcmTokens });
       return;
     }
 
@@ -195,6 +207,7 @@ async function sendPushNotification(
     const response = await messaging.sendMulticast(message);
     functions.logger.info("Push sent", {
       recipientUid,
+      tokenCount: fcmTokens.length,
       successCount: response.successCount,
       failureCount: response.failureCount,
     });
@@ -256,147 +269,169 @@ async function notifyStaffPendingSession(
  * 1. Set Table Mode settings for a listing
  */
 export const setTableModeSettings = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
-  }
+  try {
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
+    }
 
-  const { listingId, tableModeEnabled, summonCooldownSeconds, sessionMaxMinutes } = data;
+    const { listingId, tableModeEnabled, summonCooldownSeconds, sessionMaxMinutes } = data;
 
-  if (!listingId) {
-    throw new functions.https.HttpsError("invalid-argument", "listingId is required");
-  }
+    if (!listingId) {
+      throw new functions.https.HttpsError("invalid-argument", "listingId is required");
+    }
 
-  // Verify user can manage this listing
-  const canManage = await canManageTableMode(listingId, context.auth.uid);
-  if (!canManage) {
-    throw new functions.https.HttpsError(
-      "permission-denied",
-      "Only listing owner or authorized collaborators can manage table mode"
-    );
-  }
+    // Verify user can manage this listing
+    const canManage = await canManageTableMode(listingId, context.auth.uid);
+    if (!canManage) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "Only listing owner or authorized collaborators can manage table mode"
+      );
+    }
 
-  // Verify premium entitlement for the listing owner
-  const listingSnap = await db.collection("listings").doc(listingId).get();
-  if (!listingSnap.exists) {
-    throw new functions.https.HttpsError("not-found", "Listing not found");
-  }
+    // Verify premium entitlement for the listing owner
+    const listingSnap = await db.collection("listings").doc(listingId).get();
+    if (!listingSnap.exists) {
+      throw new functions.https.HttpsError("not-found", "Listing not found");
+    }
 
-  const ownerUid = listingSnap.data()?.authorID;
-  const hasPremium = await verifyPremiumEntitlement(ownerUid);
-  if (!hasPremium) {
-    throw new functions.https.HttpsError(
-      "permission-denied",
-      "Premium subscription required to enable Table Mode"
-    );
-  }
+    const ownerUid = listingSnap.data()?.authorID;
+    const hasPremium = await verifyPremiumEntitlement(ownerUid);
+    if (!hasPremium) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "Premium subscription required to enable Table Mode"
+      );
+    }
 
-  // Validate settings
-  const cooldown = summonCooldownSeconds || 120;
-  const maxMinutes = sessionMaxMinutes || 180;
+    // Validate settings
+    const cooldown = summonCooldownSeconds || 120;
+    const maxMinutes = sessionMaxMinutes || 180;
 
-  if (cooldown < 30 || cooldown > 600) {
-    throw new functions.https.HttpsError(
-      "invalid-argument",
-      "summonCooldownSeconds must be between 30 and 600"
-    );
-  }
+    if (cooldown < 30 || cooldown > 600) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "summonCooldownSeconds must be between 30 and 600"
+      );
+    }
 
-  // Update listing settings
-  await db
-    .collection("listings")
-    .doc(listingId)
-    .update({
-      tableModeEnabled: tableModeEnabled || false,
-      tableMode: {
-        summonCooldownSeconds: cooldown,
-        sessionMaxMinutes: maxMinutes,
-      },
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    // Update listing settings
+    await db
+      .collection("listings")
+      .doc(listingId)
+      .update({
+        tableModeEnabled: tableModeEnabled || false,
+        tableMode: {
+          summonCooldownSeconds: cooldown,
+          sessionMaxMinutes: maxMinutes,
+        },
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+    functions.logger.info("Table mode settings updated", {
+      listingId,
+      tableModeEnabled,
+      uid: context.auth.uid,
     });
 
-  functions.logger.info("Table mode settings updated", {
-    listingId,
-    tableModeEnabled,
-    uid: context.auth.uid,
-  });
-
-  return { success: true };
+    return { success: true };
+  } catch (error: any) {
+    functions.logger.error("setTableModeSettings error", {
+      error: error.message || String(error),
+      code: error.code,
+    });
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError("internal", `Failed to update table mode settings: ${error.message || String(error)}`);
+  }
 });
 
 /**
  * 2. Upsert Table (create or update)
  */
 export const upsertTable = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
-  }
-
-  const { listingId, tableId, tableName, tableCodePublic, regenerateSecret } = data;
-
-  if (!listingId || !tableName) {
-    throw new functions.https.HttpsError("invalid-argument", "listingId and tableName are required");
-  }
-
-  // Verify permissions and premium
-  const canManage = await canManageTableMode(listingId, context.auth.uid);
-  if (!canManage) {
-    throw new functions.https.HttpsError("permission-denied", "Permission denied");
-  }
-
-  const listingSnap = await db.collection("listings").doc(listingId).get();
-  const ownerUid = listingSnap.data()?.authorID;
-  const hasPremium = await verifyPremiumEntitlement(ownerUid);
-  if (!hasPremium) {
-    throw new functions.https.HttpsError("permission-denied", "Premium subscription required");
-  }
-
-  const now = admin.firestore.FieldValue.serverTimestamp();
-
-  if (tableId) {
-    // Update existing table
-    const updateData: any = {
-      tableName,
-      tableCodePublic: tableCodePublic || tableId.substring(0, 6).toUpperCase(),
-      updatedAt: now,
-    };
-
-    // Regenerate secret if requested
-    if (regenerateSecret === true) {
-      updateData.tableSecret = generateSecureRandom(32);
-      functions.logger.info("Table secret regenerated", { listingId, tableId });
+  try {
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
     }
 
-    await db
-      .collection("listings")
-      .doc(listingId)
-      .collection("tables")
-      .doc(tableId)
-      .update(updateData);
+    const { listingId, tableId, tableName, tableCodePublic, regenerateSecret } = data;
 
-    functions.logger.info("Table updated", { listingId, tableId });
-    return { success: true, tableId };
-  } else {
-    // Create new table
-    const newTableId = db.collection("listings").doc().id;
-    const generatedCode = tableCodePublic || (await generateNextTableCode(listingId));
-    const tableSecret = generateSecureRandom(32);
+    if (!listingId || !tableName) {
+      throw new functions.https.HttpsError("invalid-argument", "listingId and tableName are required");
+    }
 
-    await db
-      .collection("listings")
-      .doc(listingId)
-      .collection("tables")
-      .doc(newTableId)
-      .set({
+    // Verify permissions and premium
+    const canManage = await canManageTableMode(listingId, context.auth.uid);
+    if (!canManage) {
+      throw new functions.https.HttpsError("permission-denied", "Permission denied");
+    }
+
+    const listingSnap = await db.collection("listings").doc(listingId).get();
+    const ownerUid = listingSnap.data()?.authorID;
+    const hasPremium = await verifyPremiumEntitlement(ownerUid);
+    if (!hasPremium) {
+      throw new functions.https.HttpsError("permission-denied", "Premium subscription required");
+    }
+
+    const now = admin.firestore.FieldValue.serverTimestamp();
+
+    if (tableId) {
+      // Update existing table
+      const updateData: any = {
         tableName,
-        tableCodePublic: generatedCode,
-        tableSecret,
-        isActive: true,
-        createdAt: now,
+        tableCodePublic: tableCodePublic || tableId.substring(0, 6).toUpperCase(),
         updatedAt: now,
-      });
+      };
 
-    functions.logger.info("Table created", { listingId, tableId: newTableId });
-    return { success: true, tableId: newTableId };
+      // Regenerate secret if requested
+      if (regenerateSecret === true) {
+        updateData.tableSecret = generateSecureRandom(32);
+        functions.logger.info("Table secret regenerated", { listingId, tableId });
+      }
+
+      await db
+        .collection("listings")
+        .doc(listingId)
+        .collection("tables")
+        .doc(tableId)
+        .update(updateData);
+
+      functions.logger.info("Table updated", { listingId, tableId });
+      return { success: true, tableId };
+    } else {
+      // Create new table
+      const newTableId = db.collection("listings").doc().id;
+      const generatedCode = tableCodePublic || (await generateNextTableCode(listingId));
+      const tableSecret = generateSecureRandom(32);
+
+      await db
+        .collection("listings")
+        .doc(listingId)
+        .collection("tables")
+        .doc(newTableId)
+        .set({
+          tableName,
+          tableCodePublic: generatedCode,
+          tableSecret,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        });
+
+      functions.logger.info("Table created", { listingId, tableId: newTableId });
+      return { success: true, tableId: newTableId };
+    }
+  } catch (error: any) {
+    functions.logger.error("upsertTable error", {
+      error: error.message || String(error),
+      code: error.code,
+    });
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError("internal", `Failed to upsert table: ${error.message || String(error)}`);
   }
 });
 
@@ -404,55 +439,67 @@ export const upsertTable = functions.https.onCall(async (data, context) => {
  * 3. Deactivate/Activate Table
  */
 export const deactivateTable = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
-  }
+  try {
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
+    }
 
-  const { listingId, tableId, isActive } = data;
+    const { listingId, tableId, isActive } = data;
 
-  if (!listingId || !tableId) {
-    throw new functions.https.HttpsError("invalid-argument", "listingId and tableId are required");
-  }
+    if (!listingId || !tableId) {
+      throw new functions.https.HttpsError("invalid-argument", "listingId and tableId are required");
+    }
 
-  const canManage = await canManageTableMode(listingId, context.auth.uid);
-  if (!canManage) {
-    throw new functions.https.HttpsError("permission-denied", "Permission denied");
-  }
+    const canManage = await canManageTableMode(listingId, context.auth.uid);
+    if (!canManage) {
+      throw new functions.https.HttpsError("permission-denied", "Permission denied");
+    }
 
-  const listingSnap = await db.collection("listings").doc(listingId).get();
-  const ownerUid = listingSnap.data()?.authorID;
-  const hasPremium = await verifyPremiumEntitlement(ownerUid);
-  if (!hasPremium) {
-    throw new functions.https.HttpsError("permission-denied", "Premium subscription required");
-  }
+    const listingSnap = await db.collection("listings").doc(listingId).get();
+    const ownerUid = listingSnap.data()?.authorID;
+    const hasPremium = await verifyPremiumEntitlement(ownerUid);
+    if (!hasPremium) {
+      throw new functions.https.HttpsError("permission-denied", "Premium subscription required");
+    }
 
-  await db
-    .collection("listings")
-    .doc(listingId)
-    .collection("tables")
-    .doc(tableId)
-    .update({
-      isActive: isActive !== false,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    await db
+      .collection("listings")
+      .doc(listingId)
+      .collection("tables")
+      .doc(tableId)
+      .update({
+        isActive: isActive !== false,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+    functions.logger.info("Table status updated", { listingId, tableId, isActive });
+    return { success: true };
+  } catch (error: any) {
+    functions.logger.error("deactivateTable error", {
+      error: error.message || String(error),
+      code: error.code,
     });
-
-  functions.logger.info("Table status updated", { listingId, tableId, isActive });
-  return { success: true };
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError("internal", `Failed to deactivate table: ${error.message || String(error)}`);
+  }
 });
 
 /**
  * 4. Create Table Session (customer-initiated)
  */
 export const createTableSession = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
-  }
+  try {
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
+    }
 
-  const { listingId, mode, tableId, secret, tableCodePublic } = data;
+    const { listingId, mode, tableId, secret, tableCodePublic } = data;
 
-  if (!listingId || !mode) {
-    throw new functions.https.HttpsError("invalid-argument", "listingId and mode are required");
-  }
+    if (!listingId || !mode) {
+      throw new functions.https.HttpsError("invalid-argument", "listingId and mode are required");
+    }
 
   // Check if table mode is enabled
   const listingSnap = await db.collection("listings").doc(listingId).get();
@@ -576,21 +623,32 @@ export const createTableSession = functions.https.onCall(async (data, context) =
 
   functions.logger.info("Table session created", { sessionId, listingId, mode });
   return { success: true, sessionId };
+  } catch (error: any) {
+    functions.logger.error("createTableSession error", {
+      error: error.message || String(error),
+      code: error.code,
+    });
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError("internal", `Failed to create table session: ${error.message || String(error)}`);
+  }
 });
 
 /**
  * 5. Assign Waiter to Session
  */
 export const assignWaiterToSession = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
-  }
+  try {
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
+    }
 
-  const { sessionId, waiterUids } = data;
+    const { sessionId, waiterUids } = data;
 
-  if (!sessionId || !waiterUids || !Array.isArray(waiterUids) || waiterUids.length === 0) {
-    throw new functions.https.HttpsError("invalid-argument", "sessionId and waiterUids array required");
-  }
+    if (!sessionId || !waiterUids || !Array.isArray(waiterUids) || waiterUids.length === 0) {
+      throw new functions.https.HttpsError("invalid-argument", "sessionId and waiterUids array required");
+    }
 
   // Get session
   const sessionSnap = await db.collection("table_sessions").doc(sessionId).get();
@@ -667,276 +725,460 @@ export const assignWaiterToSession = functions.https.onCall(async (data, context
 
   functions.logger.info("Waiters assigned", { sessionId, waiterUids });
   return { success: true };
+  } catch (error: any) {
+    functions.logger.error("assignWaiterToSession error", {
+      error: error.message || String(error),
+      code: error.code,
+    });
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError("internal", `Failed to assign waiter: ${error.message || String(error)}`);
+  }
 });
 
 /**
  * 6. Summon Waiter
  */
 export const summonWaiter = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
-  }
+  try {
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
+    }
 
-  const { sessionId, purpose } = data;
+    const { sessionId, purpose } = data;
 
-  if (!sessionId) {
-    throw new functions.https.HttpsError("invalid-argument", "sessionId is required");
-  }
+    if (!sessionId) {
+      throw new functions.https.HttpsError("invalid-argument", "sessionId is required");
+    }
 
-  const sessionSnap = await db.collection("table_sessions").doc(sessionId).get();
-  if (!sessionSnap.exists) {
-    throw new functions.https.HttpsError("not-found", "Session not found");
-  }
+    const sessionSnap = await db.collection("table_sessions").doc(sessionId).get();
+    if (!sessionSnap.exists) {
+      throw new functions.https.HttpsError("not-found", "Session not found");
+    }
 
-  const sessionData = sessionSnap.data();
+    const sessionData = sessionSnap.data();
+    if (!sessionData) {
+      throw new functions.https.HttpsError("not-found", "Session data is empty");
+    }
 
-  // Verify caller is the customer
-  if (sessionData?.customerUid !== context.auth.uid) {
-    throw new functions.https.HttpsError("permission-denied", "Only session customer can summon waiter");
-  }
+    // Verify caller is the customer
+    if (sessionData.customerUid !== context.auth.uid) {
+      throw new functions.https.HttpsError("permission-denied", "Only session customer can summon waiter");
+    }
 
-  // Check session is active
-  if (sessionData?.status !== "ACTIVE") {
-    throw new functions.https.HttpsError("failed-precondition", "Session must be active");
-  }
+    // Check session is active
+    if (sessionData.status !== "ACTIVE") {
+      throw new functions.https.HttpsError("failed-precondition", "Session must be active");
+    }
 
-  // Enforce cooldown
-  const lastSummonAt = sessionData?.lastSummonAt?.toDate();
-  const cooldownSeconds = sessionData?.summonCooldownSeconds || 120;
+    // Enforce cooldown
+    let lastSummonAt: Date | null = null;
+    if (sessionData.lastSummonAt) {
+      try {
+        lastSummonAt = sessionData.lastSummonAt.toDate?.() || sessionData.lastSummonAt;
+      } catch (e) {
+        functions.logger.warn("Failed to parse lastSummonAt", { lastSummonAt: sessionData.lastSummonAt });
+      }
+    }
 
-  if (lastSummonAt) {
-    const elapsed = (Date.now() - lastSummonAt.getTime()) / 1000;
-    if (elapsed < cooldownSeconds) {
-      const remainingSeconds = Math.ceil(cooldownSeconds - elapsed);
+    const cooldownSeconds = sessionData.summonCooldownSeconds || 120;
+
+    if (lastSummonAt && lastSummonAt instanceof Date) {
+      const elapsed = (Date.now() - lastSummonAt.getTime()) / 1000;
+      if (elapsed < cooldownSeconds) {
+        const remainingSeconds = Math.ceil(cooldownSeconds - elapsed);
+        throw new functions.https.HttpsError(
+          "resource-exhausted",
+          `Please wait ${remainingSeconds} seconds before summoning again`,
+          { remainingSeconds }
+        );
+      }
+    }
+
+    // Rate limit summons per session per hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recentSummonsSnap = await db
+      .collection("table_sessions")
+      .doc(sessionId)
+      .collection("events")
+      .where("type", "==", "WAITER_SUMMONED")
+      .where("createdAt", ">", oneHourAgo)
+      .get();
+
+    if (recentSummonsSnap.size >= MAX_SUMMONS_PER_SESSION_PER_HOUR) {
       throw new functions.https.HttpsError(
         "resource-exhausted",
-        `Please wait ${remainingSeconds} seconds before summoning again`,
-        { remainingSeconds }
+        "Too many summons. Please ask staff directly."
       );
     }
-  }
 
-  // Rate limit summons per session per hour
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-  const recentSummonsSnap = await db
-    .collection("table_sessions")
-    .doc(sessionId)
-    .collection("events")
-    .where("type", "==", "WAITER_SUMMONED")
-    .where("createdAt", ">", oneHourAgo)
-    .get();
+    // Update lastSummonAt
+    await db
+      .collection("table_sessions")
+      .doc(sessionId)
+      .update({
+        lastSummonAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
 
-  if (recentSummonsSnap.size >= MAX_SUMMONS_PER_SESSION_PER_HOUR) {
-    throw new functions.https.HttpsError(
-      "resource-exhausted",
-      "Too many summons. Please ask staff directly."
-    );
-  }
+    // Log event
+    await logSessionEvent(sessionId, "WAITER_SUMMONED", context.auth.uid, "CUSTOMER", { purpose });
 
-  // Update lastSummonAt
-  await db
-    .collection("table_sessions")
-    .doc(sessionId)
-    .update({
-      lastSummonAt: admin.firestore.FieldValue.serverTimestamp(),
+    // Notify assigned staff (don't fail if this errors)
+    const assignedStaff = sessionData.assignedStaff || [];
+    if (Array.isArray(assignedStaff) && assignedStaff.length > 0) {
+      for (const staff of assignedStaff) {
+        if (staff && staff.uid) {
+          try {
+            await sendPushNotification(
+              staff.uid,
+              `${sessionData.tableName || "Table"} needs assistance`,
+              purpose || "Customer summoned waiter",
+              {
+                type: "table_session",
+                sessionId,
+                listingId: sessionData.listingId,
+                scope: "LISTING_TABLE_MODE",
+              }
+            );
+          } catch (pushError) {
+            functions.logger.warn("Failed to send push notification to staff", { 
+              staffUid: staff.uid, 
+              error: (pushError as any).message 
+            });
+          }
+        }
+      }
+    }
+
+    // Also notify listing owner and collaborators so they're aware
+    const listingSnap = await db.collection("listings").doc(sessionData.listingId).get();
+    const ownerUid = listingSnap.data()?.authorID;
+    const notifyOwnerUids: string[] = [];
+    
+    if (ownerUid) notifyOwnerUids.push(ownerUid);
+    
+    const collabsSnap = await db
+      .collection("listings")
+      .doc(sessionData.listingId)
+      .collection("collaborators")
+      .where("isActive", "==", true)
+      .get();
+    
+    collabsSnap.docs.forEach((doc) => {
+      const data = doc.data();
+      const permissions = data.permissions || {};
+      if (permissions.manageOrders || permissions.manageChats) {
+        notifyOwnerUids.push(doc.id);
+      }
+    });
+    
+    // Send notifications to owner/collaborators (but don't fail if errors)
+    for (const uid of [...new Set(notifyOwnerUids)]) {
+      try {
+        await sendPushNotification(
+          uid,
+          `Waiter Summon: ${sessionData.tableName || "Table"}`,
+          `${sessionData.customerName} needs assistance${purpose ? `: ${purpose}` : ""}`,
+          {
+            type: "table_session",
+            sessionId,
+            listingId: sessionData.listingId,
+            scope: "LISTING_TABLE_MODE",
+            action: "WAITER_SUMMON",
+          }
+        );
+      } catch (pushError) {
+        functions.logger.warn("Failed to send waiter summon notification to owner", { 
+          ownerUid: uid, 
+          error: (pushError as any).message 
+        });
+      }
+    }
+
+    functions.logger.info("Waiter summoned", { sessionId, purpose });
+    return { success: true };
+  } catch (error: any) {
+    // Log the actual error for debugging
+    functions.logger.error("summonWaiter error", { 
+      error: error.message || String(error),
+      code: error.code,
+      stack: error.stack 
     });
 
-  // Log event
-  await logSessionEvent(sessionId, "WAITER_SUMMONED", context.auth.uid, "CUSTOMER", { purpose });
+    // If it's already an HttpsError, rethrow it
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
 
-  // Notify assigned staff
-  const assignedStaff = sessionData?.assignedStaff || [];
-  for (const staff of assignedStaff) {
-    await sendPushNotification(
-      staff.uid,
-      `${sessionData?.tableName} needs assistance`,
-      purpose || "Customer summoned waiter",
-      {
-        type: "table_session",
-        sessionId,
-        listingId: sessionData?.listingId,
-        scope: "LISTING_TABLE_MODE",
-      }
+    // Convert unexpected errors to internal error with details
+    throw new functions.https.HttpsError(
+      "internal",
+      `Failed to summon waiter: ${error.message || String(error)}`
     );
   }
-
-  functions.logger.info("Waiter summoned", { sessionId, purpose });
-  return { success: true };
 });
 
 /**
  * 7. Acknowledge Summon
  */
 export const acknowledgeSummon = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
+  try {
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
+    }
+
+    const { sessionId } = data;
+
+    if (!sessionId) {
+      throw new functions.https.HttpsError("invalid-argument", "sessionId is required");
+    }
+
+    const sessionSnap = await db.collection("table_sessions").doc(sessionId).get();
+    if (!sessionSnap.exists) {
+      throw new functions.https.HttpsError("not-found", "Session not found");
+    }
+
+    const sessionData = sessionSnap.data();
+    const listingId = sessionData?.listingId;
+
+    // Verify caller is assigned staff or has management permissions
+    const assignedStaffUids = (sessionData?.assignedStaff || []).map((s: any) => s.uid);
+    const isAssignedStaff = assignedStaffUids.includes(context.auth.uid);
+    const canManage = await canManageTableMode(listingId, context.auth.uid);
+
+    if (!isAssignedStaff && !canManage) {
+      throw new functions.https.HttpsError("permission-denied", "Permission denied");
+    }
+
+    // Log event
+    await logSessionEvent(sessionId, "WAITER_ACKNOWLEDGED", context.auth.uid, "WAITER", {});
+
+    // Notify customer
+    const customerUid = sessionData?.customerUid;
+    if (customerUid) {
+      await sendPushNotification(
+        customerUid,
+        "Your waiter is on the way",
+        "Help is coming shortly",
+        {
+          type: "table_session",
+          sessionId,
+          listingId,
+          scope: "LISTING_TABLE_MODE",
+        }
+      );
+    }
+
+    functions.logger.info("Summon acknowledged", { sessionId });
+    return { success: true };
+  } catch (error: any) {
+    functions.logger.error("acknowledgeSummon error", {
+      error: error.message || String(error),
+      code: error.code,
+    });
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError("internal", `Failed to acknowledge summon: ${error.message || String(error)}`);
   }
-
-  const { sessionId } = data;
-
-  if (!sessionId) {
-    throw new functions.https.HttpsError("invalid-argument", "sessionId is required");
-  }
-
-  const sessionSnap = await db.collection("table_sessions").doc(sessionId).get();
-  if (!sessionSnap.exists) {
-    throw new functions.https.HttpsError("not-found", "Session not found");
-  }
-
-  const sessionData = sessionSnap.data();
-  const listingId = sessionData?.listingId;
-
-  // Verify caller is assigned staff or has management permissions
-  const assignedStaffUids = (sessionData?.assignedStaff || []).map((s: any) => s.uid);
-  const isAssignedStaff = assignedStaffUids.includes(context.auth.uid);
-  const canManage = await canManageTableMode(listingId, context.auth.uid);
-
-  if (!isAssignedStaff && !canManage) {
-    throw new functions.https.HttpsError("permission-denied", "Permission denied");
-  }
-
-  // Log event
-  await logSessionEvent(sessionId, "WAITER_ACKNOWLEDGED", context.auth.uid, "WAITER", {});
-
-  // Notify customer
-  const customerUid = sessionData?.customerUid;
-  if (customerUid) {
-    await sendPushNotification(
-      customerUid,
-      "Your waiter is on the way",
-      "Help is coming shortly",
-      {
-        type: "table_session",
-        sessionId,
-        listingId,
-        scope: "LISTING_TABLE_MODE",
-      }
-    );
-  }
-
-  functions.logger.info("Summon acknowledged", { sessionId });
-  return { success: true };
 });
 
 /**
  * 8. Request Bill
  */
 export const requestBill = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
-  }
-
-  const { sessionId, paymentMethod } = data;
-
-  if (!sessionId) {
-    throw new functions.https.HttpsError("invalid-argument", "sessionId is required");
-  }
-
-  const sessionSnap = await db.collection("table_sessions").doc(sessionId).get();
-  if (!sessionSnap.exists) {
-    throw new functions.https.HttpsError("not-found", "Session not found");
-  }
-
-  const sessionData = sessionSnap.data();
-
-  // Verify caller is the customer
-  if (sessionData?.customerUid !== context.auth.uid) {
-    throw new functions.https.HttpsError("permission-denied", "Only session customer can request bill");
-  }
-
-  // Check session is active
-  if (sessionData?.status !== "ACTIVE") {
-    throw new functions.https.HttpsError("failed-precondition", "Session must be active");
-  }
-
-  // Enforce cooldown
-  const lastBillRequestAt = sessionData?.lastBillRequestAt?.toDate();
-  if (lastBillRequestAt) {
-    const elapsed = (Date.now() - lastBillRequestAt.getTime()) / 1000;
-    if (elapsed < BILL_REQUEST_COOLDOWN_SECONDS) {
-      const remainingSeconds = Math.ceil(BILL_REQUEST_COOLDOWN_SECONDS - elapsed);
-      throw new functions.https.HttpsError(
-        "resource-exhausted",
-        `Please wait ${remainingSeconds} seconds before requesting bill again`,
-        { remainingSeconds }
-      );
+  try {
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
     }
-  }
 
-  // Update lastBillRequestAt
-  await db
-    .collection("table_sessions")
-    .doc(sessionId)
-    .update({
-      lastBillRequestAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    const { sessionId, paymentMethod } = data;
 
-  // Log event
-  await logSessionEvent(sessionId, "BILL_REQUESTED", context.auth.uid, "CUSTOMER", { paymentMethod });
+    if (!sessionId) {
+      throw new functions.https.HttpsError("invalid-argument", "sessionId is required");
+    }
 
-  // Notify assigned staff
-  const assignedStaff = sessionData?.assignedStaff || [];
-  for (const staff of assignedStaff) {
-    await sendPushNotification(
-      staff.uid,
-      `Bill requested at ${sessionData?.tableName}`,
-      `Payment method: ${paymentMethod || "Not specified"}`,
-      {
-        type: "table_session",
-        sessionId,
-        listingId: sessionData?.listingId,
-        scope: "LISTING_TABLE_MODE",
+    const sessionSnap = await db.collection("table_sessions").doc(sessionId).get();
+    if (!sessionSnap.exists) {
+      throw new functions.https.HttpsError("not-found", "Session not found");
+    }
+
+    const sessionData = sessionSnap.data();
+
+    // Verify caller is the customer
+    if (sessionData?.customerUid !== context.auth.uid) {
+      throw new functions.https.HttpsError("permission-denied", "Only session customer can request bill");
+    }
+
+    // Check session is active
+    if (sessionData?.status !== "ACTIVE") {
+      throw new functions.https.HttpsError("failed-precondition", "Session must be active");
+    }
+
+    // Enforce cooldown
+    const lastBillRequestAt = sessionData?.lastBillRequestAt?.toDate();
+    if (lastBillRequestAt) {
+      const elapsed = (Date.now() - lastBillRequestAt.getTime()) / 1000;
+      if (elapsed < BILL_REQUEST_COOLDOWN_SECONDS) {
+        const remainingSeconds = Math.ceil(BILL_REQUEST_COOLDOWN_SECONDS - elapsed);
+        throw new functions.https.HttpsError(
+          "resource-exhausted",
+          `Please wait ${remainingSeconds} seconds before requesting bill again`,
+          { remainingSeconds }
+        );
       }
-    );
-  }
+    }
 
-  functions.logger.info("Bill requested", { sessionId, paymentMethod });
-  return { success: true };
+    // Update lastBillRequestAt
+    await db
+      .collection("table_sessions")
+      .doc(sessionId)
+      .update({
+        lastBillRequestAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+    // Log event
+    await logSessionEvent(sessionId, "BILL_REQUESTED", context.auth.uid, "CUSTOMER", { paymentMethod });
+
+    // Notify assigned staff
+    const assignedStaff = sessionData?.assignedStaff || [];
+    for (const staff of assignedStaff) {
+      if (staff && staff.uid) {
+        try {
+          await sendPushNotification(
+            staff.uid,
+            `Bill requested at ${sessionData?.tableName}`,
+            `Payment method: ${paymentMethod || "Not specified"}`,
+            {
+              type: "table_session",
+              sessionId,
+              listingId: sessionData?.listingId,
+              scope: "LISTING_TABLE_MODE",
+            }
+          );
+        } catch (pushError) {
+          functions.logger.warn("Failed to send notification to staff", { 
+            staffUid: staff.uid, 
+            error: (pushError as any).message 
+          });
+        }
+      }
+    }
+
+    // Also notify listing owner and collaborators
+    const listingSnap = await db.collection("listings").doc(sessionData?.listingId).get();
+    const ownerUid = listingSnap.data()?.authorID;
+    const notifyOwnerUids: string[] = [];
+    
+    if (ownerUid) notifyOwnerUids.push(ownerUid);
+    
+    const collabsSnap = await db
+      .collection("listings")
+      .doc(sessionData?.listingId)
+      .collection("collaborators")
+      .where("isActive", "==", true)
+      .get();
+    
+    collabsSnap.docs.forEach((doc) => {
+      const data = doc.data();
+      const permissions = data.permissions || {};
+      if (permissions.manageOrders || permissions.manageChats) {
+        notifyOwnerUids.push(doc.id);
+      }
+    });
+    
+    // Send notifications to owner/collaborators (but don't fail if errors)
+    for (const uid of [...new Set(notifyOwnerUids)]) {
+      try {
+        await sendPushNotification(
+          uid,
+          `Bill Request: ${sessionData?.tableName}`,
+          `${sessionData?.customerName} requested bill${paymentMethod ? ` (${paymentMethod})` : ""}`,
+          {
+            type: "table_session",
+            sessionId,
+            listingId: sessionData?.listingId,
+            scope: "LISTING_TABLE_MODE",
+            action: "BILL_REQUEST",
+          }
+        );
+      } catch (pushError) {
+        functions.logger.warn("Failed to send bill request notification to owner", { 
+          ownerUid: uid, 
+          error: (pushError as any).message 
+        });
+      }
+    }
+
+    functions.logger.info("Bill requested", { sessionId, paymentMethod });
+    return { success: true };
+  } catch (error: any) {
+    functions.logger.error("requestBill error", {
+      error: error.message || String(error),
+      code: error.code,
+    });
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError("internal", `Failed to request bill: ${error.message || String(error)}`);
+  }
 });
 
 /**
  * 9. Close Table Session
  */
 export const closeTableSession = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
-  }
+  try {
+    if (!context.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
+    }
 
-  const { sessionId } = data;
+    const { sessionId } = data;
 
-  if (!sessionId) {
-    throw new functions.https.HttpsError("invalid-argument", "sessionId is required");
-  }
+    if (!sessionId) {
+      throw new functions.https.HttpsError("invalid-argument", "sessionId is required");
+    }
 
-  const sessionSnap = await db.collection("table_sessions").doc(sessionId).get();
-  if (!sessionSnap.exists) {
-    throw new functions.https.HttpsError("not-found", "Session not found");
-  }
+    const sessionSnap = await db.collection("table_sessions").doc(sessionId).get();
+    if (!sessionSnap.exists) {
+      throw new functions.https.HttpsError("not-found", "Session not found");
+    }
 
-  const sessionData = sessionSnap.data();
-  const listingId = sessionData?.listingId;
+    const sessionData = sessionSnap.data();
+    const listingId = sessionData?.listingId;
 
-  // Verify permissions (owner/collab can close, customer can request)
-  const canManage = await canManageTableMode(listingId, context.auth.uid);
-  const isCustomer = sessionData?.customerUid === context.auth.uid;
+    // Verify permissions (owner/collab can close, customer can request)
+    const canManage = await canManageTableMode(listingId, context.auth.uid);
+    const isCustomer = sessionData?.customerUid === context.auth.uid;
 
-  if (!canManage && !isCustomer) {
-    throw new functions.https.HttpsError("permission-denied", "Permission denied");
-  }
+    if (!canManage && !isCustomer) {
+      throw new functions.https.HttpsError("permission-denied", "Permission denied");
+    }
 
-  // Update session
-  await db
-    .collection("table_sessions")
-    .doc(sessionId)
-    .update({
-      status: "CLOSED",
-      closedAt: admin.firestore.FieldValue.serverTimestamp(),
+    // Update session
+    await db
+      .collection("table_sessions")
+      .doc(sessionId)
+      .update({
+        status: "CLOSED",
+        closedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+    // Log event
+    const actorRole = canManage ? "OWNER" : "CUSTOMER";
+    await logSessionEvent(sessionId, "SESSION_CLOSED", context.auth.uid, actorRole, {});
+
+    functions.logger.info("Table session closed", { sessionId });
+    return { success: true };
+  } catch (error: any) {
+    functions.logger.error("closeTableSession error", {
+      error: error.message || String(error),
+      code: error.code,
     });
-
-  // Log event
-  const actorRole = canManage ? "OWNER" : "CUSTOMER";
-  await logSessionEvent(sessionId, "SESSION_CLOSED", context.auth.uid, actorRole, {});
-
-  functions.logger.info("Table session closed", { sessionId });
-  return { success: true };
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError("internal", `Failed to close table session: ${error.message || String(error)}`);
+  }
 });

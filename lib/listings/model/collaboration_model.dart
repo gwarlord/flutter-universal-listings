@@ -12,6 +12,7 @@ class CollaboratorPermissions {
   bool editListing;
   bool changeOrderStatus;
   bool changeFulfillment;
+  bool manageTableMode;
   bool deleteListing; // Always false - cannot be changed
 
   CollaboratorPermissions({
@@ -22,6 +23,7 @@ class CollaboratorPermissions {
     required this.editListing,
     required this.changeOrderStatus,
     required this.changeFulfillment,
+    required this.manageTableMode,
     this.deleteListing = false,
   });
 
@@ -34,6 +36,7 @@ class CollaboratorPermissions {
       editListing: json['editListing'] ?? true,
       changeOrderStatus: json['changeOrderStatus'] ?? true,
       changeFulfillment: json['changeFulfillment'] ?? true,
+      manageTableMode: json['manageTableMode'] ?? false,
       deleteListing: false, // Always false
     );
   }
@@ -47,6 +50,7 @@ class CollaboratorPermissions {
       editListing: true,
       changeOrderStatus: true,
       changeFulfillment: true,
+      manageTableMode: false,
       deleteListing: false,
     );
   }
@@ -60,6 +64,7 @@ class CollaboratorPermissions {
       'editListing': editListing,
       'changeOrderStatus': changeOrderStatus,
       'changeFulfillment': changeFulfillment,
+      'manageTableMode': manageTableMode,
       'deleteListing': false, // Always serialize as false
     };
   }
@@ -74,6 +79,7 @@ class CollaboratorPermissions {
     if (editListing) enabled.add('editListing');
     if (changeOrderStatus) enabled.add('changeOrderStatus');
     if (changeFulfillment) enabled.add('changeFulfillment');
+    if (manageTableMode) enabled.add('manageTableMode');
     return enabled;
   }
 
@@ -85,6 +91,7 @@ class CollaboratorPermissions {
     bool? editListing,
     bool? changeOrderStatus,
     bool? changeFulfillment,
+    bool? manageTableMode,
   }) {
     return CollaboratorPermissions(
       manageOrders: manageOrders ?? this.manageOrders,
@@ -94,6 +101,7 @@ class CollaboratorPermissions {
       editListing: editListing ?? this.editListing,
       changeOrderStatus: changeOrderStatus ?? this.changeOrderStatus,
       changeFulfillment: changeFulfillment ?? this.changeFulfillment,
+      manageTableMode: manageTableMode ?? this.manageTableMode,
       deleteListing: false,
     );
   }

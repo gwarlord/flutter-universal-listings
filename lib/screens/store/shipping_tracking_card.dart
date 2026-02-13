@@ -7,6 +7,7 @@ import 'package:instaflutter/listings/services/revenue_cat_service.dart';
 import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/listings/ui/subscription/paywall_screen.dart';
 import 'package:instaflutter/core/utils/helper.dart';
+import 'package:instaflutter/screens/store/barcode_scanner_field.dart';
 
 /// Widget for lister to enter/edit shipping tracking information
 /// 
@@ -359,24 +360,16 @@ class _ShippingTrackingCardState extends State<ShippingTrackingCard> {
             ),
             const SizedBox(height: 12),
 
-            // Tracking Number
-            TextField(
+            // Tracking Number with Barcode Scanner
+            BarcodeTextField(
               controller: _trackingNumberController,
-              style: TextStyle(color: dark ? Colors.white : Colors.black),
-              decoration: InputDecoration(
-                labelText: 'Tracking Number *'.tr(),
-                labelStyle: TextStyle(
-                  color: dark ? Colors.white70 : Colors.black54,
-                ),
-                hintText: 'Enter tracking number'.tr(),
-                hintStyle: TextStyle(
-                  color: dark ? Colors.white38 : Colors.black26,
-                ),
-                border: const OutlineInputBorder(),
-                filled: true,
-                fillColor: dark ? Colors.grey.shade800 : Colors.white,
-                enabled: !_isLoading,
-              ),
+              labelText: 'Tracking Number *'.tr(),
+              hintText: 'Scan barcode or enter manually'.tr(),
+              isLoading: _isLoading,
+              isDarkMode: dark,
+              onChanged: (value) {
+                // Optional: handle real-time changes if needed
+              },
             ),
             const SizedBox(height: 12),
 

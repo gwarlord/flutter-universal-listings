@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/core/utils/helper.dart';
@@ -37,6 +38,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
   late int _leadTimeHours;
   
   bool _isSaving = false;
+  bool _canManageTableMode = false;
 
   @override
   void initState() {
@@ -48,6 +50,42 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
     _shippingFee = widget.listing.storeShippingFee;
     _leadTimeHours = widget.listing.storeLeadTimeHours;
     _shippingFeeController = TextEditingController(text: _shippingFee > 0 ? _shippingFee.toString() : '');
+    _checkTableModePermissions();
+  }
+
+  Future<void> _checkTableModePermissions() async {
+    // Check if user is owner
+    if (widget.currentUser.userID == widget.listing.authorID) {
+      setState(() {
+        _canManageTableMode = true;
+      });
+      return;
+    }
+
+    // Check if user is a collaborator with manageTableMode permission
+    try {
+      final collabSnap = await FirebaseFirestore.instance
+          .collection('listings')
+          .doc(widget.listing.id)
+          .collection('collaborators')
+          .doc(widget.currentUser.userID)
+          .get();
+
+      if (collabSnap.exists) {
+        final data = collabSnap.data();
+        final isActive = data?['isActive'] == true;
+        final permissions = data?['permissions'] as Map<String, dynamic>? ?? {};
+        final hasTablePermission = permissions['manageTableMode'] == true;
+
+        if (mounted && isActive && hasTablePermission) {
+          setState(() {
+            _canManageTableMode = true;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking table mode permissions: $e');
+    }
   }
 
   @override
@@ -398,28 +436,29 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
             ],
 
             // Table Mode Section
-            Text(
-              'Table Mode'.tr(),
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: dark ? Colors.white : Colors.black,
+            if (_canManageTableMode) ...[
+              Text(
+                'Table Mode'.tr(),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: dark ? Colors.white : Colors.black,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Manage dine-in tables and QR codes for this listing'.tr(),
-              style: TextStyle(
-                fontSize: 14,
-                color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+              const SizedBox(height: 8),
+              Text(
+                'Manage dine-in tables and QR codes for this listing'.tr(),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
-              child: ListTile(
-                leading: Icon(
-                  Icons.table_restaurant,
+              const SizedBox(height: 16),
+              Card(
+                color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+                child: ListTile(
+                  leading: Icon(
+                    Icons.table_restaurant,
                   color: Color(cfg.colorPrimary),
                 ),
                 title: Text(
@@ -453,7 +492,8 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                 },
               ),
             ),
-            const SizedBox(height: 32),
+              const SizedBox(height: 32),
+            ],
 
             // Lead Time Section
             Text(
