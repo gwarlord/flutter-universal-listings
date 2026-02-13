@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:app_links/app_links.dart';
@@ -112,13 +113,46 @@ Future<void> _handleListingDeepLink(String? link) async {
   }
 }
 
+// Handle listing management deep links
+Future<void> _handleListingManageDeepLink(String? link) async {
+  if (link == null) return;
+
+  try {
+    print('🔗 Processing listing management deep link: $link');
+
+    final listingId = DeepLinkService.parseListingManageIdFromUrl(link);
+    if (listingId == null) {
+      print('⚠️ No listing ID found in manage deep link: $link');
+      return;
+    }
+
+    print('📋 Manage listing ID extracted: $listingId');
+    _pendingListingManageId = listingId;
+  } catch (e) {
+    print('❌ Error processing listing manage deep link: $e');
+    if (navigatorKey.currentContext != null) {
+      showSnackBar(
+        navigatorKey.currentContext!,
+        'Failed to open listing management. Please try again.'.tr(),
+      );
+    }
+  }
+}
+
 // Store pending listing navigation
 String? _pendingListingId;
+String? _pendingListingManageId;
 
 // Get and clear pending listing ID
 String? getPendingListingId() {
   final id = _pendingListingId;
   _pendingListingId = null;
+  return id;
+}
+
+String? getPendingListingManageId() {
+  final id = _pendingListingManageId;
+  _pendingListingManageId = null;
   return id;
 }
 
@@ -226,12 +260,18 @@ void main() async {
   await EasyLocalization.ensureInitialized();
   await Firebase.initializeApp();
   
-  // Initialize Firebase App Check (in production, use proper attestation)
+  // Initialize Firebase App Check with proper providers
   try {
-    await FirebaseAppCheck.instance.activate();
+    await FirebaseAppCheck.instance.activate(
+      androidProvider: kDebugMode 
+          ? AndroidProvider.debug 
+          : AndroidProvider.playIntegrity,
+      appleProvider: AppleProvider.deviceCheck,
+    );
+    print('✅ Firebase App Check activated successfully');
   } catch (e) {
-    // App Check may fail in development, continue gracefully
-    print('ℹ️ Firebase App Check activation note: $e');
+    // App Check failure should not block app startup
+    print('⚠️ Firebase App Check activation error: $e');
   }
   
   await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
@@ -253,7 +293,9 @@ void main() async {
     final url = uri.toString();
     
     // Check if it's a listing deep link
-    if (DeepLinkService.isListingDeepLink(url)) {
+    if (DeepLinkService.isListingManageDeepLink(url)) {
+      _handleListingManageDeepLink(url);
+    } else if (DeepLinkService.isListingDeepLink(url)) {
       _handleListingDeepLink(url);
     } else {
       // Handle other deep links (e.g., email verification)
@@ -271,7 +313,9 @@ void main() async {
       final url = initialUri.toString();
       
       // Check if it's a listing deep link
-      if (DeepLinkService.isListingDeepLink(url)) {
+      if (DeepLinkService.isListingManageDeepLink(url)) {
+        await _handleListingManageDeepLink(url);
+      } else if (DeepLinkService.isListingDeepLink(url)) {
         await _handleListingDeepLink(url);
       } else {
         // Handle other deep links (e.g., email verification)

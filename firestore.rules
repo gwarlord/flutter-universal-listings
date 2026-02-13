@@ -46,6 +46,19 @@ service cloud.firestore {
                request.auth.uid in get(/databases/$(database)/documents/admins/admins).data.adminUserIds));
     }
 
+    function canEditListingFreshnessExempt() {
+      return isAdmin() ||
+        (resource.data.freshness == null && request.resource.data.freshness.exempt == false) ||
+        (request.resource.data.freshness.exempt == resource.data.freshness.exempt);
+    }
+
+    function canEditUserFreshnessExempt() {
+      return isAdmin() ||
+        (request.auth.token.serviceAccount == true) ||
+        (resource.data.listingFreshnessExempt == null && request.resource.data.listingFreshnessExempt == false) ||
+        (request.resource.data.listingFreshnessExempt == resource.data.listingFreshnessExempt);
+    }
+
     // DEAL ADS collection
     match /deal_ads/{adId} {
       allow create: if isSignedIn();
@@ -71,7 +84,8 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isOwner(userId) || isAdmin() || (isSignedIn() && request.auth.token.serviceAccount == true);
+      allow update: if (isOwner(userId) || isAdmin() || (isSignedIn() && request.auth.token.serviceAccount == true))
+        && canEditUserFreshnessExempt();
       allow delete: if isAdmin();
       
       match /myBookings/{bookingId} {
@@ -116,7 +130,8 @@ service cloud.firestore {
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reviewsCount', 'reviewsSum']))
         ) && 
         // Prevent client-side modification of tap fields (Cloud Functions only)
-        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['tapCount', 'tapBadge']) || isAdmin());
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['tapCount', 'tapBadge']) || isAdmin()) &&
+        canEditListingFreshnessExempt();
       
       allow delete: if isSignedIn() && (request.auth.uid == resource.data.authorID || isAdmin());
       
@@ -195,6 +210,54 @@ service cloud.firestore {
         // Allow write ONLY if listing author
         allow create, update, delete: if isSignedIn() &&
           request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID;
+      }
+
+      // Collaborators subcollection (Lister Collaboration)
+      match /collaborators/{collaboratorUid} {
+        // Allow list/query if:
+        // 1. User is listing author (can see all collaborators)
+        // 2. User is an active collaborator (can see team members)
+        // 3. Admin
+        allow list: if isSignedIn() && (
+          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID ||
+          (exists(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)) &&
+           get(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)).data.isActive == true) ||
+          isAdmin()
+        );
+
+        // Allow get (single document read) if:
+        // 1. User is listing author
+        // 2. User is the collaborator themselves
+        // 3. User is an active collaborator (can see other team members)
+        // 4. Admin
+        allow get: if isSignedIn() && (
+          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID ||
+          request.auth.uid == collaboratorUid ||
+          (exists(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)) &&
+           get(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)).data.isActive == true) ||
+          isAdmin()
+        );
+
+        // NEVER allow direct client-side writes to collaborator documents
+        // All writes must go through Cloud Functions only
+        allow create, update, delete: if false;
+      }
+
+      // Activity log subcollection
+      match /activity/{activityId} {
+        // Allow read if:
+        // 1. User is listing author
+        // 2. User is an active collaborator (can see activity in listings they collaborate on)
+        // 3. Admin
+        allow read: if isSignedIn() && (
+          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID ||
+          (exists(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)) &&
+           get(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)).data.isActive == true) ||
+          isAdmin()
+        );
+
+        // NEVER allow client-side writes (Cloud Functions only)
+        allow create, update, delete: if false;
       }
     }
     
@@ -355,6 +418,114 @@ service cloud.firestore {
       
       match /subscriptions/{subscriptionId} {
         allow read: if isOwner(userId);
+        allow write: if false;
+      }
+    }
+
+    // ========================================
+    // COLLABORATION CHAT SCOPES
+    // ========================================
+
+    // Helper to check if collaborator is active with chat permissions
+    function isActiveCollaboratorWithChatAccess(listingId) {
+      let collabPath = /databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid);
+      return exists(collabPath) &&
+             get(collabPath).data.isActive == true &&
+             get(collabPath).data.permissions.manageChats == true;
+    }
+
+    // Helper for listing management (owner or collaborator with chat permission)
+    function canManageListing(listingId) {
+      let listing = get(/databases/$(database)/documents/listings/$(listingId));
+      return isSignedIn() && (
+        request.auth.uid == listing.data.authorID ||
+        isActiveCollaboratorWithChatAccess(listingId) ||
+        isAdmin()
+      );
+    }
+
+    // Listing Team Chat (owner + collaborators with manageChats=true)
+    match /listing_chats/{listingChatId} {
+      allow read: if isSignedIn() && canManageListing(resource.data.listingId);
+      allow create: if isSignedIn() && canManageListing(request.resource.data.listingId);
+      allow update: if isSignedIn() && canManageListing(resource.data.listingId);
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && canManageListing(get(/databases/$(database)/documents/listing_chats/$(listingChatId)).data.listingId);
+        allow create: if isSignedIn() && 
+          request.auth.uid == request.resource.data.senderUid &&
+          canManageListing(get(/databases/$(database)/documents/listing_chats/$(listingChatId)).data.listingId);
+        allow update: if false;
+        allow delete: if isSignedIn() && request.auth.uid == resource.data.senderUid;
+      }
+    }
+
+    // Order Thread Chat (owner + collaborators with manageChats=true + order's customer)
+    match /order_chats/{orderChatId} {
+      allow read: if isSignedIn() && (
+        canManageListing(resource.data.listingId) ||
+        request.auth.uid == resource.data.customerUid
+      );
+      allow create: if isSignedIn() && (
+        canManageListing(request.resource.data.listingId) ||
+        request.auth.uid == request.resource.data.customerUid
+      );
+      allow update: if isSignedIn() && (
+        canManageListing(resource.data.listingId) ||
+        request.auth.uid == resource.data.customerUid
+      );
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && (
+          canManageListing(get(/databases/$(database)/documents/order_chats/$(orderChatId)).data.listingId) ||
+          request.auth.uid == get(/databases/$(database)/documents/order_chats/$(orderChatId)).data.customerUid
+        );
+        allow create: if isSignedIn() && 
+          request.auth.uid == request.resource.data.senderUid &&
+          (
+            canManageListing(get(/databases/$(database)/documents/order_chats/$(orderChatId)).data.listingId) ||
+            request.auth.uid == get(/databases/$(database)/documents/order_chats/$(orderChatId)).data.customerUid
+          );
+        allow update: if false;
+        allow delete: if isSignedIn() && request.auth.uid == resource.data.senderUid;
+      }
+    }
+
+    // ========================================================================
+    // TABLE MODE (PREMIUM FEATURE)
+    // ========================================================================
+
+    // Tables subcollection under listings (managed via Cloud Functions)
+    // Staff can read tables to generate QR codes and manage
+    // Tables contain tableSecret which should not be exposed to customers
+    match /listings/{listingId}/tables/{tableId} {
+      // Only staff (owner + authorized collaborators) can read tables
+      allow read: if isSignedIn() && canManageListing(listingId);
+      // All writes via Cloud Functions (enforces premium check)
+      allow write: if false;
+    }
+
+    // Table Sessions collection
+    match /table_sessions/{sessionId} {
+      // Customers can read their own sessions
+      // Staff can read sessions for listings they manage
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.customerUid ||
+        canManageListing(resource.data.listingId)
+      );
+      // Writes only via Cloud Functions (rate limiting, cooldown enforcement, etc.)
+      allow write: if false;
+
+      // Session events subcollection
+      match /events/{eventId} {
+        // Same read access as parent session
+        allow read: if isSignedIn() && (
+          request.auth.uid == get(/databases/$(database)/documents/table_sessions/$(sessionId)).data.customerUid ||
+          canManageListing(get(/databases/$(database)/documents/table_sessions/$(sessionId)).data.listingId)
+        );
+        // Writes only via Cloud Functions
         allow write: if false;
       }
     }

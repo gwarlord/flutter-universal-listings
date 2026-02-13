@@ -12,6 +12,7 @@ import 'package:easy_localization/easy_localization.dart';
 class FirestoreChatScreenV2 extends StatefulWidget {
   final String channelId;
   final String currentUserId;
+  final User? currentUser;
   final String listingTitle;
   final String listingImage;
   final List<User> otherParticipants;
@@ -20,6 +21,7 @@ class FirestoreChatScreenV2 extends StatefulWidget {
     Key? key,
     required this.channelId,
     required this.currentUserId,
+    this.currentUser,
     required this.listingTitle,
     required this.listingImage,
     this.otherParticipants = const [],
@@ -174,48 +176,87 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final primaryColor = theme.colorScheme.primary;
+    final List<User> allParticipants = [
+      if (widget.currentUser != null) widget.currentUser!,
+      ...widget.otherParticipants,
+    ];
+    final uniqueParticipantIds = <String>{};
+    final uniqueParticipants = allParticipants
+        .where((user) => uniqueParticipantIds.add(user.userID))
+        .toList();
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0B141B) : const Color(0xFFE5DDD5),
       appBar: AppBar(
         elevation: 1,
-        centerTitle: false,
+        centerTitle: true,
         backgroundColor: isDark ? const Color(0xFF1F2C34) : Color(colorPrimary),
         iconTheme: IconThemeData(color: Colors.white),
-        title: Row(
+        leadingWidth: 150,
+        leading: Row(
           children: [
+            const BackButton(),
             if (widget.listingImage.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.only(right: 12),
-                child: CircleAvatar(
-                  radius: 18,
-                  backgroundImage: NetworkImage(widget.listingImage),
+              CircleAvatar(
+                radius: 15,
+                backgroundImage: NetworkImage(widget.listingImage),
+              ),
+            const SizedBox(width: 4),
+            if (widget.listingTitle.isNotEmpty)
+              Expanded(
+                child: Text(
+                  widget.listingTitle,
+                  style: const TextStyle(fontSize: 12, color: Colors.white),
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
                 ),
               ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.listingTitle.isEmpty ? 'Chat'.tr() : widget.listingTitle,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    'CaribTap Chat'.tr(),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
+          ],
+        ),
+        title: Text(
+          'CaribTap Chat'.tr(),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(40.0),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Center(
+              child: SizedBox(
+                height: 30,
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  scrollDirection: Axis.horizontal,
+                  itemCount: uniqueParticipants.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(width: 4),
+                  itemBuilder: (context, index) {
+                    final participant = uniqueParticipants[index];
+                    return CircleAvatar(
+                      radius: 15,
+                      backgroundImage:
+                          (participant.profilePictureURL.isNotEmpty
+                              ? NetworkImage(participant.profilePictureURL)
+                              : null) as ImageProvider?,
+                      child: participant.profilePictureURL.isEmpty
+                          ? Text(
+                              participant.firstName.isNotEmpty
+                                  ? participant.firstName[0].toUpperCase()
+                                  : 'U',
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.white),
+                            )
+                          : null,
+                    );
+                  },
+                ),
               ),
             ),
-          ],
+          ),
         ),
       ),
       body: Stack(
@@ -223,7 +264,9 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
           Positioned.fill(
             child: CustomPaint(
               painter: ChatBackgroundPainter(
-                color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
+                color: isDark
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.black.withOpacity(0.03),
                 textDirection: Directionality.of(context),
               ),
             ),
@@ -231,19 +274,21 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
           Column(
             children: [
               Expanded(
-                child: _messages.isEmpty 
-                  ? _buildEmptyState(isDark)
-                  : ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-                      reverse: true,
-                      itemCount: _messages.length,
-                      itemBuilder: (context, index) {
-                        final msg = _messages[index];
-                        final isMe = msg['senderID'] == widget.currentUserId;
-                        return _buildMessageBubble(msg, isMe, primaryColor, isDark);
-                      },
-                    ),
+                child: _messages.isEmpty
+                    ? _buildEmptyState(isDark)
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 16, horizontal: 8),
+                        reverse: true,
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          final msg = _messages[index];
+                          final isMe = msg['senderID'] == widget.currentUserId;
+                          return _buildMessageBubble(
+                              msg, isMe, primaryColor, isDark);
+                        },
+                      ),
               ),
               _buildInputBar(primaryColor, isDark),
             ],
@@ -254,24 +299,30 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
   }
 
   Widget _buildEmptyState(bool isDark) {
-      return Center(
-        child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-                Icon(Icons.chat_bubble_outline, size: 64, color: isDark ? Colors.white24 : Colors.grey[400]),
-                const SizedBox(height: 16),
-                Text(
-                    'No messages yet'.tr(),
-                    style: TextStyle(color: isDark ? Colors.white70 : Colors.grey[700], fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-            ],
-        ),
-      );
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.chat_bubble_outline,
+              size: 64, color: isDark ? Colors.white24 : Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            'No messages yet'.tr(),
+            style: TextStyle(
+                color: isDark ? Colors.white70 : Colors.grey[700],
+                fontSize: 16,
+                fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
   }
 
-  Widget _buildMessageBubble(Map<String, dynamic> msg, bool isMe, Color primaryColor, bool isDark) {
+  Widget _buildMessageBubble(
+      Map<String, dynamic> msg, bool isMe, Color primaryColor, bool isDark) {
     final timestamp = msg['createdAt'] as Timestamp?;
-    final timeStr = timestamp != null ? DateFormat('hh:mm a').format(timestamp.toDate()) : '';
+    final timeStr =
+        timestamp != null ? DateFormat('hh:mm a').format(timestamp.toDate()) : '';
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -279,15 +330,14 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isMe 
-            ? (isDark ? const Color(0xFF005C4B) : const Color(0xFFDCF8C6)) 
-            : (isDark ? const Color(0xFF1F2C34) : Colors.white),
+          color: isMe
+              ? (isDark ? const Color(0xFF005C4B) : const Color(0xFFDCF8C6))
+              : (isDark ? const Color(0xFF1F2C34) : Colors.white),
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withOpacity(0.15),
                 blurRadius: 1,
-                offset: const Offset(0, 1)
-            )
+                offset: const Offset(0, 1))
           ],
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(12),
@@ -297,9 +347,27 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
           ),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment:
+              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (!isMe)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4.0),
+                child: Text(
+                  widget.otherParticipants
+                      .firstWhere(
+                        (user) => user.userID == msg['senderID'],
+                        orElse: () => User(firstName: 'Unknown'),
+                      )
+                      .fullName(),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.lightBlue[200] : primaryColor,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
             Text(
               msg['content'] ?? '',
               style: TextStyle(
@@ -309,11 +377,12 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
             ),
             const SizedBox(height: 4),
             Text(
-                timeStr,
-                style: TextStyle(
-                    fontSize: 10,
-                    color: isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
-                ),
+              timeStr,
+              style: TextStyle(
+                fontSize: 10,
+                color:
+                    isDark ? Colors.white.withOpacity(0.5) : Colors.grey[600],
+              ),
             ),
           ],
         ),
@@ -339,10 +408,13 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
                   controller: _controller,
                   maxLines: 4,
                   minLines: 1,
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                  style:
+                      TextStyle(color: isDark ? Colors.white : Colors.black87),
                   decoration: InputDecoration(
                     hintText: 'Type a message...'.tr(),
-                    hintStyle: TextStyle(color: isDark ? const Color(0xFF8696A0) : Colors.grey[500]),
+                    hintStyle: TextStyle(
+                        color:
+                            isDark ? const Color(0xFF8696A0) : Colors.grey[500]),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 10),
                   ),
@@ -354,11 +426,14 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
               onTap: _handleSendPressed,
               child: CircleAvatar(
                 radius: 22,
-                backgroundColor: isDark ? const Color(0xFF00A884) : primaryColor,
-                child: _isSending 
+                backgroundColor:
+                    isDark ? const Color(0xFF00A884) : primaryColor,
+                child: _isSending
                     ? const SizedBox(
-                        height: 20, width: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2),
                       )
                     : const Icon(Icons.send, color: Colors.white, size: 20),
               ),
@@ -391,8 +466,9 @@ class ChatBackgroundPainter extends CustomPainter {
 
     for (double x = 0; x < size.width + stepX; x += stepX) {
       for (double y = 0; y < size.height + stepY; y += stepY) {
-        final index = ((x / stepX).floor() + (y / stepY).floor()) % symbols.length;
-        
+        final index =
+            ((x / stepX).floor() + (y / stepY).floor()) % symbols.length;
+
         final textSpan = TextSpan(
           text: symbols[index],
           style: TextStyle(
@@ -401,15 +477,15 @@ class ChatBackgroundPainter extends CustomPainter {
             fontWeight: index == 0 ? FontWeight.bold : FontWeight.normal,
           ),
         );
-        
+
         final textPainter = TextPainter(
           text: textSpan,
           textAlign: TextAlign.left,
           textDirection: textDirection,
         );
-        
+
         textPainter.layout();
-        
+
         canvas.save();
         canvas.translate(x, y);
         canvas.rotate(-0.25);
@@ -420,5 +496,6 @@ class ChatBackgroundPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant ChatBackgroundPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant ChatBackgroundPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

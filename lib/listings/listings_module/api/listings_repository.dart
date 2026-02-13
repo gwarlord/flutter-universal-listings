@@ -87,6 +87,9 @@ abstract class ListingsRepository {
   Future<void> featureListing(String listingID, String featuredBy, {int? durationDays});
   Future<void> unfeatureListing(String listingID);
 
+  // Listing freshness
+  Future<void> refreshListingFreshness({required String listingId});
+
   // Legacy
   Future<void> postListing({required ListingModel newListing});
 }

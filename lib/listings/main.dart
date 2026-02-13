@@ -24,6 +24,9 @@ import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:instaflutter/main.dart' as entry;
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // Added import
 import 'package:instaflutter/listings/ui/auth/api/firebase/auth_firebase.dart';
+import 'package:instaflutter/listings/ui/table_mode/customer_table_mode_screen.dart';
+import 'package:instaflutter/listings/ui/table_mode/staff_table_sessions_screen.dart';
+import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
 
 runListings() {
   appName = 'Flutter Universal Listings';
@@ -223,12 +226,74 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
 void _handleNotification(Map<String, dynamic> data, GlobalKey<NavigatorState> navigatorKey, BuildContext context) async {
   try {
-    String? channelID = data['channelID'];
-    if (channelID == null) return;
-
     // Get current user from Bloc
     final user = BlocProvider.of<AuthenticationBloc>(navigatorKey.currentContext!).user;
     if (user == null) return;
+
+    // Handle table_session notifications
+    if (data['type'] == 'table_session') {
+      final sessionId = data['sessionId'];
+      final listingId = data['listingId'];
+      final scope = data['scope']; // LISTING_TABLE_MODE
+      
+      if (sessionId == null || listingId == null) return;
+
+      print('🔔 Table session notification: sessionId=$sessionId, listingId=$listingId, scope=$scope');
+
+      showDialog(
+        context: navigatorKey.currentContext!,
+        builder: (context) => AlertDialog(
+          title: Text(data['title'] ?? 'Table Notification'),
+          content: Text(data['body'] ?? ''),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Dismiss'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                
+                // Fetch listing to navigate
+                final listing = await listingApiManager.getListing(listingID: listingId);
+                if (listing == null) return;
+                
+                // Determine if user is staff (owner for now)
+                final isStaff = listing.authorID == user.userID;
+
+                if (isStaff) {
+                  // Navigate to staff session dashboard
+                  navigatorKey.currentState?.push(
+                    MaterialPageRoute(
+                      builder: (_) => StaffTableSessionsScreen(
+                        listing: listing,
+                        currentUser: user,
+                      ),
+                    ),
+                  );
+                } else {
+                  // Navigate to customer table mode screen
+                  navigatorKey.currentState?.push(
+                    MaterialPageRoute(
+                      builder: (_) => CustomerTableModeScreen(
+                        listing: listing,
+                        currentUser: user,
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: const Text('View'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Handle chat notifications (existing logic)
+    String? channelID = data['channelID'];
+    if (channelID == null) return;
 
     // Fetch channel details to populate the screen
     final channelSnap = await FirebaseFirestore.instance.collection('channels').doc(channelID).get();

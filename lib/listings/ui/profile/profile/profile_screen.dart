@@ -30,6 +30,13 @@ import 'package:instaflutter/listings/ui/profile/settings/settings_screen.dart';
 import 'package:instaflutter/listings/ui/profile/profile/profile_bloc.dart';
 import 'package:instaflutter/core/ui/theme/theme_cubit.dart';
 import 'package:instaflutter/listings/utils/populate_test_data.dart';
+import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
+import 'package:instaflutter/listings/listings_module/listing_details/listing_details_screen.dart';
+import 'package:instaflutter/listings/listings_module/api/collaboration_api_manager.dart';
+import 'package:instaflutter/listings/model/collaboration_model.dart';
+import 'package:instaflutter/listings/ui/collaboration/assigned_listings_screen.dart';
+import 'package:instaflutter/listings/ui/collaboration/activity_log_screen.dart';
+import 'package:instaflutter/listings/model/listing_model.dart';
 
 class ProfileScreen extends StatefulWidget {
   final ListingsUser currentUser;
@@ -47,11 +54,119 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late ListingsUser currentUser;
+  late final Stream<List<AssignedListingModel>> _assignedListingsStream;
+  bool _canShowActivityLog = false;
 
   @override
   void initState() {
     super.initState();
     currentUser = widget.currentUser;
+    _assignedListingsStream = collaborationApiManager.streamAssignedListings(
+      userId: currentUser.userID,
+    );
+    _loadActivityLogVisibility();
+  }
+
+  Future<void> _loadActivityLogVisibility() async {
+    if (!mounted) return;
+
+    if (currentUser.isAdmin) {
+      setState(() => _canShowActivityLog = true);
+      return;
+    }
+
+    final hasPremium = currentUser.isPremium && currentUser.isSubscriptionActive;
+    if (!hasPremium) {
+      setState(() => _canShowActivityLog = false);
+      return;
+    }
+
+    try {
+      final listings = await listingApiManager.getMyListings(
+        currentUserID: currentUser.userID,
+        favListingsIDs: currentUser.likedListingsIDs,
+      );
+      if (!mounted) return;
+      setState(() => _canShowActivityLog = listings.isNotEmpty);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _canShowActivityLog = false);
+    }
+  }
+
+  Future<void> _openActivityLogForOwnedListing() async {
+    context.read<LoadingCubit>().showLoading(
+          context,
+          'Loading listings...'.tr(),
+          false,
+          Color(colorPrimary),
+        );
+    List<ListingModel> listings = [];
+    try {
+      listings = await listingApiManager.getMyListings(
+        currentUserID: currentUser.userID,
+        favListingsIDs: currentUser.likedListingsIDs,
+      );
+    } catch (e) {
+      if (context.mounted) {
+        showSnackBar(context, 'Failed to load listings'.tr());
+      }
+    } finally {
+      if (context.mounted) {
+        context.read<LoadingCubit>().hideLoading();
+      }
+    }
+
+    if (!context.mounted) return;
+    if (listings.isEmpty) {
+      showSnackBar(context, 'No listings found'.tr());
+      return;
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+        title: Text(
+          'Select Listing'.tr(),
+          style: TextStyle(color: isDark ? Colors.white : Colors.black),
+        ),
+        children: listings
+            .map(
+              (listing) => SimpleDialogOption(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  push(
+                    context,
+                    ActivityLogScreen(listingId: listing.id),
+                  );
+                },
+                child: Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: Color(colorPrimary),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        listing.title,
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    );
   }
 
   Future<void> _refreshUserData() async {
@@ -66,6 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
       setState(() => currentUser = freshUser);
       context.read<AuthenticationBloc>().add(UpdateAuthUserEvent(freshUser));
+      _loadActivityLogVisibility();
     } catch (e) {
       if (!mounted) return;
       showSnackBar(context, 'Failed to refresh profile'.tr());
@@ -99,6 +215,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         context.read<AuthenticationBloc>().user =
                             state.updatedUser;
                         currentUser = state.updatedUser;
+                        _loadActivityLogVisibility();
                       } else if (state is UploadingImageState) {
                         context.read<LoadingCubit>().showLoading(
                               context,
@@ -241,6 +358,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         padding: const EdgeInsets.only(top: 8),
                         child: Column(
                           children: [
+                            StreamBuilder<List<AssignedListingModel>>(
+                              stream: _assignedListingsStream,
+                              builder: (context, snapshot) {
+                                final assignedCount = snapshot.data?.length ?? 0;
+                                if (assignedCount == 0) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Column(
+                                  children: [
+                                    _modernListTile(
+                                      context,
+                                      icon: Icons.group_outlined,
+                                      iconColor: Theme.of(context).colorScheme.primary,
+                                      title: 'Assigned Listings (${assignedCount.toString()})'.tr(),
+                                      onTap: () => push(
+                                        context,
+                                        AssignedListingsScreen(
+                                          userId: currentUser.userID,
+                                          onListingSelected: (listingId) async {
+                                            final listing = await listingApiManager.getListing(
+                                              listingID: listingId,
+                                            );
+                                            if (listing == null) {
+                                              if (context.mounted) {
+                                                showSnackBar(context, 'Listing not found'.tr());
+                                              }
+                                              return;
+                                            }
+                                            if (!context.mounted) return;
+                                            await push(
+                                              context,
+                                              ListingDetailsWrappingWidget(
+                                                listing: listing,
+                                                currentUser: currentUser,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    const Divider(height: 32, indent: 32, endIndent: 32),
+                                  ],
+                                );
+                              },
+                            ),
+                            if (_canShowActivityLog) ...[
+                              _modernListTile(
+                                context,
+                                icon: Icons.history,
+                                iconColor: Theme.of(context).colorScheme.primary,
+                                title: 'Activity Log'.tr(),
+                                onTap: _openActivityLogForOwnedListing,
+                              ),
+                              const Divider(height: 32, indent: 32, endIndent: 32),
+                            ],
                             if (currentUser.isAdmin) ...[
                               _modernListTile(
                                 context,
@@ -454,7 +626,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 48.0),
+                        padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 80.0),
                         child: ConstrainedBox(
                           constraints:
                               const BoxConstraints(minWidth: double.infinity),
@@ -481,15 +653,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   .read<AuthenticationBloc>()
                                   .add(LogoutEvent(currentUser));
                             },
-                            child: Text(
-                              'Logout',
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDarkMode(context)
-                                      ? Colors.white
-                                      : Colors.black),
-                            ).tr(),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Logout',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDarkMode(context)
+                                          ? Colors.white
+                                          : Colors.black),
+                                ).tr(),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "It's ok, your listings are safe",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDarkMode(context)
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade600,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ).tr(),
+                              ],
+                            ),
                           ),
                         ),
                       ),

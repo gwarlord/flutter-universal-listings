@@ -37,6 +37,9 @@ import 'package:instaflutter/listings/ui/subscription/paywall_screen.dart';
 import 'package:instaflutter/listings/ui/widgets/tap_widgets.dart';
 import 'package:instaflutter/listings/services/tap_service.dart';
 import 'package:instaflutter/listings/listings_module/api/firebase/tap_firebase.dart';
+import 'package:instaflutter/listings/ui/collaboration/collaborators_management_screen.dart';
+import 'package:instaflutter/listings/ui/collaboration/chat_scope_integration.dart';
+import 'package:instaflutter/listings/listings_module/api/collaboration_api_manager.dart';
 import 'package:instaflutter/listings/model/tap_model.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -130,6 +133,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   bool _videoMuted = true;
   bool _servicesExpanded = false;
   List<ListingReviewModel> reviews = []; // Explicitly declared here
+  bool _canAccessTeamChat = false;
 
   // Tap (Vouch) feature
   late TapService _tapService;
@@ -202,6 +206,119 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     }
 
     _checkAuthorPremiumStatus();
+    _checkTeamChatAccess();
+  }
+
+  Future<void> _checkTeamChatAccess() async {
+    if (currentUser.userID == listing.authorID || currentUser.isAdmin) {
+      if (mounted) setState(() => _canAccessTeamChat = true);
+      return;
+    }
+
+    try {
+      final allowed = await ChatScopeIntegration.canAccessListingTeamChat(
+        listingId: listing.id,
+        userId: currentUser.userID,
+        listingOwnerId: listing.authorID,
+      );
+      if (mounted) setState(() => _canAccessTeamChat = allowed);
+    } catch (e) {
+      if (mounted) setState(() => _canAccessTeamChat = false);
+    }
+  }
+
+  Future<void> _openTeamChat() async {
+    final allowed = await ChatScopeIntegration.canAccessListingTeamChat(
+      listingId: listing.id,
+      userId: currentUser.userID,
+      listingOwnerId: listing.authorID,
+    );
+
+    if (!allowed) {
+      if (mounted) {
+        showSnackBar(context, 'You do not have access to team chat'.tr());
+      }
+      return;
+    }
+
+    final collaborators = await collaborationApiManager.getListingCollaborators(
+      listingId: listing.id,
+    );
+
+    // Get actual participants from Firestore chat (not just filtered by manageChats)
+    var listingChat = await collaborationApiManager.getListingChat(
+      listingId: listing.id,
+    );
+
+    var participantUids = listingChat?.participantUids ?? [];
+    
+    // If chat doesn't exist or has no participants, build from collaborators
+    if (participantUids.isEmpty) {
+      // Include all collaborators + owner
+      participantUids = [listing.authorID];
+      for (final collab in collaborators) {
+        if (!participantUids.contains(collab.uid)) {
+          participantUids.add(collab.uid);
+        }
+      }
+    }
+    
+    // Create a map of collaborators by UID for easy lookup
+    final collabMap = {
+      for (var c in collaborators) c.uid: c,
+    };
+
+    // Build User objects for all actual participants in the chat
+    final collaboratorUsers = <core_user.User>[];
+    for (final uid in participantUids) {
+      // Skip the owner (already added separately)
+      if (uid == listing.authorID) continue;
+      
+      // Try to find collaborator info from the collaborators list
+      final collab = collabMap[uid];
+      if (collab != null) {
+        collaboratorUsers.add(
+          core_user.User(
+            userID: uid,
+            firstName: collab.displayName ?? 'Collaborator',
+            profilePictureURL: collab.profilePictureUrl ?? '',
+          ),
+        );
+      } else {
+        // If not in collaborators list, create a placeholder (user not found locally)
+        collaboratorUsers.add(
+          core_user.User(
+            userID: uid,
+            firstName: 'Collaborator',
+            profilePictureURL: '',
+          ),
+        );
+      }
+    }
+
+    final ownerUser = core_user.User(
+      userID: listing.authorID,
+      firstName: listing.authorName,
+      profilePictureURL: listing.logo,
+    );
+
+    final channel = await ChatScopeIntegration.createListingTeamChat(
+      listingId: listing.id,
+      ownerUid: listing.authorID,
+      ownerUser: ownerUser,
+      collaboratorUsers: collaboratorUsers,
+    );
+
+    if (!mounted) return;
+    await push(
+      context,
+      ChatWrapperWidget(
+        channelDataModel: channel,
+        currentUser: currentUser,
+        colorPrimary: Color(cfg.colorPrimary),
+        colorAccent: Color(cfg.colorAccent),
+      ),
+    );
   }
 
   void _buildMediaList() {
@@ -484,12 +601,39 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Expanded(
-                                        child: Text(
-                                          listing.title,
-                                          style: const TextStyle(
-                                            fontSize: 28,
-                                            fontWeight: FontWeight.bold,
-                                            letterSpacing: -0.5,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            showDialog(
+                                              context: context,
+                                              builder: (context) => AlertDialog(
+                                                backgroundColor: dark ? Colors.grey[800] : Colors.white,
+                                                title: Text(
+                                                  'Full Listing Title'.tr(),
+                                                  style: TextStyle(color: adaptiveTextColor),
+                                                ),
+                                                content: Text(
+                                                  listing.title,
+                                                  style: TextStyle(color: adaptiveTextColor),
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () => Navigator.pop(context),
+                                                    child: Text('Close'.tr()),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                          child: Text(
+                                            listing.title,
+                                            style: const TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: -0.5,
+                                            ),
+                                            softWrap: true,
+                                            maxLines: 3,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                       ),
@@ -862,6 +1006,65 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                       ),
                     );
                     if (updated is ListingModel) setState(() => listing = updated);
+                  },
+                ),
+              ),
+            if (_canEditOrDelete)
+              PopupMenuItem(
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.group, color: Color(cfg.colorPrimary)),
+                  title: Text(
+                    'Manage Collaborators'.tr(),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                      fontFamily: 'Roboto',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final hasPremium = currentUser.isAdmin ||
+                      ((currentUser.isProfessional ||
+                          currentUser.isPremium ||
+                          currentUser.subscriptionTier
+                              .trim()
+                              .toLowerCase() ==
+                            'business') &&
+                            currentUser.isSubscriptionActive);
+                    await push(
+                      context,
+                      CollaboratorsManagementScreen(
+                        listingId: listing.id,
+                        listingOwnerId: listing.authorID,
+                        currentUserId: currentUser.userID,
+                        isOwner: currentUser.userID == listing.authorID,
+                        hasPremium: hasPremium,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            if (_canEditOrDelete || _canAccessTeamChat)
+              PopupMenuItem(
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.forum_outlined, color: Color(cfg.colorPrimary)),
+                  title: Text(
+                    'Team Chat'.tr(),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                      fontFamily: 'Roboto',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await _openTeamChat();
                   },
                 ),
               ),

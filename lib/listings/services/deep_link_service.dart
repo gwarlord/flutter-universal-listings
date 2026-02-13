@@ -14,6 +14,7 @@ class DeepLinkService {
   // Custom scheme - works immediately without server setup
   static const String _customScheme = 'caribtap';
   static const String _listingHost = 'listing';
+  static const String _listingManageHost = 'listing_manage';
   
   // Web domain (requires server-side configuration with assetlinks.json and apple-app-site-association)
   static const String _baseDomain = 'caribtap.com';
@@ -177,6 +178,28 @@ class DeepLinkService {
   /// Validate if a URL is a listing deep link
   static bool isListingDeepLink(String url) {
     return parseListingIdFromUrl(url) != null;
+  }
+
+  /// Parse a deep link URL and extract the listing ID for management links
+  ///
+  /// Format: caribtap://listing_manage?listingId=<listingId>
+  static String? parseListingManageIdFromUrl(String url) {
+    try {
+      final uri = Uri.parse(url);
+      if (uri.scheme == _customScheme && uri.host == _listingManageHost) {
+        final listingId = uri.queryParameters['listingId'] ??
+            (uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null);
+        return listingId?.isNotEmpty == true ? listingId : null;
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error parsing listing manage link: $e');
+      return null;
+    }
+  }
+
+  static bool isListingManageDeepLink(String url) {
+    return parseListingManageIdFromUrl(url) != null;
   }
   
   /// Get a listing by ID from Firestore

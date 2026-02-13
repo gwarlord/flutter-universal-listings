@@ -27,11 +27,20 @@ class _SavedDealsScreenState extends State<SavedDealsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
     return Scaffold(
+      backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
         title: const Text('Saved Deals'),
         centerTitle: true,
         elevation: 0,
+        backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
+        titleTextStyle: TextStyle(
+          color: isDark ? Colors.white : Colors.black,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       body: StreamBuilder<List<DealAdModel>>(
         stream: _savedDealService.getSavedDeals(widget.currentUser.userID),
@@ -50,18 +59,20 @@ class _SavedDealsScreenState extends State<SavedDealsScreen> {
                   Icon(
                     Icons.favorite_border,
                     size: 48,
-                    color: Colors.grey[400],
+                    color: isDark ? Colors.grey[600] : Colors.grey[400],
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'No Saved Deals',
-                    style: Theme.of(context).textTheme.titleLarge,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Save deals to view them here later',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
                     ),
                   ),
                 ],
@@ -132,7 +143,12 @@ class _SavedDealCardState extends State<_SavedDealCard> {
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      elevation: 2,
+      elevation: isDark ? 1 : 2,
+      color: isDark ? Colors.grey[900] : Colors.white,
+      shadowColor: isDark ? Colors.black54 : Colors.black12,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(
         children: [
           // Image/Video thumbnail
@@ -147,13 +163,17 @@ class _SavedDealCardState extends State<_SavedDealCard> {
                   Container(
                     height: 160,
                     width: double.infinity,
-                    color: Colors.grey[300],
+                    color: isDark ? Colors.grey[800] : Colors.grey[300],
                     child: widget.deal.mediaType == 'image'
                         ? Image.network(
                       widget.deal.mediaUrl,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) =>
-                          Icon(Icons.image, size: 48, color: Colors.grey[400]),
+                          Icon(
+                            Icons.image,
+                            size: 48,
+                            color: isDark ? Colors.grey[600] : Colors.grey[400],
+                          ),
                     )
                         : Stack(
                       alignment: Alignment.center,
@@ -162,7 +182,11 @@ class _SavedDealCardState extends State<_SavedDealCard> {
                           widget.deal.thumbnailUrl ?? widget.deal.mediaUrl,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
-                              Icon(Icons.videocam, size: 48, color: Colors.grey[400]),
+                              Icon(
+                                Icons.videocam,
+                                size: 48,
+                                color: isDark ? Colors.grey[600] : Colors.grey[400],
+                              ),
                         ),
                         Icon(
                           Icons.play_circle_fill,
@@ -249,6 +273,7 @@ class _SavedDealCardState extends State<_SavedDealCard> {
                   widget.deal.caption,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -264,13 +289,14 @@ class _SavedDealCardState extends State<_SavedDealCard> {
                           Text(
                             'Valid until',
                             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Colors.grey[600],
+                              color: isDark ? Colors.grey[400] : Colors.grey[600],
                             ),
                           ),
                           Text(
                             DateFormat('MMM d, yyyy').format(widget.deal.expireAt),
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w500,
+                              color: isDark ? Colors.white70 : Colors.black87,
                             ),
                           ),
                         ],
@@ -304,7 +330,9 @@ class _SavedDealCardState extends State<_SavedDealCard> {
                     children: [
                       Text(
                         'Notify before expiry',
-                        style: Theme.of(context).textTheme.labelMedium,
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
                       ),
                       Switch(
                         value: _notifyBefore,
@@ -316,6 +344,7 @@ class _SavedDealCardState extends State<_SavedDealCard> {
                             value,
                           );
                         },
+                        activeColor: primaryColor,
                       ),
                     ],
                   ),
@@ -332,6 +361,12 @@ class _SavedDealCardState extends State<_SavedDealCard> {
                         onPressed: () {
                           push(context, DealDetailScreen(deal: widget.deal, currentUser: widget.currentUser));
                         },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isDark ? Colors.white : Colors.black87,
+                          side: BorderSide(
+                            color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -340,6 +375,12 @@ class _SavedDealCardState extends State<_SavedDealCard> {
                         icon: const Icon(Icons.delete_outline),
                         label: const Text('Remove'),
                         onPressed: widget.onUnsave,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isDark ? Colors.white : Colors.black87,
+                          side: BorderSide(
+                            color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                          ),
+                        ),
                       ),
                     ),
                   ],

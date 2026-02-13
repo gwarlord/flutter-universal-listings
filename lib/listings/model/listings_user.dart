@@ -15,6 +15,7 @@ class ListingsUser extends User {
   String countryCode;
   String gender;
   String ageRange;
+  bool listingFreshnessExempt;
 
   List<String> likedListingsIDs;
 
@@ -38,6 +39,7 @@ class ListingsUser extends User {
     this.countryCode = '',
     this.gender = 'Prefer not to say',
     this.ageRange = 'Prefer not to say',
+    this.listingFreshnessExempt = false,
     this.likedListingsIDs = const [],
   }) : super(
           firstName: firstName,
@@ -86,6 +88,7 @@ class ListingsUser extends User {
       countryCode: parsedJson['countryCode'] ?? '',
       gender: parsedJson['gender'] ?? 'Prefer not to say',
       ageRange: parsedJson['ageRange'] ?? 'Prefer not to say',
+      listingFreshnessExempt: parsedJson['listingFreshnessExempt'] ?? false,
       likedListingsIDs:
           List<String>.from(parsedJson['likedListingsIDs'] ?? const []),
     );
@@ -116,6 +119,7 @@ class ListingsUser extends User {
       'countryCode': countryCode,
       'gender': gender,
       'ageRange': ageRange,
+      'listingFreshnessExempt': listingFreshnessExempt,
       'likedListingsIDs': likedListingsIDs,
     };
   }

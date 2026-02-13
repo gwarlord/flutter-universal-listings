@@ -2,6 +2,146 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:instaflutter/listings/model/suspension_info.dart';
 import 'rental_config.dart';
 
+const int listingFreshnessDefaultDays = 90;
+
+class ListingFreshness {
+  final bool enabled;
+  final int days;
+  final Timestamp lastRefreshedAt;
+  final Timestamp hideAt;
+  final String status;
+  final Timestamp? warn10SentAt;
+  final Timestamp? warn1SentAt;
+  final Timestamp? hiddenNotifiedAt;
+  final bool exempt;
+
+  const ListingFreshness({
+    required this.enabled,
+    required this.days,
+    required this.lastRefreshedAt,
+    required this.hideAt,
+    required this.status,
+    this.warn10SentAt,
+    this.warn1SentAt,
+    this.hiddenNotifiedAt,
+    required this.exempt,
+  });
+
+  factory ListingFreshness.defaultForCreatedAt(int createdAtSeconds) {
+    final now = Timestamp.fromMillisecondsSinceEpoch(createdAtSeconds * 1000);
+    final hideAt = Timestamp.fromMillisecondsSinceEpoch(
+      now.millisecondsSinceEpoch +
+          (listingFreshnessDefaultDays * 24 * 60 * 60 * 1000),
+    );
+    return ListingFreshness(
+      enabled: true,
+      days: listingFreshnessDefaultDays,
+      lastRefreshedAt: now,
+      hideAt: hideAt,
+      status: 'ACTIVE',
+      warn10SentAt: null,
+      warn1SentAt: null,
+      hiddenNotifiedAt: null,
+      exempt: false,
+    );
+  }
+
+  factory ListingFreshness.fromJson(
+    Map<String, dynamic>? json, {
+    required int createdAtSeconds,
+  }) {
+    if (json == null) {
+      return ListingFreshness.defaultForCreatedAt(createdAtSeconds);
+    }
+
+    final enabled = json['enabled'] ?? true;
+    final days = (json['days'] is int)
+      ? json['days'] as int
+      : int.tryParse(json['days']?.toString() ?? '') ??
+        listingFreshnessDefaultDays;
+    final lastRefreshedAt = _parseTimestamp(
+          json['lastRefreshedAt'],
+          fallbackSeconds: createdAtSeconds,
+        ) ??
+        Timestamp.fromMillisecondsSinceEpoch(createdAtSeconds * 1000);
+    final hideAt = _parseTimestamp(
+          json['hideAt'],
+          fallbackSeconds: lastRefreshedAt.seconds + (days * 24 * 60 * 60),
+        ) ??
+        Timestamp.fromMillisecondsSinceEpoch(
+          lastRefreshedAt.millisecondsSinceEpoch +
+              (days * 24 * 60 * 60 * 1000),
+        );
+
+    return ListingFreshness(
+      enabled: enabled == true,
+      days: days,
+      lastRefreshedAt: lastRefreshedAt,
+      hideAt: hideAt,
+      status: json['status'] ?? 'ACTIVE',
+      warn10SentAt: _parseTimestamp(json['warn10SentAt']),
+      warn1SentAt: _parseTimestamp(json['warn1SentAt']),
+      hiddenNotifiedAt: _parseTimestamp(json['hiddenNotifiedAt']),
+      exempt: json['exempt'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'enabled': enabled,
+      'days': days,
+      'lastRefreshedAt': lastRefreshedAt,
+      'hideAt': hideAt,
+      'status': status,
+      'warn10SentAt': warn10SentAt,
+      'warn1SentAt': warn1SentAt,
+      'hiddenNotifiedAt': hiddenNotifiedAt,
+      'exempt': exempt,
+    };
+  }
+
+  int? get daysRemaining {
+    final now = DateTime.now();
+    final remaining = hideAt.toDate().difference(now);
+    return remaining.inSeconds <= 0 ? 0 : (remaining.inHours / 24).ceil();
+  }
+
+  bool get isExpired => hideAt.toDate().isBefore(DateTime.now());
+
+  ListingFreshness copyWithExempt(bool value) {
+    return ListingFreshness(
+      enabled: enabled,
+      days: days,
+      lastRefreshedAt: lastRefreshedAt,
+      hideAt: hideAt,
+      status: status,
+      warn10SentAt: warn10SentAt,
+      warn1SentAt: warn1SentAt,
+      hiddenNotifiedAt: hiddenNotifiedAt,
+      exempt: value,
+    );
+  }
+
+  static Timestamp? _parseTimestamp(
+    dynamic value, {
+    int? fallbackSeconds,
+  }) {
+    if (value is Timestamp) {
+      return value;
+    }
+    if (value is int) {
+      return Timestamp.fromMillisecondsSinceEpoch(value * 1000);
+    }
+    if (value is DateTime) {
+      return Timestamp.fromDate(value);
+    }
+    if (fallbackSeconds != null) {
+      return Timestamp.fromMillisecondsSinceEpoch(fallbackSeconds * 1000);
+    }
+    return null;
+  }
+}
+
 class ListingModel {
   /// REQUIRED
   String id;
@@ -84,6 +224,7 @@ class ListingModel {
 
   /// Filters / meta
   Map<String, dynamic> filters;
+  ListingFreshness freshness;
   bool isApproved;
   bool suspended;
   bool hidden; // Allows lister to hide their listing from public view
@@ -181,6 +322,7 @@ class ListingModel {
     this.youtube = '',
     this.x = '',
     this.filters = const {},
+    ListingFreshness? freshness,
     this.isApproved = false,
     this.suspended = false,
     this.hidden = false,
@@ -206,13 +348,28 @@ class ListingModel {
     List<Map<String, dynamic>>? menuUploads,
     List<Map<String, dynamic>>? menuSections,
     this.rentalConfig,
-  })  : menuCurrencyCode = menuCurrencyCode ?? currencyCode,
+    })  : menuCurrencyCode = menuCurrencyCode ?? currencyCode,
         storeCurrencyCode = storeCurrencyCode ?? currencyCode,
         menuUploads = menuUploads ?? [],
         menuSections = menuSections ?? [],
-        createdAt = createdAt ?? Timestamp.now().seconds;
+      createdAt = createdAt ?? Timestamp.now().seconds,
+      freshness = freshness ??
+        ListingFreshness.defaultForCreatedAt(createdAt ?? Timestamp.now().seconds);
 
   factory ListingModel.fromJson(Map<String, dynamic> json) {
+    int createdAtSeconds;
+    if (json['createdAt'] is Timestamp) {
+      createdAtSeconds = (json['createdAt'] as Timestamp).seconds;
+    } else if (json['createdAt'] != null) {
+      final rawValue = json['createdAt'] as num;
+      // If value > 10 billion, it's likely in milliseconds, convert to seconds
+      createdAtSeconds = rawValue > 10000000000 
+          ? (rawValue / 1000).round() 
+          : rawValue.toInt();
+    } else {
+      createdAtSeconds = Timestamp.now().seconds;
+    }
+
     return ListingModel(
       id: json['id'] ?? '',
       authorID: json['authorID'] ?? '',
@@ -221,9 +378,7 @@ class ListingModel {
       categoryID: json['categoryID'] ?? '',
       categoryPhoto: json['categoryPhoto'] ?? '',
       categoryTitle: json['categoryTitle'] ?? '',
-      createdAt: json['createdAt'] is Timestamp
-          ? (json['createdAt'] as Timestamp).seconds
-          : (json['createdAt'] ?? Timestamp.now().seconds),
+        createdAt: createdAtSeconds,
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       place: json['place'] ?? '',
@@ -271,6 +426,10 @@ class ListingModel {
       youtube: json['youtube'] ?? '',
       x: json['x'] ?? '',
       filters: Map<String, dynamic>.from(json['filters'] ?? {}),
+      freshness: ListingFreshness.fromJson(
+        (json['freshness'] as Map?)?.cast<String, dynamic>(),
+        createdAtSeconds: createdAtSeconds,
+      ),
       isApproved: json['isApproved'] ?? false,
       suspended: json['suspended'] ?? false,
       hidden: json['hidden'] ?? false,
@@ -358,6 +517,7 @@ class ListingModel {
       'youtube': youtube,
       'x': x,
       'filters': filters,
+      'freshness': freshness.toJson(),
       'isApproved': isApproved,
       'suspended': suspended,
       'hidden': hidden,
@@ -430,6 +590,7 @@ class ListingModel {
     String? youtube,
     String? x,
     Map<String, dynamic>? filters,
+    ListingFreshness? freshness,
     bool? isApproved,
     bool? suspended,
     bool? hidden,
@@ -486,6 +647,7 @@ class ListingModel {
       youtube: youtube ?? this.youtube,
       x: x ?? this.x,
       filters: filters ?? this.filters,
+      freshness: freshness ?? this.freshness,
       isApproved: isApproved ?? this.isApproved,
       suspended: suspended ?? this.suspended,
       hidden: hidden ?? this.hidden,

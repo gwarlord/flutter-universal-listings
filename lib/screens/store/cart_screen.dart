@@ -11,6 +11,8 @@ import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/screens/store/cart_models.dart';
 import 'package:instaflutter/screens/store/order_chat_helper.dart';
 import 'package:instaflutter/listings/listings_app_config.dart';
+import 'package:instaflutter/listings/api/firebase/table_mode_firebase.dart';
+import 'package:instaflutter/listings/model/table_mode_models.dart';
 
 /// Cart screen for reviewing and submitting orders
 class CartScreen extends StatefulWidget {
@@ -760,10 +762,28 @@ class _CartScreenState extends State<CartScreen> {
         listerId: widget.listing.authorID,
       );
 
-      // Update order with channelId
-      await FirebaseFirestore.instance.collection('order_requests').doc(orderId).update({
-        'channelId': channelId,
-      });
+      // Check for active table session and tag order
+      Map<String, dynamic> orderUpdates = {'channelId': channelId};
+      
+      try {
+        final activeSession = await tableModeRepository.getCustomerActiveSession(
+          listingId: widget.listing.id,
+          customerUid: widget.currentUser!.userID,
+        );
+        
+        if (activeSession != null) {
+          orderUpdates['tableSessionId'] = activeSession.sessionId;
+          orderUpdates['tableId'] = activeSession.tableId;
+          orderUpdates['tableName'] = activeSession.tableName;
+          print('✅ Order tagged with table session: ${activeSession.tableName}');
+        }
+      } catch (e) {
+        print('⚠️ Could not check table session: $e');
+        // Continue with order creation even if table session check fails
+      }
+
+      // Update order with channelId and optionally table session info
+      await FirebaseFirestore.instance.collection('order_requests').doc(orderId).update(orderUpdates);
 
       // Post order message to chat
       await _chatHelper.postOrderRequestMessage(

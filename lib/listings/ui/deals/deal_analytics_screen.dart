@@ -32,11 +32,20 @@ class _DealAnalyticsScreenState extends State<DealAnalyticsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
     return Scaffold(
+      backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
         title: const Text('Deal Analytics'),
         centerTitle: true,
         elevation: 0,
+        backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
+        titleTextStyle: TextStyle(
+          color: isDark ? Colors.white : Colors.black,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       body: StreamBuilder<DealAnalytics>(
         stream: _analyticsService.streamDealAnalytics(widget.dealId),
@@ -46,7 +55,14 @@ class _DealAnalyticsScreenState extends State<DealAnalyticsScreen> {
           }
 
           if (!snapshot.hasData) {
-            return const Center(child: Text('No analytics available'));
+            return Center(
+              child: Text(
+                'No analytics available',
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : Colors.black87,
+                ),
+              ),
+            );
           }
 
           final analytics = snapshot.data!;
@@ -91,7 +107,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
 
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 48),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -101,6 +117,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                 'Deal: ${widget.analytics.dealCaption}',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
               const SizedBox(height: 16),
@@ -115,6 +132,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                     label: 'Views',
                     value: widget.analytics.viewCount.toString(),
                     color: Colors.blue,
+                    isDark: isDark,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -124,6 +142,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                     label: 'Saves',
                     value: widget.analytics.saveCount.toString(),
                     color: Colors.red,
+                    isDark: isDark,
                   ),
                 ),
               ],
@@ -139,6 +158,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                     label: 'Claims',
                     value: widget.analytics.claimCount.toString(),
                     color: Colors.green,
+                    isDark: isDark,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -148,6 +168,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                     label: 'Users',
                     value: widget.analytics.redemptionCountByUser.toString(),
                     color: Colors.purple,
+                    isDark: isDark,
                   ),
                 ),
               ],
@@ -157,7 +178,12 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
 
             // Redemption section
             Card(
-              elevation: 2,
+              elevation: isDark ? 1 : 2,
+              color: isDark ? Colors.grey[900] : Colors.white,
+              shadowColor: isDark ? Colors.black54 : Colors.black12,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -167,13 +193,19 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                       'Redemption Status',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
                       ),
                     ),
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Total Redeemed'),
+                        Text(
+                          'Total Redeemed',
+                          style: TextStyle(
+                            color: isDark ? Colors.white70 : Colors.black87,
+                          ),
+                        ),
                         Text(
                           widget.analytics.redemptionCountTotal.toString(),
                           style: TextStyle(
@@ -188,10 +220,18 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Limit'),
+                          Text(
+                            'Limit',
+                            style: TextStyle(
+                              color: isDark ? Colors.white70 : Colors.black87,
+                            ),
+                          ),
                           Text(
                             widget.analytics.redemptionLimitTotal.toString(),
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
                           ),
                         ],
                       ),
@@ -199,7 +239,12 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Remaining'),
+                          Text(
+                            'Remaining',
+                            style: TextStyle(
+                              color: isDark ? Colors.white70 : Colors.black87,
+                            ),
+                          ),
                           Text(
                             widget.analytics.redemptionRemaining.toString(),
                             style: TextStyle(
@@ -218,6 +263,8 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                           value: widget.analytics.redemptionCountTotal /
                               widget.analytics.redemptionLimitTotal!,
                           minHeight: 8,
+                          backgroundColor: isDark ? Colors.grey[800] : Colors.grey[300],
+                          color: primaryColor,
                         ),
                       ),
                     ],
@@ -238,7 +285,12 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
 
                 final metrics = snapshot.data!;
                 return Card(
-                  elevation: 2,
+                  elevation: isDark ? 1 : 2,
+                  color: isDark ? Colors.grey[900] : Colors.white,
+                  shadowColor: isDark ? Colors.black54 : Colors.black12,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -248,6 +300,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                           'Engagement Metrics',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black87,
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -285,10 +338,14 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
 
             // Status summary
             Card(
-              elevation: 2,
-              color: widget.analytics.isActive
-                  ? Colors.green[50]
-                  : Colors.red[50],
+              elevation: isDark ? 1 : 2,
+              color: isDark
+                  ? (widget.analytics.isActive ? Colors.green[900] : Colors.red[900])
+                  : (widget.analytics.isActive ? Colors.green[50] : Colors.red[50]),
+              shadowColor: isDark ? Colors.black54 : Colors.black12,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -309,16 +366,20 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                         children: [
                           Text(
                             widget.analytics.isActive ? 'Active' : 'Inactive',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
+                              color: isDark ? Colors.white : Colors.black87,
                             ),
                           ),
                           Text(
                             widget.analytics.isSoldOut
                                 ? 'Sold out'
                                 : 'Accepting claims',
-                            style: const TextStyle(fontSize: 12),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? Colors.white70 : Colors.black87,
+                            ),
                           ),
                         ],
                       ),
@@ -340,18 +401,25 @@ class _StatusCard extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
+  final bool isDark;
 
   const _StatusCard({
     required this.icon,
     required this.label,
     required this.value,
     required this.color,
+    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
+      elevation: isDark ? 1 : 2,
+      color: isDark ? Colors.grey[900] : Colors.white,
+      shadowColor: isDark ? Colors.black54 : Colors.black12,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -362,12 +430,15 @@ class _StatusCard extends StatelessWidget {
               value,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               label,
-              style: Theme.of(context).textTheme.labelSmall,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
             ),
           ],
         ),
@@ -390,13 +461,20 @@ class _MetricRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
             Text(
               value,
               style: TextStyle(
@@ -411,7 +489,7 @@ class _MetricRow extends StatelessWidget {
         Text(
           description,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: Colors.grey[600],
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
           ),
         ),
       ],

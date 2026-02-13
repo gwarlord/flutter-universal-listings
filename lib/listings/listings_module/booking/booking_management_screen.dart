@@ -3,11 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/core/utils/helper.dart';
+import 'package:instaflutter/core/ui/chat/chat/chat_screen.dart';
+import 'package:instaflutter/core/model/user.dart' as core_user;
+import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/listings/listings_module/api/booking_api_manager.dart';
 import 'package:instaflutter/listings/listings_module/booking/booking_bloc.dart';
 import 'package:instaflutter/listings/listings_module/booking/booking_event.dart';
 import 'package:instaflutter/listings/listings_module/booking/booking_state.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:instaflutter/listings/listings_module/api/collaboration_api_manager.dart';
+import 'package:instaflutter/listings/ui/collaboration/chat_scope_integration.dart';
 import 'package:intl/intl.dart';
 
 class BookingManagementScreen extends StatefulWidget {
@@ -43,6 +48,82 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
     context.read<BookingBloc>().add(
           GetReceivedBookingsEvent(listersUserId: widget.currentUser.userID),
         );
+  }
+
+  Future<void> _openOrderChat(dynamic booking) async {
+    if (booking.id == null || booking.id.isEmpty) {
+      showSnackBar(context, 'Missing order ID'.tr());
+      return;
+    }
+    if (booking.listingId == null || booking.listingId.isEmpty) {
+      showSnackBar(context, 'Missing listing ID'.tr());
+      return;
+    }
+    if (booking.customerId == null || booking.customerId.isEmpty) {
+      showSnackBar(context, 'Missing customer ID'.tr());
+      return;
+    }
+    if (booking.listersUserId == null || booking.listersUserId.isEmpty) {
+      showSnackBar(context, 'Missing owner ID'.tr());
+      return;
+    }
+
+    final allowed = await ChatScopeIntegration.canAccessOrderThreadChat(
+      orderId: booking.id,
+      listingId: booking.listingId,
+      userId: widget.currentUser.userID,
+      listingOwnerId: booking.listersUserId,
+      customerUid: booking.customerId,
+    );
+
+    if (!allowed) {
+      showSnackBar(context, 'You do not have access to this chat'.tr());
+      return;
+    }
+
+    final collaborators = await collaborationApiManager.getListingCollaborators(
+      listingId: booking.listingId,
+    );
+
+    final collaboratorUsers = collaborators
+        .where((c) => c.permissions.manageChats)
+        .map((c) => core_user.User(
+              userID: c.uid,
+              firstName: c.displayName ?? 'Collaborator',
+              profilePictureURL: c.profilePictureUrl ?? '',
+            ))
+        .toList();
+
+    final ownerUser = core_user.User(
+      userID: booking.listersUserId,
+      firstName: booking.listersName,
+    );
+
+    final customerUser = core_user.User(
+      userID: booking.customerId,
+      firstName: booking.customerName,
+    );
+
+    final channel = await ChatScopeIntegration.createOrderThreadChat(
+      orderId: booking.id,
+      listingId: booking.listingId,
+      ownerUid: booking.listersUserId,
+      ownerUser: ownerUser,
+      customerUid: booking.customerId,
+      customerUser: customerUser,
+      collaboratorUsers: collaboratorUsers,
+    );
+
+    if (!mounted) return;
+    await push(
+      context,
+      ChatWrapperWidget(
+        channelDataModel: channel,
+        currentUser: widget.currentUser,
+        colorPrimary: Color(cfg.colorPrimary),
+        colorAccent: Color(cfg.colorAccent),
+      ),
+    );
   }
 
   @override
@@ -221,6 +302,14 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  tooltip: 'Order Chat'.tr(),
+                  icon: Icon(
+                    Icons.chat_bubble_outline,
+                    color: dark ? Colors.white70 : Colors.black54,
+                  ),
+                  onPressed: () => _openOrderChat(booking),
                 ),
               ],
             ),

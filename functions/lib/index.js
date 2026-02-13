@@ -59,6 +59,18 @@ __exportStar(require("./user_suspension_notifications"), exports);
 __exportStar(require("./listing_suspension_notifications"), exports);
 // Export booking reminder functions
 __exportStar(require("./booking_reminders"), exports);
+// Export listing freshness functions
+__exportStar(require("./listing_freshness"), exports);
+// Export collaboration functions
+__exportStar(require("./collaboration"), exports);
+// Export tap functions
+__exportStar(require("./tap_functions"), exports);
+// Export deal ad notification functions
+__exportStar(require("./deal_ad_notifications"), exports);
+// Export chat notification functions
+__exportStar(require("./chat_notifications"), exports);
+// Export table mode functions
+__exportStar(require("./tableMode"), exports);
 const db = admin.firestore();
 const messaging = admin.messaging();
 // Set your SendGrid API key in Functions config: firebase functions:config:set sendgrid.key="YOUR_KEY"

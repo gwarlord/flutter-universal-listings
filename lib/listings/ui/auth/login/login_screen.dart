@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
 import 'package:instaflutter/core/utils/helper.dart';
@@ -302,15 +303,14 @@ class _LoginScreen extends State<LoginScreen> {
                               textAlign: TextAlign.center,
                               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                             ).tr(),
-                            icon: Image.asset(
-                              'assets/images/facebook_logo.png',
+                            icon: const FaIcon(
+                              FontAwesomeIcons.facebookF,
                               color: Colors.white,
-                              height: 24,
-                              width: 24,
+                              size: 18,
                             ),
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
-                              backgroundColor: const Color(facebookButtonColor),
+                              backgroundColor: const Color(0xFF1877F2),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14.0),
                               ),
@@ -355,16 +355,23 @@ class _LoginScreen extends State<LoginScreen> {
                             },
                           ),
                           const SizedBox(height: 12),
-                          ElevatedButton.icon(
+                          OutlinedButton.icon(
                             label: const Text(
                               'Sign in with Google',
                               textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
                             ).tr(),
-                            icon: const Icon(Icons.g_mobiledata, color: Colors.white, size: 28),
-                            style: ElevatedButton.styleFrom(
+                            icon: const FaIcon(
+                              FontAwesomeIcons.google,
+                              color: Color(0xFF4285F4),
+                              size: 18,
+                            ),
+                            style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
-                              backgroundColor: const Color(0xFF4285F4),
+                              backgroundColor: Colors.white,
+                              side: BorderSide(
+                                color: isDarkMode(context) ? Colors.white24 : Colors.grey.shade300,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14.0),
                               ),

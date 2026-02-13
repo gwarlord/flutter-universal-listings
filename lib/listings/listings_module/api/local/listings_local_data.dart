@@ -135,4 +135,7 @@ class ListingsLocalData extends ListingsRepository {
 
   @override
   Future<void> unfeatureListing(String listingID) async {}
+
+  @override
+  Future<void> refreshListingFreshness({required String listingId}) async {}
 }

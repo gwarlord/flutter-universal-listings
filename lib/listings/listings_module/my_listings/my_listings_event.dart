@@ -18,8 +18,9 @@ class ListingDeletedByUserEvent extends MyListingsEvent {
 
 class ListingHiddenToggled extends MyListingsEvent {
   ListingModel listing;
+  bool setHidden;
 
-  ListingHiddenToggled({required this.listing});
+  ListingHiddenToggled({required this.listing, required this.setHidden});
 }
 
 class LoadingEvent extends MyListingsEvent {}

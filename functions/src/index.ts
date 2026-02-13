@@ -26,6 +26,24 @@ export * from "./listing_suspension_notifications";
 // Export booking reminder functions
 export * from "./booking_reminders";
 
+// Export listing freshness functions
+export * from "./listing_freshness";
+
+// Export collaboration functions
+export * from "./collaboration";
+
+// Export tap functions
+export * from "./tap_functions";
+
+// Export deal ad notification functions
+export * from "./deal_ad_notifications";
+
+// Export chat notification functions
+export * from "./chat_notifications";
+
+// Export table mode functions
+export * from "./tableMode";
+
 const db = admin.firestore();
 const messaging = admin.messaging();
 

@@ -44,13 +44,14 @@ class ChatWrapperWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-      return FirestoreChatScreenV2(
-        channelId: channelDataModel.channelID,
-        currentUserId: currentUser.userID,
-        listingTitle: channelDataModel.listingTitle ?? '',
-        listingImage: channelDataModel.listingImage ?? '',
-        otherParticipants: channelDataModel.participants,
-      );
+    return FirestoreChatScreenV2(
+      channelId: channelDataModel.channelID,
+      currentUserId: currentUser.userID,
+      currentUser: currentUser,
+      listingTitle: channelDataModel.listingTitle ?? '',
+      listingImage: channelDataModel.listingImage ?? '',
+      otherParticipants: channelDataModel.participants,
+    );
   }
 }
 
@@ -73,9 +74,9 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-    // Local list to keep track of loaded messages for day separator logic
-    List<ChatFeedContent> _loadedMessages = [];
-    final ScrollController _scrollController = ScrollController();
+  // Local list to keep track of loaded messages for day separator logic
+  List<ChatFeedContent> _loadedMessages = [];
+  final ScrollController _scrollController = ScrollController();
   late User currentUser;
   final TextEditingController _messageController = TextEditingController();
   RecordingState currentRecordingState = RecordingState.hidden;
@@ -93,28 +94,36 @@ class _ChatScreenState extends State<ChatScreen> {
     channelDataModel = widget.channelDataModel;
     currentUser = widget.currentUser;
 
-    subtitleText = channelDataModel.participants.isNotEmpty && channelDataModel.participants.first.active
-        ? activeNow
-        : channelDataModel.participants.isNotEmpty 
-            ? '$lastSeenOn ${formatTimestamp(channelDataModel.participants.first.lastOnlineTimestamp, lastSeen: true)}'
-            : '';
+    // DEBUG: Log group chat setup
+    debugPrint(
+        'GROUP_CHAT_DEBUG: isGroupChat=${channelDataModel.isGroupChat}, participants=${channelDataModel.participants.length}, currentUserID=$currentUser');
+    for (var p in channelDataModel.participants) {
+      debugPrint('  - Participant: ${p.userID} (${p.firstName} ${p.lastName})');
+    }
+
+    subtitleText =
+        channelDataModel.participants.isNotEmpty && channelDataModel.participants.first.active
+            ? activeNow
+            : channelDataModel.participants.isNotEmpty
+                ? '$lastSeenOn ${formatTimestamp(channelDataModel.participants.first.lastOnlineTimestamp, lastSeen: true)}'
+                : '';
 
     _pagingController = PagingController<int, ChatFeedContent>(
       fetchPage: (pageKey) {
         final completer = Completer<List<ChatFeedContent>>();
 
         context.read<ChatBloc>().add(
-          FetchMessagesPageEvent(
-            page: pageKey,
-            size: pageSize,
-            completer: completer,
-          ),
-        );
+              FetchMessagesPageEvent(
+                page: pageKey,
+                size: pageSize,
+                completer: completer,
+              ),
+            );
 
         return completer.future;
       },
       getNextPageKey: (state) =>
-      state.lastPageIsEmpty ? null : state.nextIntPageKey,
+          state.lastPageIsEmpty ? null : state.nextIntPageKey,
     );
 
     // Listen to page changes and update _loadedMessages
@@ -130,7 +139,8 @@ class _ChatScreenState extends State<ChatScreen> {
         // Optionally scroll to bottom when new messages arrive
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients) {
-            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+            _scrollController
+                .jumpTo(_scrollController.position.maxScrollExtent);
           }
         });
       }
@@ -143,17 +153,17 @@ class _ChatScreenState extends State<ChatScreen> {
     // START LIVE MESSAGE LISTENER (NON-BLOCKING)
     context.read<ChatBloc>().add(StartLiveMessagesListenerEvent());
 
-    if (!channelDataModel.readUserIDs.contains(currentUser.userID) && 
+    if (!channelDataModel.readUserIDs.contains(currentUser.userID) &&
         channelDataModel.id.isNotEmpty) {
       channelDataModel.readUserIDs.add(currentUser.userID);
       context.read<ChatBloc>().add(
-        MarkChatAsReadEvent(
-          channelID: channelDataModel.id,
-          currentUserID: currentUser.userID,
-          messageID: channelDataModel.lastThreadMessageId,
-          readUserIDs: channelDataModel.readUserIDs,
-        ),
-      );
+            MarkChatAsReadEvent(
+              channelID: channelDataModel.id,
+              currentUserID: currentUser.userID,
+              messageID: channelDataModel.lastThreadMessageId,
+              readUserIDs: channelDataModel.readUserIDs,
+            ),
+          );
     }
   }
 
@@ -168,13 +178,13 @@ class _ChatScreenState extends State<ChatScreen> {
               channelDataModel = state.channelDataModel;
             } else if (state is ParticipantsUpdatedStream) {
               channelDataModel.participants.removeWhere(
-                    (element) => element.userID == state.updatedUser.userID,
+                (element) => element.userID == state.updatedUser.userID,
               );
             }
           },
           buildWhen: (old, current) =>
-          (current is ChannelUpdatedStream ||
-              current is ParticipantsUpdatedStream) &&
+              (current is ChannelUpdatedStream ||
+                  current is ParticipantsUpdatedStream) &&
               old != current,
           builder: (context, state) {
             String? statusText;
@@ -183,14 +193,16 @@ class _ChatScreenState extends State<ChatScreen> {
               if (first.active) {
                 statusText = activeNow;
               } else if (first.lastOnlineTimestamp != null) {
-                statusText = '$lastSeenOn ${formatTimestamp(first.lastOnlineTimestamp, lastSeen: true)}';
+                statusText =
+                    '$lastSeenOn ${formatTimestamp(first.lastOnlineTimestamp, lastSeen: true)}';
               }
             }
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                if (channelDataModel.listingTitle != null && channelDataModel.listingTitle!.isNotEmpty)
+                if (channelDataModel.listingTitle != null &&
+                    channelDataModel.listingTitle!.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 2.0),
                     child: Text(
@@ -299,18 +311,21 @@ class _ChatScreenState extends State<ChatScreen> {
 
             final existingPages = _pagingController.value.pages ?? [];
             final Set<String> newPageIds =
-            Set.from(state.newPage.map((m) => m.id));
+                Set.from(state.newPage.map((m) => m.id));
 
             final List<List<ChatFeedContent>> updatedPages = existingPages
                 .map(
                   (page) =>
-                  page.where((m) => !newPageIds.contains(m.id)).toList(),
-            )
+                      page.where((m) => !newPageIds.contains(m.id)).toList(),
+                )
                 .toList();
 
             updatedPages.add(state.newPage);
 
-            final newKeys = [...?_pagingController.value.keys, state.oldPageKey];
+            final newKeys = [
+              ...?_pagingController.value.keys,
+              state.oldPageKey
+            ];
 
             _pagingController.value = _pagingController.value.copyWith(
               pages: updatedPages,
@@ -331,21 +346,21 @@ class _ChatScreenState extends State<ChatScreen> {
           } else if (state is MediaSelectedState) {
             if (state.mediaType == imageMediaType) {
               context.read<LoadingCubit>().showLoading(
-                context,
-                'Uploading image...'.tr(),
-                false,
-                widget.colorPrimary,
-              );
+                    context,
+                    'Uploading image...'.tr(),
+                    false,
+                    widget.colorPrimary,
+                  );
               context
                   .read<ChatBloc>()
                   .add(SendImageMessageEvent(image: state.mediaFile));
             } else if (state.mediaType == videoMediaType) {
               context.read<LoadingCubit>().showLoading(
-                context,
-                'Uploading video...'.tr(),
-                false,
-                widget.colorPrimary,
-              );
+                    context,
+                    'Uploading video...'.tr(),
+                    false,
+                    widget.colorPrimary,
+                  );
               context
                   .read<ChatBloc>()
                   .add(SendVideoMessageEvent(video: state.mediaFile));
@@ -362,7 +377,7 @@ class _ChatScreenState extends State<ChatScreen> {
           }
         },
         buildWhen: (old, current) =>
-        current.runtimeType != UpdateAppBarState && old != current,
+            current.runtimeType != UpdateAppBarState && old != current,
         builder: (context, state) {
           if (state is RestartStream) {
             channelDataModel = state.channelDataModel;
@@ -393,97 +408,117 @@ class _ChatScreenState extends State<ChatScreen> {
                       onTap: () {
                         FocusScope.of(context).unfocus();
                         context.read<ChatBloc>().add(
-                          MicClickedEvent(
-                            recordingState: RecordingState.visible,
-                          ),
-                        );
+                              MicClickedEvent(
+                                recordingState: RecordingState.visible,
+                              ),
+                            );
                       },
                       child: PagingListener(
                         controller: _pagingController,
                         builder: (context, state, fetchNextPage) =>
                             PagedListView<int, ChatFeedContent>(
-                              keyboardDismissBehavior:
-                                ScrollViewKeyboardDismissBehavior.onDrag,
-                              state: state,
-                              fetchNextPage: fetchNextPage,
-                              reverse: false, // Show oldest at top, newest at bottom
-                              scrollController: _scrollController,
-                              builderDelegate:
-                                PagedChildBuilderDelegate<ChatFeedContent>(
-                                invisibleItemsThreshold: 5,
-                                noItemsFoundIndicatorBuilder: (_) => Center(
-                                  child: const Text('No Messages Yet.').tr(),
-                                ),
-                                firstPageProgressIndicatorBuilder: (_) =>
-                                const Center(
-                                  child: CircularProgressIndicator.adaptive(),
-                                ),
-                                itemBuilder: (context, message, index) {
-                                  // Use the local _loadedMessages for day separator logic
-                                  final messages = _loadedMessages;
-                                  bool showDaySeparator = false;
-                                  String? dayString;
-                                  
-                                  final currDate = DateTime.fromMillisecondsSinceEpoch(message.createdAt);
-                                  
-                                  if (index == 0) {
-                                    showDaySeparator = true;
-                                  } else {
-                                    final prevMsg = messages[index - 1];
-                                    final prevDate = DateTime.fromMillisecondsSinceEpoch(prevMsg.createdAt);
-                                    if (currDate.year != prevDate.year || currDate.month != prevDate.month || currDate.day != prevDate.day) {
-                                      showDaySeparator = true;
-                                    }
-                                  }
-                                  
-                                  if (showDaySeparator) {
-                                    final now = DateTime.now();
-                                    if (currDate.year == now.year && currDate.month == now.month && currDate.day == now.day) {
-                                      dayString = 'Today'.tr();
-                                    } else if (currDate.year == now.year && currDate.month == now.month && currDate.day == now.day - 1) {
-                                      dayString = 'Yesterday'.tr();
-                                    } else {
-                                      dayString = DateFormat('MMMM d, yyyy').format(currDate);
-                                    }
-                                  }
-                                  
-                                  return Column(
-                                    children: [
-                                      if (showDaySeparator && dayString != null)
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(vertical: 16.0),
-                                          child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-                                                decoration: BoxDecoration(
-                                                  color: isDarkMode(context) ? Colors.white10 : Colors.grey.shade200,
-                                                  borderRadius: BorderRadius.circular(20),
-                                                ),
-                                                child: Text(
-                                                  dayString,
-                                                  style: TextStyle(
-                                                    fontSize: 12, 
-                                                    color: isDarkMode(context) ? Colors.white70 : Colors.black54, 
-                                                    fontWeight: FontWeight.bold,
-                                                    letterSpacing: 0.5,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      buildMessage(
-                                        message,
-                                        channelDataModel.participants,
-                                        showTime: true,
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          state: state,
+                          fetchNextPage: fetchNextPage,
+                          reverse:
+                              false, // Show oldest at top, newest at bottom
+                          scrollController: _scrollController,
+                          builderDelegate:
+                              PagedChildBuilderDelegate<ChatFeedContent>(
+                            invisibleItemsThreshold: 5,
+                            noItemsFoundIndicatorBuilder: (_) => Center(
+                              child: const Text('No Messages Yet.').tr(),
                             ),
+                            firstPageProgressIndicatorBuilder: (_) =>
+                                const Center(
+                              child: CircularProgressIndicator.adaptive(),
+                            ),
+                            itemBuilder: (context, message, index) {
+                              // Use the local _loadedMessages for day separator logic
+                              final messages = _loadedMessages;
+                              bool showDaySeparator = false;
+                              String? dayString;
+
+                              final currDate =
+                                  DateTime.fromMillisecondsSinceEpoch(
+                                      message.createdAt);
+
+                              if (index == 0) {
+                                showDaySeparator = true;
+                              } else {
+                                final prevMsg = messages[index - 1];
+                                final prevDate =
+                                    DateTime.fromMillisecondsSinceEpoch(
+                                        prevMsg.createdAt);
+                                if (currDate.year != prevDate.year ||
+                                    currDate.month != prevDate.month ||
+                                    currDate.day != prevDate.day) {
+                                  showDaySeparator = true;
+                                }
+                              }
+
+                              if (showDaySeparator) {
+                                final now = DateTime.now();
+                                if (currDate.year == now.year &&
+                                    currDate.month == now.month &&
+                                    currDate.day == now.day) {
+                                  dayString = 'Today'.tr();
+                                } else if (currDate.year == now.year &&
+                                    currDate.month == now.month &&
+                                    currDate.day == now.day - 1) {
+                                  dayString = 'Yesterday'.tr();
+                                } else {
+                                  dayString =
+                                      DateFormat('MMMM d, yyyy').format(currDate);
+                                }
+                              }
+
+                              return Column(
+                                children: [
+                                  if (showDaySeparator && dayString != null)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 16.0),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 6, horizontal: 16),
+                                            decoration: BoxDecoration(
+                                              color: isDarkMode(context)
+                                                  ? Colors.white10
+                                                  : Colors.grey.shade200,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: Text(
+                                              dayString,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: isDarkMode(context)
+                                                    ? Colors.white70
+                                                    : Colors.black54,
+                                                fontWeight: FontWeight.bold,
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  buildMessage(
+                                    message,
+                                    channelDataModel.participants,
+                                    showTime: true,
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -500,16 +535,14 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                         Expanded(
                           child: Padding(
-                            padding:
-                            const EdgeInsets.only(left: 2.0, right: 2),
+                            padding: const EdgeInsets.only(left: 2.0, right: 2),
                             child: Container(
                               padding: const EdgeInsets.all(2),
                               decoration: ShapeDecoration(
                                 shape: const OutlineInputBorder(
                                   borderRadius:
-                                  BorderRadius.all(Radius.circular(360)),
-                                  borderSide:
-                                  BorderSide.none,
+                                      BorderRadius.all(Radius.circular(360)),
+                                  borderSide: BorderSide.none,
                                 ),
                                 color: isDarkMode(context)
                                     ? Colors.grey[700]
@@ -519,15 +552,15 @@ class _ChatScreenState extends State<ChatScreen> {
                                 children: [
                                   InkWell(
                                     onTap: () => context.read<ChatBloc>().add(
-                                      MicClickedEvent(
-                                        recordingState:
-                                        currentRecordingState,
-                                      ),
-                                    ),
+                                          MicClickedEvent(
+                                            recordingState:
+                                                currentRecordingState,
+                                          ),
+                                        ),
                                     child: Icon(
                                       Icons.mic,
                                       color: currentRecordingState ==
-                                          RecordingState.hidden
+                                              RecordingState.hidden
                                           ? widget.colorPrimary
                                           : Colors.red,
                                     ),
@@ -536,25 +569,25 @@ class _ChatScreenState extends State<ChatScreen> {
                                     child: TextField(
                                       onChanged: (s) =>
                                           context.read<ChatBloc>().add(
-                                            TextUpdateEvent(
-                                              isTextEmpty: s.isEmpty,
-                                            ),
-                                          ),
+                                                TextUpdateEvent(
+                                                  isTextEmpty: s.isEmpty,
+                                                ),
+                                              ),
                                       onTap: () {
                                         context.read<ChatBloc>().add(
-                                          MicClickedEvent(
-                                            recordingState:
-                                            RecordingState.visible,
-                                          ),
-                                        );
+                                              MicClickedEvent(
+                                                recordingState:
+                                                    RecordingState.visible,
+                                              ),
+                                            );
                                       },
                                       textAlignVertical:
-                                      TextAlignVertical.center,
+                                          TextAlignVertical.center,
                                       controller: _messageController,
                                       decoration: InputDecoration(
                                         isDense: true,
                                         contentPadding:
-                                        const EdgeInsets.symmetric(
+                                            const EdgeInsets.symmetric(
                                           vertical: 8,
                                           horizontal: 8,
                                         ),
@@ -563,14 +596,14 @@ class _ChatScreenState extends State<ChatScreen> {
                                           color: Colors.grey[400],
                                         ),
                                         focusedBorder:
-                                        const OutlineInputBorder(
+                                            const OutlineInputBorder(
                                           borderRadius: BorderRadius.all(
                                             Radius.circular(360),
                                           ),
                                           borderSide: BorderSide.none,
                                         ),
                                         enabledBorder:
-                                        const OutlineInputBorder(
+                                            const OutlineInputBorder(
                                           borderRadius: BorderRadius.all(
                                             Radius.circular(360),
                                           ),
@@ -578,7 +611,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                         ),
                                       ),
                                       textCapitalization:
-                                      TextCapitalization.sentences,
+                                          TextCapitalization.sentences,
                                       maxLines: 5,
                                       minLines: 1,
                                       keyboardType: TextInputType.multiline,
@@ -591,26 +624,26 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                         BlocBuilder<ChatBloc, ChatState>(
                           buildWhen: (old, current) =>
-                          current is TextUpdateState && old != current,
+                              current is TextUpdateState && old != current,
                           builder: (context, state) {
                             return IconButton(
                               icon: Icon(
                                 Icons.send,
                                 color: state is TextUpdateState &&
-                                    state.isTextEmpty
+                                        state.isTextEmpty
                                     ? widget.colorPrimary
-                                    .withAlpha((0.5 * 255).toInt())
+                                        .withAlpha((0.5 * 255).toInt())
                                     : widget.colorPrimary,
                               ),
                               onPressed: () async {
                                 if (_messageController.text.isNotEmpty) {
                                   context.read<ChatBloc>().add(
-                                    SendTextMessageEvent(
-                                      messageContent: _messageController
-                                          .text
-                                          .trim(),
-                                    ),
-                                  );
+                                        SendTextMessageEvent(
+                                          messageContent: _messageController
+                                              .text
+                                              .trim(),
+                                        ),
+                                      );
                                   _messageController.clear();
                                 }
                               },
@@ -665,12 +698,12 @@ class _ChatScreenState extends State<ChatScreen> {
                         Expanded(
                           child: Visibility(
                             visible:
-                            currentRecordingState == RecordingState.recording,
+                                currentRecordingState == RecordingState.recording,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: widget.colorPrimary,
                                 padding:
-                                const EdgeInsets.only(top: 12, bottom: 12),
+                                    const EdgeInsets.only(top: 12, bottom: 12),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(25.0),
                                   side: BorderSide.none,
@@ -689,11 +722,11 @@ class _ChatScreenState extends State<ChatScreen> {
                                     .read<ChatBloc>()
                                     .add(SendAudioMessageEvent());
                                 context.read<LoadingCubit>().showLoading(
-                                  context,
-                                  'Uploading Audio...'.tr(),
-                                  false,
-                                  widget.colorPrimary,
-                                );
+                                      context,
+                                      'Uploading Audio...'.tr(),
+                                      false,
+                                      widget.colorPrimary,
+                                    );
                               },
                             ),
                           ),
@@ -702,12 +735,12 @@ class _ChatScreenState extends State<ChatScreen> {
                         Expanded(
                           child: Visibility(
                             visible:
-                            currentRecordingState == RecordingState.recording,
+                                currentRecordingState == RecordingState.recording,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.grey.shade700,
                                 padding:
-                                const EdgeInsets.only(top: 12, bottom: 12),
+                                    const EdgeInsets.only(top: 12, bottom: 12),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(25.0),
                                   side: BorderSide.none,
@@ -737,7 +770,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,
                             padding:
-                            const EdgeInsets.only(top: 12, bottom: 12),
+                                const EdgeInsets.only(top: 12, bottom: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(25.0),
                               side: BorderSide.none,
@@ -795,11 +828,11 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: () async {
               Navigator.pop(actionSheetContext);
               context.read<ChatBloc>().add(
-                AddMediaToChatEvent(
-                  mediaSource: galleryMediaSource,
-                  mediaType: imageMediaType,
-                ),
-              );
+                    AddMediaToChatEvent(
+                      mediaSource: galleryMediaSource,
+                      mediaType: imageMediaType,
+                    ),
+                  );
             },
           ),
           CupertinoActionSheetAction(
@@ -807,11 +840,11 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: () async {
               Navigator.pop(actionSheetContext);
               context.read<ChatBloc>().add(
-                AddMediaToChatEvent(
-                  mediaSource: galleryMediaSource,
-                  mediaType: videoMediaType,
-                ),
-              );
+                    AddMediaToChatEvent(
+                      mediaSource: galleryMediaSource,
+                      mediaType: videoMediaType,
+                    ),
+                  );
             },
           ),
           CupertinoActionSheetAction(
@@ -819,11 +852,11 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: () async {
               Navigator.pop(actionSheetContext);
               context.read<ChatBloc>().add(
-                AddMediaToChatEvent(
-                  mediaSource: cameraMediaSource,
-                  mediaType: imageMediaType,
-                ),
-              );
+                    AddMediaToChatEvent(
+                      mediaSource: cameraMediaSource,
+                      mediaType: imageMediaType,
+                    ),
+                  );
             },
           ),
           CupertinoActionSheetAction(
@@ -831,11 +864,11 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: () async {
               Navigator.pop(actionSheetContext);
               context.read<ChatBloc>().add(
-                AddMediaToChatEvent(
-                  mediaSource: cameraMediaSource,
-                  mediaType: videoMediaType,
-                ),
-              );
+                    AddMediaToChatEvent(
+                      mediaSource: cameraMediaSource,
+                      mediaType: videoMediaType,
+                    ),
+                  );
             },
           ),
         ],
@@ -849,14 +882,16 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget buildMessage(ChatFeedContent messageData, List<User> members, {bool showTime = true}) {
+  Widget buildMessage(ChatFeedContent messageData, List<User> members,
+      {bool showTime = true}) {
     Widget messageWidget;
     if (messageData.senderID == currentUser.userID) {
       messageWidget = myMessageView(messageData);
     } else {
       messageWidget = remoteMessageView(
         messageData: messageData,
-        sender: members.firstWhereOrNull((user) => user.userID == messageData.senderID),
+        sender:
+            members.firstWhereOrNull((user) => user.userID == messageData.senderID),
       );
     }
     if (!showTime) return messageWidget;
@@ -869,7 +904,8 @@ class _ChatScreenState extends State<ChatScreen> {
       children: [
         messageWidget,
         Padding(
-          padding: const EdgeInsets.only(left: 12.0, right: 12.0, top: 2, bottom: 2),
+          padding:
+              const EdgeInsets.only(left: 12.0, right: 12.0, top: 2, bottom: 2),
           child: Text(
             msgTimeString,
             style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
@@ -952,7 +988,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                     child: PlayerWidget(
                       url: messageData.chatMedia!.url,
                       color: isDarkMode(context)
@@ -1067,12 +1104,14 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                     child: Text(
                       messageData.content,
                       textAlign: TextAlign.start,
                       style: TextStyle(
-                        color: isDarkMode(context) ? Colors.black : Colors.white,
+                        color:
+                            isDarkMode(context) ? Colors.black : Colors.white,
                         fontSize: 16,
                       ),
                     ),
@@ -1094,6 +1133,16 @@ class _ChatScreenState extends State<ChatScreen> {
         sender?.email == 'florian@instamobile.io') {
       return const SizedBox();
     }
+
+    // Get sender name for display in group chats
+    // Prioritize messageData.senderFirstName since it's what was stored when message was sent
+    final senderName = messageData.senderFirstName.isNotEmpty
+        ? messageData.senderFirstName
+        : (sender?.firstName ?? 'Unknown');
+
+    // DEBUG: Log sender info
+    debugPrint(
+        'REMOTE_MESSAGE: senderID=${messageData.senderID}, senderName=$senderName, isGroupChat=${channelDataModel.isGroupChat}, sender=${sender?.firstName}, fromMessage=${messageData.senderFirstName}');
 
     // Show the profile/avatar in the small circle, and the logo in the bubble
     return Padding(
@@ -1126,9 +1175,32 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ],
           ),
-          Padding(
-            padding: const EdgeInsetsDirectional.only(start: 12.0),
-            child: _remoteMessageContentWidgetWithLogo(messageData),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(start: 12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Show sender name in group chats
+                  if (channelDataModel.isGroupChat)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0, left: 8.0),
+                      child: Text(
+                        senderName,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: isDarkMode(context)
+                              ? Colors.grey.shade300
+                              : Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                  _remoteMessageContentWidgetWithLogo(messageData),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -1189,7 +1261,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                     child: PlayerWidget(
                       url: messageData.chatMedia!.url,
                       color: isDarkMode(context)
@@ -1304,12 +1377,14 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                     child: Text(
                       messageData.content,
                       textAlign: TextAlign.start,
                       style: TextStyle(
-                        color: isDarkMode(context) ? Colors.white : Colors.black,
+                        color:
+                            isDarkMode(context) ? Colors.white : Colors.black,
                         fontSize: 16,
                       ),
                     ),
@@ -1344,17 +1419,17 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: () {
               Navigator.pop(actionSheetContext);
               context.read<LoadingCubit>().showLoading(
-                context,
-                'Blocking user...'.tr(),
-                false,
-                widget.colorPrimary,
-              );
+                    context,
+                    'Blocking user...'.tr(),
+                    false,
+                    widget.colorPrimary,
+                  );
               context.read<ChatBloc>().add(
-                BlockUserEvent(
-                  targetUser: channelDataModel.participants.first,
-                  action: blockUserAction,
-                ),
-              );
+                    BlockUserEvent(
+                      targetUser: channelDataModel.participants.first,
+                      action: blockUserAction,
+                    ),
+                  );
             },
           ),
           CupertinoActionSheetAction(
@@ -1362,17 +1437,17 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: () {
               Navigator.pop(actionSheetContext);
               context.read<LoadingCubit>().showLoading(
-                context,
-                'Reporting user...'.tr(),
-                false,
-                widget.colorPrimary,
-              );
+                    context,
+                    'Reporting user...'.tr(),
+                    false,
+                    widget.colorPrimary,
+                  );
               context.read<ChatBloc>().add(
-                BlockUserEvent(
-                  targetUser: channelDataModel.participants.first,
-                  action: blockUserAction,
-                ),
-              );
+                    BlockUserEvent(
+                      targetUser: channelDataModel.participants.first,
+                      action: blockUserAction,
+                    ),
+                  );
             },
           ),
         ],

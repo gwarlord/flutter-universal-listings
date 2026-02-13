@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_google_places_hoc081098/google_maps_webservice_places.dart';
 import 'package:flutter_native_image_v2/flutter_native_image_v2.dart';
@@ -488,6 +489,13 @@ class ListingsFirebaseUtils extends ListingsRepository {
       debugPrint('$st');
       return false;
     }
+  }
+
+  @override
+  Future<void> refreshListingFreshness({required String listingId}) async {
+    final HttpsCallable callable =
+        FirebaseFunctions.instance.httpsCallable('refreshListingFreshness');
+    await callable.call({'listingId': listingId});
   }
 
   // ---------------------------

@@ -333,6 +333,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             user: user,
                             onSuspend: () => _showSuspendUserConfirmation(user),
                             onUnsuspend: () => _showUnsuspendUserConfirmation(user),
+                            onToggleFreshnessExempt: (value) =>
+                                _toggleUserFreshnessExempt(user, value),
                           );
                         },
                       ),
@@ -382,6 +384,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             onUnsuspend: () => _showUnsuspendListingConfirmation(listing),
                             onFeature: () => _featureListing(listing),
                             onUnfeature: () => _unfeatureListing(listing),
+                            onToggleFreshnessExempt: (value) =>
+                                _toggleListingFreshnessExempt(listing, value),
                           );
                         },
                       ),
@@ -731,6 +735,85 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
+
+  Future<void> _toggleUserFreshnessExempt(
+    ListingsUser user,
+    bool value,
+  ) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection(usersCollection)
+          .doc(user.userID)
+          .set({'listingFreshnessExempt': value}, SetOptions(merge: true));
+      setState(() {
+        for (final entry in allUsers) {
+          if (entry.userID == user.userID) {
+            entry.listingFreshnessExempt = value;
+          }
+        }
+        for (final entry in suspendedUsers) {
+          if (entry.userID == user.userID) {
+            entry.listingFreshnessExempt = value;
+          }
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            value
+                ? 'User is exempt from listing expiry'.tr()
+                : 'User exemption removed'.tr(),
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  Future<void> _toggleListingFreshnessExempt(
+    ListingModel listing,
+    bool value,
+  ) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection(listingsCollection)
+          .doc(listing.id)
+          .set({
+            'freshness': {
+              'exempt': value,
+            }
+          }, SetOptions(merge: true));
+      setState(() {
+        final idx = allListings.indexWhere((l) => l.id == listing.id);
+        if (idx >= 0) {
+          allListings[idx].freshness =
+              allListings[idx].freshness.copyWithExempt(value);
+        }
+        final suspendedIdx =
+            suspendedListings.indexWhere((l) => l.id == listing.id);
+        if (suspendedIdx >= 0) {
+          suspendedListings[suspendedIdx].freshness =
+              suspendedListings[suspendedIdx].freshness.copyWithExempt(value);
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            value
+                ? 'Listing is exempt from expiry'.tr()
+                : 'Listing exemption removed'.tr(),
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
 }
 
 // --- Modern Card Widgets ---
@@ -739,8 +822,15 @@ class ModernUserCard extends StatelessWidget {
   final ListingsUser user;
   final VoidCallback onSuspend;
   final VoidCallback onUnsuspend;
+  final ValueChanged<bool> onToggleFreshnessExempt;
 
-  const ModernUserCard({super.key, required this.user, required this.onSuspend, required this.onUnsuspend});
+  const ModernUserCard({
+    super.key,
+    required this.user,
+    required this.onSuspend,
+    required this.onUnsuspend,
+    required this.onToggleFreshnessExempt,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -779,6 +869,27 @@ class ModernUserCard extends StatelessWidget {
                       _buildBadge('SUSPENDED', Colors.red, isDark),
                     if (!user.isAdmin && !isSuspended)
                       _buildBadge(user.subscriptionTier.toUpperCase(), Color(colorPrimary), isDark),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.timer_off, size: 14, color: Colors.orange),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Listing expiry exempt'.tr(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                    Switch(
+                      value: user.listingFreshnessExempt,
+                      activeColor: Colors.orange,
+                      onChanged: onToggleFreshnessExempt,
+                    ),
                   ],
                 ),
                 // Show suspension details if suspended
@@ -839,8 +950,17 @@ class ModernListingCard extends StatelessWidget {
   final VoidCallback onUnsuspend;
   final VoidCallback onFeature;
   final VoidCallback onUnfeature;
+  final ValueChanged<bool> onToggleFreshnessExempt;
 
-  const ModernListingCard({super.key, required this.listing, required this.onSuspend, required this.onUnsuspend, required this.onFeature, required this.onUnfeature});
+  const ModernListingCard({
+    super.key,
+    required this.listing,
+    required this.onSuspend,
+    required this.onUnsuspend,
+    required this.onFeature,
+    required this.onUnfeature,
+    required this.onToggleFreshnessExempt,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -890,6 +1010,29 @@ class ModernListingCard extends StatelessWidget {
                 IconButton(
                   icon: Icon(isSuspended ? Icons.check_circle_outline : Icons.block, color: isSuspended ? Colors.green : Colors.red),
                   onPressed: isSuspended ? onUnsuspend : onSuspend,
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Row(
+              children: [
+                Icon(Icons.timer_off, size: 14, color: Colors.orange),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Listing expiry exempt'.tr(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ),
+                Switch(
+                  value: listing.freshness.exempt,
+                  activeColor: Colors.orange,
+                  onChanged: onToggleFreshnessExempt,
                 ),
               ],
             ),

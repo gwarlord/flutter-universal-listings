@@ -101,9 +101,17 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
     final primaryColor = Color(colorPrimary);
 
     return Scaffold(
+      backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
         title: const Text('Deal Settings'),
         centerTitle: true,
+        backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
+        titleTextStyle: TextStyle(
+          color: isDark ? Colors.white : Colors.black,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -124,7 +132,7 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 48),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -133,20 +141,30 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                 'Expiry & Schedule',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
               const SizedBox(height: 16),
 
               // Expiry date
               Card(
+                color: isDark ? Colors.grey.shade900 : Colors.white,
+                shadowColor: isDark ? Colors.black54 : Colors.black12,
+                elevation: isDark ? 1 : 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Deal Expires',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -154,12 +172,21 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                         children: [
                           Text(
                             DateFormat('MMM dd, yyyy').format(_expireAt),
-                            style: const TextStyle(fontSize: 16),
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: isDark ? Colors.white70 : Colors.black87,
+                            ),
                           ),
                           OutlinedButton(
                             onPressed: () => _selectDate((date) {
                               setState(() => _expireAt = date);
                             }),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: isDark ? Colors.white : Colors.black87,
+                              side: BorderSide(
+                                color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                              ),
+                            ),
                             child: const Text('Change'),
                           ),
                         ],
@@ -173,6 +200,12 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
 
               // Schedule date (optional)
               Card(
+                color: isDark ? Colors.grey.shade900 : Colors.white,
+                shadowColor: isDark ? Colors.black54 : Colors.black12,
+                elevation: isDark ? 1 : 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
@@ -181,9 +214,12 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Schedule for Later (optional)',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
                           ),
                           Switch(
                             value: _scheduleAt != null,
@@ -197,8 +233,8 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                               });
                             },
                             activeColor: primaryColor,
-                            inactiveThumbColor: Colors.grey,
-                            inactiveTrackColor: Colors.grey.shade300,
+                            inactiveThumbColor: isDark ? Colors.grey[600] : Colors.grey,
+                            inactiveTrackColor: isDark ? Colors.grey[800] : Colors.grey.shade300,
                           ),
                         ],
                       ),
@@ -209,12 +245,21 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                           children: [
                             Text(
                               DateFormat('MMM dd, yyyy - hh:mm a').format(_scheduleAt!),
-                              style: const TextStyle(fontSize: 14),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
                             ),
                             OutlinedButton(
                               onPressed: () => _selectDate((date) {
                                 setState(() => _scheduleAt = date);
                               }),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: isDark ? Colors.white : Colors.black87,
+                                side: BorderSide(
+                                  color: isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                                ),
+                              ),
                               child: const Text('Change'),
                             ),
                           ],
@@ -232,38 +277,81 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                 'Redemption Type',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
               const SizedBox(height: 16),
 
               // Redemption type selection
               Card(
+                color: isDark ? Colors.grey.shade900 : Colors.white,
+                shadowColor: isDark ? Colors.black54 : Colors.black12,
+                elevation: isDark ? 1 : 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       RadioListTile<String>(
-                        title: const Text('Promo Code'),
-                        subtitle: const Text('Users copy a code to redeem'),
+                        title: Text(
+                          'Promo Code',
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Users copy a code to redeem',
+                          style: TextStyle(
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                        ),
                         value: 'PROMO_CODE',
                         groupValue: _redemptionType,
                         onChanged: (value) {
                           setState(() => _redemptionType = value!);
                         },
                         activeColor: primaryColor,
-                        tileColor: Colors.white,
+                        fillColor: MaterialStateProperty.resolveWith<Color>(
+                          (states) {
+                            if (states.contains(MaterialState.selected)) {
+                              return primaryColor;
+                            }
+                            return isDark ? Colors.white70 : Colors.black54;
+                          },
+                        ),
+                        tileColor: isDark ? Colors.grey[850] : Colors.white,
                       ),
                       RadioListTile<String>(
-                        title: const Text('In-App Claim'),
-                        subtitle: const Text('Users claim through the app'),
+                        title: Text(
+                          'In-App Claim',
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Users claim through the app',
+                          style: TextStyle(
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                        ),
                         value: 'IN_APP_CLAIM',
                         groupValue: _redemptionType,
                         onChanged: (value) {
                           setState(() => _redemptionType = value!);
                         },
                         activeColor: primaryColor,
-                        tileColor: Colors.white,
+                        fillColor: MaterialStateProperty.resolveWith<Color>(
+                          (states) {
+                            if (states.contains(MaterialState.selected)) {
+                              return primaryColor;
+                            }
+                            return isDark ? Colors.white70 : Colors.black54;
+                          },
+                        ),
+                        tileColor: isDark ? Colors.grey[850] : Colors.white,
                       ),
                     ],
                   ),
@@ -275,23 +363,37 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
               // Promo code input (only show if PROMO_CODE selected)
               if (_redemptionType == 'PROMO_CODE') ...[
                 Card(
+                  color: isDark ? Colors.grey.shade900 : Colors.white,
+                  shadowColor: isDark ? Colors.black54 : Colors.black12,
+                  elevation: isDark ? 1 : 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Promo Code',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         TextField(
                           controller: _promoCodeController,
                           decoration: InputDecoration(
                             hintText: 'e.g., SAVE20SUMMER',
+                            hintStyle: TextStyle(
+                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
+                            filled: true,
+                            fillColor: isDark ? Colors.grey[850] : Colors.white,
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12,
                               vertical: 10,
@@ -300,6 +402,7 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                           style: TextStyle(
                             fontSize: 14,
                             fontFamily: 'monospace',
+                            color: isDark ? Colors.white : Colors.black87,
                           ),
                         ),
                       ],
@@ -314,12 +417,19 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                 'Redemption Limits',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
               const SizedBox(height: 16),
 
               // Total redemption limit
               Card(
+                color: isDark ? Colors.grey.shade900 : Colors.white,
+                shadowColor: isDark ? Colors.black54 : Colors.black12,
+                elevation: isDark ? 1 : 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
@@ -328,9 +438,12 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Total Redemptions',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
                           ),
                           Switch(
                             value: _hasRedemptionLimit,
@@ -338,8 +451,8 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                               setState(() => _hasRedemptionLimit = value);
                             },
                             activeColor: primaryColor,
-                            inactiveThumbColor: Colors.grey,
-                            inactiveTrackColor: Colors.grey.shade300,
+                            inactiveThumbColor: isDark ? Colors.grey[600] : Colors.grey,
+                            inactiveTrackColor: isDark ? Colors.grey[800] : Colors.grey.shade300,
                           ),
                         ],
                       ),
@@ -351,13 +464,24 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                           decoration: InputDecoration(
                             hintText: 'e.g., 100',
                             suffix: const Text('items'),
+                            hintStyle: TextStyle(
+                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            ),
+                            suffixStyle: TextStyle(
+                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
+                            filled: true,
+                            fillColor: isDark ? Colors.grey[850] : Colors.white,
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12,
                               vertical: 10,
                             ),
+                          ),
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
                           ),
                         ),
                       ],
@@ -370,6 +494,12 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
 
               // Per-user redemption limit
               Card(
+                color: isDark ? Colors.grey.shade900 : Colors.white,
+                shadowColor: isDark ? Colors.black54 : Colors.black12,
+                elevation: isDark ? 1 : 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
@@ -378,9 +508,12 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Per User Limit',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
                           ),
                           Switch(
                             value: _hasPerUserLimit,
@@ -388,8 +521,8 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                               setState(() => _hasPerUserLimit = value);
                             },
                             activeColor: primaryColor,
-                            inactiveThumbColor: Colors.grey,
-                            inactiveTrackColor: Colors.grey.shade300,
+                            inactiveThumbColor: isDark ? Colors.grey[600] : Colors.grey,
+                            inactiveTrackColor: isDark ? Colors.grey[800] : Colors.grey.shade300,
                           ),
                         ],
                       ),
@@ -401,13 +534,24 @@ class _DealSettingsFormState extends State<DealSettingsForm> {
                           decoration: InputDecoration(
                             hintText: 'e.g., 1',
                             suffix: const Text('times'),
+                            hintStyle: TextStyle(
+                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            ),
+                            suffixStyle: TextStyle(
+                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
+                            filled: true,
+                            fillColor: isDark ? Colors.grey[850] : Colors.white,
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12,
                               vertical: 10,
                             ),
+                          ),
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
                           ),
                         ),
                       ],

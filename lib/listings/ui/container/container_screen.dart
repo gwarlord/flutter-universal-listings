@@ -105,6 +105,19 @@ class _ContainerState extends State<ContainerScreen> {
 
   /// Handle pending deep link after the screen is built
   Future<void> _handlePendingDeepLink() async {
+    final pendingManageId = main_entry.getPendingListingManageId();
+    if (pendingManageId != null) {
+      print('🔗 Navigating to manage listing: $pendingManageId');
+      await push(
+        context,
+        MyListingsWrapperWidget(
+          currentUser: widget.user,
+          initialListingId: pendingManageId,
+        ),
+      );
+      return;
+    }
+
     final pendingListingId = main_entry.getPendingListingId();
     
     if (pendingListingId != null) {

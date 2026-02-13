@@ -12,12 +12,18 @@ import 'package:instaflutter/listings/listings_module/api/listings_api_manager.d
 import 'package:instaflutter/listings/listings_module/listing_details/listing_details_screen.dart';
 import 'package:instaflutter/listings/listings_module/my_listings/my_listings_bloc.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
+import 'package:instaflutter/listings/ui/collaboration/assigned_listings_screen.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
 class MyListingsWrapperWidget extends StatelessWidget {
   final ListingsUser currentUser;
+  final String? initialListingId;
 
-  const MyListingsWrapperWidget({Key? key, required this.currentUser})
+  const MyListingsWrapperWidget({
+    Key? key,
+    required this.currentUser,
+    this.initialListingId,
+  })
       : super(key: key);
 
   @override
@@ -28,15 +34,23 @@ class MyListingsWrapperWidget extends StatelessWidget {
         currentUser: currentUser,
         profileRepository: profileApiManager,
       ),
-      child: MyListingsScreen(currentUser: currentUser),
+      child: MyListingsScreen(
+        currentUser: currentUser,
+        initialListingId: initialListingId,
+      ),
     );
   }
 }
 
 class MyListingsScreen extends StatefulWidget {
   final ListingsUser currentUser;
+  final String? initialListingId;
 
-  const MyListingsScreen({Key? key, required this.currentUser})
+  const MyListingsScreen({
+    Key? key,
+    required this.currentUser,
+    this.initialListingId,
+  })
       : super(key: key);
 
   @override
@@ -47,21 +61,61 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   List<ListingModel> _listings = [];
   late ListingsUser currentUser;
   bool isLoading = true;
+  bool _initialListingHandled = false;
+  String? _initialListingId;
 
   @override
   void initState() {
     super.initState();
     currentUser = widget.currentUser;
+    _initialListingId = widget.initialListingId;
     context.read<MyListingsBloc>().add(GetMyListingsEvent());
   }
 
+  Future<void> _openAssignedListings() async {
+    await push(
+      context,
+      AssignedListingsScreen(
+        userId: currentUser.userID,
+        onListingSelected: (listingId) async {
+          final listing = await listingApiManager.getListing(
+            listingID: listingId,
+          );
+          if (listing == null) {
+            if (mounted) {
+              showSnackBar(context, 'Listing not found'.tr());
+            }
+            return;
+          }
+          if (!mounted) return;
+          await push(
+            context,
+            ListingDetailsWrappingWidget(
+              listing: listing,
+              currentUser: currentUser,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(
           'My Listings'.tr(),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Assigned Listings'.tr(),
+            icon: const Icon(Icons.group_outlined),
+            onPressed: _openAssignedListings,
+          ),
+        ],
       ),
       body: SafeArea(
         child: RefreshIndicator(
@@ -74,6 +128,26 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
               if (state is MyListingsReadyState) {
                 isLoading = false;
                 _listings = state.myListings;
+
+                if (!_initialListingHandled && _initialListingId != null) {
+                  final target = _listings.firstWhere(
+                    (element) => element.id == _initialListingId,
+                    orElse: () => ListingModel(),
+                  );
+
+                  _initialListingHandled = true;
+                  if (target.id.isNotEmpty) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) async {
+                      await push(
+                        context,
+                        ListingDetailsWrappingWidget(
+                          listing: target,
+                          currentUser: currentUser,
+                        ),
+                      );
+                    });
+                  }
+                }
               } else if (state is ListingFavToggleState) {
                 currentUser = state.updatedUser;
                 context.read<AuthenticationBloc>().user = state.updatedUser;
@@ -148,6 +222,34 @@ class MyListingCard extends StatefulWidget {
 }
 
 class _MyListingCardState extends State<MyListingCard> {
+  bool _isRefreshing = false;
+
+  Future<void> _refreshFreshness(String successMessage) async {
+    if (_isRefreshing) return;
+    setState(() => _isRefreshing = true);
+    try {
+      await listingApiManager.refreshListingFreshness(
+        listingId: widget.listing.id,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(successMessage.tr())),
+        );
+        context.read<MyListingsBloc>().add(GetMyListingsEvent());
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isRefreshing = false);
+      }
+    }
+  }
+
   void _showRequestUnsuspensionDialog() {
     final TextEditingController controller = TextEditingController();
     final isDark = isDarkMode(context);
@@ -272,6 +374,15 @@ class _MyListingCardState extends State<MyListingCard> {
   Widget build(BuildContext context) {
     final isSuspended = widget.listing.suspended;
     final suspensionRequested = widget.listing.suspensionInfo?.unsuspensionRequested ?? false;
+    final freshness = widget.listing.freshness;
+    final freshnessEnabled = freshness.enabled && !freshness.exempt;
+    final daysRemaining = freshness.daysRemaining;
+    final showExpiryBadge = freshnessEnabled &&
+      daysRemaining != null &&
+      daysRemaining > 0 &&
+      daysRemaining <= 14;
+    final isHiddenExpired = widget.listing.hidden &&
+      freshness.status == 'HIDDEN_EXPIRED';
     
     return GestureDetector(
       onTap: () async {
@@ -386,6 +497,46 @@ class _MyListingCardState extends State<MyListingCard> {
                     : Colors.grey.shade800,
                 fontWeight: FontWeight.bold),
           ),
+          if (!isSuspended && showExpiryBadge)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.orange, width: 1),
+                ),
+                child: Text(
+                  'Expires in $daysRemaining days'.tr(),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.orange,
+                  ),
+                ),
+              ),
+            ),
+          if (!isSuspended && isHiddenExpired)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.red, width: 1),
+                ),
+                child: Text(
+                  'Hidden (expired)'.tr(),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.red,
+                  ),
+                ),
+              ),
+            ),
           if (isSuspended && !suspensionRequested)
             Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -405,6 +556,56 @@ class _MyListingCardState extends State<MyListingCard> {
               padding: const EdgeInsets.symmetric(vertical: 4.0),
               child: Text(widget.listing.place, maxLines: 1),
             ),
+            if (isHiddenExpired)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(colorPrimary),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                  ),
+                  icon: _isRefreshing
+                      ? const SizedBox(
+                          height: 14,
+                          width: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.refresh, size: 16),
+                  label: Text('Reactivate / Reset'.tr(),
+                      style: const TextStyle(fontSize: 11)),
+                  onPressed: _isRefreshing
+                      ? null
+                      : () => _refreshFreshness(
+                            'Listing reactivated and refreshed',
+                          ),
+                ),
+              ),
+            if (!isHiddenExpired && showExpiryBadge)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    side: BorderSide(color: Color(colorPrimary)),
+                  ),
+                  icon: _isRefreshing
+                      ? const SizedBox(
+                          height: 14,
+                          width: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh, size: 16),
+                  label: Text('Reset counter'.tr(),
+                      style: const TextStyle(fontSize: 11)),
+                  onPressed: _isRefreshing
+                      ? null
+                      : () => _refreshFreshness('Listing freshness refreshed'),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4.0),
               child: Row(
@@ -436,7 +637,10 @@ class _MyListingCardState extends State<MyListingCard> {
                           : Colors.grey.shade300,
                       onChanged: (value) => context
                           .read<MyListingsBloc>()
-                          .add(ListingHiddenToggled(listing: widget.listing)),
+                          .add(ListingHiddenToggled(
+                            listing: widget.listing,
+                            setHidden: !value,
+                          )),
                     ),
                   ),
                 ],

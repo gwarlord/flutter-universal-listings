@@ -6,6 +6,7 @@ import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/services/store_service.dart';
+import 'package:instaflutter/listings/ui/table_mode/staff_tables_screen.dart';
 
 /// Store Settings Screen - Configure Mini Store fulfillment options
 class StoreSettingsScreen extends StatefulWidget {
@@ -390,6 +391,64 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
               ),
               const SizedBox(height: 32),
             ],
+
+            // Table Mode Section
+            Text(
+              'Table Mode'.tr(),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: dark ? Colors.white : Colors.black,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Manage dine-in tables and QR codes for this listing'.tr(),
+              style: TextStyle(
+                fontSize: 14,
+                color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+              child: ListTile(
+                leading: Icon(
+                  Icons.table_restaurant,
+                  color: Color(cfg.colorPrimary),
+                ),
+                title: Text(
+                  'Tables & QR Codes'.tr(),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: dark ? Colors.white : Colors.black,
+                  ),
+                ),
+                subtitle: Text(
+                  'Create tables, share QR codes, and manage sessions'.tr(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  ),
+                ),
+                trailing: Icon(
+                  Icons.chevron_right,
+                  color: dark ? Colors.white70 : Colors.black54,
+                ),
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => StaffTablesScreen(
+                        listing: widget.listing,
+                        currentUser: widget.currentUser,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 32),
 
             // Lead Time Section
             Text(
