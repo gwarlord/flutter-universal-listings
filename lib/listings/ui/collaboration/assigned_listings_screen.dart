@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/listings_module/api/collaboration_api_manager.dart';
 import 'package:instaflutter/listings/model/collaboration_model.dart';
 
@@ -29,10 +30,14 @@ class _AssignedListingsScreenState extends State<AssignedListingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final dark = isDarkMode(context);
     return Scaffold(
+      backgroundColor: dark ? Colors.grey[900] : Colors.grey[50],
       appBar: AppBar(
         title: const Text('Assigned Listings'),
         elevation: 0,
+        backgroundColor: dark ? Colors.grey[850] : null,
+        foregroundColor: dark ? Colors.white : null,
       ),
       body: StreamBuilder<List<AssignedListingModel>>(
         stream: assignedListingsStream,
@@ -43,7 +48,10 @@ class _AssignedListingsScreenState extends State<AssignedListingsScreen> {
 
           if (snapshot.hasError) {
             return Center(
-              child: Text('Error: ${snapshot.error}'),
+              child: Text(
+                'Error: ${snapshot.error}',
+                style: TextStyle(color: dark ? Colors.red[300] : Colors.red),
+              ),
             );
           }
 
@@ -51,26 +59,33 @@ class _AssignedListingsScreenState extends State<AssignedListingsScreen> {
 
           if (listings.isEmpty) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.business_center_outlined,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Assigned Listings',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'You have not been added as a collaborator to any listings',
-                    style: Theme.of(context).textTheme.bodySmall,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.business_center_outlined,
+                      size: 64,
+                      color: dark ? Colors.grey[600] : Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No Assigned Listings',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: dark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'You have not been added as a collaborator to any listings',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: dark ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -113,22 +128,31 @@ class AssignedListingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = isDarkMode(context);
+    final primaryColor = Theme.of(context).primaryColor;
+    
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: dark ? Colors.grey[850] : Colors.white,
+      elevation: dark ? 2 : 1,
       child: ListTile(
         leading: Container(
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: Colors.blue[100],
+            color: dark ? primaryColor.withOpacity(0.2) : Colors.blue[100],
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(Icons.store, color: Colors.blue[700]),
+          child: Icon(
+            Icons.store,
+            color: dark ? primaryColor : Colors.blue[700],
+          ),
         ),
         title: Text(
           listing.listingId,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: dark ? Colors.white : Colors.black87),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,8 +166,12 @@ class AssignedListingTile extends StatelessWidget {
                     (p) => Chip(
                       label: Text(
                         _permissionLabel(p),
-                        style: const TextStyle(fontSize: 10),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: dark ? Colors.white : Colors.black87,
+                        ),
                       ),
+                      backgroundColor: dark ? Colors.grey[700] : Colors.grey[200],
                       padding: EdgeInsets.zero,
                       visualDensity: VisualDensity.compact,
                     ),
@@ -153,11 +181,16 @@ class AssignedListingTile extends StatelessWidget {
             if (listing.permissionsSummary.length > 3)
               Text(
                 '+${listing.permissionsSummary.length - 3} more',
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: dark ? Colors.grey[400] : Colors.grey[600],
+                ),
               ),
           ],
         ),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: dark ? Colors.grey[400] : Colors.grey[600],
+        ),
         onTap: onTap,
       ),
     );
