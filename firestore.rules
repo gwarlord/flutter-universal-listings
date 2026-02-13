@@ -109,6 +109,14 @@ service cloud.firestore {
         allow read: if isOwner(userId) || isAdmin();
         allow create, update, delete: if isOwner(userId);
       }
+      
+      // Assigned Listings (Lister Collaboration)
+      // Quick lookup for collaborators to see which listings they're assigned to
+      match /assignedListings/{listingId} {
+        allow read: if isOwner(userId) || isAdmin();
+        // Writes only via Cloud Functions (when collaborator is added/removed)
+        allow write: if false;
+      }
     }
     
     // Listings collection
