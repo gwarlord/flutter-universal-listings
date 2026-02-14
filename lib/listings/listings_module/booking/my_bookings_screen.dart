@@ -14,6 +14,8 @@ import 'package:instaflutter/listings/listings_module/api/booking_api_manager.da
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/listings_module/api/collaboration_api_manager.dart';
 import 'package:instaflutter/listings/ui/collaboration/chat_scope_integration.dart';
+import 'package:instaflutter/listings/listings_module/proof_of_payment/proof_of_payment_upload_widget.dart';
+import 'package:instaflutter/listings/model/proof_of_payment_model.dart';
 import 'package:intl/intl.dart';
 
 class MyBookingsScreen extends StatefulWidget {
@@ -339,6 +341,26 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                   fontStyle: FontStyle.italic,
                   color: dark ? Colors.white70 : Colors.black87,
                 ),
+              ),
+            ],
+            // Proof of Payment section - Only show for confirmed bookings
+            if (booking.isConfirmed) ...[
+              const SizedBox(height: 16),
+              ProofOfPaymentUploadWidget(
+                listingId: booking.listingId,
+                orderId: booking.id,
+                currentUserId: widget.currentUser.userID,
+                isLister: false,
+                listingAcceptsProofOfPayment: booking.listingAcceptsProofOfPayment,
+                proofOfPayment: booking.proofOfPayment != null
+                    ? ProofOfPayment.fromJson(booking.proofOfPayment)
+                    : null,
+                onUploadComplete: () {
+                  // Refresh booking data
+                  context
+                      .read<BookingBloc>()
+                      .add(GetMyBookingsEvent(userId: widget.currentUser.userID));
+                },
               ),
             ],
             if (booking.isPending) ...[

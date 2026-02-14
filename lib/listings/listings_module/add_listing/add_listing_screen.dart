@@ -177,6 +177,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final TextEditingController _storeUrlController = TextEditingController();
   String _storeMode = 'external_url'; // "external_url" | "internal_catalog" | "both"
   int _storeLeadTimeHours = 24;
+  
+  // Payments settings
+  bool _acceptProofOfPayment = false;
 
   // Rentals (Premium Feature)
   RentalConfig? _rentalConfig;
@@ -288,6 +291,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _storeUrlController.text = l.storeUrl ?? '';
     _storeMode = l.storeMode ?? 'external_url';
     _storeLeadTimeHours = l.storeLeadTimeHours;
+    
+    // Payments settings
+    _acceptProofOfPayment = l.payments['acceptProofOfPayment'] ?? false;
   }
 
   Future<void> _refreshUserSubscription() async {
@@ -1842,6 +1848,29 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   ),
                   const SizedBox(height: 12),
                 ],
+                // Accept Proof of Payment toggle
+                SwitchListTile(
+                  value: _acceptProofOfPayment,
+                  onChanged: (value) => setState(() => _acceptProofOfPayment = value),
+                  title: Text(
+                    'Accept Proof of Payment',
+                    style: TextStyle(
+                      color: dark ? Colors.white : Colors.black,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Require customers to provide proof of payment (photo/receipt) for orders',
+                    style: TextStyle(
+                      color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+                    ),
+                  ),
+                  activeColor: Color(colorPrimary),
+                  activeTrackColor: Color(colorPrimary).withOpacity(0.5),
+                  inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
+                  inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
+                ),
+                const SizedBox(height: 12),
               ],
               const SizedBox(height: 20),
 
@@ -2088,10 +2117,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
     final place = _placeDetail?.formattedAddress ?? (isEdit ? widget.listingToEdit?.place ?? '' : '');
     final latitude = _placeDetail?.geometry?.location.lat ?? (isEdit ? widget.listingToEdit?.latitude ?? 0 : 0);
     final longitude = _placeDetail?.geometry?.location.lng ?? (isEdit ? widget.listingToEdit?.longitude ?? 0 : 0);
-    debugPrint('*** DEBUG: _postListing called. place="$place" lat=$latitude lng=$longitude');
-    debugPrint('🟢 DEBUG [_postListing]: _rentalConfig=${_rentalConfig}');
-    debugPrint('🟢 DEBUG [_postListing]: _rentalConfig?.isRentalEnabled=${_rentalConfig?.isRentalEnabled}');
-    debugPrint('🟢 DEBUG [_postListing]: _rentalConfig?.basePrice=${_rentalConfig?.basePrice}');
 
     final listingModel = ListingModel(
       title: _titleController.text.trim(),
@@ -2121,6 +2146,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       storeLeadTimeHours: _storeLeadTimeHours,
       listerTierSnapshot: currentUser.subscriptionTier.toLowerCase(),
       rentalConfig: _rentalConfig?.isRentalEnabled ?? false ? _rentalConfig : null,
+      payments: {'acceptProofOfPayment': _acceptProofOfPayment},
       instagram: _instagramController.text.trim(),
       facebook: _facebookController.text.trim(),
       tiktok: _tiktokController.text.trim(),
@@ -2139,8 +2165,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
       longitude: longitude,
     );
 
-    debugPrint('🟢 DEBUG [_postListing]: listingModel.rentalConfig=${listingModel.rentalConfig}');
-    debugPrint('🟢 DEBUG [_postListing]: listingModel.rentalConfig?.toJson()=${listingModel.rentalConfig?.toJson()}');
+    // DEBUG: Log proof of address toggle state
+    debugPrint('🟢 DEBUG [_postListing]: Publishing listing with address verification enabled=${listingModel.latitude != 0 && listingModel.longitude != 0}');
 
     context.read<AddListingBloc>().add(
       PublishListingEvent(

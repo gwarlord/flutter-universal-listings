@@ -214,6 +214,9 @@ class ListingModel {
   /// This is set when the listing is saved and indicates the owner's tier at that time
   String listerTierSnapshot; // "free" | "professional" | "premium"
 
+  /// Payments Settings
+  Map<String, dynamic> payments; // { acceptProofOfPayment: bool }
+
   /// Social Media
   String instagram;
   String facebook;
@@ -319,6 +322,7 @@ class ListingModel {
     this.storeLeadTimeHours = 24,
     this.storeUpdatedAt,
     this.listerTierSnapshot = 'free',
+    Map<String, dynamic>? payments,
     this.instagram = '',
     this.facebook = '',
     this.tiktok = '',
@@ -354,13 +358,16 @@ class ListingModel {
     this.rentalConfig,
     this.brandId,
     this.locationLabel,
-    })  : menuCurrencyCode = menuCurrencyCode ?? currencyCode,
+    })  : payments = payments ?? {'acceptProofOfPayment': false},
+        menuCurrencyCode = menuCurrencyCode ?? currencyCode,
         storeCurrencyCode = storeCurrencyCode ?? currencyCode,
         menuUploads = menuUploads ?? [],
         menuSections = menuSections ?? [],
       createdAt = createdAt ?? Timestamp.now().seconds,
       freshness = freshness ??
-        ListingFreshness.defaultForCreatedAt(createdAt ?? Timestamp.now().seconds);
+        ListingFreshness.defaultForCreatedAt((createdAt ?? Timestamp.now().seconds) > 10000000000 
+          ? ((createdAt ?? Timestamp.now().seconds) ~/ 1000).toInt()
+          : (createdAt ?? Timestamp.now().seconds).toInt());
 
   factory ListingModel.fromJson(Map<String, dynamic> json) {
     int createdAtSeconds;
@@ -425,6 +432,7 @@ class ListingModel {
       storeLeadTimeHours: json['storeLeadTimeHours'] ?? 24,
       storeUpdatedAt: json['storeUpdatedAt'],
       listerTierSnapshot: json['listerTierSnapshot'] ?? 'free',
+      payments: Map<String, dynamic>.from(json['payments'] ?? {'acceptProofOfPayment': false}),
       instagram: json['instagram'] ?? '',
       facebook: json['facebook'] ?? '',
       tiktok: json['tiktok'] ?? '',
@@ -518,6 +526,7 @@ class ListingModel {
       'storeLeadTimeHours': storeLeadTimeHours,
       'storeUpdatedAt': storeUpdatedAt,
       'listerTierSnapshot': listerTierSnapshot,
+      'payments': payments,
       'instagram': instagram,
       'facebook': facebook,
       'tiktok': tiktok,

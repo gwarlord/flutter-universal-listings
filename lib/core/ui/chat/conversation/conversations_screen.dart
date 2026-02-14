@@ -17,6 +17,8 @@ import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:collection/collection.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:instaflutter/listings/ui/attention/attention_cubit.dart';
+import 'package:instaflutter/listings/model/attention_state_model.dart';
 
 class ConversationsWrapperWidget extends StatelessWidget {
   const ConversationsWrapperWidget({super.key, required this.user});
@@ -52,6 +54,10 @@ class _ConversationsState extends State<ConversationsScreen> {
   void initState() {
     super.initState();
     user = widget.user;
+
+    // Clear the conversations badge as soon as this screen is opened.
+    context.read<AttentionCubit>().markModuleAsSeen(AttentionModule.conversations);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ConversationsBloc>().add(InitConversationsEvent());
     });

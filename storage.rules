@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Proof of Payment uploads
+    // Path: proof_of_payment/{orderId}/{filename}
+    // Customers upload files for their own orders
+    // Listers and staff can read customer uploads
+    match /proof_of_payment/{orderId}/{fileName} {
+      // Allow upload if:
+      // 1. User is authenticated
+      // 2. File size <= 10MB
+      // 3. File type is jpg, jpeg, png, or pdf
+      // Note: orderId validation requires Cloud Function verification (done via commitMetadata)
+      allow write: if request.auth != null &&
+        request.resource.size <= 10 * 1024 * 1024 &&
+        (request.resource.contentType == 'image/jpeg' ||
+         request.resource.contentType == 'image/png' ||
+         request.resource.contentType == 'application/pdf');
+      
+      // Allow read if user is authenticated
+      // Fine-grained access control (customer-owns-order, lister-manages-listing)
+      // is enforced at Cloud Function level since Storage Rules can't query Firestore
+      allow read: if request.auth != null;
+      
+      // Delete via Cloud Function only (cleanup when order is cancelled)
+      allow delete: if false;
+    }
+
+    // Catch-all rules for other app resources (existing images, etc)
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

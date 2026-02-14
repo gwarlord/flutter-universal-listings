@@ -69,10 +69,14 @@ __exportStar(require("./tap_functions"), exports);
 __exportStar(require("./deal_ad_notifications"), exports);
 // Export chat notification functions
 __exportStar(require("./chat_notifications"), exports);
+// Export attention tracking functions (badges/dots)
+__exportStar(require("./attention_tracking"), exports);
 // Export table mode functions
 __exportStar(require("./tableMode"), exports);
 // Export brand functions
 __exportStar(require("./brand_functions"), exports);
+// Export proof of payment functions
+__exportStar(require("./proof_of_payment_functions"), exports);
 const db = admin.firestore();
 const messaging = admin.messaging();
 // Set your SendGrid API key in Functions config: firebase functions:config:set sendgrid.key="YOUR_KEY"

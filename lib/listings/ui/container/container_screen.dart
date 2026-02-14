@@ -31,18 +31,44 @@ import 'package:instaflutter/listings/listings_module/listing_details/listing_de
 import 'package:instaflutter/listings/services/deep_link_service.dart';
 import 'package:instaflutter/screens/brand/my_brands_screen.dart';
 import 'package:instaflutter/main.dart' as main_entry;
+import 'package:instaflutter/listings/ui/widgets/attention_badge.dart'; // Import the new widget
 import '../deals/deals_promotion_screen.dart';
 import '../deals/ad_review_approval_screen.dart';
 import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart' as listings_api; // Corrected import with alias
 import 'package:provider/provider.dart';
 import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
+import 'package:instaflutter/listings/services/attention_service.dart';
+import 'package:instaflutter/listings/ui/attention/attention_cubit.dart';
+import 'package:instaflutter/listings/model/attention_state_model.dart';
 
 enum DrawerSelection { home, conversations, categories, search, orders, rentalOrders, profile }
 
-class ContainerWrapperWidget extends StatelessWidget {
+class ContainerWrapperWidget extends StatefulWidget {
   final ListingsUser currentUser;
 
   const ContainerWrapperWidget({super.key, required this.currentUser});
+
+  @override
+  State<ContainerWrapperWidget> createState() => _ContainerWrapperState();
+}
+
+class _ContainerWrapperState extends State<ContainerWrapperWidget> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize attention service with user ID
+    final attentionCubit = context.read<AttentionCubit>();
+    attentionCubit.attentionService.initialize(widget.currentUser.userID);
+    // Start listening to attention state
+    attentionCubit.startListening();
+  }
+
+  @override
+  void dispose() {
+    // Stop listening when widget is disposed
+    context.read<AttentionCubit>().stopListening();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +78,7 @@ class ContainerWrapperWidget extends StatelessWidget {
           create: (context) => ContainerBloc(),
         ),
       ],
-      child: ContainerScreen(user: currentUser),
+      child: ContainerScreen(user: widget.currentUser),
     );
   }
 }
@@ -327,9 +353,23 @@ class _ContainerState extends State<ContainerScreen> {
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         Builder(
-                          builder: (context) => IconButton(
-                            icon: const Icon(Icons.menu),
-                            onPressed: () => Scaffold.of(context).openDrawer(),
+                          builder: (context) => BlocBuilder<AttentionCubit, AttentionState>(
+                            builder: (context, attentionState) {
+                              final hasAttention = attentionState.attentionState?.globalHasAttention ?? false;
+                              return Stack(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.menu),
+                                    onPressed: () => Scaffold.of(context).openDrawer(),
+                                  ),
+                                  Positioned(
+                                    right: 2, // Adjusted position for visibility
+                                    top: 6,   // Adjusted position for visibility
+                                    child: AttentionDot(hasAttention: hasAttention, dotSize: 12),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ),
                         GestureDetector(
@@ -444,21 +484,37 @@ class _ContainerState extends State<ContainerScreen> {
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
-                  _drawerTile(
-                    title: 'Conversations'.tr(),
-                    icon: Icons.chat_bubble_rounded,
-                    isSelected: _drawerSelection == DrawerSelection.conversations,
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.read<ContainerBloc>().add(TabSelectedEvent(
-                        appBarTitle: 'Conversations'.tr(),
-                        currentTabIndex: 2,
-                        drawerSelection: DrawerSelection.conversations,
-                        currentWidget: ConversationsWrapperWidget(user: currentUser),
-                      ));
+                  BlocBuilder<AttentionCubit, AttentionState>(
+                    builder: (context, state) {
+                      final badgeCount = state.attentionState?.getCountForModule(AttentionModule.conversations) ?? 0;
+                      return _drawerTile(
+                        title: 'Conversations'.tr(),
+                        icon: Icons.chat_bubble_rounded,
+                        isSelected: _drawerSelection == DrawerSelection.conversations,
+                        trailing: badgeCount > 0
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(color: Color(cfg.colorPrimary), borderRadius: BorderRadius.circular(10)),
+                                child: Text(
+                                  badgeCount > 99 ? '99+' : badgeCount.toString(),
+                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                ),
+                              )
+                            : null,
+                        onTap: () {
+                          // NOTE: markModuleAsSeen is now handled in ConversationsScreen initState
+                          Navigator.pop(context);
+                          context.read<ContainerBloc>().add(TabSelectedEvent(
+                            appBarTitle: 'Conversations'.tr(),
+                            currentTabIndex: 2,
+                            drawerSelection: DrawerSelection.conversations,
+                            currentWidget: ConversationsWrapperWidget(user: currentUser),
+                          ));
+                        },
+                        isDark: isDark,
+                        primaryColor: primaryColorValue,
+                      );
                     },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
                   ),
                   _drawerTile(
                     title: 'Search'.tr(),
@@ -480,52 +536,103 @@ class _ContainerState extends State<ContainerScreen> {
                   const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
                   // SHOPPING SECTION
                   _drawerSectionLabel('Shopping'.tr(), isDark),
-                  _drawerTile(
-                    title: 'My Orders'.tr(),
-                    icon: Icons.shopping_bag_rounded,
-                    isSelected: _drawerSelection == DrawerSelection.orders,
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.read<ContainerBloc>().add(TabSelectedEvent(
-                        appBarTitle: 'My Orders'.tr(),
-                        currentTabIndex: 4,
-                        drawerSelection: DrawerSelection.orders,
-                        currentWidget: CustomerOrdersScreen(currentUser: currentUser),
-                      ));
+                  BlocBuilder<AttentionCubit, AttentionState>(
+                    builder: (context, state) {
+                      final badgeCount = state.attentionState?.getCountForModule(AttentionModule.myOrders) ?? 0;
+                      return _drawerTile(
+                        title: 'My Orders'.tr(),
+                        icon: Icons.shopping_bag_rounded,
+                        isSelected: _drawerSelection == DrawerSelection.orders,
+                        trailing: badgeCount > 0
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(color: Color(cfg.colorPrimary), borderRadius: BorderRadius.circular(10)),
+                                child: Text(
+                                  badgeCount > 99 ? '99+' : badgeCount.toString(),
+                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                ),
+                              )
+                            : null,
+                        onTap: () {
+                          context.read<AttentionCubit>().markModuleAsSeen(AttentionModule.myOrders);
+                          Navigator.pop(context);
+                          context.read<ContainerBloc>().add(TabSelectedEvent(
+                            appBarTitle: 'My Orders'.tr(),
+                            currentTabIndex: 4,
+                            drawerSelection: DrawerSelection.orders,
+                            currentWidget: CustomerOrdersScreen(currentUser: currentUser),
+                          ));
+                        },
+                        isDark: isDark,
+                        primaryColor: primaryColorValue,
+                      );
                     },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
                   ),
                   if (isPremiumUser(currentUser))
-                    _drawerTile(
-                      title: 'Order Requests'.tr(),
-                      icon: Icons.event_note_rounded,
-                      trailing: _tierBadge('PREMIUM', Colors.purple),
-                      onTap: () {
-                        Navigator.pop(context);
-                        push(context, OrdersManagementScreen(currentUser: currentUser));
+                    BlocBuilder<AttentionCubit, AttentionState>(
+                      builder: (context, state) {
+                        final badgeCount = state.attentionState?.getCountForModule(AttentionModule.orderRequests) ?? 0;
+                        return _drawerTile(
+                          title: 'Order Requests'.tr(),
+                          icon: Icons.event_note_rounded,
+                          trailing: badgeCount > 0
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(color: Color(cfg.colorPrimary), borderRadius: BorderRadius.circular(10)),
+                                      child: Text(
+                                        badgeCount > 99 ? '99+' : badgeCount.toString(),
+                                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    _tierBadge('PREMIUM', Colors.purple),
+                                  ],
+                                )
+                              : _tierBadge('PREMIUM', Colors.purple),
+                          onTap: () {
+                            context.read<AttentionCubit>().markModuleAsSeen(AttentionModule.orderRequests);
+                            Navigator.pop(context);
+                            push(context, OrdersManagementScreen(currentUser: currentUser));
+                          },
+                          isDark: isDark,
+                          primaryColor: primaryColorValue,
+                        );
                       },
-                      isDark: isDark,
-                      primaryColor: primaryColorValue,
                     ),
-                  _drawerTile(
-                    title: 'Rentals'.tr(),
-                    icon: Icons.calendar_month_rounded,
-                    isSelected: _drawerSelection == DrawerSelection.rentalOrders,
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.read<ContainerBloc>().add(TabSelectedEvent(
-                        appBarTitle: 'Rentals'.tr(),
-                        currentTabIndex: 4,
-                        drawerSelection: DrawerSelection.rentalOrders,
-                        currentWidget: RentalOrdersHubScreen(
-                          currentUser: currentUser,
-                          showAppBar: false,
-                        ),
-                      ));
+                  BlocBuilder<AttentionCubit, AttentionState>(
+                    builder: (context, state) {
+                      final badgeCount = state.attentionState?.getCountForModule(AttentionModule.rentals) ?? 0;
+                      return _drawerTile(
+                        title: 'Rentals'.tr(),
+                        icon: Icons.calendar_month_rounded,
+                        isSelected: _drawerSelection == DrawerSelection.rentalOrders,
+                        trailing: badgeCount > 0
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(color: Color(cfg.colorPrimary), borderRadius: BorderRadius.circular(10)),
+                                child: Text(
+                                  badgeCount > 99 ? '99+' : badgeCount.toString(),
+                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                ),
+                              )
+                            : null,
+                        onTap: () {
+                          context.read<AttentionCubit>().markModuleAsSeen(AttentionModule.rentals);
+                          Navigator.pop(context);
+                          context.read<ContainerBloc>().add(TabSelectedEvent(
+                            appBarTitle: 'Rentals'.tr(),
+                            currentTabIndex: 4,
+                            drawerSelection: DrawerSelection.rentalOrders,
+                            currentWidget: RentalOrdersHubScreen(currentUser: currentUser, showAppBar: false),
+                          ));
+                        },
+                        isDark: isDark,
+                        primaryColor: primaryColorValue,
+                      );
                     },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
                   ),
 
                   const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
@@ -551,27 +658,65 @@ class _ContainerState extends State<ContainerScreen> {
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
-                  _drawerTile(
-                    title: 'My Bookings'.tr(),
-                    icon: Icons.calendar_today_rounded,
-                    onTap: () {
-                      Navigator.pop(context);
-                      push(context, MyBookingsWrapperWidget(currentUser: currentUser));
+                  BlocBuilder<AttentionCubit, AttentionState>(
+                    builder: (context, state) {
+                      final badgeCount = state.attentionState?.getCountForModule(AttentionModule.myBookings) ?? 0;
+                      return _drawerTile(
+                        title: 'My Bookings'.tr(),
+                        icon: Icons.calendar_today_rounded,
+                        trailing: badgeCount > 0
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(color: Color(cfg.colorPrimary), borderRadius: BorderRadius.circular(10)),
+                                child: Text(
+                                  badgeCount > 99 ? '99+' : badgeCount.toString(),
+                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                ),
+                              )
+                            : null,
+                        onTap: () {
+                          context.read<AttentionCubit>().markModuleAsSeen(AttentionModule.myBookings);
+                          Navigator.pop(context);
+                          push(context, MyBookingsWrapperWidget(currentUser: currentUser));
+                        },
+                        isDark: isDark,
+                        primaryColor: primaryColorValue,
+                      );
                     },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
                   ),
                   if (currentUser.isAdmin || const ['professional', 'premium'].contains(currentUser.subscriptionTier.toLowerCase()))
-                    _drawerTile(
-                      title: 'Booking Requests'.tr(),
-                      icon: Icons.event_note_rounded,
-                      trailing: _tierBadge('PRO', Colors.blue),
-                      onTap: () {
-                        Navigator.pop(context);
-                        push(context, BookingManagementWrapperWidget(currentUser: currentUser));
+                    BlocBuilder<AttentionCubit, AttentionState>(
+                      builder: (context, state) {
+                        final badgeCount = state.attentionState?.getCountForModule(AttentionModule.bookingRequests) ?? 0;
+                        return _drawerTile(
+                          title: 'Booking Requests'.tr(),
+                          icon: Icons.event_note_rounded,
+                          trailing: badgeCount > 0
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(color: Color(cfg.colorPrimary), borderRadius: BorderRadius.circular(10)),
+                                      child: Text(
+                                        badgeCount > 99 ? '99+' : badgeCount.toString(),
+                                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    _tierBadge('PRO', Colors.blue),
+                                  ],
+                                )
+                              : _tierBadge('PRO', Colors.blue),
+                          onTap: () {
+                            context.read<AttentionCubit>().markModuleAsSeen(AttentionModule.bookingRequests);
+                            Navigator.pop(context);
+                            push(context, BookingManagementWrapperWidget(currentUser: currentUser));
+                          },
+                          isDark: isDark,
+                          primaryColor: primaryColorValue,
+                        );
                       },
-                      isDark: isDark,
-                      primaryColor: primaryColorValue,
                     ),
                   _drawerTile(
                     title: 'Activate Booking'.tr(),

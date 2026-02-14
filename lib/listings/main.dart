@@ -27,6 +27,8 @@ import 'package:instaflutter/listings/ui/auth/api/firebase/auth_firebase.dart';
 import 'package:instaflutter/listings/ui/table_mode/customer_table_mode_screen.dart';
 import 'package:instaflutter/listings/ui/table_mode/staff_table_sessions_screen.dart';
 import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
+import 'package:instaflutter/listings/services/attention_service.dart';
+import 'package:instaflutter/listings/ui/attention/attention_cubit.dart';
 
 runListings() {
   appName = 'Flutter Universal Listings';
@@ -53,6 +55,12 @@ runListings() {
                 AuthenticationBloc(authenticationRepository: authApiManager)),
         BlocProvider(create: (_) => LoadingCubit()),
         BlocProvider(create: (_) => ThemeCubit()),
+        // Attention Cubit for badges/dots
+        BlocProvider(
+          create: (_) => AttentionCubit(
+            attentionService: AttentionService(),
+          ),
+        ),
       ],
       child: const MyApp(),
     ),

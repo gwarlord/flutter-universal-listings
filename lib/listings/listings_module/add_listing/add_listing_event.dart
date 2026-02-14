@@ -85,6 +85,7 @@ class ValidateListingInputEvent extends AddListingEvent {
 
   final bool storeEnabled; // ✅ Added
   final String storeUrl; // ✅ Added
+  final bool acceptProofOfPayment; // ✅ Added
 
   final String instagram;
   final String facebook;
@@ -134,6 +135,7 @@ class ValidateListingInputEvent extends AddListingEvent {
     required this.blockedDates, // ✅ Added
     required this.storeEnabled, // ✅ Added
     required this.storeUrl, // ✅ Added
+    required this.acceptProofOfPayment, // ✅ Added
     required this.instagram,
     required this.facebook,
     required this.tiktok,

@@ -41,11 +41,17 @@ export * from "./deal_ad_notifications";
 // Export chat notification functions
 export * from "./chat_notifications";
 
+// Export attention tracking functions (badges/dots)
+export * from "./attention_tracking";
+
 // Export table mode functions
 export * from "./tableMode";
 
 // Export brand functions
 export * from "./brand_functions";
+
+// Export proof of payment functions
+export * from "./proof_of_payment_functions";
 
 const db = admin.firestore();
 const messaging = admin.messaging();

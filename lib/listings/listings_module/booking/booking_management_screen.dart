@@ -13,6 +13,8 @@ import 'package:instaflutter/listings/listings_module/booking/booking_state.dart
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/listings_module/api/collaboration_api_manager.dart';
 import 'package:instaflutter/listings/ui/collaboration/chat_scope_integration.dart';
+import 'package:instaflutter/listings/listings_module/proof_of_payment/proof_of_payment_upload_widget.dart';
+import 'package:instaflutter/listings/model/proof_of_payment_model.dart';
 import 'package:intl/intl.dart';
 
 class BookingManagementScreen extends StatefulWidget {
@@ -396,6 +398,24 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
                       ),
                     ))
                     .toList(),
+              ),
+            ],
+            // Proof of Payment section - Only show for confirmed bookings
+            if (booking.isConfirmed) ...[
+              const SizedBox(height: 16),
+              ProofOfPaymentUploadWidget(
+                listingId: booking.listingId,
+                orderId: booking.id,
+                currentUserId: widget.currentUser.userID,
+                isLister: true,
+                listingAcceptsProofOfPayment: booking.listingAcceptsProofOfPayment,
+                proofOfPayment: booking.proofOfPayment != null
+                    ? ProofOfPayment.fromJson(booking.proofOfPayment)
+                    : null,
+                onReviewComplete: () {
+                  // Refresh bookings after review
+                  _refreshBookings();
+                },
               ),
             ],
             if (booking.isPending) ...[

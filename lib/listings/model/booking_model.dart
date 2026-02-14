@@ -26,6 +26,10 @@ class BookingModel {
   DateTime? reminder24hSentAt;
   DateTime? reminder1hSentAt;
   String? timezone; // IANA timezone string (e.g., "America/Port_of_Spain")
+  
+  // Proof of Payment fields
+  Map<String, dynamic>? proofOfPayment;
+  bool listingAcceptsProofOfPayment = false; // ✅ Snapshot of listing's POP setting
 
   BookingModel({
     this.id = '',
@@ -53,6 +57,8 @@ class BookingModel {
     this.reminder24hSentAt,
     this.reminder1hSentAt,
     this.timezone,
+    this.proofOfPayment,
+    this.listingAcceptsProofOfPayment = false,
   })  : createdAt = createdAt ?? DateTime.now(),
       updatedAt = updatedAt ?? DateTime.now(),
       customAnswers = customAnswers ?? {};
@@ -96,6 +102,8 @@ class BookingModel {
           ? DateTime.parse(json['reminder1hSentAt'] as String)
           : null,
       timezone: json['timezone'] as String?,
+      proofOfPayment: json['proofOfPayment'] as Map<String, dynamic>?,
+      listingAcceptsProofOfPayment: json['listingAcceptsProofOfPayment'] ?? false,
     );
   }
 
@@ -126,6 +134,8 @@ class BookingModel {
       'reminder24hSentAt': reminder24hSentAt?.toIso8601String(),
       'reminder1hSentAt': reminder1hSentAt?.toIso8601String(),
       'timezone': timezone,
+      'proofOfPayment': proofOfPayment,
+      'listingAcceptsProofOfPayment': listingAcceptsProofOfPayment,
     };
   }
 

@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
@@ -38,6 +39,7 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
   late final CollectionReference _messagesRef;
   StreamSubscription? _messagesSubscription;
   bool _isSending = false;
+  List<User> _fullParticipants = [];
 
   @override
   void initState() {
@@ -47,13 +49,37 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
         .doc(widget.channelId)
         .collection('thread');
     
-    // Mark as read when entering the chat
+    _fetchParticipantDetails();
     _markAsRead();
 
     _messagesSubscription = _messagesRef
         .orderBy('createdAt', descending: true)
         .snapshots()
         .listen(_onMessageSnapshot);
+  }
+
+  Future<void> _fetchParticipantDetails() async {
+    List<User> participants = [];
+    if (widget.currentUser != null) {
+      participants.add(widget.currentUser!);
+    }
+    for (var user in widget.otherParticipants) {
+      if (user.profilePictureURL.isEmpty) {
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.userID).get();
+        if (userDoc.exists) {
+          participants.add(User.fromJson(userDoc.data()!));
+        } else {
+          participants.add(user);
+        }
+      } else {
+        participants.add(user);
+      }
+    }
+    if (mounted) {
+      setState(() {
+        _fullParticipants = participants;
+      });
+    }
   }
 
   void _markAsRead() async {
@@ -68,7 +94,6 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
         'markedAsRead': true,
       }, SetOptions(merge: true));
 
-      // Also update the channel's readUserIDs for broader tracking
       await FirebaseFirestore.instance
           .collection(chatChannelsCollection)
           .doc(widget.channelId)
@@ -116,8 +141,8 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
         });
 
         Set<String> participantIdsSet = {widget.currentUserId};
-        for (var p in widget.otherParticipants) {
-        participantIdsSet.add(p.userID);
+        for (var p in _fullParticipants) {
+          participantIdsSet.add(p.userID);
         }
         List<String> finalParticipantIds = participantIdsSet.toList();
 
@@ -140,8 +165,7 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
         'lastMessage': lastMessageObj,
         'lastMessageDate': serverTimestamp,
         'participantIds': finalParticipantIds,
-        'participants': widget.otherParticipants.map((u) => u.toJson()).toList() 
-            ..add(User(userID: widget.currentUserId).toJson()), 
+        'participants': _fullParticipants.map((u) => u.toJson()).toList(),
         'listingTitle': widget.listingTitle,
         'listingImage': widget.listingImage,
         'readUserIDs': [widget.currentUserId],
@@ -176,14 +200,6 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final primaryColor = theme.colorScheme.primary;
-    final List<User> allParticipants = [
-      if (widget.currentUser != null) widget.currentUser!,
-      ...widget.otherParticipants,
-    ];
-    final uniqueParticipantIds = <String>{};
-    final uniqueParticipants = allParticipants
-        .where((user) => uniqueParticipantIds.add(user.userID))
-        .toList();
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0B141B) : const Color(0xFFE5DDD5),
@@ -199,7 +215,7 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
             if (widget.listingImage.isNotEmpty)
               CircleAvatar(
                 radius: 15,
-                backgroundImage: NetworkImage(widget.listingImage),
+                backgroundImage: CachedNetworkImageProvider(widget.listingImage),
               ),
             const SizedBox(width: 4),
             if (widget.listingTitle.isNotEmpty)
@@ -228,32 +244,41 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
             child: Center(
               child: SizedBox(
                 height: 30,
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  scrollDirection: Axis.horizontal,
-                  itemCount: uniqueParticipants.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(width: 4),
-                  itemBuilder: (context, index) {
-                    final participant = uniqueParticipants[index];
-                    return CircleAvatar(
-                      radius: 15,
-                      backgroundImage:
-                          (participant.profilePictureURL.isNotEmpty
-                              ? NetworkImage(participant.profilePictureURL)
-                              : null) as ImageProvider?,
-                      child: participant.profilePictureURL.isEmpty
-                          ? Text(
-                              participant.firstName.isNotEmpty
-                                  ? participant.firstName[0].toUpperCase()
-                                  : 'U',
-                              style: const TextStyle(
-                                  fontSize: 12, color: Colors.white),
-                            )
-                          : null,
-                    );
-                  },
-                ),
+                child: _fullParticipants.isEmpty
+                    ? const SizedBox.shrink()
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _fullParticipants.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(width: 4),
+                        itemBuilder: (context, index) {
+                          final participant = _fullParticipants[index];
+                          final isCurrentUser = participant.userID == widget.currentUserId;
+                          final hasProfilePic = participant.profilePictureURL.isNotEmpty;
+                          final hasListingImage = widget.listingImage.isNotEmpty;
+
+                          ImageProvider? backgroundImage;
+                          Widget? child;
+
+                          if (hasProfilePic) {
+                            backgroundImage = CachedNetworkImageProvider(participant.profilePictureURL);
+                          } else if (isCurrentUser && hasListingImage) {
+                            backgroundImage = CachedNetworkImageProvider(widget.listingImage);
+                          } else {
+                            child = Text(
+                              participant.firstName.isNotEmpty ? participant.firstName[0].toUpperCase() : 'U',
+                              style: const TextStyle(fontSize: 12, color: Colors.white),
+                            );
+                          }
+
+                          return CircleAvatar(
+                            radius: 15,
+                            backgroundImage: backgroundImage,
+                            child: child,
+                          );
+                        },
+                      ),
               ),
             ),
           ),
@@ -355,7 +380,7 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 4.0),
                 child: Text(
-                  widget.otherParticipants
+                  _fullParticipants
                       .firstWhere(
                         (user) => user.userID == msg['senderID'],
                         orElse: () => User(firstName: 'Unknown'),

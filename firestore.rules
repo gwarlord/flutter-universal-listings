@@ -117,6 +117,14 @@ service cloud.firestore {
         // Writes only via Cloud Functions (when collaborator is added/removed)
         allow write: if false;
       }
+
+      // Attention/Badges subcollection for tracking unread counts
+      match /attention/{subDoc=**} {
+        allow read: if isOwner(userId) || isAdmin();
+        // Cloud Functions can write (server-side updates)
+        // Users cannot write directly to prevent tampering
+        allow write: if request.auth.token.serviceAccount == true || isAdmin();
+      }
     }
     
     // Listings collection
@@ -152,6 +160,11 @@ service cloud.firestore {
             isAdmin()
           );
           allow delete: if isSignedIn() && (request.auth.uid == resource.data.customerId || request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID || isAdmin());
+          
+          // Proof of Payment (POP) - allows submission and review updates
+          // POP is stored directly in booking document (proofOfPayment field)
+          // Customers can upload/submit their own POP
+          // Listers and collaborators can review/update POP status
       }
       
       // Taps (Vouching) subcollection

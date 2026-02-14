@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:instaflutter/listings/model/booking_model.dart';
 import 'package:instaflutter/listings/listings_module/api/booking_repository.dart';
 
@@ -49,17 +50,51 @@ class BookingFirebase extends BookingRepository {
   @override
   Future<List<BookingModel>> getMyBookings({required String userId}) async {
     try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('myBookings')
-          .orderBy('createdAt', descending: true)
-          .get();
+      debugPrint('🟢 DEBUG [getMyBookings]: Fetching bookings for userId=$userId');
+      
+      // Try with orderBy first (recommended for performance)
+      QuerySnapshot<Map<String, dynamic>> snapshot;
+      try {
+        snapshot = await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('myBookings')
+            .orderBy('createdAt', descending: true)
+            .get();
+        debugPrint('🟢 DEBUG [getMyBookings]: Query with orderBy succeeded');
+      } catch (orderByError) {
+        debugPrint('⚠️  DEBUG [getMyBookings]: orderBy failed, fetching without ordering: $orderByError');
+        // Fallback: Get without ordering
+        snapshot = await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('myBookings')
+            .get();
+      }
 
-      return snapshot.docs
-          .map((doc) => BookingModel.fromJson(doc.data()))
-          .toList();
+      debugPrint('🟢 DEBUG [getMyBookings]: Found ${snapshot.docs.length} bookings');
+      
+      final List<BookingModel> bookings = [];
+      for (final doc in snapshot.docs) {
+        try {
+          final booking = BookingModel.fromJson(doc.data());
+          booking.id = doc.id; // Ensure ID is set from document ID
+          bookings.add(booking);
+          debugPrint('🟢 DEBUG [getMyBookings]: Parsed booking ${booking.id} - status=${booking.status}');
+        } catch (parseError) {
+          debugPrint('❌ DEBUG [getMyBookings]: Failed to parse booking ${doc.id}: $parseError');
+        }
+      }
+      
+      // Manual sort if orderBy wasn't used
+      if (bookings.isNotEmpty && bookings.first.createdAt != null) {
+        bookings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      }
+      
+      debugPrint('🟢 DEBUG [getMyBookings]: Successfully parsed ${bookings.length} bookings');
+      return bookings;
     } catch (e) {
+      debugPrint('❌ DEBUG [getMyBookings]: Query error: $e');
       throw Exception('Failed to fetch my bookings: $e');
     }
   }

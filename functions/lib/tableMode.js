@@ -130,7 +130,7 @@ async function canManageTableMode(listingId, uid) {
     const isAdmin = await isAdminUser(uid);
     if (isAdmin)
         return true;
-    return await hasCollaboratorPermission(listingId, uid, "manageOrders", "manageChats");
+    return await hasCollaboratorPermission(listingId, uid, "manageTableMode");
 }
 /**
  * Generate secure random string

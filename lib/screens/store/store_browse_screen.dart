@@ -171,14 +171,8 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
           StreamBuilder<List<CatalogItem>>(
             stream: _storeService.getCatalogItems(widget.listing.id),
             builder: (context, snapshot) {
-              // Get unique categories from items
               final items = snapshot.data ?? [];
-              final categories = <String>{'All'};
-              for (final item in items) {
-                if (item.category.isNotEmpty) {
-                  categories.add(item.category);
-                }
-              }
+              final categories = <String>{'All', ...items.map((e) => e.category).where((c) => c.isNotEmpty)};
               final categoryList = categories.toList();
               
               return SizedBox(
@@ -200,10 +194,7 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                Text(
-                  'Sort:'.tr(),
-                  style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
-                ),
+                Text('Sort:'.tr(), style: TextStyle(color: dark ? Colors.white70 : Colors.black54)),
                 const SizedBox(width: 8),
                 DropdownButton<String>(
                   value: _sortBy,
@@ -216,9 +207,7 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
                     DropdownMenuItem(value: 'price_high', child: Text('Price: High to Low'.tr())),
                   ],
                   onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _sortBy = value);
-                    }
+                    if (value != null) setState(() => _sortBy = value);
                   },
                 ),
               ],
@@ -230,64 +219,26 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
             child: StreamBuilder<List<CatalogItem>>(
               stream: _storeService.getCatalogItems(widget.listing.id),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text(
-                      'Error loading items'.tr(),
-                      style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
-                    ),
-                  );
-                }
+                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                if (snapshot.hasError) return Center(child: Text('Error loading items'.tr(), style: TextStyle(color: dark ? Colors.white70 : Colors.black54)));
 
                 var items = snapshot.data ?? [];
+                if (_selectedCategory != 'All') items = items.where((item) => item.category == _selectedCategory).toList();
+                if (_searchQuery.isNotEmpty) items = items.where((item) => item.name.toLowerCase().contains(_searchQuery) || (item.description?.toLowerCase().contains(_searchQuery) ?? false)).toList();
+                
+                items.sort((a, b) {
+                  if (_sortBy == 'price_low') return a.price.compareTo(b.price);
+                  if (_sortBy == 'price_high') return b.price.compareTo(a.price);
+                  return (b.createdAt?.seconds ?? 0).compareTo(a.createdAt?.seconds ?? 0);
+                });
 
-                // Filter by category (using custom category field)
-                if (_selectedCategory != 'All') {
-                  items = items.where((item) => item.category == _selectedCategory).toList();
-                }
-
-                // Filter by search
-                if (_searchQuery.isNotEmpty) {
-                  items = items.where((item) {
-                    return item.name.toLowerCase().contains(_searchQuery) ||
-                           (item.description?.toLowerCase().contains(_searchQuery) ?? false);
-                  }).toList();
-                }
-
-                // Sort
-                if (_sortBy == 'price_low') {
-                  items.sort((a, b) => a.price.compareTo(b.price));
-                } else if (_sortBy == 'price_high') {
-                  items.sort((a, b) => b.price.compareTo(a.price));
-                } else {
-                  items.sort((a, b) => (b.createdAt?.seconds ?? 0).compareTo(a.createdAt?.seconds ?? 0));
-                }
-
-                if (items.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'No items found'.tr(),
-                      style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
-                    ),
-                  );
-                }
+                if (items.isEmpty) return Center(child: Text('No items found'.tr(), style: TextStyle(color: dark ? Colors.white70 : Colors.black54)));
 
                 return GridView.builder(
                   padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.75,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.75, crossAxisSpacing: 12, mainAxisSpacing: 12),
                   itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    return _buildItemCard(items[index], dark);
-                  },
+                  itemBuilder: (context, index) => _buildItemCard(items[index], dark),
                 );
               },
             ),
@@ -299,10 +250,7 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
               onPressed: _viewCart,
               backgroundColor: Color(cfg.colorPrimary),
               icon: const Icon(Icons.shopping_cart, color: Colors.white),
-              label: Text(
-                'View Cart ($_cartItemCount)'.tr(),
-                style: const TextStyle(color: Colors.white),
-              ),
+              label: Text('View Cart ($_cartItemCount)'.tr(), style: const TextStyle(color: Colors.white)),
             )
           : null,
     );
@@ -316,14 +264,10 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
         label: Text(category.tr()),
         selected: isSelected,
         onSelected: (selected) {
-          if (selected) {
-            setState(() => _selectedCategory = category);
-          }
+          if (selected) setState(() => _selectedCategory = category);
         },
         selectedColor: Color(cfg.colorPrimary),
-        labelStyle: TextStyle(
-          color: isSelected ? Colors.white : (dark ? Colors.white70 : Colors.black87),
-        ),
+        labelStyle: TextStyle(color: isSelected ? Colors.white : (dark ? Colors.white70 : Colors.black87)),
       ),
     );
   }
@@ -338,20 +282,10 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-              child: item.photos.isNotEmpty
-                  ? Image.network(
-                      item.photos.first,
-                      height: 120,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _placeholderImage(),
-                    )
-                  : _placeholderImage(),
+              child: item.photos.isNotEmpty ? Image.network(item.photos.first, height: 120, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _placeholderImage()) : _placeholderImage(),
             ),
-
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(8),
@@ -359,35 +293,12 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      item.name,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: dark ? Colors.white : Colors.black87,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    Text(item.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black87), maxLines: 2, overflow: TextOverflow.ellipsis),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          _formatCurrency(item.price, item.currencyCode),
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Color(cfg.colorPrimary),
-                          ),
-                        ),
-                        if (!item.isAvailable)
-                          Text(
-                            'Unavailable'.tr(),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.red,
-                            ),
-                          ),
+                        Text(_formatCurrency(item.price, item.currencyCode), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(cfg.colorPrimary))),
+                        if (!item.isAvailable) Text('Unavailable'.tr(), style: const TextStyle(fontSize: 12, color: Colors.red)),
                       ],
                     ),
                   ],
@@ -400,32 +311,14 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
     );
   }
 
-  Widget _placeholderImage() {
-    return Container(
-      height: 120,
-      width: double.infinity,
-      color: Colors.grey.shade300,
-      child: const Icon(Icons.image, size: 40, color: Colors.grey),
-    );
-  }
-
-  String _formatCurrency(double amount, String currencyCode) {
-    final symbol = _getCurrencySymbol(currencyCode);
-    return '$symbol${amount.toStringAsFixed(2)}';
-  }
-
+  Widget _placeholderImage() => Container(height: 120, width: double.infinity, color: Colors.grey.shade300, child: const Icon(Icons.image, size: 40, color: Colors.grey));
+  String _formatCurrency(double amount, String currencyCode) => '${_getCurrencySymbol(currencyCode)}${amount.toStringAsFixed(2)}';
   String _getCurrencySymbol(String code) {
     switch (code.toUpperCase()) {
-      case 'USD':
-      case 'TTD':
-      case 'JMD':
-        return '\$';
-      case 'EUR':
-        return '€';
-      case 'GBP':
-        return '£';
-      default:
-        return '\$';
+      case 'USD': case 'TTD': case 'JMD': return '\$';
+      case 'EUR': return '€';
+      case 'GBP': return '£';
+      default: return '\$';
     }
   }
 
@@ -438,11 +331,7 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
         item: item,
         onAddToCart: (cartItem) {
           setState(() {
-            // Check if same item+variant already in cart
-            final existingIndex = _cart.indexWhere((c) =>
-                c.itemId == cartItem.itemId &&
-                c.variant?['sku'] == cartItem.variant?['sku']);
-
+            final existingIndex = _cart.indexWhere((c) => c.itemId == cartItem.itemId && c.variant?['sku'] == cartItem.variant?['sku']);
             if (existingIndex >= 0) {
               _cart[existingIndex].qty += cartItem.qty;
             } else {
@@ -463,24 +352,17 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
           listing: widget.listing,
           currentUser: widget.currentUser,
           cartItems: _cart,
-          onCartUpdated: () {
-            setState(() {}); // Refresh to update badge
-          },
+          onCartUpdated: () => setState(() {}),
         ),
       ),
     );
   }
 }
 
-/// Item detail modal
 class _ItemDetailModal extends StatefulWidget {
   final CatalogItem item;
   final Function(CartItem) onAddToCart;
-
-  const _ItemDetailModal({
-    required this.item,
-    required this.onAddToCart,
-  });
+  const _ItemDetailModal({required this.item, required this.onAddToCart});
 
   @override
   State<_ItemDetailModal> createState() => _ItemDetailModalState();
@@ -489,192 +371,97 @@ class _ItemDetailModal extends StatefulWidget {
 class _ItemDetailModalState extends State<_ItemDetailModal> {
   int _quantity = 1;
   CatalogVariant? _selectedVariant;
+  Map<String, List<CatalogVariant>> _variantsByColor = {};
+  String? _selectedColor;
+  String? _selectedSize;
+
+  @override
+  void initState() {
+    super.initState();
+    _groupVariants();
+    if (widget.item.variants.isNotEmpty) {
+      final firstColor = _variantsByColor.keys.first;
+      final firstVariantOfColor = _variantsByColor[firstColor]?.first;
+      if (firstVariantOfColor != null) {
+        _selectedVariant = firstVariantOfColor;
+        _selectedColor = firstVariantOfColor.color;
+        _selectedSize = firstVariantOfColor.size;
+      }
+    }
+  }
+
+  void _groupVariants() {
+    _variantsByColor = {};
+    for (final variant in widget.item.variants) {
+      final colorKey = variant.color ?? 'Default';
+      (_variantsByColor[colorKey] ??= []).add(variant);
+    }
+    // Sort sizes for consistency
+    _variantsByColor.forEach((_, variants) => variants.sort((a, b) => (a.size ?? '').compareTo(b.size ?? '')));
+  }
+  
+  void _onVariantSelected(String? color, String? size) {
+    setState(() {
+      _selectedColor = color;
+      _selectedSize = size;
+      _selectedVariant = widget.item.variants.firstWhere((v) => v.color == color && v.size == size);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
-
     return DraggableScrollableSheet(
       initialChildSize: 0.9,
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (context, scrollController) {
         return Container(
-          decoration: BoxDecoration(
-            color: dark ? Colors.grey.shade900 : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
+          decoration: BoxDecoration(color: dark ? Colors.grey.shade900 : Colors.white, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
           child: ListView(
             controller: scrollController,
             padding: const EdgeInsets.all(16),
             children: [
-              // Drag handle
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade400,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2)))),
               const SizedBox(height: 16),
-
-              // Photos carousel
               if (widget.item.photos.isNotEmpty)
                 SizedBox(
                   height: 300,
                   child: PageView.builder(
                     itemCount: widget.item.photos.length,
-                    itemBuilder: (context, index) {
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          widget.item.photos[index],
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: Colors.grey.shade300,
-                            child: const Icon(Icons.image, size: 60),
-                          ),
-                        ),
-                      );
-                    },
+                    itemBuilder: (context, index) => ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(widget.item.photos[index], fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade300, child: const Icon(Icons.image, size: 60)))),
                   ),
                 ),
               const SizedBox(height: 16),
-
-              // Name and price
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Text(
-                      widget.item.name,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: dark ? Colors.white : Colors.black,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    _formatCurrency(_selectedVariant?.price ?? widget.item.price, widget.item.currencyCode),
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(cfg.colorPrimary),
-                    ),
-                  ),
+                  Expanded(child: Text(widget.item.name, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black))),
+                  Text(_formatCurrency(_selectedVariant?.price ?? widget.item.price, widget.item.currencyCode), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(cfg.colorPrimary))),
                 ],
               ),
               const SizedBox(height: 8),
-
-              // Description
-              if (widget.item.description != null && widget.item.description!.isNotEmpty)
-                Text(
-                  widget.item.description!,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: dark ? Colors.white70 : Colors.black54,
-                  ),
-                ),
+              if (widget.item.description != null && widget.item.description!.isNotEmpty) Text(widget.item.description!, style: TextStyle(fontSize: 16, color: dark ? Colors.white70 : Colors.black54)),
               const SizedBox(height: 16),
-
-              // Variants
-              if (widget.item.variants.isNotEmpty) ...[
-                Text(
-                  'Select Option'.tr(),
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: dark ? Colors.white : Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: widget.item.variants.map((variant) {
-                    final isSelected = _selectedVariant?.sku == variant.sku;
-                    final isAvailable = !widget.item.trackStock || variant.stockQty > 0;
-                    return ChoiceChip(
-                      label: Text('${variant.size ?? ''}${variant.size != null && variant.color != null ? ' / ' : ''}${variant.color ?? ''}'),
-                      selected: isSelected,
-                      onSelected: isAvailable
-                          ? (selected) {
-                              if (selected) {
-                                setState(() => _selectedVariant = variant);
-                              }
-                            }
-                          : null,
-                      selectedColor: Color(cfg.colorPrimary),
-                      labelStyle: TextStyle(
-                        color: isSelected ? Colors.white : (dark ? Colors.white70 : Colors.black87),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Quantity
+              if (widget.item.variants.isNotEmpty) _buildVariantSelectors(dark),
+              const SizedBox(height: 16),
               Row(
                 children: [
-                  Text(
-                    'Quantity'.tr(),
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: dark ? Colors.white : Colors.black,
-                    ),
-                  ),
+                  Text('Quantity'.tr(), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black)),
                   const Spacer(),
-                  IconButton(
-                    onPressed: _quantity > 1 ? () => setState(() => _quantity--) : null,
-                    icon: Icon(
-                      Icons.remove_circle_outline,
-                      color: _quantity > 1
-                          ? Color(cfg.colorPrimary)
-                          : (dark ? Colors.grey.shade600 : Colors.grey.shade400),
-                    ),
-                  ),
-                  Text(
-                    _quantity.toString(),
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: dark ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => setState(() => _quantity++),
-                    icon: Icon(
-                      Icons.add_circle_outline,
-                      color: Color(cfg.colorPrimary),
-                    ),
-                  ),
+                  IconButton(onPressed: _quantity > 1 ? () => setState(() => _quantity--) : null, icon: Icon(Icons.remove_circle_outline, color: _quantity > 1 ? Color(cfg.colorPrimary) : (dark ? Colors.grey.shade600 : Colors.grey.shade400))),
+                  Text(_quantity.toString(), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black)),
+                  IconButton(onPressed: () => setState(() => _quantity++), icon: Icon(Icons.add_circle_outline, color: Color(cfg.colorPrimary))),
                 ],
               ),
               const SizedBox(height: 24),
-
-              // Add to cart button
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: widget.item.isAvailable &&
-                          (widget.item.variants.isEmpty || _selectedVariant != null)
-                      ? _addToCart
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(cfg.colorPrimary),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Text(
-                    'Add to Cart'.tr(),
-                    style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
+                  onPressed: widget.item.isAvailable && (widget.item.variants.isEmpty || _selectedVariant != null) ? _addToCart : null,
+                  style: ElevatedButton.styleFrom(backgroundColor: Color(cfg.colorPrimary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  child: Text('Add to Cart'.tr(), style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -683,50 +470,67 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
       },
     );
   }
-
-  String _formatCurrency(double amount, String currencyCode) {
-    final symbol = _getCurrencySymbol(currencyCode);
-    return '$symbol${amount.toStringAsFixed(2)}';
+  
+  Widget _buildVariantSelectors(bool dark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: _variantsByColor.entries.map((entry) {
+        final color = entry.key;
+        final variantsForColor = entry.value;
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (color != 'Default')
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+                child: Text('Color: $color'.tr(), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black)),
+              ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: variantsForColor.map((variant) {
+                final isSelected = _selectedSize == variant.size && _selectedColor == variant.color;
+                final isAvailable = !widget.item.trackStock || variant.stockQty > 0;
+                
+                return ChoiceChip(
+                  label: Text(variant.size ?? 'Default'),
+                  selected: isSelected,
+                  onSelected: isAvailable ? (selected) {
+                    if (selected) _onVariantSelected(variant.color, variant.size);
+                  } : null,
+                  selectedColor: Color(cfg.colorPrimary),
+                  labelStyle: TextStyle(color: isSelected ? Colors.white : (dark ? Colors.white70 : Colors.black87)),
+                );
+              }).toList(),
+            ),
+          ],
+        );
+      }).toList(),
+    );
   }
 
+  String _formatCurrency(double amount, String currencyCode) => '${_getCurrencySymbol(currencyCode)}${amount.toStringAsFixed(2)}';
   String _getCurrencySymbol(String code) {
     switch (code.toUpperCase()) {
-      case 'USD':
-      case 'TTD':
-      case 'JMD':
-        return '\$';
-      case 'EUR':
-        return '€';
-      case 'GBP':
-        return '£';
-      default:
-        return '\$';
+      case 'USD': case 'TTD': case 'JMD': return '\$';
+      case 'EUR': return '€';
+      case 'GBP': return '£';
+      default: return '\$';
     }
   }
 
   void _addToCart() {
-    final cartItem = CartItem(
+    widget.onAddToCart(CartItem(
       itemId: widget.item.id,
       name: widget.item.name,
       qty: _quantity,
       unitPrice: _selectedVariant?.price ?? widget.item.price,
       currencyCode: widget.item.currencyCode,
       photoUrl: widget.item.photos.isNotEmpty ? widget.item.photos.first : null,
-      variant: _selectedVariant != null
-          ? {
-              'sku': _selectedVariant!.sku,
-              'size': _selectedVariant!.size,
-              'color': _selectedVariant!.color,
-              'price': _selectedVariant!.price,
-              'stockQty': _selectedVariant!.stockQty,
-            }
-          : null,
-      variantLabel: _selectedVariant != null
-          ? '${_selectedVariant!.size ?? ''}${_selectedVariant!.size != null && _selectedVariant!.color != null ? ', ' : ''}${_selectedVariant!.color ?? ''}'
-          : null,
-    );
-
-    widget.onAddToCart(cartItem);
+      variant: _selectedVariant != null ? {'sku': _selectedVariant!.sku, 'size': _selectedVariant!.size, 'color': _selectedVariant!.color, 'price': _selectedVariant!.price, 'stockQty': _selectedVariant!.stockQty} : null,
+      variantLabel: _selectedVariant != null ? '${_selectedVariant!.size ?? ''}${_selectedVariant!.size != null && _selectedVariant!.color != null ? ', ' : ''}${_selectedVariant!.color ?? ''}' : null,
+    ));
     Navigator.pop(context);
   }
 }
