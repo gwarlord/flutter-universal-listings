@@ -27,3 +27,18 @@ class ListingDeleteByAdminEvent extends HomeEvent {
 }
 
 class LoadingEvent extends HomeEvent {}
+
+// Filter events
+class ApplyFiltersEvent extends HomeEvent {
+  final HomeFilterState filters;
+
+  ApplyFiltersEvent({required this.filters});
+}
+
+class ClearFiltersEvent extends HomeEvent {}
+
+class GetListingsWithFiltersEvent extends HomeEvent {
+  final HomeFilterState filters;
+
+  GetListingsWithFiltersEvent({required this.filters});
+}

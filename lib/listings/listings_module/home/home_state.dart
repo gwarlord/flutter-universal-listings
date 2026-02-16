@@ -22,6 +22,13 @@ class ListingsListState extends HomeState {
   ListingsListState({required this.listingsWithAds});
 }
 
+class FiltersAppliedState extends HomeState {
+  List<ListingModel?> listingsWithAds;
+  HomeFilterState filters;
+
+  FiltersAppliedState({required this.listingsWithAds, required this.filters});
+}
+
 class ListingFavToggleState extends HomeState {
   ListingModel listing;
   ListingsUser updatedUser;

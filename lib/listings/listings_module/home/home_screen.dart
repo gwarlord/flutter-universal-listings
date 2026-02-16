@@ -15,10 +15,12 @@ import 'package:instaflutter/listings/listings_module/add_listing/add_listing_sc
 import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
 import 'package:instaflutter/listings/listings_module/category_listings/category_listings_screen.dart';
 import 'package:instaflutter/listings/listings_module/home/home_bloc.dart';
+import 'package:instaflutter/listings/listings_module/home/widgets/home_filter_panel.dart';
 import 'package:instaflutter/listings/listings_module/listing_details/listing_details_screen.dart';
 import 'package:instaflutter/listings/model/categories_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:instaflutter/listings/model/home_filter_state.dart';
 import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:instaflutter/listings/utils/caribbean_countries.dart';
@@ -239,6 +241,7 @@ class HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
   List<String> _selectedCountryCodes = [];
   late TextEditingController _searchController;
+  HomeFilterState _currentFilters = HomeFilterState();
 
   // Cycling controllers
   late ScrollController _categoryScrollController;
@@ -417,6 +420,7 @@ class HomeScreenState extends State<HomeScreen> {
     required String title,
     VoidCallback? onSeeAll,
     bool isDark = false,
+    Color? titleColor,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0, top: 4.0),
@@ -429,7 +433,7 @@ class HomeScreenState extends State<HomeScreen> {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
-                color: isDark ? Colors.white : Colors.black87,
+                color: titleColor ?? (isDark ? Colors.white : Colors.black87),
                 letterSpacing: 0.5,
               ),
             ),
@@ -472,6 +476,111 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showFilterPanel(BuildContext context) {
+    final homeBloc = context.read<HomeBloc>();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => HomeFilterPanel(
+        currentFilters: _currentFilters,
+        categories: _categories,
+        onApply: (filters) {
+          setState(() {
+            _currentFilters = filters;
+          });
+          homeBloc.add(ApplyFiltersEvent(filters: filters));
+          Navigator.of(sheetContext).pop();
+        },
+        onClear: () {
+          setState(() {
+            _currentFilters = HomeFilterState();
+          });
+          homeBloc.add(ClearFiltersEvent());
+          Navigator.of(sheetContext).pop();
+        },
+      ),
+    );
+  }
+
+  String _sortOptionLabel(HomeSortOption option) {
+    switch (option) {
+      case HomeSortOption.recommended:
+        return 'Recommended'.tr();
+      case HomeSortOption.mostVouched:
+        return 'Most Vouched'.tr();
+      case HomeSortOption.nearest:
+        return 'Nearest'.tr();
+      case HomeSortOption.newest:
+        return 'Newest'.tr();
+      case HomeSortOption.aToZ:
+        return 'A-Z'.tr();
+      case HomeSortOption.vouchCount:
+        return 'Vouch count'.tr();
+    }
+  }
+
+  Widget _buildSortControl(bool isDark) {
+    final primaryColor = Color(cfg.colorPrimary);
+    const options = [
+      HomeSortOption.recommended,
+      HomeSortOption.mostVouched,
+      HomeSortOption.nearest,
+      HomeSortOption.newest,
+      HomeSortOption.aToZ,
+      HomeSortOption.vouchCount,
+    ];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.black : Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Color(cfg.colorPrimary).withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          Text(
+            'Sort by'.tr(),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white70 : Colors.black54,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<HomeSortOption>(
+                value: _currentFilters.sortOption,
+                isExpanded: true,
+                dropdownColor: isDark ? Colors.grey[900] : Colors.white,
+                iconEnabledColor: primaryColor,
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+                items: options
+                    .map((option) => DropdownMenuItem<HomeSortOption>(
+                          value: option,
+                          child: Text(_sortOptionLabel(option)),
+                        ))
+                    .toList(),
+                onChanged: (option) {
+                  if (option == null) return;
+                  final updatedFilters = _currentFilters.copyWith(sortOption: option);
+                  setState(() => _currentFilters = updatedFilters);
+                  context.read<HomeBloc>().add(ApplyFiltersEvent(filters: updatedFilters));
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool dark = isDarkMode(context);
@@ -498,6 +607,17 @@ class HomeScreenState extends State<HomeScreen> {
               listingsWithAds = state.listingsWithAds;
               final tempList = [...listingsWithAds]..removeWhere((e) => e == null);
               listings = [...tempList.cast<ListingModel>()];
+            } else if (state is FiltersAppliedState) {
+              context.read<LoadingCubit>().hideLoading();
+              loadingListings = false;
+
+              listingsWithAds = state.listingsWithAds;
+              final tempList = [...listingsWithAds]..removeWhere((e) => e == null);
+              listings = [...tempList.cast<ListingModel>()];
+              
+              setState(() {
+                _currentFilters = state.filters;
+              });
             } else if (state is LoadingCategoriesState) {
               loadingCategories = true;
             } else if (state is LoadingListingsState) {
@@ -601,7 +721,11 @@ class HomeScreenState extends State<HomeScreen> {
                         children: [
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                            child: _buildSectionHeader(title: 'Categories'.tr(), isDark: dark),
+                            child: _buildSectionHeader(
+                              title: 'Categories'.tr(),
+                              isDark: dark,
+                              titleColor: Color(cfg.colorPrimary),
+                            ),
                           ),
                           if (loadingCategories)
                             const Padding(
@@ -687,33 +811,84 @@ class HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          GestureDetector(
-                            onTap: () => _showCountrySelectionDialog(context),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: dark ? Colors.black : Colors.grey[50],
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Color(cfg.colorPrimary).withOpacity(0.1)),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      _selectedCountryCodes.isEmpty
-                                          ? 'Filter by Country'.tr()
-                                          : '${_selectedCountryCodes.length} Countries Selected'.tr(),
-                                      style: TextStyle(
-                                        color: _selectedCountryCodes.isEmpty ? Colors.grey : (dark ? Colors.white : Colors.black),
-                                      ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => _showCountrySelectionDialog(context),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: dark ? Colors.black : Colors.grey[50],
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Color(cfg.colorPrimary).withOpacity(0.1)),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            _selectedCountryCodes.isEmpty
+                                                ? 'Filter by Country'.tr()
+                                                : '${_selectedCountryCodes.length} Countries Selected'.tr(),
+                                            style: TextStyle(
+                                              color: _selectedCountryCodes.isEmpty ? Colors.grey : (dark ? Colors.white : Colors.black),
+                                            ),
+                                          ),
+                                        ),
+                                        Icon(Icons.public, color: Color(cfg.colorPrimary), size: 20),
+                                      ],
                                     ),
                                   ),
-                                  Icon(Icons.tune, color: Color(cfg.colorPrimary), size: 20),
-                                ],
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () => _showFilterPanel(context),
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: _currentFilters.activeFilterCount > 0
+                                        ? Color(cfg.colorPrimary)
+                                        : (dark ? Colors.black : Colors.grey[50]),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Color(cfg.colorPrimary).withOpacity(0.1)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.tune,
+                                        color: _currentFilters.activeFilterCount > 0
+                                            ? Colors.white
+                                            : Color(cfg.colorPrimary),
+                                        size: 20,
+                                      ),
+                                      if (_currentFilters.activeFilterCount > 0) ...[
+                                        const SizedBox(width: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          child: Text(
+                                            '${_currentFilters.activeFilterCount}',
+                                            style: TextStyle(
+                                              color: Color(cfg.colorPrimary),
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
+                          const SizedBox(height: 12),
+                          _buildSortControl(dark),
                           if (_selectedCountryCodes.isNotEmpty) ...[
                             const SizedBox(height: 12),
                             Wrap(
@@ -733,6 +908,149 @@ class HomeScreenState extends State<HomeScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 );
                               }).toList(),
+                            ),
+                          ],
+                          if (_currentFilters.activeFilterCount > 0) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              'Active filters'.tr(),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: dark ? Colors.grey[400] : Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                if (_currentFilters.openNowOnly)
+                                  Chip(
+                                    label: Text('Open Now'.tr(), style: const TextStyle(fontSize: 12)),
+                                    onDeleted: () {
+                                      final updatedFilters = _currentFilters.copyWith(openNowOnly: false);
+                                      setState(() => _currentFilters = updatedFilters);
+                                      context.read<HomeBloc>().add(ApplyFiltersEvent(filters: updatedFilters));
+                                    },
+                                    backgroundColor: Color(cfg.colorPrimary).withOpacity(0.1),
+                                    deleteIconColor: Color(cfg.colorPrimary),
+                                    side: BorderSide.none,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                if (_currentFilters.hasMiniStore)
+                                  Chip(
+                                    label: Text('Has Mini Store'.tr(), style: const TextStyle(fontSize: 12)),
+                                    onDeleted: () {
+                                      final updatedFilters = _currentFilters.copyWith(hasMiniStore: false);
+                                      setState(() => _currentFilters = updatedFilters);
+                                      context.read<HomeBloc>().add(ApplyFiltersEvent(filters: updatedFilters));
+                                    },
+                                    backgroundColor: Color(cfg.colorPrimary).withOpacity(0.1),
+                                    deleteIconColor: Color(cfg.colorPrimary),
+                                    side: BorderSide.none,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                if (_currentFilters.hasRentals)
+                                  Chip(
+                                    label: Text('Has Rentals'.tr(), style: const TextStyle(fontSize: 12)),
+                                    onDeleted: () {
+                                      final updatedFilters = _currentFilters.copyWith(hasRentals: false);
+                                      setState(() => _currentFilters = updatedFilters);
+                                      context.read<HomeBloc>().add(ApplyFiltersEvent(filters: updatedFilters));
+                                    },
+                                    backgroundColor: Color(cfg.colorPrimary).withOpacity(0.1),
+                                    deleteIconColor: Color(cfg.colorPrimary),
+                                    side: BorderSide.none,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                if (_currentFilters.hasBooking)
+                                  Chip(
+                                    label: Text('Has Booking'.tr(), style: const TextStyle(fontSize: 12)),
+                                    onDeleted: () {
+                                      final updatedFilters = _currentFilters.copyWith(hasBooking: false);
+                                      setState(() => _currentFilters = updatedFilters);
+                                      context.read<HomeBloc>().add(ApplyFiltersEvent(filters: updatedFilters));
+                                    },
+                                    backgroundColor: Color(cfg.colorPrimary).withOpacity(0.1),
+                                    deleteIconColor: Color(cfg.colorPrimary),
+                                    side: BorderSide.none,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                if (_currentFilters.hasDeals)
+                                  Chip(
+                                    label: Text('Has Deals'.tr(), style: const TextStyle(fontSize: 12)),
+                                    onDeleted: () {
+                                      final updatedFilters = _currentFilters.copyWith(hasDeals: false);
+                                      setState(() => _currentFilters = updatedFilters);
+                                      context.read<HomeBloc>().add(ApplyFiltersEvent(filters: updatedFilters));
+                                    },
+                                    backgroundColor: Color(cfg.colorPrimary).withOpacity(0.1),
+                                    deleteIconColor: Color(cfg.colorPrimary),
+                                    side: BorderSide.none,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                if (_currentFilters.supportsDelivery)
+                                  Chip(
+                                    label: Text('Delivery'.tr(), style: const TextStyle(fontSize: 12)),
+                                    onDeleted: () {
+                                      final updatedFilters = _currentFilters.copyWith(supportsDelivery: false);
+                                      setState(() => _currentFilters = updatedFilters);
+                                      context.read<HomeBloc>().add(ApplyFiltersEvent(filters: updatedFilters));
+                                    },
+                                    backgroundColor: Color(cfg.colorPrimary).withOpacity(0.1),
+                                    deleteIconColor: Color(cfg.colorPrimary),
+                                    side: BorderSide.none,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                if (_currentFilters.supportsPickup)
+                                  Chip(
+                                    label: Text('Pickup'.tr(), style: const TextStyle(fontSize: 12)),
+                                    onDeleted: () {
+                                      final updatedFilters = _currentFilters.copyWith(supportsPickup: false);
+                                      setState(() => _currentFilters = updatedFilters);
+                                      context.read<HomeBloc>().add(ApplyFiltersEvent(filters: updatedFilters));
+                                    },
+                                    backgroundColor: Color(cfg.colorPrimary).withOpacity(0.1),
+                                    deleteIconColor: Color(cfg.colorPrimary),
+                                    side: BorderSide.none,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                if (_currentFilters.supportsDineIn)
+                                  Chip(
+                                    label: Text('Dine-in'.tr(), style: const TextStyle(fontSize: 12)),
+                                    onDeleted: () {
+                                      final updatedFilters = _currentFilters.copyWith(supportsDineIn: false);
+                                      setState(() => _currentFilters = updatedFilters);
+                                      context.read<HomeBloc>().add(ApplyFiltersEvent(filters: updatedFilters));
+                                    },
+                                    backgroundColor: Color(cfg.colorPrimary).withOpacity(0.1),
+                                    deleteIconColor: Color(cfg.colorPrimary),
+                                    side: BorderSide.none,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                if (_currentFilters.categoryIds.isNotEmpty)
+                                  ..._currentFilters.categoryIds.map((categoryId) {
+                                    final categoryTitle = _categories.firstWhere(
+                                      (c) => c.id == categoryId,
+                                      orElse: () => CategoriesModel(id: '', title: 'Category'.tr(), photo: '', isActive: true, sortOrder: 0),
+                                    ).title;
+                                    return Chip(
+                                      label: Text(categoryTitle, style: const TextStyle(fontSize: 12)),
+                                      onDeleted: () {
+                                        final updatedCategories = List<String>.from(_currentFilters.categoryIds)
+                                          ..remove(categoryId);
+                                        final updatedFilters = _currentFilters.copyWith(categoryIds: updatedCategories);
+                                        setState(() => _currentFilters = updatedFilters);
+                                        context.read<HomeBloc>().add(ApplyFiltersEvent(filters: updatedFilters));
+                                      },
+                                      backgroundColor: Color(cfg.colorPrimary).withOpacity(0.1),
+                                      deleteIconColor: Color(cfg.colorPrimary),
+                                      side: BorderSide.none,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    );
+                                  }),
+                              ],
                             ),
                           ],
                         ],
