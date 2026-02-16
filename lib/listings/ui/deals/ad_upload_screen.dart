@@ -10,7 +10,6 @@ import 'package:instaflutter/listings/ui/deals/ad_format_guidance_screen.dart';
 import 'package:instaflutter/listings/ui/deals/ad_terms_and_conditions_screen.dart';
 import 'package:instaflutter/listings/ui/deals/ad_pricing_selector.dart';
 import 'package:instaflutter/listings/ui/deals/ad_review_screen.dart';
-import 'package:instaflutter/listings/ui/deals/deal_settings_form.dart';
 import 'package:instaflutter/listings/utils/caribbean_countries.dart';
 import 'package:instaflutter/listings/model/ad_targeting_model.dart';
 import 'package:instaflutter/listings/model/categories_model.dart';
@@ -331,11 +330,11 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
   List<CategoriesModel> _availableCategories = [];
   bool _loadingCategories = false;
   
-  // Deal Settings (Redemption) variables
-  String _redemptionType = 'IN_APP_CLAIM'; // 'PROMO_CODE' or 'IN_APP_CLAIM'
-  String? _promoCode;
-  int? _redemptionLimitTotal;
-  int? _redemptionLimitPerUser;
+  // Deal Settings (Redemption) variables - REMOVED, but keeping defaults
+  final String _redemptionType = 'IN_APP_CLAIM';
+  final String? _promoCode = null;
+  final int? _redemptionLimitTotal = null;
+  final int? _redemptionLimitPerUser = null;
   DateTime? _scheduleAt;
   late DateTime _expireAt;
   
@@ -364,11 +363,6 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
       _selectedLocations = List<String>.from(ad.targeting.locations);
       _selectedCategories = List<String>.from(ad.targeting.categories);
       _selectedAudience = List<String>.from(ad.targeting.audience);
-      // Load redemption settings
-      _redemptionType = ad.redemptionType;
-      _promoCode = ad.promoCode;
-      _redemptionLimitTotal = ad.redemptionLimitTotal;
-      _redemptionLimitPerUser = ad.redemptionLimitPerUser;
       _scheduleAt = ad.scheduleAt;
       _expireAt = ad.expireAt;
     }
@@ -487,32 +481,6 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
       context,
       MaterialPageRoute(builder: (_) => const AdFormatGuidanceScreen()),
     );
-  }
-
-  Future<void> _showDealSettings() async {
-    final settings = await showDialog<DealSettings>(
-      context: context,
-      builder: (_) => DealSettingsForm(
-        initialRedemptionType: _redemptionType,
-        initialPromoCode: _promoCode,
-        initialRedemptionLimitTotal: _redemptionLimitTotal,
-        initialRedemptionLimitPerUser: _redemptionLimitPerUser,
-        initialExpireAt: _expireAt,
-        initialScheduleAt: _scheduleAt,
-        onSaved: (settings) {},
-      ),
-    );
-
-    if (settings != null) {
-      setState(() {
-        _redemptionType = settings.redemptionType;
-        _promoCode = settings.promoCode;
-        _redemptionLimitTotal = settings.redemptionLimitTotal;
-        _redemptionLimitPerUser = settings.redemptionLimitPerUser;
-        _expireAt = settings.expireAt;
-        _scheduleAt = settings.scheduleAt;
-      });
-    }
   }
 
   void _showTypeInfo() {
@@ -787,154 +755,6 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildDealSettingsSummary(bool isDark, Color textColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.redeem, size: 16, color: isDark ? Colors.white70 : Colors.black54),
-            const SizedBox(width: 8),
-            Text(
-              'Type: ',
-              style: TextStyle(
-                color: isDark ? Colors.white70 : Colors.black54,
-                fontSize: 13,
-              ),
-            ),
-            Text(
-              _redemptionType == 'PROMO_CODE' ? 'Promo Code' : 'In-App Claim',
-              style: TextStyle(
-                color: textColor,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        if (_redemptionType == 'PROMO_CODE' && _promoCode != null) ...[
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.code, size: 16, color: isDark ? Colors.white70 : Colors.black54),
-              const SizedBox(width: 8),
-              Text(
-                'Code: ',
-                style: TextStyle(
-                  color: isDark ? Colors.white70 : Colors.black54,
-                  fontSize: 13,
-                ),
-              ),
-              Text(
-                _promoCode!,
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'monospace',
-                ),
-              ),
-            ],
-          ),
-        ],
-        if (_scheduleAt != null) ...[
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.schedule, size: 16, color: isDark ? Colors.white70 : Colors.black54),
-              const SizedBox(width: 8),
-              Text(
-                'Starts: ',
-                style: TextStyle(
-                  color: isDark ? Colors.white70 : Colors.black54,
-                  fontSize: 13,
-                ),
-              ),
-              Text(
-                DateFormat('MMM dd, yyyy').format(_scheduleAt!),
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ],
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Icon(Icons.event_busy, size: 16, color: isDark ? Colors.white70 : Colors.black54),
-            const SizedBox(width: 8),
-            Text(
-              'Expires: ',
-              style: TextStyle(
-                color: isDark ? Colors.white70 : Colors.black54,
-                fontSize: 13,
-              ),
-            ),
-            Text(
-              DateFormat('MMM dd, yyyy').format(_expireAt),
-              style: TextStyle(
-                color: textColor,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        if (_redemptionLimitTotal != null) ...[
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.people_outline, size: 16, color: isDark ? Colors.white70 : Colors.black54),
-              const SizedBox(width: 8),
-              Text(
-                'Total Limit: ',
-                style: TextStyle(
-                  color: isDark ? Colors.white70 : Colors.black54,
-                  fontSize: 13,
-                ),
-              ),
-              Text(
-                '$_redemptionLimitTotal claims',
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ],
-        if (_redemptionLimitPerUser != null) ...[
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.person_outline, size: 16, color: isDark ? Colors.white70 : Colors.black54),
-              const SizedBox(width: 8),
-              Text(
-                'Per User: ',
-                style: TextStyle(
-                  color: isDark ? Colors.white70 : Colors.black54,
-                  fontSize: 13,
-                ),
-              ),
-              Text(
-                '$_redemptionLimitPerUser time${_redemptionLimitPerUser == 1 ? '' : 's'}',
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ],
     );
   }
 
@@ -1407,48 +1227,6 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                     ],
                   ),
                 ],
-              ),
-            ),
-            
-            const SizedBox(height: 24),
-            
-            // Deal Settings Section
-            Card(
-              elevation: 2,
-              color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.settings_outlined, color: primaryColor, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Deal Settings',
-                          style: TextStyle(
-                            color: adaptiveTextColor,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const Spacer(),
-                        TextButton.icon(
-                          onPressed: _showDealSettings,
-                          icon: Icon(Icons.tune, size: 18),
-                          label: Text('Configure'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: primaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _buildDealSettingsSummary(isDark, adaptiveTextColor),
-                  ],
-                ),
               ),
             ),
             

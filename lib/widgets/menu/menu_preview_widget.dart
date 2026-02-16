@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:instaflutter/models/menu_models.dart';
 import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/core/utils/helper.dart';
@@ -32,7 +33,7 @@ class MenuPreviewWidget extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Text(
-            'Menu Preview',
+            'Menu Preview'.tr(),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -54,7 +55,7 @@ class MenuPreviewWidget extends StatelessWidget {
             width: double.infinity,
             child: FilledButton(
               onPressed: onViewFullMenu,
-              child: const Text('View Full Menu'),
+              child: Text('View Full Menu'.tr()),
             ),
           ),
         ),
@@ -151,7 +152,7 @@ class MenuPreviewWidget extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                tag,
+                                tag.tr(),
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,

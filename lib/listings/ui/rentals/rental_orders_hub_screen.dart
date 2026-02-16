@@ -26,6 +26,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     with SingleTickerProviderStateMixin {
   final RentalService _rentalService = RentalService();
   final Map<String, String> _currencyCodeCache = {};
+  final Map<String, _CustomerPreview> _customerPreviewCache = {};
   late TabController _tabController;
   String _selectedStatus = 'all';
   bool _showHistory = false; // Toggle between active orders and all orders
@@ -590,6 +591,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     final surface = theme.colorScheme.surface;
     final surfaceVariant = theme.colorScheme.surfaceVariant;
     final onSurface = theme.colorScheme.onSurface;
+    final onSurfaceMuted = onSurface.withOpacity(0.7);
     final statusStyle = _statusStyle(booking.status);
     
     return FutureBuilder<_RentalItemPreview>(
@@ -664,6 +666,54 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  FutureBuilder<_CustomerPreview>(
+                    future: _fetchCustomerPreview(booking.customerId),
+                    builder: (context, snapshot) {
+                      final preview = snapshot.data ?? const _CustomerPreview(name: 'Customer');
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundImage: preview.profilePictureURL.isNotEmpty
+                                ? NetworkImage(preview.profilePictureURL)
+                                : null,
+                            backgroundColor: Colors.grey[300],
+                            child: preview.profilePictureURL.isEmpty
+                                ? Icon(Icons.person, size: 16, color: Colors.grey[700])
+                                : null,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  preview.name,
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (preview.contact != null && preview.contact!.isNotEmpty)
+                                  Text(
+                                    preview.contact!,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: onSurfaceMuted),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -842,6 +892,47 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     );
   }
 
+  Future<_CustomerPreview> _fetchCustomerPreview(String customerId) async {
+    if (customerId.isEmpty) {
+      return const _CustomerPreview(name: 'Customer');
+    }
+
+    final cached = _customerPreviewCache[customerId];
+    if (cached != null) return cached;
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(customerId)
+        .get();
+    if (!userDoc.exists) {
+      return const _CustomerPreview(name: 'Customer');
+    }
+
+    final data = userDoc.data();
+    final firstName = (data?['firstName'] as String?)?.trim() ?? '';
+    final lastName = (data?['lastName'] as String?)?.trim() ?? '';
+    final displayName = (data?['displayName'] as String?)?.trim() ?? '';
+    final fullName = (data?['name'] as String?)?.trim() ?? '';
+    final email = (data?['email'] as String?)?.trim() ?? '';
+    final phone = (data?['phoneNumber'] as String?)?.trim() ??
+        (data?['phone'] as String?)?.trim() ?? '';
+    final profilePictureURL = (data?['profilePictureURL'] as String?)?.trim() ?? '';
+
+    final combinedName = '$firstName $lastName'.trim();
+    final resolvedName = combinedName.isNotEmpty
+        ? combinedName
+        : (displayName.isNotEmpty
+            ? displayName
+            : (fullName.isNotEmpty
+                ? fullName
+                : (email.isNotEmpty ? email : 'Customer')));
+    final contact = email.isNotEmpty ? email : (phone.isNotEmpty ? phone : null);
+
+    final preview = _CustomerPreview(name: resolvedName, contact: contact, profilePictureURL: profilePictureURL);
+    _customerPreviewCache[customerId] = preview;
+    return preview;
+  }
+
   Future<String> _getListingCurrencyCode(String listingId) async {
     final cached = _currencyCodeCache[listingId];
     if (cached != null) return cached;
@@ -914,6 +1005,18 @@ class _RentalItemPreview {
     required this.title,
     required this.imageUrl,
     required this.currencyCode,
+  });
+}
+
+class _CustomerPreview {
+  final String name;
+  final String? contact;
+  final String profilePictureURL;
+
+  const _CustomerPreview({
+    required this.name,
+    this.contact,
+    this.profilePictureURL = '',
   });
 }
 

@@ -4,9 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 enum OrderStatus {
   requested('requested'),
   confirmed('confirmed'),
-  preparing('preparing'),      // Restaurant: meal being prepared
-  ready('ready'),              // Restaurant: ready to serve / pickup ready
-  served('served'),            // Restaurant: served to table
+  preparing('preparing'), // Restaurant: meal being prepared
+  ready('ready'), // Restaurant: ready to serve / pickup ready
+  served('served'), // Restaurant: served to table
   declined('declined'),
   fulfilled('fulfilled'),
   cancelled('cancelled');
@@ -24,9 +24,9 @@ enum OrderStatus {
 
 /// Order type (determined by items in order)
 enum OrderType {
-  food('food'),           // All items are food/drink
-  general('general'),     // All items are products/services
-  mixed('mixed');         // Contains both food and non-food items
+  food('food'), // All items are food/drink
+  general('general'), // All items are products/services
+  mixed('mixed'); // Contains both food and non-food items
 
   final String value;
   const OrderType(this.value);
@@ -122,13 +122,13 @@ enum TrackingStatus {
 /// Shipping information (populated when fulfillmentMethod == SHIPPING)
 /// Contains both customer's shipping details and lister's tracking info
 class ShippingInfo {
-  // Customer-provided shipping details
+// Customer-provided shipping details
   final String? address; // Shipping address
   final double? latitude; // Pinned location latitude
   final double? longitude; // Pinned location longitude
   final String? instructions; // Additional shipping instructions
 
-  // Lister-provided tracking information
+// Lister-provided tracking information
   final String? carrierName; // e.g., "FedEx", "UPS", "DHL"
   final String? trackingNumber;
   final String? trackingUrl;
@@ -184,18 +184,25 @@ class ShippingInfo {
   }
 
   /// Returns true if tracking info is complete (required fields populated)
-  bool get isComplete => trackingNumber != null && trackingNumber!.isNotEmpty && 
-                         trackingUrl != null && trackingUrl!.isNotEmpty;
+  bool get isComplete =>
+      trackingNumber != null &&
+      trackingNumber!.isNotEmpty &&
+      trackingUrl != null &&
+      trackingUrl!.isNotEmpty;
 
   /// Returns true if shipping address is complete
   bool get hasDeliveryAddress => address != null && address!.isNotEmpty;
 
   /// Returns true if at least one shipping field is set
-  bool get hasData => address != null || latitude != null || longitude != null ||
-                      instructions != null || carrierName != null || 
-                      trackingNumber != null || trackingUrl != null;
+  bool get hasData =>
+      address != null ||
+      latitude != null ||
+      longitude != null ||
+      instructions != null ||
+      carrierName != null ||
+      trackingNumber != null ||
+      trackingUrl != null;
 }
-
 
 /// Order item
 class OrderItem {
@@ -205,6 +212,7 @@ class OrderItem {
   final double unitPrice;
   final Map<String, dynamic>? variant; // SKU, size, color, etc.
   final String itemType; // 'food_drink', 'product', 'service' from CatalogItemType
+  final String? photoUrl; // Product/item image
 
   OrderItem({
     required this.itemId,
@@ -213,6 +221,7 @@ class OrderItem {
     required this.unitPrice,
     this.variant,
     this.itemType = 'product', // Default to product for backwards compatibility
+    this.photoUrl,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
@@ -223,6 +232,7 @@ class OrderItem {
       unitPrice: (json['unitPrice'] ?? 0).toDouble(),
       variant: json['variant'] != null ? Map<String, dynamic>.from(json['variant']) : null,
       itemType: json['itemType'] ?? 'product',
+      photoUrl: json['photoUrl'],
     );
   }
 
@@ -234,6 +244,7 @@ class OrderItem {
       'unitPrice': unitPrice,
       'variant': variant,
       'itemType': itemType,
+      'photoUrl': photoUrl,
     };
   }
 
@@ -256,6 +267,7 @@ class OrderRequest {
   final String? listerNotes;
   final String? channelId; // Chat channel ID
   final OrderType orderType; // Food, General, or Mixed based on items
+  final Map<String, dynamic>? payment;
   final Timestamp? createdAt;
   final Timestamp? updatedAt;
 
@@ -274,6 +286,7 @@ class OrderRequest {
     this.listerNotes,
     this.channelId,
     OrderType? orderType,
+    this.payment,
     this.createdAt,
     this.updatedAt,
   }) : orderType = orderType ?? _determineOrderType(items);
@@ -293,11 +306,14 @@ class OrderRequest {
       estimatedTotal: (json['estimatedTotal'] ?? 0).toDouble(),
       currencyCode: json['currencyCode'] ?? 'USD',
       fulfillment: FulfillmentInfo.fromJson(json['fulfillment'] ?? {}),
-      shipping: json['shipping'] != null ? ShippingInfo.fromJson(json['shipping'] as Map<String, dynamic>) : null,
+      shipping: json['shipping'] != null
+          ? ShippingInfo.fromJson(json['shipping'] as Map<String, dynamic>)
+          : null,
       notes: json['notes'],
       listerNotes: json['listerNotes'],
       channelId: json['channelId'],
       orderType: OrderType.fromString(json['orderType']),
+      payment: json['payment'] != null ? Map<String, dynamic>.from(json['payment']) : null,
       createdAt: json['createdAt'],
       updatedAt: json['updatedAt'],
     );
@@ -319,6 +335,7 @@ class OrderRequest {
       'listerNotes': listerNotes,
       'channelId': channelId,
       'orderType': orderType.value,
+      'payment': payment,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
     };
@@ -339,6 +356,7 @@ class OrderRequest {
     String? listerNotes,
     String? channelId,
     OrderType? orderType,
+    Map<String, dynamic>? payment,
     Timestamp? createdAt,
     Timestamp? updatedAt,
   }) {
@@ -357,6 +375,7 @@ class OrderRequest {
       listerNotes: listerNotes ?? this.listerNotes,
       channelId: channelId ?? this.channelId,
       orderType: orderType ?? this.orderType,
+      payment: payment ?? this.payment,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -365,10 +384,10 @@ class OrderRequest {
   /// Determine order type based on item types
   static OrderType _determineOrderType(List<OrderItem> items) {
     if (items.isEmpty) return OrderType.general;
-    
+
     bool hasFood = false;
     bool hasNonFood = false;
-    
+
     for (final item in items) {
       if (item.itemType == 'food_drink') {
         hasFood = true;
@@ -376,7 +395,7 @@ class OrderRequest {
         hasNonFood = true;
       }
     }
-    
+
     if (hasFood && hasNonFood) {
       return OrderType.mixed;
     } else if (hasFood) {

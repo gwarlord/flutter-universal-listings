@@ -30,6 +30,8 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _statusUpdated = false;
+  DateTime? _selectedFilterDate;
+  Set<String> _bookingDateKeys = {};
 
   @override
   void initState() {
@@ -50,6 +52,16 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
     context.read<BookingBloc>().add(
           GetReceivedBookingsEvent(listersUserId: widget.currentUser.userID),
         );
+  }
+
+  void _updateBookingDateKeys(List<dynamic> bookings) {
+    final nextKeys = _collectBookingDateKeys(bookings);
+    if (_bookingDateKeys.length == nextKeys.length && _bookingDateKeys.containsAll(nextKeys)) {
+      return;
+    }
+    setState(() {
+      _bookingDateKeys = nextKeys;
+    });
   }
 
   Future<void> _openOrderChat(dynamic booking) async {
@@ -135,6 +147,16 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
         title: Text('Booking Requests'.tr()),
         actions: [
           IconButton(
+            icon: Icon(
+              Icons.calendar_month,
+              color: _selectedFilterDate != null ? Color(cfg.colorPrimary) : null,
+            ),
+            onPressed: _bookingDateKeys.isEmpty ? null : _openBookingDateFilter,
+            tooltip: _selectedFilterDate == null
+                ? 'Filter by date'.tr()
+                : DateFormat('MMM dd, yyyy').format(_selectedFilterDate!),
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _refreshBookings,
             tooltip: 'Refresh'.tr(),
@@ -172,13 +194,17 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
               ),
             );
           }
+
+          if (state is ReceivedBookingsLoadedState) {
+            _updateBookingDateKeys(state.bookings);
+          }
         },
         child: BlocBuilder<BookingBloc, BookingState>(
           builder: (context, state) {
             if (state is BookingLoading) {
               return const Center(child: CircularProgressIndicator.adaptive());
             } else if (state is ReceivedBookingsLoadedState) {
-              final allBookings = state.bookings;
+              final allBookings = _applyDateFilter(state.bookings);
               final pendingBookings = allBookings.where((b) => b.isPending).toList();
               final confirmedBookings = allBookings.where((b) => b.isConfirmed).toList();
 
@@ -217,6 +243,231 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
         ),
       ),
     );
+  }
+
+  Future<void> _openBookingDateFilter() async {
+    if (_bookingDateKeys.isEmpty) {
+      showSnackBar(context, 'No bookings available for filtering'.tr());
+      return;
+    }
+
+    final dark = isDarkMode(context);
+    DateTime displayMonth = _selectedFilterDate ?? DateTime.now();
+    displayMonth = DateTime(displayMonth.year, displayMonth.month);
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left),
+                    onPressed: () {
+                      setDialogState(() {
+                        displayMonth = DateTime(displayMonth.year, displayMonth.month - 1);
+                      });
+                    },
+                  ),
+                  Text(
+                    DateFormat('MMMM yyyy').format(displayMonth),
+                    style: TextStyle(color: dark ? Colors.white : Colors.black87),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right),
+                    onPressed: () {
+                      setDialogState(() {
+                        displayMonth = DateTime(displayMonth.year, displayMonth.month + 1);
+                      });
+                    },
+                  ),
+                ],
+              ),
+              content: _buildCalendarGrid(displayMonth, dark, onSelect: (selected) {
+                setState(() {
+                  _selectedFilterDate = selected;
+                });
+                Navigator.pop(dialogContext);
+              }),
+              actions: [
+                if (_selectedFilterDate != null)
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedFilterDate = null;
+                      });
+                      Navigator.pop(dialogContext);
+                    },
+                    child: Text('Clear filter'.tr()),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: Text('Close'.tr()),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildCalendarGrid(
+    DateTime displayMonth,
+    bool dark, {
+    required ValueChanged<DateTime> onSelect,
+  }) {
+    final localizations = MaterialLocalizations.of(context);
+    final firstDayOfWeekIndex = localizations.firstDayOfWeekIndex;
+    final weekdayLabels = List.generate(
+      7,
+      (index) => localizations.narrowWeekdays[(index + firstDayOfWeekIndex) % 7],
+    );
+
+    final daysInMonth = DateUtils.getDaysInMonth(displayMonth.year, displayMonth.month);
+    final firstWeekday = DateTime(displayMonth.year, displayMonth.month, 1).weekday;
+    final firstDayIndex = firstWeekday % 7;
+    final leadingEmpty = (firstDayIndex - firstDayOfWeekIndex + 7) % 7;
+    final totalCells = ((leadingEmpty + daysInMonth) / 7).ceil() * 7;
+    final primary = Color(cfg.colorPrimary);
+
+    return SizedBox(
+      width: 320,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: weekdayLabels
+                .map(
+                  (label) => Expanded(
+                    child: Center(
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: dark ? Colors.white54 : Colors.black45,
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 240,
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 7,
+                mainAxisSpacing: 6,
+                crossAxisSpacing: 6,
+              ),
+              itemCount: totalCells,
+              itemBuilder: (context, index) {
+                final dayIndex = index - leadingEmpty + 1;
+                if (dayIndex < 1 || dayIndex > daysInMonth) {
+                  return const SizedBox.shrink();
+                }
+
+                final date = DateTime(displayMonth.year, displayMonth.month, dayIndex);
+                final key = _dateKey(date);
+                final hasBooking = _bookingDateKeys.contains(key);
+                final isSelected = _selectedFilterDate != null && DateUtils.isSameDay(_selectedFilterDate, date);
+
+                final bgColor = isSelected
+                    ? primary
+                    : hasBooking
+                        ? primary.withOpacity(0.2)
+                        : Colors.transparent;
+                final textColor = isSelected
+                    ? Colors.white
+                    : hasBooking
+                        ? primary
+                        : (dark ? Colors.white70 : Colors.black87);
+
+                return InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: hasBooking ? () => onSelect(date) : null,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      dayIndex.toString(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: hasBooking ? FontWeight.w600 : FontWeight.normal,
+                        color: textColor,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: primary.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Dates with bookings'.tr(),
+                style: TextStyle(fontSize: 11, color: dark ? Colors.white54 : Colors.black45),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<dynamic> _applyDateFilter(List<dynamic> bookings) {
+    if (_selectedFilterDate == null) {
+      return bookings;
+    }
+
+    final target = DateUtils.dateOnly(_selectedFilterDate!);
+    return bookings.where((booking) => _isBookingOnDate(booking, target)).toList();
+  }
+
+  bool _isBookingOnDate(dynamic booking, DateTime target) {
+    final start = DateUtils.dateOnly(booking.checkInDate);
+    final end = DateUtils.dateOnly(booking.checkOutDate);
+    return !target.isBefore(start) && !target.isAfter(end);
+  }
+
+  Set<String> _collectBookingDateKeys(List<dynamic> bookings) {
+    final keys = <String>{};
+    for (final booking in bookings) {
+      final start = DateUtils.dateOnly(booking.checkInDate);
+      final end = DateUtils.dateOnly(booking.checkOutDate);
+      DateTime cursor = start;
+      while (!cursor.isAfter(end)) {
+        keys.add(_dateKey(cursor));
+        cursor = cursor.add(const Duration(days: 1));
+      }
+    }
+    return keys;
+  }
+
+  String _dateKey(DateTime date) {
+    return DateFormat('yyyy-MM-dd').format(date);
   }
 
   Widget _buildBookingsList(List<dynamic> bookings) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:instaflutter/models/menu_models.dart';
 import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/core/utils/helper.dart';
@@ -183,7 +184,7 @@ class _MenuDetailsWidgetState extends State<MenuDetailsWidget>
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          tag,
+                          tag.tr(),
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,

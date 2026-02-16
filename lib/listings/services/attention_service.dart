@@ -77,8 +77,8 @@ class AttentionService {
     try {
       debugPrint('👁️ AttentionService: Marking ${module.key} as seen via Cloud Function');
       
-      // Call Cloud Function to mark as seen - REMOVED hardcoded region
-      final functions = FirebaseFunctions.instance;
+      // Call Cloud Function to mark as seen - must specify region where functions are deployed
+      final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
       final callable = functions.httpsCallable('markAttentionModuleAsSeen');
       
       final result = await callable.call({

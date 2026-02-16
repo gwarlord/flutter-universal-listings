@@ -53,20 +53,34 @@ class ContainerWrapperWidget extends StatefulWidget {
 }
 
 class _ContainerWrapperState extends State<ContainerWrapperWidget> {
+  late final AttentionCubit _attentionCubit;
+  
   @override
   void initState() {
     super.initState();
     // Initialize attention service with user ID
-    final attentionCubit = context.read<AttentionCubit>();
-    attentionCubit.attentionService.initialize(widget.currentUser.userID);
+    _attentionCubit = context.read<AttentionCubit>();
+    _attentionCubit.attentionService.initialize(widget.currentUser.userID);
     // Start listening to attention state
-    attentionCubit.startListening();
+    _attentionCubit.startListening();
+    
+    // Set user's preferred language
+    _setUserLanguage();
+  }
+  
+  void _setUserLanguage() {
+    final languageCode = widget.currentUser.settings.languageCode;
+    if (languageCode != null && languageCode.isNotEmpty) {
+      // User has a language preference, apply it
+      context.setLocale(Locale(languageCode));
+    }
+    // If languageCode is null, use system default (already set by EasyLocalization)
   }
 
   @override
   void dispose() {
-    // Stop listening when widget is disposed
-    context.read<AttentionCubit>().stopListening();
+    // Stop listening when widget is disposed - use saved reference
+    _attentionCubit.stopListening();
     super.dispose();
   }
 

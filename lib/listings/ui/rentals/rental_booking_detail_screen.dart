@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../../model/rental_booking.dart';
 import '../../model/rental_unit.dart';
@@ -43,6 +44,42 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
     }
 
     return {};
+  }
+
+  Future<_CustomerPreview> _fetchCustomerPreview() async {
+    if (booking.customerId.isEmpty) {
+      return const _CustomerPreview(name: 'Customer');
+    }
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(booking.customerId)
+        .get();
+    if (!userDoc.exists) {
+      return const _CustomerPreview(name: 'Customer');
+    }
+
+    final data = userDoc.data();
+    final firstName = (data?['firstName'] as String?)?.trim() ?? '';
+    final lastName = (data?['lastName'] as String?)?.trim() ?? '';
+    final displayName = (data?['displayName'] as String?)?.trim() ?? '';
+    final fullName = (data?['name'] as String?)?.trim() ?? '';
+    final email = (data?['email'] as String?)?.trim() ?? '';
+    final phone = (data?['phoneNumber'] as String?)?.trim() ??
+        (data?['phone'] as String?)?.trim() ?? '';
+    final profilePictureURL = (data?['profilePictureURL'] as String?)?.trim() ?? '';
+
+    final combinedName = '$firstName $lastName'.trim();
+    final resolvedName = combinedName.isNotEmpty
+        ? combinedName
+        : (displayName.isNotEmpty
+            ? displayName
+            : (fullName.isNotEmpty
+                ? fullName
+                : (email.isNotEmpty ? email : 'Customer')));
+    final contact = email.isNotEmpty ? email : (phone.isNotEmpty ? phone : null);
+
+    return _CustomerPreview(name: resolvedName, contact: contact, profilePictureURL: profilePictureURL);
   }
 
   @override
@@ -201,6 +238,81 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
           ),
           // Status card
           _buildStatusCard(context),
+          const SizedBox(height: 16),
+
+          _buildSection(
+            context,
+            title: 'Customer',
+            children: [
+              FutureBuilder<_CustomerPreview>(
+                future: _fetchCustomerPreview(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Row(
+                      children: [
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Loading customer...',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    );
+                  }
+
+                  final preview = snapshot.data ?? const _CustomerPreview(name: 'Customer');
+                  final onSurface = Theme.of(context).colorScheme.onSurface;
+                  final onSurfaceMuted = onSurface.withOpacity(0.7);
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundImage: preview.profilePictureURL.isNotEmpty
+                            ? NetworkImage(preview.profilePictureURL)
+                            : null,
+                        backgroundColor: Colors.grey[300],
+                        child: preview.profilePictureURL.isEmpty
+                            ? Icon(Icons.person, color: Colors.grey[700])
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              preview.name,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (preview.contact != null && preview.contact!.isNotEmpty)
+                              Text(
+                                preview.contact!,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: onSurfaceMuted),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
           
           // Booking info
@@ -482,4 +594,16 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
     );
     return '$date at $time';
   }
+}
+
+class _CustomerPreview {
+  final String name;
+  final String? contact;
+  final String profilePictureURL;
+
+  const _CustomerPreview({
+    required this.name,
+    this.contact,
+    this.profilePictureURL = '',
+  });
 }

@@ -30,18 +30,24 @@ class BookingRequestDialog extends StatefulWidget {
 class _BookingRequestDialogState extends State<BookingRequestDialog> {
   DateRange? _selectedDateRange;
   int _numberOfGuests = 1;
+  late TextEditingController _guestsController;
+  late TextEditingController _guestsInputController;
   final TextEditingController _notesController = TextEditingController();
   List<DateTime> _bookedDates = [];
   String? _selectedTimeBlock; // ✅ Selected time block
   List<String> _availableTimeBlocks = []; // ✅ Available time blocks for selected date
   final Map<String, TextEditingController> _questionControllers = {}; // ✅ Answers for custom questions
+  final Map<ServiceItem, TextEditingController> _serviceQuantityControllers = {}; // ✅ Quantity input controllers for each service
   
   // ✅ Track selected services with quantities
   final Map<ServiceItem, int> _selectedServicesQuantity = {};
 
   @override
   void dispose() {
+    _guestsController.dispose();
+    _guestsInputController.dispose();
     _questionControllers.values.forEach((c) => c.dispose());
+    _serviceQuantityControllers.values.forEach((c) => c.dispose());
     _notesController.dispose();
     super.dispose();
   }
@@ -49,6 +55,8 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
   @override
   void initState() {
     super.initState();
+    _guestsController = TextEditingController(text: _numberOfGuests.toString());
+    _guestsInputController = TextEditingController(text: _numberOfGuests.toString());
     _initQuestionControllers();
   }
 
@@ -118,6 +126,20 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
     // Start with all configured time blocks
     List<String> available = List.from(widget.listing.timeBlocks);
 
+    // Filter out past time blocks when selecting today's date
+    final today = DateUtils.dateOnly(DateTime.now());
+    final selectedDate = DateUtils.dateOnly(date);
+    if (selectedDate == today) {
+      final now = DateTime.now();
+      available = available.where((block) {
+        final startTime = _parseTimeBlockStart(block, selectedDate);
+        if (startTime == null) {
+          return true;
+        }
+        return !startTime.isBefore(now);
+      }).toList();
+    }
+
     // TODO: Fetch bookings for this date and remove booked time blocks
     // This would require a backend query to get bookings for the specific date
     // For now, we'll show all time blocks
@@ -126,6 +148,25 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
     setState(() {
       _availableTimeBlocks = available;
     });
+  }
+
+  DateTime? _parseTimeBlockStart(String block, DateTime date) {
+    try {
+      final parts = block.split('-');
+      if (parts.isEmpty) {
+        return null;
+      }
+      final time = parts.first.trim();
+      final timeParts = time.split(':');
+      if (timeParts.length < 2) {
+        return null;
+      }
+      final hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+      return DateTime(date.year, date.month, date.day, hour, minute);
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -299,6 +340,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                         onTap: quantity > 1 ? () {
                                           setState(() {
                                             _selectedServicesQuantity[service] = quantity - 1;
+                                            _serviceQuantityControllers[service]?.text = (quantity - 1).toString();
                                           });
                                         } : null,
                                         child: Padding(
@@ -311,20 +353,34 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                         ),
                                       ),
                                     ),
-                                    Container(
-                                      width: 28,
-                                      alignment: Alignment.center,
-                                      decoration: BoxDecoration(
-                                        color: dark ? Colors.grey.shade800 : Colors.grey.shade100,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        '$quantity',
+                                    SizedBox(
+                                      width: 48,
+                                      child: TextFormField(
+                                        controller: _serviceQuantityControllers.putIfAbsent(service, () => TextEditingController(text: quantity.toString())),
+                                        textAlign: TextAlign.center,
+                                        keyboardType: TextInputType.number,
+                                        decoration: InputDecoration(
+                                          contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                                          isDense: true,
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                        ),
                                         style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
                                           color: dark ? Colors.white : Colors.black,
                                         ),
+                                        onChanged: (value) {
+                                          if (value.isNotEmpty) {
+                                            int? newValue = int.tryParse(value);
+                                            if (newValue != null && newValue > 0 && newValue <= 99) {
+                                              setState(() {
+                                                _selectedServicesQuantity[service] = newValue;
+                                              });
+                                            }
+                                          }
+                                        },
                                       ),
                                     ),
                                     Material(
@@ -333,6 +389,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                         onTap: quantity < 99 ? () {
                                           setState(() {
                                             _selectedServicesQuantity[service] = quantity + 1;
+                                            _serviceQuantityControllers[service]?.text = (quantity + 1).toString();
                                           });
                                         } : null,
                                         child: Padding(
@@ -481,23 +538,46 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                     IconButton(
                       icon: Icon(Icons.remove, color: dark ? Colors.white : Colors.black),
                       onPressed: _numberOfGuests > 1
-                          ? () => setState(() => _numberOfGuests--)
+                          ? () => setState(() {
+                                _numberOfGuests--;
+                                _guestsInputController.text = _numberOfGuests.toString();
+                              })
                           : null,
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _numberOfGuests.toString(),
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _guestsInputController,
+                        textAlign: TextAlign.center,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: dark ? Colors.white : Colors.black,
+                        ),
+                        onChanged: (value) {
+                          if (value.isNotEmpty) {
+                            int? newValue = int.tryParse(value);
+                            if (newValue != null && newValue > 0) {
+                              setState(() {
+                                _numberOfGuests = newValue;
+                              });
+                            }
+                          }
+                        },
                       ),
                     ),
                     IconButton(
                       icon: Icon(Icons.add, color: dark ? Colors.white : Colors.black),
-                      onPressed: () => setState(() => _numberOfGuests++),
+                      onPressed: () => setState(() {
+                            _numberOfGuests++;
+                            _guestsInputController.text = _numberOfGuests.toString();
+                          }),
                     ),
                   ],
                 ),

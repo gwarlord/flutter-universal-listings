@@ -169,8 +169,8 @@ service cloud.firestore {
       
       // Taps (Vouching) subcollection
       match /taps/{userId} {
-        // Anyone can read taps (they are public)
-        allow read: if true;
+        // Authenticated users can read taps
+        allow read: if request.auth != null;
         
         // Users can create their own tap document
         // Must be authenticated, cannot tap own listing, must set correct userId
@@ -280,6 +280,18 @@ service cloud.firestore {
         // NEVER allow client-side writes (Cloud Functions only)
         allow create, update, delete: if false;
       }
+    }
+    
+    // Bookings collection (top-level)
+    match /bookings/{bookingId} {
+      allow read: if request.auth != null && (
+                  resource.data.customerId == request.auth.uid ||
+                  resource.data.listersUserId == request.auth.uid ||
+                  request.auth.uid == get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.authorID ||
+                  isAdmin()
+                );
+      allow create: if request.auth != null;
+      // Add other rules for update, delete as needed
     }
     
     // Categories collection

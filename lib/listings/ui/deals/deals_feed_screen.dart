@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:instaflutter/listings/services/deal_ad_service.dart';
-import 'package:instaflutter/listings/services/saved_deal_service.dart';
 import 'package:instaflutter/listings/model/deal_ad_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:instaflutter/listings/listings_app_config.dart';
@@ -177,16 +176,13 @@ class _DealFeedItemState extends State<DealFeedItem> {
   bool _isInitialized = false;
   bool _isMuted = true;
   bool _isExpanded = false;
-  late SavedDealService _savedDealService;
   late DealAdService _dealAdService;
-  bool _isSaved = false;
   bool _isClaimed = false;
   bool _isClaimLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _savedDealService = SavedDealService();
     _dealAdService = DealAdService();
     
     if (widget.ad.mediaType == 'video') {
@@ -204,25 +200,9 @@ class _DealFeedItemState extends State<DealFeedItem> {
         });
     }
 
-    // Check if user is signed in and load saved/claimed status
+    // Check if user is signed in and load claimed status
     if (widget.currentUser != null) {
-      _checkSavedStatus();
       _checkClaimedStatus();
-    }
-  }
-
-  Future<void> _checkSavedStatus() async {
-    if (!mounted) return;
-    try {
-      final isSaved = await _savedDealService.isDealSaved(
-        widget.currentUser!.userID,
-        widget.ad.id,
-      );
-      if (mounted) {
-        setState(() => _isSaved = isSaved);
-      }
-    } catch (e) {
-      print('Error checking saved status: $e');
     }
   }
 
@@ -238,46 +218,6 @@ class _DealFeedItemState extends State<DealFeedItem> {
       }
     } catch (e) {
       print('Error checking claimed status: $e');
-    }
-  }
-
-  Future<void> _toggleSave() async {
-    if (widget.currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please sign in to save deals')),
-      );
-      return;
-    }
-
-    try {
-      if (_isSaved) {
-        await _savedDealService.unsaveDeal(
-          widget.currentUser!.userID,
-          widget.ad.id,
-        );
-        await _dealAdService.incrementSaveCount(widget.ad.id, isSaving: false);
-      } else {
-        await _savedDealService.saveDeal(
-          widget.currentUser!.userID,
-          widget.ad.id,
-        );
-        await _dealAdService.incrementSaveCount(widget.ad.id, isSaving: true);
-      }
-      if (mounted) {
-        setState(() => _isSaved = !_isSaved);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isSaved ? 'Deal saved!' : 'Deal removed from saves'),
-            duration: const Duration(seconds: 1),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
     }
   }
 
@@ -441,17 +381,6 @@ class _DealFeedItemState extends State<DealFeedItem> {
               children: [
                 ShareAdWidget(adTitle: ad.caption, adUrl: ad.mediaUrl, adId: ad.id),
                 const SizedBox(height: 12),
-                // Save button
-                if (widget.currentUser != null)
-                  IconButton(
-                    icon: Icon(
-                      _isSaved ? Icons.favorite : Icons.favorite_border,
-                      color: _isSaved ? Colors.red : Colors.white,
-                      size: 28,
-                    ),
-                    onPressed: _toggleSave,
-                  ),
-                if (widget.currentUser != null) const SizedBox(height: 12),
                 if (widget.ad.mediaType == 'video') ...[
                   IconButton(
                     icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up, color: Colors.white, size: 28),

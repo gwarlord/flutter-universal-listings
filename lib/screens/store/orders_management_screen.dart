@@ -32,6 +32,8 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
   late TabController _tabController;
   final Map<String, ListingsUser> _customerCache = {};
   final Map<String, ListingModel> _listingCache = {};
+  final TextEditingController _orderSearchController = TextEditingController();
+  String _orderSearchQuery = '';
 
   // Toggle between food and general orders
   bool _isShowingFoodOrders = true;
@@ -80,6 +82,7 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
 
   @override
   void dispose() {
+    _orderSearchController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -205,13 +208,21 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
             onPressed: () => _navigateToTableSessions(context, dark),
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          labelColor: Color(cfg.colorPrimary),
-          unselectedLabelColor: dark ? Colors.white54 : Colors.black45,
-          indicatorColor: Color(cfg.colorPrimary),
-          tabs: _buildTabLabels(),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(104),
+          child: Column(
+            children: [
+              _buildOrderSearchBar(dark),
+              TabBar(
+                controller: _tabController,
+                isScrollable: true,
+                labelColor: Color(cfg.colorPrimary),
+                unselectedLabelColor: dark ? Colors.white54 : Colors.black45,
+                indicatorColor: Color(cfg.colorPrimary),
+                tabs: _buildTabLabels(),
+              ),
+            ],
+          ),
         ),
       ),
       body: TabBarView(
@@ -244,6 +255,48 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
     }
   }
 
+  Widget _buildOrderSearchBar(bool dark) {
+    final hintColor = dark ? Colors.white54 : Colors.black45;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: TextField(
+        controller: _orderSearchController,
+        onChanged: (value) {
+          setState(() {
+            _orderSearchQuery = value;
+          });
+        },
+        decoration: InputDecoration(
+          hintText: 'Search order #'.tr(),
+          hintStyle: TextStyle(color: hintColor),
+          prefixIcon: Icon(Icons.search, color: hintColor),
+          suffixIcon: _orderSearchQuery.trim().isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close),
+                  color: hintColor,
+                  tooltip: 'Clear'.tr(),
+                  onPressed: () {
+                    setState(() {
+                      _orderSearchController.clear();
+                      _orderSearchQuery = '';
+                    });
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: dark ? Colors.grey.shade800 : Colors.grey.shade100,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+        ),
+        style: TextStyle(color: dark ? Colors.white : Colors.black87),
+        textInputAction: TextInputAction.search,
+      ),
+    );
+  }
+
   Widget _buildOrderList(dynamic statusFilter, bool dark) {
     return StreamBuilder<List<OrderRequest>>(
       stream: _storeService.getOrderRequestsForLister(
@@ -269,6 +322,18 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
 
         // Filter by order type (Food, General, or Mixed) based on current tab
         orders = orders.where(_shouldShowOrder).toList();
+
+        final rawQuery = _orderSearchQuery.trim();
+        if (rawQuery.isNotEmpty) {
+          final normalizedQuery = rawQuery.replaceAll('#', '').replaceAll(' ', '');
+          final queryLower = normalizedQuery.toLowerCase();
+          final queryUpper = normalizedQuery.toUpperCase();
+          orders = orders.where((order) {
+            final id = order.id;
+            final shortId = id.length >= 8 ? id.substring(0, 8).toUpperCase() : id.toUpperCase();
+            return id.toLowerCase().contains(queryLower) || shortId.contains(queryUpper);
+          }).toList();
+        }
 
         // Filter for Active Orders tab - show Pending, Confirmed, and additional statuses based on type
         if (statusFilter == _activeOrdersMarker) {

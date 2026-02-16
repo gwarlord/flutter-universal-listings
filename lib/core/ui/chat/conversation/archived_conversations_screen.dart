@@ -3,13 +3,11 @@ import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/core/model/chat_feed_model.dart';
 import 'package:instaflutter/core/model/channel_data_model.dart';
 import 'package:instaflutter/core/model/user.dart';
 import 'package:instaflutter/core/ui/chat/chat/chat_screen.dart';
-import 'package:instaflutter/core/ui/chat/api/chat_api_manager.dart';
 import 'package:instaflutter/core/ui/chat/api/conversations_data_factory.dart';
 import 'package:instaflutter/core/ui/chat/conversation/conversation_bloc.dart';
 import 'package:instaflutter/core/utils/helper.dart';
@@ -17,63 +15,26 @@ import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
 import 'package:collection/collection.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:instaflutter/listings/ui/attention/attention_cubit.dart';
-import 'package:instaflutter/listings/model/attention_state_model.dart';
-import 'archived_conversations_screen.dart';
 
-class ConversationsWrapperWidget extends StatelessWidget {
-  const ConversationsWrapperWidget({super.key, required this.user});
+class ArchivedConversationsScreen extends StatefulWidget {
   final ListingsUser user;
 
-  @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-        create: (context) => ConversationsBloc(
-            chatRepository: chatApiManager, currentUser: user),
-        child: ConversationsScreen(user: user));
-  }
-}
-
-class ConversationsScreen extends StatefulWidget {
-  final ListingsUser user;
-
-  const ConversationsScreen({super.key, required this.user});
+  const ArchivedConversationsScreen({super.key, required this.user});
 
   @override
-  State createState() {
-    return _ConversationsState();
-  }
+  State createState() => _ArchivedConversationsScreenState();
 }
 
-class _ConversationsState extends State<ConversationsScreen> {
+class _ArchivedConversationsScreenState extends State<ArchivedConversationsScreen> {
   late ListingsUser user;
-  late final PagingController<int, ChatFeedModel> _conversationsController;
+  List<ChatFeedModel> _archivedConversations = [];
   ConversationsDataFactory conversationsDataFactory = ConversationsDataFactory();
-  int pageSize = pageSizeLimit;
 
   @override
   void initState() {
     super.initState();
     user = widget.user;
-
-    context.read<AttentionCubit>().markModuleAsSeen(AttentionModule.conversations);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ConversationsBloc>().add(InitConversationsEvent());
-    });
-    
-    _conversationsController = PagingController<int, ChatFeedModel>(
-      fetchPage: (pageKey) {
-        final completer = Completer<List<ChatFeedModel>>();
-        context.read<ConversationsBloc>().add(FetchConversationsPageEvent(
-          page: pageKey,
-          size: pageSize,
-          completer: completer,
-        ));
-        return completer.future;
-      },
-      getNextPageKey: (state) => state.lastPageIsEmpty ? null : state.nextIntPageKey,
-    );
+    context.read<ConversationsBloc>().add(InitConversationsEvent());
   }
 
   @override
@@ -81,118 +42,70 @@ class _ConversationsState extends State<ConversationsScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return BlocConsumer<ConversationsBloc, ConversationsState>(
+    return BlocListener<ConversationsBloc, ConversationsState>(
       listener: (context, state) {
         if (state is UpdateLiveConversationsState) {
           conversationsDataFactory.newLiveConversations = state.liveConversations;
           _updateConversationList();
         } else if (state is NewConversationsPageState) {
-          final isLastPage = state.newPage.length < pageSize;
-          final existingPages = _conversationsController.value.pages ?? [];
-          final newPageIds = Set.from(state.newPage.map((c) => c.id));
-          
-          final List<List<ChatFeedModel>> updatedPages = existingPages
-              .map((page) => page.where((c) => !newPageIds.contains(c.id)).toList())
-              .toList();
-              
-          updatedPages.add(state.newPage);
-          final newKeys = [...?_conversationsController.value.keys, state.oldPageKey];
-
-          _conversationsController.value = _conversationsController.value.copyWith(
-            pages: updatedPages,
-            keys: newKeys,
-            hasNextPage: !isLastPage,
-            error: null,
-            isLoading: false,
-          );
           conversationsDataFactory.appendHistoricalConversations(state.newPage);
           _updateConversationList();
-        } else if (state is ConversationsPageErrorState) {
-          _conversationsController.value = _conversationsController.value.copyWith(
-            error: state.error,
-            isLoading: false,
-          );
         }
       },
-      builder: (context, state) {
-        return Scaffold(
+      child: Scaffold(
+        backgroundColor: isDark ? Colors.black : Colors.white,
+        appBar: AppBar(
           backgroundColor: isDark ? Colors.black : Colors.white,
-          appBar: AppBar(
-            backgroundColor: isDark ? Colors.black : Colors.white,
-            title: Text('Conversations'.tr()),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.archive),
-                onPressed: () {
-                   Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => BlocProvider.value(
-                        value: BlocProvider.of<ConversationsBloc>(context),
-                        child: ArchivedConversationsScreen(user: widget.user),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-          body: RefreshIndicator(
-            color: Color(colorPrimary),
-            onRefresh: () async {
-              _conversationsController.refresh();
-              context.read<ConversationsBloc>().add(InitConversationsEvent());
-            },
-            child: PagingListener(
-              controller: _conversationsController,
-              builder: (context, state, fetchNextPage) => PagedListView<int, ChatFeedModel>.separated(
-                padding: const EdgeInsets.only(top: 8),
-                state: state,
-                fetchNextPage: fetchNextPage,
-                builderDelegate: PagedChildBuilderDelegate(
-                  animateTransitions: true,
-                  noItemsFoundIndicatorBuilder: (context) => _buildEmptyState(isDark),
-                  firstPageProgressIndicatorBuilder: (context) => const Center(child: CircularProgressIndicator.adaptive()),
-                  itemBuilder: (context, conversation, index) => _buildDismissibleConversationItem(conversation),
+          title: Text('Archived Conversations'.tr()),
+        ),
+        body: RefreshIndicator(
+          color: Color(colorPrimary),
+          onRefresh: () async {
+            context.read<ConversationsBloc>().add(InitConversationsEvent());
+          },
+          child: _archivedConversations.isEmpty
+              ? _buildEmptyState(isDark)
+              : ListView.separated(
+                  padding: const EdgeInsets.only(top: 8),
+                  itemCount: _archivedConversations.length,
+                  itemBuilder: (context, index) {
+                    final conversation = _archivedConversations[index];
+                    return _buildDismissibleConversationItem(conversation);
+                  },
+                  separatorBuilder: (context, index) => Divider(
+                    height: 1,
+                    indent: 84,
+                    endIndent: 16,
+                    color: isDark ? Colors.white12 : Colors.black.withOpacity(0.05),
+                  ),
                 ),
-                separatorBuilder: (context, index) => Divider(
-                  height: 1, 
-                  indent: 84, 
-                  endIndent: 16, 
-                  color: isDark ? Colors.white12 : Colors.black.withOpacity(0.05)
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+        ),
+      ),
     );
   }
-  
+
   void _updateConversationList() {
-    final allConversations = conversationsDataFactory.getAllConversations()
+    final allConversations = conversationsDataFactory
+        .getAllConversations()
         .where((c) => c.id.isNotEmpty && (c.chatFeedContent.content.trim().isNotEmpty || c.listingTitle.isNotEmpty))
         .where((c) => !c.deletedFor.contains(user.userID))
-        .where((c) => c.isArchived[user.userID] != true)
+        .where((c) => c.isArchived[user.userID] == true)
         .toList();
-    _conversationsController.value = _conversationsController.value.copyWith(
-      pages: [allConversations],
-      hasNextPage: true,
-      keys: [0],
-      error: null,
-      isLoading: false,
-    );
+    setState(() {
+      _archivedConversations = allConversations;
+    });
   }
 
   Widget _buildDismissibleConversationItem(ChatFeedModel conversation) {
     return Dismissible(
       key: ValueKey(conversation.id),
       background: Container(
-        color: Colors.green,
+        color: Colors.orange,
         child: const Align(
           alignment: Alignment.centerLeft,
           child: Padding(
             padding: EdgeInsets.only(left: 20),
-            child: Icon(Icons.archive, color: Colors.white),
+            child: Icon(Icons.unarchive, color: Colors.white),
           ),
         ),
       ),
@@ -226,10 +139,10 @@ class _ConversationsState extends State<ConversationsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.chat_bubble_outline, size: 80, color: Colors.grey.withOpacity(0.3)),
+          Icon(Icons.archive, size: 80, color: Colors.grey.withOpacity(0.3)),
           const SizedBox(height: 24),
           Text(
-            'No Conversations Yet',
+            'No Archived Conversations',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[600]),
           ).tr(),
         ],

@@ -415,6 +415,13 @@ class _RentalRequestScreenState extends State<RentalRequestScreen> {
           pickedTime.minute,
         );
 
+        if (selectedDateTime.isBefore(DateTime.now())) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Please select a future time'.tr())),
+          );
+          return;
+        }
+
         setState(() {
           if (isStart) {
             _startTime = selectedDateTime;
@@ -425,6 +432,12 @@ class _RentalRequestScreenState extends State<RentalRequestScreen> {
             _selectedUnit = null;
             _availableUnits.clear();
           } else {
+            if (_startTime != null && selectedDateTime.isBefore(_startTime!)) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('End time must be after start time'.tr())),
+              );
+              return;
+            }
             _endTime = selectedDateTime;
             _selectedUnit = null;
           }

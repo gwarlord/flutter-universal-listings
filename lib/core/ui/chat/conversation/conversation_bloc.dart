@@ -24,6 +24,14 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
     required this.currentUser,
   }) : super(ConversationInitial()) {
     
+    on<ArchiveConversationEvent>((event, emit) async {
+      await chatRepository.archiveConversation(event.channelID, event.userID);
+    });
+
+    on<DeleteConversationEvent>((event, emit) async {
+      await chatRepository.deleteConversation(event.channelID, event.userID);
+    });
+
     // START LIVE CONVERSATION LISTENER
     on<InitConversationsEvent>((event, emit) async {
        await conversationsStreamSub?.cancel();

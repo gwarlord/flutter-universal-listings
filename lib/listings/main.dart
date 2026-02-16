@@ -43,7 +43,13 @@ runListings() {
   googleMapsApiKey = dotenv.env['GOOGLE_API_KEY'] ?? ''; // Updated to use dotenv
 
   return EasyLocalization(
-    supportedLocales: const [Locale('en'), Locale('ar')],
+    supportedLocales: const [
+      Locale('en'), 
+      Locale('es'), 
+      Locale('fr'), 
+      Locale('nl'), 
+      Locale('ht')
+    ],
     path: 'assets/translations',
     fallbackLocale: const Locale('en'),
     useFallbackTranslations: true,

@@ -3,6 +3,7 @@ import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,11 +23,33 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 const AndroidNotificationChannel chatChannel = AndroidNotificationChannel(
-  'chat_messages', 
-  'Chat Messages', 
-  description: 'Notifications for new chat messages.', 
+  'chat_messages',
+  'Chat Messages',
+  description: 'Notifications for new chat messages.',
   importance: Importance.max,
 );
+
+const AndroidNotificationChannel ordersChannel = AndroidNotificationChannel(
+  'orders',
+  'Orders',
+  description: 'Notifications for order updates.',
+  importance: Importance.max,
+);
+
+const AndroidNotificationChannel rentalBookingsChannel = AndroidNotificationChannel(
+  'rental_bookings',
+  'Rental Bookings',
+  description: 'Notifications for rental booking updates.',
+  importance: Importance.max,
+);
+
+const AndroidNotificationChannel bookingRemindersChannel = AndroidNotificationChannel(
+  'booking_reminders',
+  'Booking Reminders',
+  description: 'Reminders for upcoming bookings.',
+  importance: Importance.max,
+);
+
 
 // Handle Firebase email verification deep links
 Future<void> _handleFirebaseEmailVerificationLink(String? link) async {
@@ -163,10 +186,30 @@ void showSnackBar(BuildContext context, String message) {
   );
 }
 
+// Update notification badge
+Future<void> _updateBadge(RemoteMessage message) async {
+  if (await FlutterAppBadger.isAppBadgeSupported()) {
+    int badgeCount = 0;
+    if (message.data.containsKey('badge')) {
+      try {
+        badgeCount = int.parse(message.data['badge'].toString());
+      } catch (e) {
+        print('Error parsing badge count: $e');
+      }
+    }
+    if (badgeCount > 0) {
+      FlutterAppBadger.updateBadgeCount(badgeCount);
+    } else {
+      FlutterAppBadger.removeBadge();
+    }
+  }
+}
+
 // Handle background messages
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
+  await _updateBadge(message);
   print('🔔 [BACKGROUND] Handling background message: ${message.messageId}');
 }
 
@@ -350,10 +393,14 @@ void main() async {
     },
   );
 
-  // Create Android notification channel
-  await flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-      ?.createNotificationChannel(chatChannel);
+  // Create Android notification channels
+  final androidImplementation = flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+  await androidImplementation?.createNotificationChannel(chatChannel);
+  await androidImplementation?.createNotificationChannel(ordersChannel);
+  await androidImplementation?.createNotificationChannel(rentalBookingsChannel);
+  await androidImplementation?.createNotificationChannel(bookingRemindersChannel);
+
 
   // Set up FCM
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -370,6 +417,7 @@ void main() async {
   // Handle foreground messages
   FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
     print('🔔 [FOREGROUND] Got a message whilst in the foreground!');
+    await _updateBadge(message);
     // If it's a notification message, don't show local notification manually
     // because Firebase shows it automatically if correctly configured.
     // However, for data-only or specific behavior:

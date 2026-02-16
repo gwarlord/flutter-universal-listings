@@ -41,3 +41,17 @@ class SearchConversationsEvent extends ConversationsEvent {
     required this.friends,
   });
 }
+
+class ArchiveConversationEvent extends ConversationsEvent {
+  final String channelID;
+  final String userID;
+
+  ArchiveConversationEvent({required this.channelID, required this.userID});
+}
+
+class DeleteConversationEvent extends ConversationsEvent {
+  final String channelID;
+  final String userID;
+
+  DeleteConversationEvent({required this.channelID, required this.userID});
+}

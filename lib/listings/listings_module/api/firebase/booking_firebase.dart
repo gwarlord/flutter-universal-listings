@@ -120,17 +120,47 @@ class BookingFirebase extends BookingRepository {
   @override
   Future<List<BookingModel>> getReceivedBookings({required String listersUserId}) async {
     try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(listersUserId)
-          .collection('receivedBookings')
-          .orderBy('createdAt', descending: true)
-          .get();
+      debugPrint('🟢 DEBUG [getReceivedBookings]: Fetching bookings for listerId=$listersUserId');
 
-      return snapshot.docs
-          .map((doc) => BookingModel.fromJson(doc.data()))
-          .toList();
+      QuerySnapshot<Map<String, dynamic>> snapshot;
+      try {
+        snapshot = await _firestore
+            .collection('users')
+            .doc(listersUserId)
+            .collection('receivedBookings')
+            .orderBy('createdAt', descending: true)
+            .get();
+        debugPrint('🟢 DEBUG [getReceivedBookings]: Query with orderBy succeeded');
+      } catch (orderByError) {
+        debugPrint('⚠️  DEBUG [getReceivedBookings]: orderBy failed, fetching without ordering: $orderByError');
+        snapshot = await _firestore
+            .collection('users')
+            .doc(listersUserId)
+            .collection('receivedBookings')
+            .get();
+      }
+
+      debugPrint('🟢 DEBUG [getReceivedBookings]: Found ${snapshot.docs.length} bookings');
+      final bookings = <BookingModel>[];
+      for (final doc in snapshot.docs) {
+        try {
+          final booking = BookingModel.fromJson(doc.data());
+          booking.id = doc.id;
+          bookings.add(booking);
+          debugPrint('🟢 DEBUG [getReceivedBookings]: Parsed booking ${booking.id} - status=${booking.status}');
+        } catch (parseError) {
+          debugPrint('❌ DEBUG [getReceivedBookings]: Failed to parse booking ${doc.id}: $parseError');
+        }
+      }
+
+      if (bookings.isNotEmpty && bookings.first.createdAt != null) {
+        bookings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      }
+
+      debugPrint('🟢 DEBUG [getReceivedBookings]: Successfully parsed ${bookings.length} bookings');
+      return bookings;
     } catch (e) {
+      debugPrint('❌ DEBUG [getReceivedBookings]: Query error: $e');
       throw Exception('Failed to fetch received bookings: $e');
     }
   }

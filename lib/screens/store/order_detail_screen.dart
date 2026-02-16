@@ -1,6 +1,12 @@
+import 'dart:io';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:instaflutter/main.dart' hide showSnackBar;
+import 'package:instaflutter/core/ui/full_screen_image_viewer/full_screen_image_viewer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:instaflutter/constants.dart';
@@ -18,6 +24,8 @@ import 'package:instaflutter/listings/utils/subscription_helper.dart';
 import 'package:instaflutter/screens/store/order_chat_helper.dart';
 import 'package:instaflutter/screens/store/shipping_tracking_card.dart';
 import 'package:instaflutter/screens/store/shipping_tracking_display.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+
 
 /// Order detail screen with status management actions
 class OrderDetailScreen extends StatefulWidget {
@@ -40,6 +48,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   final StoreService _storeService = StoreService();
   final OrderChatHelper _chatHelper = OrderChatHelper();
   ListingsUser? _customer;
+  ListingModel? _listing;
   bool _isUpdating = false;
   late OrderRequest _currentOrder;
   TableSessionModel? _tableSession;
@@ -60,27 +69,27 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       });
     }
 
-    _loadOrderDetails();
+    _loadListing();
     _loadCustomer();
     _loadTableSession();
   }
 
-  Future<void> _loadOrderDetails() async {
+  Future<void> _loadListing() async {
     try {
       final doc = await FirebaseFirestore.instance
-          .collection('order_requests')
-          .doc(widget.order.id)
+          .collection('listings')
+          .doc(widget.order.listingId)
           .get();
       if (doc.exists && mounted) {
-        final updatedOrder = OrderRequest.fromJson(doc.data()!);
         setState(() {
-          _currentOrder = updatedOrder;
+          _listing = ListingModel.fromJson(doc.data()!);
         });
       }
     } catch (e) {
-      // Ignore error - use local order data
+      // Ignore error
     }
   }
+
 
   Future<void> _loadCustomer() async {
     try {
@@ -104,16 +113,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           .collection('order_requests')
           .doc(widget.order.id)
           .get();
-      
+
       if (orderDoc.exists) {
         final tableSessionId = orderDoc.data()?['tableSessionId'] as String?;
-        
+
         if (tableSessionId != null) {
           final sessionDoc = await FirebaseFirestore.instance
               .collection('table_sessions')
               .doc(tableSessionId)
               .get();
-          
+
           if (sessionDoc.exists && mounted) {
             final session = TableSessionModel.fromJson(sessionDoc.id, sessionDoc.data()!);
             setState(() {
@@ -160,18 +169,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           // Update order if snapshot has data
           if (snapshot.hasData && snapshot.data!.exists) {
             final updatedOrder = OrderRequest.fromJson(snapshot.data!.data() as Map<String, dynamic>);
-            if (updatedOrder.status != _currentOrder.status) {
-              // Schedule state update after build
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  setState(() {
-                    _currentOrder = updatedOrder;
-                  });
-                }
-              });
-            } else {
-              _currentOrder = updatedOrder;
-            }
+            // This ensures we always have the latest order state
+            _currentOrder = updatedOrder;
           }
 
           return _buildOrderContent(dark);
@@ -182,532 +181,719 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Widget _buildOrderContent(bool dark) {
+    final bool requiresProofOfPayment = _listing?.payments['acceptProofOfPayment'] ?? false;
+    final bool canUploadProof = !widget.viewAsLister &&
+        _currentOrder.status == OrderStatus.confirmed &&
+        requiresProofOfPayment &&
+        (_currentOrder.payment?['proofOfPaymentUrl'] == null ||
+            _currentOrder.payment!['proofOfPaymentUrl'].isEmpty);
+    final bool hasProofOfPayment =
+        _currentOrder.payment?['proofOfPaymentUrl'] != null &&
+        _currentOrder.payment!['proofOfPaymentUrl'].isNotEmpty;
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-          // Order ID
-          Text(
-            'Order #${_currentOrder.id.substring(0, 8).toUpperCase()}',
-            style: TextStyle(
-              fontSize: 14,
+        // Order ID
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Order #${_currentOrder.id.substring(0, 8).toUpperCase()}',
+              style: TextStyle(
+                fontSize: 14,
+                color: dark ? Colors.white54 : Colors.black45,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.copy, size: 16),
               color: dark ? Colors.white54 : Colors.black45,
+              tooltip: 'Copy order number'.tr(),
+              onPressed: () {
+                Clipboard.setData(
+                  ClipboardData(text: _currentOrder.id.substring(0, 8).toUpperCase()),
+                );
+                showSnackBar(context, 'Order number copied'.tr());
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // Status
+        _buildStatusChip(_currentOrder.status, dark),
+        const SizedBox(height: 24),
+
+        // Customer info
+        _buildSectionTitle('Customer'.tr(), dark),
+        Card(
+          color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundImage: _customer?.profilePictureURL != null &&
+                      _customer!.profilePictureURL.isNotEmpty
+                  ? NetworkImage(_customer!.profilePictureURL)
+                  : null,
+              child: _customer?.profilePictureURL == null ||
+                      _customer!.profilePictureURL.isEmpty
+                  ? const Icon(Icons.person)
+                  : null,
+            ),
+            title: Text(
+              _customer?.fullName() ?? 'Loading...'.tr(),
+              style: TextStyle(color: dark ? Colors.white : Colors.black),
+            ),
+            subtitle: Text(
+              _customer?.email ?? '',
+              style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
             ),
           ),
-          const SizedBox(height: 8),
+        ),
+        const SizedBox(height: 16),
 
-          // Status
-          _buildStatusChip(_currentOrder.status, dark),
-          const SizedBox(height: 24),
+        // Items
+        _buildSectionTitle('Items'.tr(), dark),
+        ..._currentOrder.items.map((item) => _buildItemCard(item, dark)),
+        const SizedBox(height: 16),
 
-          // Customer info
-          _buildSectionTitle('Customer'.tr(), dark),
-          Card(
-            color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundImage: _customer?.profilePictureURL != null &&
-                        _customer!.profilePictureURL.isNotEmpty
-                    ? NetworkImage(_customer!.profilePictureURL)
-                    : null,
-                child: _customer?.profilePictureURL == null ||
-                        _customer!.profilePictureURL.isEmpty
-                    ? const Icon(Icons.person)
-                    : null,
-              ),
-              title: Text(
-                _customer?.fullName() ?? 'Loading...'.tr(),
-                style: TextStyle(color: dark ? Colors.white : Colors.black),
-              ),
-              subtitle: Text(
-                _customer?.email ?? '',
-                style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Items
-          _buildSectionTitle('Items'.tr(), dark),
-          ..._currentOrder.items.map((item) => _buildItemCard(item, dark)),
-          const SizedBox(height: 16),
-
-          // Total with shipping breakdown
-          Card(
-            color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Subtotal'.tr(),
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: dark ? Colors.white70 : Colors.black54,
-                        ),
+        // Total with shipping breakdown
+        Card(
+          color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Subtotal'.tr(),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: dark ? Colors.white70 : Colors.black54,
                       ),
-                      Text(
-                        _formatCurrency(_currentOrder.items.fold(0.0, (sum, item) {
-                          return sum + (item.qty * item.unitPrice);
-                        })),
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: dark ? Colors.white70 : Colors.black54,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_currentOrder.fulfillment.method == FulfillmentMethod.shipping && _currentOrder.shipping?.hasData == true) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Shipping Fee'.tr(),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: dark ? Colors.white70 : Colors.black54,
-                          ),
-                        ),
-                        Text(
-                          _formatCurrency(
-                            _currentOrder.estimatedTotal - 
-                            _currentOrder.items.fold(0.0, (sum, item) {
-                              return sum + (item.qty * item.unitPrice);
-                            })
-                          ),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Color(cfg.colorPrimary),
-                          ),
-                        ),
-                      ],
                     ),
-                    const SizedBox(height: 12),
-                    Divider(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
-                    const SizedBox(height: 12),
+                    Text(
+                      _formatCurrency(_currentOrder.items.fold(0.0, (sum, item) {
+                        return sum + (item.qty * item.unitPrice);
+                      })),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: dark ? Colors.white70 : Colors.black54,
+                      ),
+                    ),
                   ],
+                ),
+                if (_currentOrder.fulfillment.method == FulfillmentMethod.shipping && _currentOrder.shipping?.hasData == true) ...[
+                  const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Total'.tr(),
+                        'Shipping Fee'.tr(),
                         style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: dark ? Colors.white : Colors.black,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: dark ? Colors.white70 : Colors.black54,
                         ),
                       ),
                       Text(
-                        _formatCurrency(widget.order.estimatedTotal),
+                        _formatCurrency(
+                          _currentOrder.estimatedTotal -
+                              _currentOrder.items.fold(0.0, (sum, item) {
+                                return sum + (item.qty * item.unitPrice);
+                              })
+                        ),
                         style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
                           color: Color(cfg.colorPrimary),
                         ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  Divider(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                  const SizedBox(height: 12),
+                ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Total'.tr(),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: dark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    Text(
+                      _formatCurrency(widget.order.estimatedTotal),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(cfg.colorPrimary),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Fulfillment
+        _buildSectionTitle('Fulfillment'.tr(), dark),
+        Card(
+          color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      widget.order.fulfillment.method == FulfillmentMethod.pickup
+                          ? Icons.store_outlined
+                          : widget.order.fulfillment.method == FulfillmentMethod.dineIn
+                              ? Icons.restaurant_outlined
+                              : widget.order.fulfillment.method == FulfillmentMethod.shipping
+                                  ? Icons.local_shipping_outlined
+                                  : Icons.delivery_dining_outlined,
+                      color: dark ? Colors.white70 : Colors.black54,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      widget.order.fulfillment.method == FulfillmentMethod.pickup
+                          ? 'Pickup'.tr()
+                          : widget.order.fulfillment.method == FulfillmentMethod.dineIn
+                              ? 'Dining In'.tr()
+                              : widget.order.fulfillment.method == FulfillmentMethod.shipping
+                                  ? 'Shipping'.tr()
+                                  : 'Delivery'.tr(),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: dark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+                if (_currentOrder.fulfillment.address != null) ...[
+                  const SizedBox(height: 12),
+                  // Tappable address with navigation
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _canNavigate()
+                          ? () => _navigateToDelivery()
+                          : null,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on,
+                                  size: 16,
+                                  color: _canNavigate()
+                                      ? Color(cfg.colorPrimary)
+                                      : (dark ? Colors.white70 : Colors.black54),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _currentOrder.fulfillment.address!,
+                                    style: TextStyle(
+                                      color: _canNavigate()
+                                          ? Color(cfg.colorPrimary)
+                                          : (dark ? Colors.white70 : Colors.black54),
+                                      fontWeight: _canNavigate() ? FontWeight.w600 : FontWeight.normal,
+                                      decoration: _canNavigate() ? TextDecoration.underline : null,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (_canNavigate())
+                              Padding(
+                                padding: const EdgeInsets.only(left: 24, top: 4),
+                                child: Text(
+                                  'Tap to navigate'.tr(),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(cfg.colorPrimary),
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+
+                // Shipping details (address, instructions)
+                if (_currentOrder.fulfillment.method == FulfillmentMethod.shipping && _currentOrder.shipping != null) ...[
+                  if (_currentOrder.shipping?.address != null) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on,
+                            size: 16, color: dark ? Colors.white70 : Colors.black54),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Shipping Address'.tr(),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: dark ? Colors.white54 : Colors.black45,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _currentOrder.shipping!.address!,
+                                style: TextStyle(
+                                  color: dark ? Colors.white70 : Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (_currentOrder.shipping?.instructions != null) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline,
+                            size: 16, color: dark ? Colors.white70 : Colors.black54),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Instructions'.tr(),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: dark ? Colors.white54 : Colors.black45,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _currentOrder.shipping!.instructions!,
+                                style: TextStyle(
+                                  color: dark ? Colors.white70 : Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+
+                if (_currentOrder.fulfillment.preferredAt != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.calendar_today,
+                          size: 16, color: dark ? Colors.white70 : Colors.black54),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Preferred: ${DateFormat('MMM d, y • h:mm a').format(_currentOrder.fulfillment.preferredAt!)}',
+                        style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                      ),
+                    ],
+                  ),
+                ],
+                // Order action section for lister
+                const SizedBox(height: 12),
+                Divider(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                const SizedBox(height: 12),
+                if (_currentOrder.status == OrderStatus.requested)
+                  SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      'This order is pending your response'.tr(),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                // Share buttons
+                const SizedBox(height: 12),
+                Divider(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildShareButton(
+                        icon: Icons.mail,
+                        label: 'Email'.tr(),
+                        onPressed: _shareViaEmail,
+                        dark: dark,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildShareButton(
+                        icon: Icons.chat,
+                        label: 'WhatsApp'.tr(),
+                        onPressed: _shareViaWhatsApp,
+                        dark: dark,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildShareButton(
+                        icon: Icons.share,
+                        label: 'Share'.tr(),
+                        onPressed: _shareOrder,
+                        dark: dark,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Proof of Payment Section (Customer Upload)
+        if (canUploadProof) ...[
+          const SizedBox(height: 16),
+          _buildSectionTitle('Payment'.tr(), dark),
+          Card(
+            color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Text(
+                    'This order requires proof of payment. Please upload a receipt or screenshot.'.tr(),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _uploadProofOfPayment,
+                      icon: const Icon(Icons.upload_file),
+                      label: Text('Upload Proof of Payment'.tr()),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Color(cfg.colorPrimary),
+                        side: BorderSide(color: Color(cfg.colorPrimary).withOpacity(0.5)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
+        ],
+
+        // Proof of Payment Section (Lister View)
+        if (widget.viewAsLister && hasProofOfPayment)
+          _buildListerProofOfPaymentSection(dark),
+
+        // Shipping Tracking Section (only for SHIPPING orders)
+        if (_currentOrder.fulfillment.method == FulfillmentMethod.shipping) ...[
           const SizedBox(height: 16),
 
-          // Fulfillment
-          _buildSectionTitle('Fulfillment'.tr(), dark),
+          // Show saved tracking info to everyone (lister and customer)
+          if (_currentOrder.shipping?.trackingNumber != null)
+            ShippingTrackingDisplay(order: _currentOrder),
+
+          // Show editable form to lister (below the display if tracking exists)
+          if (widget.viewAsLister) ...[
+            if (_currentOrder.shipping?.trackingNumber != null)
+              const SizedBox(height: 16),
+            ShippingTrackingCard(
+              order: _currentOrder,
+              currentUser: widget.currentUser,
+              onTrackingUpdated: () {}, // StreamBuilder handles updates
+            ),
+          ],
+        ],
+
+        // Notes
+        if (_currentOrder.notes != null && _currentOrder.notes!.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _buildSectionTitle('Notes'.tr(), dark),
+          Card(
+            color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                _currentOrder.notes!,
+                style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+              ),
+            ),
+          ),
+        ],
+        if (_currentOrder.listerNotes != null && _currentOrder.listerNotes!.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _buildSectionTitle('Seller Note'.tr(), dark),
+          Card(
+            color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                _currentOrder.listerNotes!,
+                style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+              ),
+            ),
+          ),
+        ],
+
+        // Table Mode Actions (for customers in active table sessions)
+        if (!widget.viewAsLister &&
+            _tableSession != null &&
+            _tableSession!.status == TableSessionStatus.ACTIVE &&
+            (_currentOrder.status == OrderStatus.confirmed ||
+                _currentOrder.status == OrderStatus.preparing ||
+                _currentOrder.status == OrderStatus.ready ||
+                _currentOrder.status == OrderStatus.served)) ...[
+          const SizedBox(height: 16),
+          _buildSectionTitle('Table Service'.tr(), dark),
           Card(
             color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        widget.order.fulfillment.method == FulfillmentMethod.pickup
-                            ? Icons.store_outlined
-                            : widget.order.fulfillment.method == FulfillmentMethod.dineIn
-                                ? Icons.restaurant_outlined
-                                : widget.order.fulfillment.method == FulfillmentMethod.shipping
-                                    ? Icons.local_shipping_outlined
-                                    : Icons.delivery_dining_outlined,
-                        color: dark ? Colors.white70 : Colors.black54,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        widget.order.fulfillment.method == FulfillmentMethod.pickup
-                            ? 'Pickup'.tr()
-                            : widget.order.fulfillment.method == FulfillmentMethod.dineIn
-                                ? 'Dining In'.tr()
-                                : widget.order.fulfillment.method == FulfillmentMethod.shipping
-                                    ? 'Shipping'.tr()
-                                    : 'Delivery'.tr(),
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: dark ? Colors.white : Colors.black,
+                  // Waiter info
+                  if (_tableSession!.assignedStaff.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundImage: NetworkImage(_tableSession!.assignedStaff.first.photoUrl),
+                          backgroundColor: Colors.grey.shade300,
                         ),
-                      ),
-                    ],
-                  ),
-                  if (_currentOrder.fulfillment.address != null) ...[
-                    const SizedBox(height: 12),
-                    // Tappable address with navigation
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: _canNavigate()
-                            ? () => _navigateToDelivery()
-                            : null,
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                        const SizedBox(width: 12),
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.location_on,
-                                    size: 16,
-                                    color: _canNavigate()
-                                        ? Color(cfg.colorPrimary)
-                                        : (dark ? Colors.white70 : Colors.black54),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      _currentOrder.fulfillment.address!,
-                                      style: TextStyle(
-                                        color: _canNavigate()
-                                            ? Color(cfg.colorPrimary)
-                                            : (dark ? Colors.white70 : Colors.black54),
-                                        fontWeight: _canNavigate() ? FontWeight.w600 : FontWeight.normal,
-                                        decoration: _canNavigate() ? TextDecoration.underline : null,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (_canNavigate())
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 24, top: 4),
-                                  child: Text(
-                                    'Tap to navigate'.tr(),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Color(cfg.colorPrimary),
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
+                              Text(
+                                'Your ${_tableSession!.assignedStaff.first.role.toLowerCase()}'.tr(),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: dark ? Colors.white54 : Colors.black54,
                                 ),
+                              ),
+                              Text(
+                                _tableSession!.assignedStaff.first.firstName,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: dark ? Colors.white : Colors.black,
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                      ),
-                    ),
-                  ],
-
-                  // Shipping details (address, instructions)
-                  if (_currentOrder.fulfillment.method == FulfillmentMethod.shipping && _currentOrder.shipping != null) ...[
-                    if (_currentOrder.shipping?.address != null) ...[
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Icon(Icons.location_on,
-                              size: 16, color: dark ? Colors.white70 : Colors.black54),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Shipping Address'.tr(),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: dark ? Colors.white54 : Colors.black45,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _currentOrder.shipping!.address!,
-                                  style: TextStyle(
-                                    color: dark ? Colors.white70 : Colors.black54,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (_currentOrder.shipping?.instructions != null) ...[
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Icon(Icons.info_outline,
-                              size: 16, color: dark ? Colors.white70 : Colors.black54),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Instructions'.tr(),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: dark ? Colors.white54 : Colors.black45,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _currentOrder.shipping!.instructions!,
-                                  style: TextStyle(
-                                    color: dark ? Colors.white70 : Colors.black54,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-
-                  if (_currentOrder.fulfillment.preferredAt != null) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.calendar_today,
-                            size: 16, color: dark ? Colors.white70 : Colors.black54),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Preferred: ${DateFormat('MMM d, y • h:mm a').format(_currentOrder.fulfillment.preferredAt!)}',
-                          style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
-                        ),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    Divider(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                    const SizedBox(height: 16),
                   ],
-                  // Order action section for lister
-                  const SizedBox(height: 12),
-                  Divider(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
-                  const SizedBox(height: 12),
-                  if (_currentOrder.status == OrderStatus.requested)
-                    SizedBox(
-                      width: double.infinity,
-                      child: Text(
-                        'This order is pending your response'.tr(),
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.orange,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                  // Summon Waiter button
+                  ElevatedButton.icon(
+                    onPressed: _isSummonCooldown ? null : _summonWaiter,
+                    icon: Icon(_isSummonCooldown ? Icons.timer : Icons.pan_tool),
+                    label: Text(
+                      _isSummonCooldown
+                          ? 'Wait ${_summonCooldownSeconds}s'.tr()
+                          : 'Summon Waiter'.tr(),
+                      style: const TextStyle(fontSize: 16),
                     ),
-                  // Share buttons
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isSummonCooldown ? Colors.grey : Color(cfg.colorPrimary),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
                   const SizedBox(height: 12),
-                  Divider(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildShareButton(
-                          icon: Icons.mail,
-                          label: 'Email'.tr(),
-                          onPressed: _shareViaEmail,
-                          dark: dark,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildShareButton(
-                          icon: Icons.chat,
-                          label: 'WhatsApp'.tr(),
-                          onPressed: _shareViaWhatsApp,
-                          dark: dark,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildShareButton(
-                          icon: Icons.share,
-                          label: 'Share'.tr(),
-                          onPressed: _shareOrder,
-                          dark: dark,
-                        ),
-                      ),
-                    ],
+                  // Request Bill button
+                  OutlinedButton.icon(
+                    onPressed: _requestBill,
+                    icon: const Icon(Icons.receipt_long),
+                    label: Text('Request Bill'.tr(), style: const TextStyle(fontSize: 16)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Color(cfg.colorPrimary),
+                      side: BorderSide(color: Color(cfg.colorPrimary), width: 2),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
+        ],
 
-          // Shipping Tracking Section (only for SHIPPING orders)
-          if (_currentOrder.fulfillment.method == FulfillmentMethod.shipping) ...[
-            const SizedBox(height: 16),
-            
-            // Show saved tracking info to everyone (lister and customer)
-            if (_currentOrder.shipping?.trackingNumber != null)
-              ShippingTrackingDisplay(order: _currentOrder),
-            
-            // Show editable form to lister (below the display if tracking exists)
-            if (widget.viewAsLister) ...[
-              if (_currentOrder.shipping?.trackingNumber != null)
+        // Date
+        const SizedBox(height: 16),
+        Text(
+          'Created: ${_currentOrder.createdAt != null ? DateFormat('MMM d, y • h:mm a').format(_currentOrder.createdAt!.toDate()) : 'N/A'}',
+          style: TextStyle(
+            fontSize: 12,
+            color: dark ? Colors.white54 : Colors.black45,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildListerProofOfPaymentSection(bool dark) {
+    final status = _currentOrder.payment?['proofOfPaymentStatus'] ?? 'pending';
+    final imageUrl = _currentOrder.payment!['proofOfPaymentUrl'];
+    final rejectionReason = _currentOrder.payment?['rejectionReason'];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        _buildSectionTitle('Proof of Payment'.tr(), dark),
+        Card(
+          color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Status Chip
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: _buildPOPStatusChip(status, dark),
+                ),
+                if (rejectionReason != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Reason: $rejectionReason'.tr(),
+                    style: TextStyle(color: Colors.red.shade300),
+                  ),
+                ],
                 const SizedBox(height: 16),
-              ShippingTrackingCard(
-                order: _currentOrder,
-                currentUser: widget.currentUser,
-                onTrackingUpdated: _loadOrderDetails,
-              ),
-            ],
-          ],
 
-          // Notes
-          if (_currentOrder.notes != null && _currentOrder.notes!.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            _buildSectionTitle('Notes'.tr(), dark),
-            Card(
-              color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  _currentOrder.notes!,
-                  style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                // Image Preview
+                GestureDetector(
+                  onTap: () => push(
+                    context,
+                    FullScreenImageViewer(imageUrl: imageUrl),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      imageUrl,
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return Container(
+                          height: 200,
+                          width: double.infinity,
+                          color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+                          child: const Center(child: CircularProgressIndicator()),
+                        );
+                      },
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
-          if (_currentOrder.listerNotes != null && _currentOrder.listerNotes!.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            _buildSectionTitle('Seller Note'.tr(), dark),
-            Card(
-              color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  _currentOrder.listerNotes!,
-                  style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
-                ),
-              ),
-            ),
-          ],
 
-          // Table Mode Actions (for customers in active table sessions)
-          if (!widget.viewAsLister && 
-              _tableSession != null && 
-              _tableSession!.status == TableSessionStatus.ACTIVE &&
-              (_currentOrder.status == OrderStatus.confirmed ||
-               _currentOrder.status == OrderStatus.preparing ||
-               _currentOrder.status == OrderStatus.ready ||
-               _currentOrder.status == OrderStatus.served)) ...[
-            const SizedBox(height: 16),
-            _buildSectionTitle('Table Service'.tr(), dark),
-            Card(
-              color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Waiter info
-                    if (_tableSession!.assignedStaff.isNotEmpty) ...[
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundImage: NetworkImage(_tableSession!.assignedStaff.first.photoUrl),
-                            backgroundColor: Colors.grey.shade300,
+                // Action Buttons
+                if (status == 'pending') ...[
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _rejectProofOfPayment,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Your ${_tableSession!.assignedStaff.first.role.toLowerCase()}'.tr(),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: dark ? Colors.white54 : Colors.black54,
-                                  ),
-                                ),
-                                Text(
-                                  _tableSession!.assignedStaff.first.firstName,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: dark ? Colors.white : Colors.black,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                          child: Text('Reject'.tr()),
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      Divider(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
-                      const SizedBox(height: 16),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => _updateProofOfPaymentStatus('approved'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                          ),
+                          child: Text('Approve'.tr(), style: const TextStyle(color: Colors.white)),
+                        ),
+                      ),
                     ],
-                    // Summon Waiter button
-                    ElevatedButton.icon(
-                      onPressed: _isSummonCooldown ? null : _summonWaiter,
-                      icon: Icon(_isSummonCooldown ? Icons.timer : Icons.pan_tool),
-                      label: Text(
-                        _isSummonCooldown 
-                            ? 'Wait ${_summonCooldownSeconds}s'.tr()
-                            : 'Summon Waiter'.tr(),
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _isSummonCooldown ? Colors.grey : Color(cfg.colorPrimary),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Request Bill button
-                    OutlinedButton.icon(
-                      onPressed: _requestBill,
-                      icon: const Icon(Icons.receipt_long),
-                      label: Text('Request Bill'.tr(), style: const TextStyle(fontSize: 16)),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Color(cfg.colorPrimary),
-                        side: BorderSide(color: Color(cfg.colorPrimary), width: 2),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-
-          // Date
-          const SizedBox(height: 16),
-          Text(
-            'Created: ${_currentOrder.createdAt != null ? DateFormat('MMM d, y • h:mm a').format(_currentOrder.createdAt!.toDate()) : 'N/A'}',
-            style: TextStyle(
-              fontSize: 12,
-              color: dark ? Colors.white54 : Colors.black45,
+                  ),
+                ],
+              ],
             ),
           ),
-        ],
-      );
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPOPStatusChip(String status, bool dark) {
+    late Color color;
+    late String label;
+    late IconData icon;
+
+    switch (status) {
+      case 'approved':
+        color = Colors.green;
+        label = 'Approved'.tr();
+        icon = Icons.check_circle;
+        break;
+      case 'rejected':
+        color = Colors.red;
+        label = 'Rejected'.tr();
+        icon = Icons.cancel;
+        break;
+      default: // pending
+        color = Colors.orange;
+        label = 'Pending Review'.tr();
+        icon = Icons.hourglass_empty;
     }
+    return Chip(
+      avatar: Icon(icon, color: color, size: 18),
+      label: Text(label),
+      labelStyle: TextStyle(color: dark ? Colors.white : Colors.black),
+      backgroundColor: color.withOpacity(0.2),
+    );
+  }
+
 
   Widget _buildSectionTitle(String title, bool dark) {
     return Padding(
@@ -732,7 +918,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Future<void> _navigateToDelivery() async {
     final lat = _currentOrder.fulfillment.latitude;
     final lng = _currentOrder.fulfillment.longitude;
-    
+
     if (lat == null || lng == null) {
       showSnackBar(context, 'Location coordinates not available'.tr());
       return;
@@ -810,7 +996,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Future<void> _shareViaEmail() async {
     final summary = _generateOrderSummary();
     final subject = 'Order #${_currentOrder.id.substring(0, 8).toUpperCase()} - ${_currentOrder.status.value}';
-    
+
     try {
       final emailUrl = 'mailto:?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(summary)}';
       if (await canLaunchUrl(Uri.parse(emailUrl))) {
@@ -825,7 +1011,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Future<void> _shareViaWhatsApp() async {
     final summary = _generateOrderSummary();
-    
+
     try {
       final whatsappUrl = 'https://wa.me/?text=${Uri.encodeComponent(summary)}';
       if (await canLaunchUrl(Uri.parse(whatsappUrl))) {
@@ -840,7 +1026,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Future<void> _shareOrder() async {
     final summary = _generateOrderSummary();
-    
+
     try {
       await Share.share(
         summary,
@@ -950,6 +1136,33 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
+            // Item Image
+            if (item.photoUrl != null && item.photoUrl!.isNotEmpty) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  item.photoUrl!,
+                  width: 60,
+                  height: 60,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: dark ? Colors.grey.shade800 : Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.image_not_supported,
+                      color: dark ? Colors.grey.shade600 : Colors.grey.shade500,
+                      size: 24,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
+            // Item Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1242,7 +1455,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     try {
       final isCustomer = !widget.viewAsLister;
-      
+
       // Customer can only cancel their order
       if (isCustomer && newStatus == OrderStatus.cancelled) {
         await _storeService.cancelOrder(
@@ -1286,6 +1499,108 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       }
     }
   }
+
+  Future<void> _uploadProofOfPayment() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      final File imageFile = File(image.path);
+
+      showProgress(context, 'Uploading...'.tr(), false, Color(cfg.colorPrimary));
+
+      try {
+        // Upload to Firebase Storage
+        final storageRef = FirebaseStorage.instance.ref();
+        final fileName =
+            'proof_of_payment/${_currentOrder.id}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final proofRef = storageRef.child(fileName);
+        final uploadTask = await proofRef.putFile(imageFile);
+        final downloadUrl = await uploadTask.ref.getDownloadURL();
+
+        // Update order in Firestore
+        await FirebaseFirestore.instance.collection('order_requests').doc(_currentOrder.id).update({
+          'payment.proofOfPaymentUrl': downloadUrl,
+          'payment.proofOfPaymentStatus': 'pending',
+          'payment.proofSubmittedAt': FieldValue.serverTimestamp(),
+        });
+
+        hideProgress();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Proof of payment uploaded successfully'.tr()),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        hideProgress();
+        if (mounted) {
+          showAlertDialog(context, 'Error'.tr(), 'Failed to upload proof of payment'.tr());
+        }
+      }
+    }
+  }
+
+  Future<void> _rejectProofOfPayment() async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        final controller = TextEditingController();
+        return AlertDialog(
+          title: Text('Reject Payment?'.tr()),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              hintText: 'Reason for rejection (optional)'.tr(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'.tr()),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: Text('Reject'.tr()),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (reason != null) {
+      await _updateProofOfPaymentStatus('rejected', rejectionReason: reason);
+    }
+  }
+
+  Future<void> _updateProofOfPaymentStatus(String status, {String? rejectionReason}) async {
+    showProgress(context, 'Updating...'.tr(), false, Color(cfg.colorPrimary));
+    try {
+      final Map<String, dynamic> updateData = {
+        'payment.proofOfPaymentStatus': status,
+      };
+      if (rejectionReason != null) {
+        updateData['payment.rejectionReason'] = rejectionReason;
+      }
+      // If rejecting, clear the URL so the user can re-upload
+      if (status == 'rejected') {
+        updateData['payment.proofOfPaymentUrl'] = null;
+      }
+
+      await FirebaseFirestore.instance
+          .collection('order_requests')
+          .doc(_currentOrder.id)
+          .update(updateData);
+      hideProgress();
+    } catch (e) {
+      hideProgress();
+      showAlertDialog(context, 'Error'.tr(), 'Failed to update status'.tr());
+    }
+  }
+
+
 
   Future<void> _summonWaiter() async {
     if (_tableSession == null) return;
@@ -1337,17 +1652,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     try {
       showProgress(context, 'Summoning waiter...'.tr(), false, Color(cfg.colorPrimary));
-      
+
       await tableModeRepository.summonWaiter(
         sessionId: _tableSession!.sessionId,
         purpose: purpose,
       );
 
       hideProgress();
-      
+
       // Reload table session to update cooldown
       await _loadTableSession();
-      
+
       if (mounted) {
         showSnackBar(context, 'Waiter summoned successfully!'.tr());
       }
@@ -1408,14 +1723,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     try {
       showProgress(context, 'Requesting bill...'.tr(), false, Color(cfg.colorPrimary));
-      
+
       await tableModeRepository.requestBill(
         sessionId: _tableSession!.sessionId,
         paymentMethod: method,
       );
 
       hideProgress();
-      
+
       if (mounted) {
         showSnackBar(context, 'Bill requested successfully! Your waiter will be with you shortly.'.tr());
       }
@@ -1510,7 +1825,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       // Only post if order summary doesn't already exist
       if (messagesSnapshot.docs.isEmpty) {
         final orderSummary = _generateOrderSummary();
-        
+
         await channelRef.collection('thread').add({
           'content': orderSummary,
           'senderId': widget.currentUser.userID,

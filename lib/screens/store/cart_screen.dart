@@ -880,10 +880,10 @@ class _CartScreenState extends State<CartScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      // Build order items with item types fetched from catalog
+      // Build order items with item types and photos fetched from catalog
       final List<OrderItem> orderItems = [];
       for (final cartItem in widget.cartItems) {
-        // Fetch the catalog item to get its type
+        // Fetch the catalog item to get its type and photo
         final catalogItem = await _storeService.getCatalogItem(
           widget.listing.id, 
           cartItem.itemId,
@@ -896,6 +896,7 @@ class _CartScreenState extends State<CartScreen> {
           unitPrice: cartItem.unitPrice,
           variant: cartItem.variant,
           itemType: catalogItem?.type.value ?? 'product',
+          photoUrl: catalogItem?.photos.isNotEmpty == true ? catalogItem!.photos.first : null,
         ));
       }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
@@ -351,7 +352,7 @@ class _MenuItemEditorScreenState extends State<MenuItemEditorScreen> {
                   .map(
                     (tag) => FilterChip(
                       label: Text(
-                        tag,
+                        tag.tr(),
                         style: TextStyle(
                           color: _tags.contains(tag)
                               ? Color(cfg.colorPrimary)

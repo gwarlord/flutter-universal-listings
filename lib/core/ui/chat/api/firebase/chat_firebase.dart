@@ -34,6 +34,27 @@ class ChatFireStoreUtils extends ChatRepository {
   List<StreamSubscription> chatStreamSubs = [];
 
   @override
+  Future<void> archiveConversation(String channelID, String userID) async {
+    DocumentReference docRef = firestore.collection(chatChannelsCollection).doc(channelID);
+    DocumentSnapshot doc = await docRef.get();
+    if (doc.exists) {
+      bool isCurrentlyArchived = false;
+      var data = doc.data() as Map<String, dynamic>;
+      if (data.containsKey('isArchived') && data['isArchived'] is Map) {
+        isCurrentlyArchived = data['isArchived'][userID] == true;
+      }
+      await docRef.update({'isArchived.$userID': !isCurrentlyArchived});
+    }
+  }
+
+  @override
+  Future<void> deleteConversation(String channelID, String userID) async {
+    await firestore.collection(chatChannelsCollection).doc(channelID).update({
+      'deletedFor': FieldValue.arrayUnion([userID]),
+    });
+  }
+
+  @override
   Future<User?> getUserByID(String userID) async {
     DocumentSnapshot<Map<String, dynamic>> userDocument =
         await firestore.collection(usersCollection).doc(userID).get();

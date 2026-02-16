@@ -194,7 +194,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
             _checkOutDate!.month == date.month &&
             _checkOutDate!.day == date.day;
         final isInRange = _isDateInRange(date);
-        final isPast = date.isBefore(DateTime.now());
+        final isPast = date.isBefore(DateUtils.dateOnly(DateTime.now()));
 
         return GestureDetector(
           onTap: isPast || isBooked ? null : () => _selectDate(date),

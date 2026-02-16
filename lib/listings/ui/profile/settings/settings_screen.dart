@@ -26,6 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool _allowPushNotifications;
   late bool _bookingEmailReminders;
   late bool _bookingPushReminders;
+  String? _selectedLanguageCode;
 
   @override
   void initState() {
@@ -34,6 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _allowPushNotifications = user.settings.allowPushNotifications;
     _bookingEmailReminders = user.settings.bookingEmailReminders;
     _bookingPushReminders = user.settings.bookingPushReminders;
+    _selectedLanguageCode = user.settings.languageCode;
   }
 
   @override
@@ -138,6 +140,128 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       const SizedBox(height: 32),
+                      Text('APP LANGUAGE'.tr(), style: titleStyle),
+                      const SizedBox(height: 12),
+                      Card(
+                        color: cardColor,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(
+                            color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Color(colorPrimary).withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(Icons.language, color: Color(colorPrimary)),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'App Language'.tr(),
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: isDark ? Colors.white : Colors.black87,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Choose your preferred language'.tr(),
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              DropdownButtonFormField<String?>(
+                                value: _selectedLanguageCode,
+                                decoration: InputDecoration(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                                  ),
+                                  filled: true,
+                                  fillColor: isDark ? Colors.grey[850] : Colors.grey[50],
+                                ),
+                                dropdownColor: isDark ? Colors.grey[850] : Colors.white,
+                                items: [
+                                  DropdownMenuItem<String?>(
+                                    value: null,
+                                    child: Text('System Default'.tr()),
+                                  ),
+                                  DropdownMenuItem<String?>(
+                                    value: 'en',
+                                    child: Text('English'.tr()),
+                                  ),
+                                  DropdownMenuItem<String?>(
+                                    value: 'es',
+                                    child: Text('Spanish'.tr()),
+                                  ),
+                                  DropdownMenuItem<String?>(
+                                    value: 'fr',
+                                    child: Text('French'.tr()),
+                                  ),
+                                  DropdownMenuItem<String?>(
+                                    value: 'nl',
+                                    child: Text('Dutch'.tr()),
+                                  ),
+                                  DropdownMenuItem<String?>(
+                                    value: 'ht',
+                                    child: Text('Haitian Creole'.tr()),
+                                  ),
+                                ],
+                                onChanged: (String? newValue) {
+                                  setState(() {
+                                    _selectedLanguageCode = newValue;
+                                  });
+                                  // Update locale immediately
+                                  if (newValue == null) {
+                                    context.resetLocale();
+                                  } else {
+                                    context.setLocale(Locale(newValue));
+                                  }
+                                  context.read<SettingsBloc>().add(SettingsChangedEvent());
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Applies to the app interface. Listings and reviews remain as written.'.tr(),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? Colors.grey[500] : Colors.grey[600],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
                       Text('ACCOUNT SECURITY'.tr(), style: titleStyle),
                       const SizedBox(height: 12),
                       Card(
@@ -182,6 +306,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             user.settings.allowPushNotifications = _allowPushNotifications;
                             user.settings.bookingEmailReminders = _bookingEmailReminders;
                             user.settings.bookingPushReminders = _bookingPushReminders;
+                            user.settings.languageCode = _selectedLanguageCode;
                             context.read<LoadingCubit>().showLoading(
                                   context,
                                   'Saving changes...'.tr(),

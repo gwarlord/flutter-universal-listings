@@ -92,12 +92,14 @@ class UserSettings {
   int subscriptionReminderDays;
   bool bookingEmailReminders;
   bool bookingPushReminders;
+  String? languageCode; // null = system default, 'en', 'es', 'fr', 'nl', 'ht'
 
   UserSettings({
     this.allowPushNotifications = true,
     this.subscriptionReminderDays = 3,
     this.bookingEmailReminders = true,
     this.bookingPushReminders = true,
+    this.languageCode,
   });
 
   factory UserSettings.fromJson(Map<dynamic, dynamic> parsedJson) {
@@ -114,6 +116,7 @@ class UserSettings {
       subscriptionReminderDays: parsedReminderDays,
       bookingEmailReminders: parsedJson['bookingEmailReminders'] ?? true,
       bookingPushReminders: parsedJson['bookingPushReminders'] ?? true,
+      languageCode: parsedJson['languageCode'] as String?,
     );
   }
 
@@ -123,6 +126,7 @@ class UserSettings {
       'subscriptionReminderDays': subscriptionReminderDays,
       'bookingEmailReminders': bookingEmailReminders,
       'bookingPushReminders': bookingPushReminders,
+      'languageCode': languageCode,
     };
   }
 }

@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:instaflutter/constants.dart';
 import 'package:instaflutter/core/model/user.dart';
 import 'package:instaflutter/core/utils/helper.dart';
@@ -12,6 +15,7 @@ import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
 import 'package:instaflutter/listings/services/store_service.dart';
 import 'package:instaflutter/screens/store/order_detail_screen.dart';
 import 'package:instaflutter/screens/store/shipping_tracking_display.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 /// Screen for customers to view their order history
 class CustomerOrdersScreen extends StatefulWidget {
@@ -177,19 +181,35 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
     return FutureBuilder<Map<String, dynamic>>(
       future: _getOrderPreviewData(order),
       builder: (context, previewSnapshot) {
+        if (previewSnapshot.connectionState == ConnectionState.waiting) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+
         final previewData = previewSnapshot.data ?? {};
+        final listing = previewData['listing'] as ListingModel?;
         final listingTitle =
-            previewData['listingTitle'] as String? ?? 'Order ${order.id.substring(0, 8)}';
+            listing?.title ?? 'Order ${order.id.substring(0, 8)}';
         final firstItemImage = previewData['firstItemImage'] as String?;
         final isTableMode = previewData['tableSessionId'] != null;
         final tableName = previewData['tableName'] as String?;
         final assignedStaff = previewData['assignedStaff'] as List<AssignedStaff>? ?? [];
-        final isOrderActive =
-            order.status == OrderStatus.requested || 
+        final isOrderActive = order.status == OrderStatus.requested ||
             order.status == OrderStatus.confirmed ||
             order.status == OrderStatus.preparing ||
             order.status == OrderStatus.ready ||
             order.status == OrderStatus.served;
+
+        final bool requiresProofOfPayment =
+            listing?.payments['acceptProofOfPayment'] ?? false;
+        final bool canUploadProof = order.status == OrderStatus.confirmed &&
+            requiresProofOfPayment &&
+            (order.payment?['proofOfPaymentUrl'] == null ||
+                order.payment!['proofOfPaymentUrl'].isEmpty);
 
         return Card(
           color: dark ? Colors.grey.shade900 : Colors.white,
@@ -240,7 +260,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Your waiter: ${assignedStaff.first.firstName}',
+                          '${'Your waiter'.tr()}: ${assignedStaff.first.firstName}',
                           style: TextStyle(
                             fontSize: 13,
                             color: dark ? Colors.white70 : Colors.black87,
@@ -387,6 +407,23 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                       ),
                     ],
                   ),
+
+                  // Proof of Payment section
+                  if (canUploadProof) ...[
+                    const Divider(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _uploadProofOfPayment(order),
+                        icon: const Icon(Icons.upload_file),
+                        label: Text('Upload Proof of Payment'.tr()),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Color(cfg.colorPrimary),
+                          side: BorderSide(color: Color(cfg.colorPrimary).withOpacity(0.5)),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -487,9 +524,9 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
   Future<Map<String, dynamic>> _getOrderPreviewData(OrderRequest order) async {
     final result = <String, dynamic>{};
 
-    // Get listing title
+    // Get listing
     final listing = await _getListingCached(order.listingId);
-    result['listingTitle'] = listing?.title ?? 'Order ${order.id.substring(0, 8)}';
+    result['listing'] = listing;
 
     // Get first item image
     if (order.items.isNotEmpty) {
@@ -542,6 +579,47 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
     }
 
     return result;
+  }
+
+  Future<void> _uploadProofOfPayment(OrderRequest order) async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      final File imageFile = File(image.path);
+
+      showProgress(context, 'Uploading...'.tr(), false, Color(cfg.colorPrimary));
+
+      try {
+        // Upload to Firebase Storage
+        final storageRef = FirebaseStorage.instance.ref();
+        final fileName =
+            'proof_of_payment/${order.id}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final proofRef = storageRef.child(fileName);
+        final uploadTask = await proofRef.putFile(imageFile);
+        final downloadUrl = await uploadTask.ref.getDownloadURL();
+
+        // Update order in Firestore
+        await FirebaseFirestore.instance.collection('order_requests').doc(order.id).update({
+          'payment': {
+            'proofOfPaymentUrl': downloadUrl,
+            'proofOfPaymentStatus': 'pending', // 'pending', 'approved', 'rejected'
+            'proofSubmittedAt': FieldValue.serverTimestamp(),
+          }
+        });
+
+        hideProgress();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Proof of payment uploaded successfully'.tr()),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        hideProgress();
+        showAlertDialog(context, 'Error'.tr(), 'Failed to upload proof of payment'.tr());
+      }
+    }
   }
 
   String _formatDate(Timestamp? timestamp) {

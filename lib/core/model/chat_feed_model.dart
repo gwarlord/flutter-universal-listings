@@ -13,6 +13,8 @@ class ChatFeedModel {
   String listingId;
   String listingTitle;
   String listingImage;
+  Map<String, bool> isArchived;
+  List<String> deletedFor;
 
   ChatFeedModel({
     chatFeedContent,
@@ -24,6 +26,8 @@ class ChatFeedModel {
     this.listingId = '',
     this.listingTitle = '',
     this.listingImage = '',
+    this.isArchived = const {},
+    this.deletedFor = const [],
   })  : chatFeedContent = chatFeedContent ?? ChatFeedContent(),
         isGroupChat = participants.length > 1;
 
@@ -95,6 +99,8 @@ class ChatFeedModel {
       listingId: parsedJson['listingId'] ?? '',
       listingTitle: parsedJson['listingTitle'] ?? '',
       listingImage: parsedJson['listingImage'] ?? '',
+      isArchived: Map<String, bool>.from(parsedJson['isArchived'] ?? {}),
+      deletedFor: List<String>.from(parsedJson['deletedFor'] ?? []),
     );
   }
 
@@ -109,6 +115,8 @@ class ChatFeedModel {
       'listingId': listingId,
       'listingTitle': listingTitle,
       'listingImage': listingImage,
+      'isArchived': isArchived,
+      'deletedFor': deletedFor,
     };
   }
 }

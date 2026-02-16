@@ -85,4 +85,7 @@ abstract class ChatRepository {
       required String currentUserID,
       required String messageID,
       required List<String> readUserIDs});
+
+  Future<void> archiveConversation(String channelID, String userID);
+  Future<void> deleteConversation(String channelID, String userID);
 }

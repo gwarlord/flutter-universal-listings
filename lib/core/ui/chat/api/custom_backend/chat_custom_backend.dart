@@ -120,4 +120,16 @@ class ChatCustomBackend extends ChatRepository {
     // TODO: implement markAsRead
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> archiveConversation(String channelID, String userID) {
+    // TODO: implement archiveConversation
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> deleteConversation(String channelID, String userID) {
+    // TODO: implement deleteConversation
+    throw UnimplementedError();
+  }
 }
