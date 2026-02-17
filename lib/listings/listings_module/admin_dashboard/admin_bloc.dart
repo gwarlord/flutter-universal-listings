@@ -2,6 +2,7 @@ import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:instaflutter/listings/model/reported_listing_model.dart';
 import 'package:instaflutter/listings/model/suspension_info.dart';
 import 'package:instaflutter/listings/listings_module/api/listings_repository.dart';
 import 'package:instaflutter/listings/ui/profile/api/profile_repository.dart';
@@ -32,6 +33,11 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
     on<GetAllUsersEvent>((event, emit) async {
       allUsers = await profileRepository.getAllUsers(searchQuery: event.searchQuery);
       emit(AllUsersState(users: allUsers));
+    });
+
+    on<GetReportedListingsEvent>((event, emit) async {
+      final reportedListings = await listingsRepository.getReportedListings();
+      emit(ReportedListingsState(reportedListings: reportedListings));
     });
 
     on<GetSuspendedListingsEvent>((event, emit) async {

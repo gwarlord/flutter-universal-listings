@@ -7,6 +7,7 @@ import 'package:instaflutter/listings/model/filter_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listing_review_model.dart';
 import 'package:instaflutter/listings/model/paged_reviews_result.dart';
+import 'package:instaflutter/listings/model/reported_listing_model.dart';
 import 'package:instaflutter/listings/model/suspension_info.dart';
 
 class ListingsLocalData extends ListingsRepository {
@@ -138,4 +139,10 @@ class ListingsLocalData extends ListingsRepository {
 
   @override
   Future<void> refreshListingFreshness({required String listingId}) async {}
+
+  @override
+  Future<List<ReportedListing>> getReportedListings() async => [];
+
+  @override
+  Future<void> dismissReport(String reportId) async {}
 }

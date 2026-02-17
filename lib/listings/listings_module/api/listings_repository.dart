@@ -6,6 +6,7 @@ import 'package:instaflutter/listings/model/filter_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listing_review_model.dart';
 import 'package:instaflutter/listings/model/paged_reviews_result.dart';
+import 'package:instaflutter/listings/model/reported_listing_model.dart';
 import 'package:instaflutter/listings/model/suspension_info.dart';
 
 abstract class ListingsRepository {
@@ -58,6 +59,8 @@ abstract class ListingsRepository {
   // Admin / moderation
   Future<void> approveListing({required ListingModel listingModel});
   Future<void> deleteListing({required ListingModel listingModel});
+  Future<List<ReportedListing>> getReportedListings();
+  Future<void> dismissReport(String reportId);
 
   // Listing suspension
   Future<List<ListingModel>> getSuspendedListings();

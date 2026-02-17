@@ -231,6 +231,7 @@ class ListingModel {
   bool isApproved;
   bool suspended;
   bool hidden; // Allows lister to hide their listing from public view
+  bool isFlagged;
   SuspensionInfo? suspensionInfo;
   bool verified;
   String? verificationMethod; // 'auto', 'manual', or null
@@ -334,6 +335,7 @@ class ListingModel {
     this.isApproved = false,
     this.suspended = false,
     this.hidden = false,
+    this.isFlagged = false,
     this.suspensionInfo,
     this.verified = false,
     this.verificationMethod,
@@ -447,6 +449,7 @@ class ListingModel {
       isApproved: json['isApproved'] ?? false,
       suspended: json['suspended'] ?? false,
       hidden: json['hidden'] ?? false,
+      isFlagged: json['isFlagged'] ?? false,
         suspensionInfo: json['suspensionInfo'] != null
           ? SuspensionInfo.fromJson(json['suspensionInfo'] as Map<String, dynamic>)
           : null,
@@ -538,6 +541,7 @@ class ListingModel {
       'isApproved': isApproved,
       'suspended': suspended,
       'hidden': hidden,
+      'isFlagged': isFlagged,
       'suspensionInfo': suspensionInfo?.toJson(),
       'verified': verified,
       'verificationMethod': verificationMethod,
@@ -613,6 +617,7 @@ class ListingModel {
     bool? isApproved,
     bool? suspended,
     bool? hidden,
+    bool? isFlagged,
     SuspensionInfo? suspensionInfo,
     bool? verified,
     num? reviewsCount,
@@ -670,6 +675,7 @@ class ListingModel {
       isApproved: isApproved ?? this.isApproved,
       suspended: suspended ?? this.suspended,
       hidden: hidden ?? this.hidden,
+      isFlagged: isFlagged ?? this.isFlagged,
       suspensionInfo: suspensionInfo ?? this.suspensionInfo,
       verified: verified ?? this.verified,
       reviewsCount: reviewsCount ?? this.reviewsCount,

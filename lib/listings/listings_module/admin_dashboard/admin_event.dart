@@ -12,6 +12,8 @@ class GetAllUsersEvent extends AdminEvent {
 
 class GetSuspendedListingsEvent extends AdminEvent {}
 
+class GetReportedListingsEvent extends AdminEvent {}
+
 class GetAllListingsEvent extends AdminEvent {}
 
 class LoadingEvent extends AdminEvent {}

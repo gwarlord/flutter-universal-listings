@@ -16,6 +16,12 @@ class AllUsersState extends AdminState {
   AllUsersState({required this.users});
 }
 
+class ReportedListingsState extends AdminState {
+  final List<ReportedListing> reportedListings;
+
+  ReportedListingsState({required this.reportedListings});
+}
+
 class SuspendedListingsState extends AdminState {
   List<ListingModel> suspendedListings;
 

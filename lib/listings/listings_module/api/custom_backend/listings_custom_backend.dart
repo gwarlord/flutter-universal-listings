@@ -7,6 +7,7 @@ import 'package:instaflutter/listings/model/filter_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listing_review_model.dart';
 import 'package:instaflutter/listings/model/paged_reviews_result.dart';
+import 'package:instaflutter/listings/model/reported_listing_model.dart';
 import 'package:instaflutter/listings/model/suspension_info.dart';
 
 class ListingsCustomBackendUtils extends ListingsRepository {
@@ -110,9 +111,7 @@ class ListingsCustomBackendUtils extends ListingsRepository {
   }) async {}
 
   @override
-  Future<ListingReviewModel?> postReview({required ListingReviewModel reviewModel}) async {
-    return null;
-  }
+  Future<void> postReview({required ListingReviewModel reviewModel}) async {}
 
   @override
   Future<List<ListingReviewModel>> getReviews({required String listingID}) async => [];
@@ -150,4 +149,10 @@ class ListingsCustomBackendUtils extends ListingsRepository {
 
   @override
   Future<void> refreshListingFreshness({required String listingId}) async {}
+
+  @override
+  Future<List<ReportedListing>> getReportedListings() async => [];
+
+  @override
+  Future<void> dismissReport(String reportId) async {}
 }

@@ -344,6 +344,30 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
+    // Reports collection (Listing Flagging/Reporting)
+    match /reports/{reportId} {
+      // Allow read if:
+      // 1. User is the reporter who created it
+      // 2. User is an admin
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.reporterId || 
+        isAdmin()
+      );
+      
+      // Allow create if:
+      // 1. User is authenticated and is the reporter (reporterId must match auth.uid)
+      // 2. Status must be 'pending' on creation
+      allow create: if isSignedIn() && 
+        request.auth.uid == request.resource.data.reporterId &&
+        request.resource.data.status == 'pending';
+      
+      // Allow update only by admins (for dismissing/reviewing reports)
+      allow update: if isAdmin();
+      
+      // Allow delete only by admins
+      allow delete: if isAdmin();
+    }
+    
     // Mail collection
     match /mail/{mailId} {
       allow read: if isAdmin();

@@ -7,12 +7,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:instaflutter/listings/listings_app_config.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:instaflutter/listings/model/reported_listing_model.dart';
 import 'package:instaflutter/listings/model/suspension_info.dart';
 import 'package:instaflutter/core/utils/helper.dart';
 import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
 import 'package:instaflutter/listings/listings_module/admin_dashboard/admin_bloc.dart';
 import 'package:instaflutter/listings/listings_module/admin_dashboard/suspension_reason_dialog.dart';
 import 'package:instaflutter/listings/listings_module/admin_dashboard/review_removal_requests_screen.dart';
+import 'package:instaflutter/listings/listings_module/listing_details/listing_details_screen.dart';
 import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
 import 'package:instaflutter/listings/services/review_removal_request_service.dart';
 import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
@@ -53,6 +55,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   List<ListingsUser> suspendedUsers = [];
   List<ListingsUser> allUsers = [];
   List<ListingModel> suspendedListings = [];
+  List<ReportedListing> reportedListings = [];
   List<ListingModel> allListings = [];
   List<ListingModel> unverifiedListings = [];
   late ListingsUser currentUser;
@@ -78,7 +81,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     currentUser = widget.currentUser;
     _loadAllData();
     _loadPendingRequestsCount();
@@ -86,6 +89,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     _tabController.addListener(() {
       if (_tabController.index == 2 && unverifiedListings.isEmpty) {
         _loadUnverifiedListings();
+      }
+      if (_tabController.index == 3) {
+        context.read<AdminBloc>().add(GetReportedListingsEvent());
       }
     });
 
@@ -200,6 +206,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             Tab(text: 'Users'.tr()),
             Tab(text: 'Listings'.tr()),
             Tab(text: 'Verification'.tr()),
+            Tab(text: 'Reports'.tr()),
           ],
         ),
       ),
@@ -221,6 +228,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             isLoading = false;
             suspendedListings = state.suspendedListings;
             setState(() {});
+          } else if (state is ReportedListingsState) {
+            isLoading = false;
+            reportedListings = state.reportedListings;
+            setState(() {});
           } else if (state is LoadingState) {
             isLoading = true;
             setState(() {});
@@ -233,6 +244,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               _buildAllUsersTab(),
               _buildAllListingsTab(),
               _buildVerificationTab(),
+              _buildReportsTab(),
             ],
           );
         },
@@ -393,6 +405,294 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         ],
       ),
     );
+  }
+
+  Widget _buildReportsTab() {
+    return RefreshIndicator(
+      onRefresh: () async {
+        context.read<AdminBloc>().add(GetReportedListingsEvent());
+      },
+      child: Column(
+        children: [
+          // A simple header for now
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Flagged Content'.tr(),
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode(context) ? Colors.white : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Review listings reported by users.'.tr(),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDarkMode(context) ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator.adaptive())
+                : reportedListings.isEmpty
+                    ? showEmptyState('No Reports Found'.tr(), 'All caught up!'.tr())
+                    : Builder(
+                        builder: (context) {
+                          // Group reports by listingId to avoid duplicates
+                          final uniqueListings = <String, ReportedListing>{};
+                          for (var report in reportedListings) {
+                            if (!uniqueListings.containsKey(report.listingId)) {
+                              uniqueListings[report.listingId] = report;
+                            }
+                          }
+                          final uniqueReports = uniqueListings.values.toList();
+                          
+                          return ListView.builder(
+                            padding: const EdgeInsets.only(bottom: 24),
+                            itemCount: uniqueReports.length,
+                            itemBuilder: (context, index) {
+                              final report = uniqueReports[index];
+                              // Count reports for this listing
+                              final reportCount = reportedListings
+                                  .where((r) => r.listingId == report.listingId)
+                                  .length;
+                              return _buildReportCard(report, reportCount);
+                            },
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportCard(ReportedListing report, int reportCount) {
+    final isDark = isDarkMode(context);
+    return GestureDetector(
+      onTap: () => _viewReportedListing(report),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.grey[900] : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+          boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.flag, color: Colors.red, size: 24),
+                    ),
+                    if (reportCount > 1)
+                      Positioned(
+                        right: -6,
+                        top: -6,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: isDark ? Colors.grey[900]! : Colors.white, width: 2),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 20,
+                            minHeight: 20,
+                          ),
+                          child: Text(
+                            reportCount.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        report.listingTitle,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        reportCount > 1 
+                          ? '$reportCount reports • Latest by ${report.reporterName}'
+                          : 'Reported by ${report.reporterName}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: isDark ? Colors.grey[600] : Colors.grey[400]),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[850] : Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Reason'.tr(),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    report.reason,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => _dismissReport(report),
+                  icon: Icon(Icons.check, size: 18),
+                  label: Text('Dismiss'.tr()),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark ? Colors.grey[300] : Colors.grey[700],
+                    side: BorderSide(color: isDark ? Colors.grey[600]! : Colors.grey[400]!),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: () => _suspendListingFromReport(report),
+                  icon: Icon(Icons.block, size: 18),
+                  label: Text('Suspend'.tr()),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _viewReportedListing(ReportedListing report) async {
+    context.read<LoadingCubit>().showLoading(context, 'Loading...'.tr(), false, Color(colorPrimary));
+    try {
+      final listing = await listingApiManager.getListing(listingID: report.listingId);
+      context.read<LoadingCubit>().hideLoading();
+      
+      if (listing != null && mounted) {
+        await push(
+          context,
+          ListingDetailsWrappingWidget(listing: listing, currentUser: currentUser),
+        );
+        // Refresh reports after returning in case listing was suspended
+        if (mounted) {
+          context.read<AdminBloc>().add(GetReportedListingsEvent());
+        }
+      } else {
+        if (mounted) {
+          showSnackBar(context, 'Listing not found or has been deleted.'.tr());
+        }
+      }
+    } catch (e) {
+      context.read<LoadingCubit>().hideLoading();
+      if (mounted) {
+        showSnackBar(context, 'Error loading listing: $e'.tr());
+      }
+    }
+  }
+
+  void _dismissReport(ReportedListing report) async {
+    // Get all reports for this listing
+    final allReportsForListing = reportedListings
+        .where((r) => r.listingId == report.listingId)
+        .toList();
+    
+    final count = allReportsForListing.length;
+    final message = count > 1 
+        ? 'Dismissing $count reports...'.tr()
+        : 'Dismissing...'.tr();
+    
+    context.read<LoadingCubit>().showLoading(context, message, false, Color(colorPrimary));
+    
+    // Dismiss all reports for this listing
+    for (final r in allReportsForListing) {
+      await listingApiManager.dismissReport(r.id);
+    }
+    
+    context.read<LoadingCubit>().hideLoading();
+    context.read<AdminBloc>().add(GetReportedListingsEvent());
+  }
+
+  void _suspendListingFromReport(ReportedListing report) async {
+    final listing = await listingApiManager.getListing(listingID: report.listingId);
+    if (listing != null) {
+      _showSuspendListingConfirmation(listing);
+      
+      // Dismiss all reports for this listing after suspension
+      final allReportsForListing = reportedListings
+          .where((r) => r.listingId == report.listingId)
+          .toList();
+      
+      for (final r in allReportsForListing) {
+        await listingApiManager.dismissReport(r.id);
+      }
+      
+      context.read<AdminBloc>().add(GetReportedListingsEvent());
+    }
   }
 
   List<ListingModel> _getFilteredListings() {

@@ -1141,6 +1141,27 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                   },
                 ),
               ),
+            if (currentUser.userID != listing.authorID)
+              PopupMenuItem(
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.flag, color: Colors.orange),
+                  title: Text(
+                    'Report Inappropriate'.tr(),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                      fontFamily: 'Roboto',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _reportListing(context);
+                  },
+                ),
+              ),
             if (_canEditOrDelete)
               PopupMenuItem(
                 child: ListTile(
@@ -2148,6 +2169,84 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _reportListing(BuildContext context) async {
+    final reasonController = TextEditingController();
+    final isDark = isDarkMode(context);
+    final reportSubmitted = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? Colors.grey[800] : Colors.white,
+        title: Text('Report Listing'.tr(), style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Please provide a reason for reporting this listing as inappropriate.'.tr(),
+              style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+              decoration: InputDecoration(
+                hintText: 'Reason...'.tr(),
+                hintStyle: TextStyle(color: isDark ? Colors.white54 : Colors.black54),
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel'.tr()),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (reasonController.text.trim().isEmpty) {
+                showSnackBar(context, 'Please provide a reason.'.tr());
+                return;
+              }
+              context.read<LoadingCubit>().showLoading(context, 'Submitting...'.tr(), false, Color(cfg.colorPrimary));
+              try {
+                await FirebaseFirestore.instance.collection('reports').add({
+                  'listingId': listing.id,
+                  'listingTitle': listing.title,
+                  'listingAuthorId': listing.authorID,
+                  'reporterId': currentUser.userID,
+                  'reporterName': currentUser.fullName(),
+                  'reason': reasonController.text.trim(),
+                  'createdAt': FieldValue.serverTimestamp(),
+                  'status': 'pending', // 'pending', 'reviewed'
+                });
+                
+                await FirebaseFirestore.instance
+                    .collection(cfg.listingsCollection)
+                    .doc(listing.id)
+                    .update({'isFlagged': true});
+
+                context.read<LoadingCubit>().hideLoading();
+                Navigator.pop(context, true);
+              } catch (e) {
+                context.read<LoadingCubit>().hideLoading();
+                Navigator.pop(context, false);
+                debugPrint('Error reporting listing: $e');
+                showSnackBar(context, 'Failed to submit report. Please try again.'.tr());
+              }
+            },
+            child: Text('Submit'.tr()),
+          ),
+        ],
+      ),
+    );
+
+    if (reportSubmitted == true) {
+      showSnackBar(context, 'Listing reported. Thank you for your feedback.'.tr());
+    }
   }
 
   static bool _hasContactOrHours(ListingModel l) {

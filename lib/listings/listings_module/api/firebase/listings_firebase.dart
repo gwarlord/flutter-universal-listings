@@ -16,6 +16,7 @@ import 'package:instaflutter/listings/model/filter_model.dart';
 import 'package:instaflutter/listings/model/listing_model.dart';
 import 'package:instaflutter/listings/model/listing_review_model.dart';
 import 'package:instaflutter/listings/model/paged_reviews_result.dart';
+import 'package:instaflutter/listings/model/reported_listing_model.dart';
 import 'package:instaflutter/listings/model/suspension_info.dart';
 import 'package:path/path.dart' as path;
 
@@ -84,6 +85,50 @@ class ListingsFirebaseUtils extends ListingsRepository {
   }
 
   @override
+  Future<List<ReportedListing>> getReportedListings() async {
+    final snapshot = await firestore
+        .collection('reports')
+        .where('status', isEqualTo: 'pending')
+        .orderBy('createdAt', descending: true)
+        .get();
+    return snapshot.docs.map((doc) => ReportedListing.fromSnapshot(doc)).toList();
+  }
+
+  @override
+  Future<void> dismissReport(String reportId) async {
+    // Get report to find the listing ID
+    final reportDoc = await firestore.collection('reports').doc(reportId).get();
+    final reportData = reportDoc.data();
+    
+    // Update report status
+    await firestore
+        .collection('reports')
+        .doc(reportId)
+        .update({'status': 'dismissed'});
+    
+    // Clear isFlagged on the listing if this was the only pending report
+    if (reportData != null && reportData['listingId'] != null) {
+      final listingId = reportData['listingId'] as String;
+      
+      // Check if there are other pending reports for this listing
+      final otherReports = await firestore
+          .collection('reports')
+          .where('listingId', isEqualTo: listingId)
+          .where('status', isEqualTo: 'pending')
+          .limit(1)
+          .get();
+      
+      // If no other pending reports, clear the flag
+      if (otherReports.docs.isEmpty) {
+        await firestore
+            .collection(cfg.listingsCollection)
+            .doc(listingId)
+            .update({'isFlagged': false});
+      }
+    }
+  }
+
+  @override
   Future<List<ListingModel>> getSuspendedListings() async {
     QuerySnapshot<Map<String, dynamic>> querySnapshot = await firestore
         .collection(cfg.listingsCollection)
@@ -119,6 +164,7 @@ class ListingsFirebaseUtils extends ListingsRepository {
         .update({
           'suspended': true,
           'suspensionInfo': updatedInfo.toJson(),
+          'isFlagged': false, // Clear flag since listing is being actioned
         });
     debugPrint('[ListingsFirebase] suspendListing COMPLETE: ${listing.id}');
   }
