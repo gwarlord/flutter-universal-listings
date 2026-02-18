@@ -233,7 +233,7 @@ class _ComparisonViewWidgetState extends State<ComparisonViewWidget> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '"Enhanced for clarity" badge will be added',
+                    '"AI enhanced via CaribTap" badge will be added',
                     style: TextStyle(
                       fontSize: 12,
                       color: isDark ? Colors.white70 : Colors.black87,

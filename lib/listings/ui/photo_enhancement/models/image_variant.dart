@@ -21,7 +21,7 @@ class ImageVariant {
   /// List of enhancements applied
   final List<String> enhancements;
 
-  /// Whether "Enhanced for Clarity" disclosure badge was added
+  /// Whether "AI enhanced via CaribTap" disclosure badge was added
   final bool hasDisclosure;
 
   /// User ID who created this variant

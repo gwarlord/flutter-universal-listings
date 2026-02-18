@@ -463,6 +463,10 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
         if (snapshot.hasData && snapshot.data != null && snapshot.data!.exists) {
           final data = snapshot.data!.data()!;
           listing = ListingModel.fromJson(data);
+          
+          // Rebuild media list when listing data updates (for enhanced photos)
+          _buildMediaList();
+          
           // Refetch preview if storeUrl changed
           if (listing.storeEnabled && listing.storeUrl.isNotEmpty) {
             _fetchStorePreview(listing.storeUrl);

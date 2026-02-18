@@ -205,11 +205,159 @@ class _ImageSelectorWidgetState extends State<ImageSelectorWidget> {
                 ],
               ),
             ),
+            IconButton(
+              icon: Icon(
+                Icons.info_outline,
+                size: 20,
+                color: widget.isDark ? Colors.grey.shade400 : Colors.grey[600],
+              ),
+              onPressed: () => _showCategoryInfo(value, title),
+              tooltip: 'Learn more',
+            ),
             if (isSelected)
               Icon(Icons.check_circle, color: accentColor),
           ],
         ),
       ),
+    );
+  }
+
+  void _showCategoryInfo(String category, String title) {
+    String description;
+    List<String> features;
+    String result;
+
+    switch (category) {
+      case 'product':
+        description = 'Professional e-commerce style photos for physical items and merchandise.';
+        features = [
+          '✓ Background completely removed',
+          '✓ Item placed on clean white background',
+          '✓ Automatically cropped tight to product',
+          '✓ Removes excess white space',
+          '✓ Uses advanced AI background removal',
+        ];
+        result = 'Clean, studio-quality product shots perfect for professional e-commerce listings';
+        break;
+      case 'service':
+        description = 'Enhanced photos showing your service environment or workspace.';
+        features = [
+          '✓ Original background preserved',
+          '✓ Enhanced brightness (+5%)',
+          '✓ Improved color saturation (+10%)',
+          '✓ Maintains location context',
+          '✓ Natural studio lighting effect',
+        ];
+        result = 'Your service location with enhanced lighting and colors while keeping the environment visible';
+        break;
+      case 'person':
+        description = 'Natural-looking portraits for profiles, teams, and headshots.';
+        features = [
+          '✓ Original background preserved',
+          '✓ Enhanced brightness (+5%)',
+          '✓ Improved color saturation (+10%)',
+          '✓ Natural environment maintained',
+          '✓ Professional portrait enhancement',
+        ];
+        result = 'Natural portraits with enhanced lighting while preserving the original setting';
+        break;
+      default:
+        return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: widget.isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          title: Row(
+            children: [
+              Icon(
+                category == 'product' ? Icons.shopping_bag :
+                category == 'service' ? Icons.handshake : Icons.person,
+                color: Colors.blueAccent,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  color: widget.isDark ? Colors.white : Colors.black,
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: widget.isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Enhancement Features:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: widget.isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...features.map((feature) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    feature,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: widget.isDark ? Colors.grey.shade300 : Colors.grey[700],
+                    ),
+                  ),
+                )),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blueAccent.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.lightbulb_outline,
+                        size: 20,
+                        color: Colors.blueAccent,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          result,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: widget.isDark ? Colors.white : Colors.black87,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Got it'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

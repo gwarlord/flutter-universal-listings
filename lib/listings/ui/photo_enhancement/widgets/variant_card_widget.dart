@@ -73,7 +73,7 @@ class VariantCardWidget extends StatelessWidget {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: const Text(
-                        'Enhanced for clarity',
+                        'AI enhanced via CaribTap',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 10,

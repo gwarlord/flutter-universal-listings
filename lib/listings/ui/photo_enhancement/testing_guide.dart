@@ -24,7 +24,7 @@ class PhotoEnhancementTestingGuide {
      i. Visual API analyzes image
      j. Enhancements applied: auto_crop, lighting, clarity, blur
      k. ComparisonView displays before/after with toggle
-     l. "Enhanced for Clarity" badge visible on enhanced image
+     l. "AI enhanced via CaribTap" badge visible on enhanced image
      m. User reviews and taps "Approve & Save"
      n. SavingVariant state shows progress
      o. VariantSaved state confirmed

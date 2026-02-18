@@ -499,19 +499,19 @@ async function applyStudioBackground(imageBuffer, visionResults, usePreview = fa
     }
 }
 /**
- * Add "Enhanced for Clarity" disclosure badge
+ * Add "AI enhanced via CaribTap" disclosure badge
  */
 async function addDisclosureBadge(imageBuffer) {
     try {
         const metadata = await (0, sharp_1.default)(imageBuffer).metadata();
         const width = metadata.width || 1000;
         const height = metadata.height || 1000;
-        // Create SVG badge with "Enhanced for clarity" text
+        // Create SVG badge with "AI enhanced via CaribTap" text
         const svgBadge = Buffer.from(`
       <svg width="${width}" height="30" xmlns="http://www.w3.org/2000/svg">
         <rect width="${width}" height="30" fill="rgba(0,0,0,0.7)"/>
         <text x="10" y="20" font-size="12" fill="white" font-family="Arial">
-          Enhanced for clarity
+          AI enhanced via CaribTap
         </text>
       </svg>
     `);
