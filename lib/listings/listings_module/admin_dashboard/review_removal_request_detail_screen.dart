@@ -1,11 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/listing_review_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/model/review_removal_request_model.dart';
-import 'package:instaflutter/listings/services/review_removal_request_service.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listing_review_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/review_removal_request_model.dart';
+import 'package:caribtap/listings/services/review_removal_request_service.dart';
 
 class ReviewRemovalRequestDetailScreen extends StatefulWidget {
   final ReviewRemovalRequestModel request;

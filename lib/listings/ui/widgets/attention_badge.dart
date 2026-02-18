@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:instaflutter/listings/model/attention_state_model.dart';
+import 'package:caribtap/listings/model/attention_state_model.dart';
 
 // A distinct, vibrant color for notifications.
 const _kAttentionColor = Color(0xFF009688); // Teal

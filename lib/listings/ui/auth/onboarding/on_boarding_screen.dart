@@ -1,11 +1,11 @@
 import 'package:easy_localization/easy_localization.dart' as easy_local;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
-import 'package:instaflutter/listings/ui/auth/onBoarding/on_boarding_cubit.dart';
-import 'package:instaflutter/listings/ui/auth/welcome/welcome_screen.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
+import 'package:caribtap/listings/ui/auth/onBoarding/on_boarding_cubit.dart';
+import 'package:caribtap/listings/ui/auth/welcome/welcome_screen.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 class OnBoardingScreen extends StatefulWidget {

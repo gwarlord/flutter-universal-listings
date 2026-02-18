@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
-import 'package:instaflutter/listings/ui/auth/api/authentication_repository.dart';
+import 'package:caribtap/listings/ui/auth/api/authentication_repository.dart';
 
 part 'code_input_event.dart';
 

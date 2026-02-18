@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:instaflutter/listings/model/suspension_info.dart';
+import 'package:caribtap/listings/model/suspension_info.dart';
 import 'rental_config.dart';
 
 const int listingFreshnessDefaultDays = 90;

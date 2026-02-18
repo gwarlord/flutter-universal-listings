@@ -2,11 +2,11 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:instaflutter/listings/model/catalog_item.dart';
-import 'package:instaflutter/listings/model/order_request.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/utils/subscription_helper.dart';
+import 'package:caribtap/listings/model/catalog_item.dart';
+import 'package:caribtap/listings/model/order_request.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/utils/subscription_helper.dart';
 import 'package:uuid/uuid.dart';
 
 /// Service for managing Mini Store catalog and orders

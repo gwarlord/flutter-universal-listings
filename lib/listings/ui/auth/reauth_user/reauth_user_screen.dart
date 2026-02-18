@@ -1,14 +1,14 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/ui/auth/api/auth_api_manager.dart';
-import 'package:instaflutter/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
-import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/ui/auth/api/auth_api_manager.dart';
+import 'package:caribtap/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
+import 'package:caribtap/core/ui/loading/loading_cubit.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:the_apple_sign_in/the_apple_sign_in.dart' as apple;
-import 'package:instaflutter/constants.dart';
+import 'package:caribtap/constants.dart';
 
 class ReAuthUserScreen extends StatefulWidget {
   final AuthProviders provider;

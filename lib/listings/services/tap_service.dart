@@ -1,9 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/foundation.dart';
-import 'package:instaflutter/listings/constants/tap_constants.dart';
-import 'package:instaflutter/listings/listings_module/api/tap_repository.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/tap_model.dart';
+import 'package:caribtap/listings/constants/tap_constants.dart';
+import 'package:caribtap/listings/listings_module/api/tap_repository.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/tap_model.dart';
 
 /// Service layer for Tap operations with business logic and validation
 class TapService {

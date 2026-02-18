@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:instaflutter/listings/model/booking_model.dart';
-import 'package:instaflutter/listings/listings_module/api/booking_repository.dart';
+import 'package:caribtap/listings/model/booking_model.dart';
+import 'package:caribtap/listings/listings_module/api/booking_repository.dart';
 
 class BookingFirebase extends BookingRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

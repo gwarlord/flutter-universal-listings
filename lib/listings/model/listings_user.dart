@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:instaflutter/core/model/user.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/listings/model/suspension_info.dart';
+import 'package:caribtap/core/model/user.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/model/suspension_info.dart';
 
 class ListingsUser extends User {
   bool isAdmin;

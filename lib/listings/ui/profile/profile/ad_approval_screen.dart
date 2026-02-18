@@ -1,13 +1,13 @@
 
 import 'package:flutter/material.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:provider/provider.dart';
-import 'package:instaflutter/listings/services/deal_ad_admin_service.dart';
-import 'package:instaflutter/listings/services/deal_ad_service.dart';
-import 'package:instaflutter/listings/model/deal_ad_model.dart';
+import 'package:caribtap/listings/services/deal_ad_admin_service.dart';
+import 'package:caribtap/listings/services/deal_ad_service.dart';
+import 'package:caribtap/listings/model/deal_ad_model.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:instaflutter/core/ui/video/adaptive_video_player.dart';
-import 'package:instaflutter/listings/ui/profile/profile/_dialog_video_player.dart';
+import 'package:caribtap/core/ui/video/adaptive_video_player.dart';
+import 'package:caribtap/listings/ui/profile/profile/_dialog_video_player.dart';
 import 'package:video_player/video_player.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'dart:typed_data';

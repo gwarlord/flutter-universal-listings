@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
-import 'package:instaflutter/listings/api/table_mode_repository.dart';
-import 'package:instaflutter/listings/model/table_mode_models.dart';
+import 'package:caribtap/listings/api/table_mode_repository.dart';
+import 'package:caribtap/listings/model/table_mode_models.dart';
 
 class TableModeFirebase implements TableModeRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

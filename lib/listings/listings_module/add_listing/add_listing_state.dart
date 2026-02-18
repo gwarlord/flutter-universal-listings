@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_google_places_hoc081098/google_maps_webservice_places.dart';
-import 'package:instaflutter/listings/model/categories_model.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/categories_model.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
 
 abstract class AddListingState {}
 

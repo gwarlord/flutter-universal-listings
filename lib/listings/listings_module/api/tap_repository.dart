@@ -1,4 +1,4 @@
-import 'package:instaflutter/listings/model/tap_model.dart';
+import 'package:caribtap/listings/model/tap_model.dart';
 
 /// Repository interface for Tap operations
 abstract class TapRepository {

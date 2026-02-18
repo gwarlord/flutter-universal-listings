@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:instaflutter/core/model/chat_feed_model.dart';
-import 'package:instaflutter/core/model/user.dart';
+import 'package:caribtap/core/model/chat_feed_model.dart';
+import 'package:caribtap/core/model/user.dart';
 
 class ChannelDataModel {
   String channelID;

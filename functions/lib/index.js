@@ -77,6 +77,8 @@ __exportStar(require("./tableMode"), exports);
 __exportStar(require("./brand_functions"), exports);
 // Export proof of payment functions
 __exportStar(require("./proof_of_payment_functions"), exports);
+// Export AI photo enhancement functions
+__exportStar(require("./photo_enhancement"), exports);
 const db = admin.firestore();
 const messaging = admin.messaging();
 // Set your SendGrid API key in Functions config: firebase functions:config:set sendgrid.key="YOUR_KEY"

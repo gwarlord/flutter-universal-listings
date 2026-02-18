@@ -1,4 +1,4 @@
-import 'package:instaflutter/core/model/user.dart';
+import 'package:caribtap/core/model/user.dart';
 
 const blockUserAction = 'block';
 const reportUserAction = 'report';

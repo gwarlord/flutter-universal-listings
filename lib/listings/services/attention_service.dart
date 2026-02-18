@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
-import 'package:instaflutter/listings/model/attention_state_model.dart';
+import 'package:caribtap/listings/model/attention_state_model.dart';
 
 class AttentionService {
   final FirebaseFirestore _firestore;

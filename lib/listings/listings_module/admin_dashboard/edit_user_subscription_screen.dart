@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:instaflutter/constants.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:caribtap/constants.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
 
 class EditUserSubscriptionScreen extends StatefulWidget {
   final ListingsUser currentUser;

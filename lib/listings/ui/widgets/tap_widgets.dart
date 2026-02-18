@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:instaflutter/listings/constants/tap_constants.dart';
-import 'package:instaflutter/listings/model/tap_model.dart';
+import 'package:caribtap/listings/constants/tap_constants.dart';
+import 'package:caribtap/listings/model/tap_model.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 
 /// Widget showing tap badge for a listing
 class TapBadgeWidget extends StatelessWidget {

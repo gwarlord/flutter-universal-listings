@@ -1,7 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:instaflutter/listings/model/deal_ad_model.dart';
+import 'package:caribtap/listings/model/deal_ad_model.dart';
 
 /// Service to manage deal notifications and user preferences
 class DealNotificationService {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/listings/model/deal_ad_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/services/deal_analytics_service.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/model/deal_ad_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/services/deal_analytics_service.dart';
 
 /// Screen for deal owners to view analytics and performance metrics
 class DealAnalyticsScreen extends StatefulWidget {

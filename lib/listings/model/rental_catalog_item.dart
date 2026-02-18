@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:instaflutter/listings/model/rental_config.dart';
+import 'package:caribtap/listings/model/rental_config.dart';
 
 /// Rental catalog item - individual rentable items (tools, vehicles, equipment, etc.)
 class RentalCatalogItem {

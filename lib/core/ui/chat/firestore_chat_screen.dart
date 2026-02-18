@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:instaflutter/core/model/channel_data_model.dart';
-import 'package:instaflutter/core/model/user.dart';
-import 'package:instaflutter/core/ui/chat/chat/chat_screen.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:caribtap/core/model/channel_data_model.dart';
+import 'package:caribtap/core/model/user.dart';
+import 'package:caribtap/core/ui/chat/chat/chat_screen.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
 
 class FirestoreChatScreen extends StatefulWidget {
   final ListingsUser user;

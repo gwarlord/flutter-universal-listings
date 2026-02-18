@@ -4,12 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
-import 'package:instaflutter/constants.dart';
-import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/listing_review_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/model/review_removal_request_model.dart';
+import 'package:caribtap/constants.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listing_review_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/review_removal_request_model.dart';
 
 class ReviewRemovalRequestService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

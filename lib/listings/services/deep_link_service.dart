@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:share_plus/share_plus.dart';
 
 /// Service for creating and sharing deep links to listings

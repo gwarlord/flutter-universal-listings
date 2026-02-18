@@ -1,11 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/ui/auth/api/auth_api_manager.dart';
-import 'package:instaflutter/listings/ui/auth/reset_password/reset_password_cubit.dart';
-import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/ui/auth/api/auth_api_manager.dart';
+import 'package:caribtap/listings/ui/auth/reset_password/reset_password_cubit.dart';
+import 'package:caribtap/core/ui/loading/loading_cubit.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});

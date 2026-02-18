@@ -3,18 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:instaflutter/constants.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/model/order_request.dart';
-import 'package:instaflutter/listings/services/store_service.dart';
-import 'package:instaflutter/screens/store/cart_models.dart';
-import 'package:instaflutter/screens/store/order_chat_helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/listings/api/firebase/table_mode_firebase.dart';
-import 'package:instaflutter/listings/model/table_mode_models.dart';
-import 'package:instaflutter/listings/ui/table_mode/qr_scanner_screen.dart';
+import 'package:caribtap/constants.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/order_request.dart';
+import 'package:caribtap/listings/services/store_service.dart';
+import 'package:caribtap/screens/store/cart_models.dart';
+import 'package:caribtap/screens/store/order_chat_helper.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/api/firebase/table_mode_firebase.dart';
+import 'package:caribtap/listings/model/table_mode_models.dart';
+import 'package:caribtap/listings/ui/table_mode/qr_scanner_screen.dart';
 
 /// Cart screen for reviewing and submitting orders
 class CartScreen extends StatefulWidget {

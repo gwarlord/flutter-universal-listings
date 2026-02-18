@@ -3,11 +3,11 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:instaflutter/constants.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/services/revenue_cat_service.dart';
-import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
+import 'package:caribtap/constants.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/services/revenue_cat_service.dart';
+import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 

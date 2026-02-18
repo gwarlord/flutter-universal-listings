@@ -1,11 +1,11 @@
 import 'package:bloc/bloc.dart';
-import 'package:instaflutter/listings/model/categories_model.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/model/home_filter_state.dart';
-import 'package:instaflutter/listings/listings_module/api/listings_repository.dart';
-import 'package:instaflutter/listings/ui/profile/api/profile_repository.dart';
-import 'package:instaflutter/listings/utils/listing_filter_helpers.dart';
+import 'package:caribtap/listings/model/categories_model.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/home_filter_state.dart';
+import 'package:caribtap/listings/listings_module/api/listings_repository.dart';
+import 'package:caribtap/listings/ui/profile/api/profile_repository.dart';
+import 'package:caribtap/listings/utils/listing_filter_helpers.dart';
 
 part 'home_event.dart';
 

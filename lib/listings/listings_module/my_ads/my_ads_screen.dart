@@ -1,11 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
-import 'package:instaflutter/listings/model/deal_ad_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/services/deal_ad_service.dart'; // Assuming this service exists
-import 'package:instaflutter/listings/ui/deals/ad_upload_screen.dart'; // For editing ads
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/listings/model/deal_ad_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/services/deal_ad_service.dart'; // Assuming this service exists
+import 'package:caribtap/listings/ui/deals/ad_upload_screen.dart'; // For editing ads
 
 class MyAdsScreen extends StatefulWidget {
   final ListingsUser currentUser;

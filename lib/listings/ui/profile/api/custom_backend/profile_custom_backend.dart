@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/model/suspension_info.dart';
-import 'package:instaflutter/listings/ui/profile/api/profile_repository.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/suspension_info.dart';
+import 'package:caribtap/listings/ui/profile/api/profile_repository.dart';
 
 class ProfileCustomBackendUtils extends ProfileRepository {
   @override

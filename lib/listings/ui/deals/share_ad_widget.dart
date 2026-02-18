@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
 
 class ShareAdWidget extends StatelessWidget {
   final String adTitle;

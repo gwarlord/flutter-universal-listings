@@ -1,9 +1,9 @@
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
-import 'package:instaflutter/listings/ui/profile/api/firebase/profile_firebase.dart';
-import 'package:instaflutter/listings/ui/profile/api/profile_repository.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
+import 'package:caribtap/listings/ui/profile/api/firebase/profile_firebase.dart';
+import 'package:caribtap/listings/ui/profile/api/profile_repository.dart';
 
 part 'account_details_event.dart';
 

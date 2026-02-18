@@ -12,13 +12,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_native_image_v2/flutter_native_image_v2.dart';
 
 import 'package:http/http.dart' as http;
-import 'package:instaflutter/constants.dart';
-import 'package:instaflutter/core/model/channel_data_model.dart';
-import 'package:instaflutter/core/model/chat_feed_model.dart';
-import 'package:instaflutter/core/model/media_container.dart';
-import 'package:instaflutter/core/model/user.dart';
-import 'package:instaflutter/core/ui/chat/api/chat_repository.dart';
-import 'package:instaflutter/core/utils/helper.dart';
+import 'package:caribtap/constants.dart';
+import 'package:caribtap/core/model/channel_data_model.dart';
+import 'package:caribtap/core/model/chat_feed_model.dart';
+import 'package:caribtap/core/model/media_container.dart';
+import 'package:caribtap/core/model/user.dart';
+import 'package:caribtap/core/ui/chat/api/chat_repository.dart';
+import 'package:caribtap/core/utils/helper.dart';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';

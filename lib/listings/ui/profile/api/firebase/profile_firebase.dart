@@ -6,11 +6,11 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_native_image_v2/flutter_native_image_v2.dart';
 
-import 'package:instaflutter/constants.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/model/suspension_info.dart';
-import 'package:instaflutter/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
-import 'package:instaflutter/listings/ui/profile/api/profile_repository.dart';
+import 'package:caribtap/constants.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/suspension_info.dart';
+import 'package:caribtap/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
+import 'package:caribtap/listings/ui/profile/api/profile_repository.dart';
 import 'package:path/path.dart' as path;
 
 class ProfileFirebaseUtils extends ProfileRepository {

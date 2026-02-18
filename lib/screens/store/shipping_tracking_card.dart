@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
-import 'package:instaflutter/listings/model/order_request.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/services/revenue_cat_service.dart';
-import 'package:instaflutter/listings/services/store_service.dart';
-import 'package:instaflutter/listings/ui/subscription/paywall_screen.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/screens/store/barcode_scanner_field.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/listings/model/order_request.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/services/revenue_cat_service.dart';
+import 'package:caribtap/listings/services/store_service.dart';
+import 'package:caribtap/listings/ui/subscription/paywall_screen.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/screens/store/barcode_scanner_field.dart';
 
 /// Widget for lister to enter/edit shipping tracking information
 /// 

@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:instaflutter/core/model/media_container.dart';
-import 'package:instaflutter/core/model/user.dart';
+import 'package:caribtap/core/model/media_container.dart';
+import 'package:caribtap/core/model/user.dart';
 
 class ChatFeedModel {
   ChatFeedContent chatFeedContent;

@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:instaflutter/core/model/user.dart';
-import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/listings/api/firebase/table_mode_firebase.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/table_mode_models.dart';
+import 'package:caribtap/core/model/user.dart';
+import 'package:caribtap/core/ui/loading/loading_cubit.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/api/firebase/table_mode_firebase.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/table_mode_models.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 class CustomerTableModeScreen extends StatefulWidget {

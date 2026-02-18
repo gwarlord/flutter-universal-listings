@@ -1,14 +1,14 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:instaflutter/constants.dart';
-import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/model/rental_catalog_item.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/services/rental_catalog_service.dart';
-import 'package:instaflutter/listings/utils/subscription_helper.dart';
-import 'package:instaflutter/screens/rentals/rental_item_editor_screen.dart';
+import 'package:caribtap/constants.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/model/rental_catalog_item.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/services/rental_catalog_service.dart';
+import 'package:caribtap/listings/utils/subscription_helper.dart';
+import 'package:caribtap/screens/rentals/rental_item_editor_screen.dart';
 
 /// Rental Catalog Manager Screen - Premium Only
 /// Allows listing owners to manage their rental inventory

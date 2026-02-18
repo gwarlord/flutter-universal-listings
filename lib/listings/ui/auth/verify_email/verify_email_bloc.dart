@@ -1,7 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
+import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:meta/meta.dart';
 
 part 'verify_email_event.dart';

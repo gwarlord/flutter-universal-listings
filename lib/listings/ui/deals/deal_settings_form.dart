@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:intl/intl.dart';
 
 /// Form for editing redemption and expiry settings for deals

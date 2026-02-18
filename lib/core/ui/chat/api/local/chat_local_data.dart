@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:instaflutter/core/model/channel_data_model.dart';
-import 'package:instaflutter/core/model/chat_feed_model.dart';
-import 'package:instaflutter/core/model/media_container.dart';
-import 'package:instaflutter/core/model/user.dart';
-import 'package:instaflutter/core/ui/chat/api/chat_repository.dart';
+import 'package:caribtap/core/model/channel_data_model.dart';
+import 'package:caribtap/core/model/chat_feed_model.dart';
+import 'package:caribtap/core/model/media_container.dart';
+import 'package:caribtap/core/model/user.dart';
+import 'package:caribtap/core/ui/chat/api/chat_repository.dart';
 
 class ChatLocalData extends ChatRepository {
   @override

@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:instaflutter/listings/model/rental_config.dart';
-import 'package:instaflutter/listings/model/rental_booking.dart';
-import 'package:instaflutter/listings/model/rental_catalog_item.dart';
-import 'package:instaflutter/screens/rentals/rental_item_models.dart';
+import 'package:caribtap/listings/model/rental_config.dart';
+import 'package:caribtap/listings/model/rental_booking.dart';
+import 'package:caribtap/listings/model/rental_catalog_item.dart';
+import 'package:caribtap/screens/rentals/rental_item_models.dart';
 
 /// Service for managing rental browsing, inventory, and booking operations
 class RentalBrowseService {

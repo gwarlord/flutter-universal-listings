@@ -1,4 +1,4 @@
-import 'package:instaflutter/listings/model/listing_review_model.dart';
+import 'package:caribtap/listings/model/listing_review_model.dart';
 
 /// Represents a page of reviews with pagination metadata
 class PagedReviewsResult {

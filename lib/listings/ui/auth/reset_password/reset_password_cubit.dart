@@ -1,7 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:instaflutter/listings/ui/auth/api/authentication_repository.dart';
+import 'package:caribtap/listings/ui/auth/api/authentication_repository.dart';
 
 part 'reset_password_state.dart';
 

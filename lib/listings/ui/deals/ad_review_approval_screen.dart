@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:instaflutter/listings/services/deal_ad_service.dart';
-import 'package:instaflutter/listings/model/deal_ad_model.dart';
+import 'package:caribtap/listings/services/deal_ad_service.dart';
+import 'package:caribtap/listings/model/deal_ad_model.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
-import 'package:instaflutter/listings/model/listings_user.dart'; 
+import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
+import 'package:caribtap/listings/model/listings_user.dart'; 
 import 'package:intl/intl.dart';
-import 'package:instaflutter/listings/utils/caribbean_countries.dart';
-import 'package:instaflutter/core/utils/helper.dart'; // Import helper for isDarkMode
+import 'package:caribtap/listings/utils/caribbean_countries.dart';
+import 'package:caribtap/core/utils/helper.dart'; // Import helper for isDarkMode
 
 class AdReviewApprovalScreen extends StatelessWidget {
   const AdReviewApprovalScreen({Key? key}) : super(key: key);

@@ -1,5 +1,5 @@
-name: instaflutter
-description: Instaflutter Project
+name: caribtap
+description: CaribTap - Universal Listings Marketplace
 publish_to: 'none'
 version: 1.0.0+1
 environment:
@@ -20,6 +20,7 @@ dependencies:
   cloud_firestore: ^6.1.2
   firebase_storage: ^13.0.0
   firebase_messaging: ^16.0.0
+  firebase_analytics: ^12.1.2
   flutter_local_notifications: ^18.0.1
   cloud_functions: ^6.0.0
   easy_localization: ^3.0.8
@@ -90,7 +91,7 @@ dependencies:
   #rxdart: 0.28.0
  # rxdart_ext: 0.3.0
 
-ev_dependencies:
+dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
 flutter_native_splash:
@@ -104,9 +105,9 @@ flutter_native_splash:
 flutter_icons:
   android: true
   ios: true
-  image_path: 'assets/images/instaflutter.png'
+  image_path: 'assets/app icon/caribtap_icon.png'
   adaptive_icon_background: '#ffffff'
-  adaptive_icon_foreground: 'assets/images/instaflutter.png'
+  adaptive_icon_foreground: 'assets/app icon/caribtap_icon.png'
   remove_alpha_ios: true
 
 flutter:

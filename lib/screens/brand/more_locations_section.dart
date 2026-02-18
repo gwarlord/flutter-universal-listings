@@ -1,16 +1,16 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:instaflutter/constants.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/model/brand_model.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/services/brand_service.dart';
-import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
-import 'package:instaflutter/screens/brand/brand_locations_screen.dart';
-import 'package:instaflutter/listings/listings_module/listing_details/listing_details_screen.dart';
-import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
+import 'package:caribtap/constants.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/model/brand_model.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/services/brand_service.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/screens/brand/brand_locations_screen.dart';
+import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
+import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 
 /// Widget showing other locations of a brand
 class MoreLocationsSection extends StatefulWidget {

@@ -1,15 +1,15 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
-import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
-import 'package:instaflutter/listings/listings_module/favorite_listings/favorite_listings_bloc.dart';
-import 'package:instaflutter/listings/listings_module/listing_details/listing_details_screen.dart';
-import 'package:instaflutter/listings/ui/profile/api/profile_api_manager.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
+import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
+import 'package:caribtap/listings/listings_module/favorite_listings/favorite_listings_bloc.dart';
+import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
+import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
 class FavoriteListingsWrapperWidget extends StatelessWidget {

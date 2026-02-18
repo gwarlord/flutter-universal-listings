@@ -2,12 +2,12 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:instaflutter/listings/model/categories_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
-import 'package:instaflutter/listings/listings_module/categories/categories_bloc.dart';
-import 'package:instaflutter/listings/listings_module/category_listings/category_listings_screen.dart';
+import 'package:caribtap/listings/model/categories_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
+import 'package:caribtap/listings/listings_module/categories/categories_bloc.dart';
+import 'package:caribtap/listings/listings_module/category_listings/category_listings_screen.dart';
 
 class CategoriesWrapperWidget extends StatelessWidget {
   final ListingsUser currentUser;

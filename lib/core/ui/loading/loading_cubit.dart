@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:instaflutter/core/utils/helper.dart';
+import 'package:caribtap/core/utils/helper.dart';
 
 part 'loading_state.dart';
 

@@ -4,11 +4,11 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
-import 'package:instaflutter/core/model/channel_data_model.dart';
-import 'package:instaflutter/core/model/chat_feed_model.dart';
-import 'package:instaflutter/core/model/user.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/core/ui/chat/api/chat_repository.dart';
+import 'package:caribtap/core/model/channel_data_model.dart';
+import 'package:caribtap/core/model/chat_feed_model.dart';
+import 'package:caribtap/core/model/user.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/core/ui/chat/api/chat_repository.dart';
 
 part 'conversation_event.dart';
 

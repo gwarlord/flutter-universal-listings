@@ -1,5 +1,5 @@
 import 'dart:math' as math;
-import 'package:instaflutter/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:intl/intl.dart';
 
 /// Helper utilities for filtering listings

@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/model/suspension_info.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/suspension_info.dart';
 
 abstract class ProfileRepository {
   /// Updates the [currentUser] object in the database.

@@ -1,4 +1,4 @@
-import 'package:instaflutter/listings/model/collaboration_model.dart';
+import 'package:caribtap/listings/model/collaboration_model.dart';
 
 abstract class CollaborationRepository {
   /// Add a collaborator to a listing

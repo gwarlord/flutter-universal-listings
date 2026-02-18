@@ -1,7 +1,7 @@
-import 'package:instaflutter/core/model/channel_data_model.dart';
-import 'package:instaflutter/core/model/user.dart';
-import 'package:instaflutter/listings/listings_module/api/collaboration_api_manager.dart';
-import 'package:instaflutter/listings/model/collaboration_model.dart';
+import 'package:caribtap/core/model/channel_data_model.dart';
+import 'package:caribtap/core/model/user.dart';
+import 'package:caribtap/listings/listings_module/api/collaboration_api_manager.dart';
+import 'package:caribtap/listings/model/collaboration_model.dart';
 
 /// Helper class to integrate collaboration chats with the existing chat system
 class ChatScopeIntegration {

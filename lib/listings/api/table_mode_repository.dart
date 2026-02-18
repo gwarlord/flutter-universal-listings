@@ -1,4 +1,4 @@
-import 'package:instaflutter/listings/model/table_mode_models.dart';
+import 'package:caribtap/listings/model/table_mode_models.dart';
 
 /// Abstract repository for Table Mode operations
 abstract class TableModeRepository {

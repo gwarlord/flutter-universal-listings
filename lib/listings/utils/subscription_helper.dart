@@ -1,4 +1,4 @@
-import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
 
 /// Subscription tier helper utilities for CaribTap
 /// 

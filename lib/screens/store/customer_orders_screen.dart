@@ -4,17 +4,17 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:instaflutter/constants.dart';
-import 'package:instaflutter/core/model/user.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/model/order_request.dart';
-import 'package:instaflutter/listings/model/table_mode_models.dart';
-import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
-import 'package:instaflutter/listings/services/store_service.dart';
-import 'package:instaflutter/screens/store/order_detail_screen.dart';
-import 'package:instaflutter/screens/store/shipping_tracking_display.dart';
+import 'package:caribtap/constants.dart';
+import 'package:caribtap/core/model/user.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/order_request.dart';
+import 'package:caribtap/listings/model/table_mode_models.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/listings/services/store_service.dart';
+import 'package:caribtap/screens/store/order_detail_screen.dart';
+import 'package:caribtap/screens/store/shipping_tracking_display.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 /// Screen for customers to view their order history

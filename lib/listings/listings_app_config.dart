@@ -1,4 +1,4 @@
-import 'package:instaflutter/listings/main.dart';
+import 'package:caribtap/listings/main.dart';
 
 const finishedOnBoardingConst = 'finishedOnBoarding_listings';
 

@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
 import 'package:the_apple_sign_in/the_apple_sign_in.dart' as apple;
 
 abstract class AuthenticationRepository {

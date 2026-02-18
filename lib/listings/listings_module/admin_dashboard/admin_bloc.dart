@@ -1,11 +1,11 @@
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/model/reported_listing_model.dart';
-import 'package:instaflutter/listings/model/suspension_info.dart';
-import 'package:instaflutter/listings/listings_module/api/listings_repository.dart';
-import 'package:instaflutter/listings/ui/profile/api/profile_repository.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/reported_listing_model.dart';
+import 'package:caribtap/listings/model/suspension_info.dart';
+import 'package:caribtap/listings/listings_module/api/listings_repository.dart';
+import 'package:caribtap/listings/ui/profile/api/profile_repository.dart';
 
 part 'admin_event.dart';
 

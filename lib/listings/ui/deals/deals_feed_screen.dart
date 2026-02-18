@@ -1,18 +1,18 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:instaflutter/listings/services/deal_ad_service.dart';
-import 'package:instaflutter/listings/model/deal_ad_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/core/ui/video/adaptive_video_player.dart';
-import 'package:instaflutter/core/utils/helper.dart';
+import 'package:caribtap/listings/services/deal_ad_service.dart';
+import 'package:caribtap/listings/model/deal_ad_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/core/ui/video/adaptive_video_player.dart';
+import 'package:caribtap/core/utils/helper.dart';
 import 'package:video_player/video_player.dart';
 import 'package:intl/intl.dart';
 import 'share_ad_widget.dart';
 import 'ad_upload_screen.dart';
 import 'deal_detail_screen.dart';
-import 'package:instaflutter/listings/utils/caribbean_countries.dart';
+import 'package:caribtap/listings/utils/caribbean_countries.dart';
 
 // Helper function to convert country code to flag emoji
 String _countryCodeToFlag(String countryCode) {

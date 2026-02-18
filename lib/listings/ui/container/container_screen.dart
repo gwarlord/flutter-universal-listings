@@ -2,44 +2,44 @@ import 'dart:io';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:instaflutter/core/ui/chat/conversation/conversations_screen.dart';
+import 'package:caribtap/core/ui/chat/conversation/conversations_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/ui/container/container_bloc.dart';
-import 'package:instaflutter/listings/listings_module/add_listing/add_listing_screen.dart';
-import 'package:instaflutter/listings/listings_module/categories/categories_screen.dart';
-import 'package:instaflutter/listings/listings_module/home/home_screen.dart';
-import 'package:instaflutter/listings/listings_module/map_view/map_view_screen.dart';
-import 'package:instaflutter/listings/listings_module/search/search_screen.dart';
-import 'package:instaflutter/listings/listings_module/my_listings/my_listings_screen.dart';
-import 'package:instaflutter/listings/listings_module/booking_services/booking_services_screen.dart';
-import 'package:instaflutter/listings/listings_module/booking/my_bookings_screen.dart';
-import 'package:instaflutter/listings/listings_module/booking/booking_management_screen.dart';
-import 'package:instaflutter/listings/ui/rentals/rental_orders_hub_screen.dart';
-import 'package:instaflutter/listings/ui/subscription/paywall_screen.dart';
-import 'package:instaflutter/listings/ui/subscription/customer_center_screen.dart';
-import 'package:instaflutter/listings/utils/subscription_helper.dart';
-import 'package:instaflutter/screens/store/orders_management_screen.dart';
-import 'package:instaflutter/screens/store/customer_orders_screen.dart';
-import 'package:instaflutter/listings/listings_module/analytics/analytics_screen.dart';
-import 'package:instaflutter/listings/listings_module/analytics/advanced_analytics_screen.dart';
-import 'package:instaflutter/listings/listings_module/chat_settings/chat_settings_screen.dart';
-import 'package:instaflutter/listings/ui/profile/profile/profile_screen.dart';
-import 'package:instaflutter/listings/listings_module/listing_details/listing_details_screen.dart';
-import 'package:instaflutter/listings/services/deep_link_service.dart';
-import 'package:instaflutter/screens/brand/my_brands_screen.dart';
-import 'package:instaflutter/main.dart' as main_entry;
-import 'package:instaflutter/listings/ui/widgets/attention_badge.dart'; // Import the new widget
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/ui/container/container_bloc.dart';
+import 'package:caribtap/listings/listings_module/add_listing/add_listing_screen.dart';
+import 'package:caribtap/listings/listings_module/categories/categories_screen.dart';
+import 'package:caribtap/listings/listings_module/home/home_screen.dart';
+import 'package:caribtap/listings/listings_module/map_view/map_view_screen.dart';
+import 'package:caribtap/listings/listings_module/search/search_screen.dart';
+import 'package:caribtap/listings/listings_module/my_listings/my_listings_screen.dart';
+import 'package:caribtap/listings/listings_module/booking_services/booking_services_screen.dart';
+import 'package:caribtap/listings/listings_module/booking/my_bookings_screen.dart';
+import 'package:caribtap/listings/listings_module/booking/booking_management_screen.dart';
+import 'package:caribtap/listings/ui/rentals/rental_orders_hub_screen.dart';
+import 'package:caribtap/listings/ui/subscription/paywall_screen.dart';
+import 'package:caribtap/listings/ui/subscription/customer_center_screen.dart';
+import 'package:caribtap/listings/utils/subscription_helper.dart';
+import 'package:caribtap/screens/store/orders_management_screen.dart';
+import 'package:caribtap/screens/store/customer_orders_screen.dart';
+import 'package:caribtap/listings/listings_module/analytics/analytics_screen.dart';
+import 'package:caribtap/listings/listings_module/analytics/advanced_analytics_screen.dart';
+import 'package:caribtap/listings/listings_module/chat_settings/chat_settings_screen.dart';
+import 'package:caribtap/listings/ui/profile/profile/profile_screen.dart';
+import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
+import 'package:caribtap/listings/services/deep_link_service.dart';
+import 'package:caribtap/screens/brand/my_brands_screen.dart';
+import 'package:caribtap/main.dart' as main_entry;
+import 'package:caribtap/listings/ui/widgets/attention_badge.dart'; // Import the new widget
 import '../deals/deals_promotion_screen.dart';
 import '../deals/ad_review_approval_screen.dart';
-import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart' as listings_api; // Corrected import with alias
+import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart' as listings_api; // Corrected import with alias
 import 'package:provider/provider.dart';
-import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
-import 'package:instaflutter/listings/services/attention_service.dart';
-import 'package:instaflutter/listings/ui/attention/attention_cubit.dart';
-import 'package:instaflutter/listings/model/attention_state_model.dart';
+import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
+import 'package:caribtap/listings/services/attention_service.dart';
+import 'package:caribtap/listings/ui/attention/attention_cubit.dart';
+import 'package:caribtap/listings/model/attention_state_model.dart';
 
 enum DrawerSelection { home, conversations, categories, search, orders, rentalOrders, profile }
 

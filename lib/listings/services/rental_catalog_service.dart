@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:instaflutter/listings/model/rental_catalog_item.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/utils/subscription_helper.dart';
+import 'package:caribtap/listings/model/rental_catalog_item.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/utils/subscription_helper.dart';
 
 /// Service for managing rental catalog items
 class RentalCatalogService {

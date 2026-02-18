@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
-import 'package:instaflutter/listings/ui/container/container_screen.dart';
+import 'package:caribtap/listings/ui/container/container_screen.dart';
 
 part 'container_event.dart';
 

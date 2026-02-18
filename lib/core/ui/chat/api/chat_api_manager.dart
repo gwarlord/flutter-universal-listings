@@ -1,8 +1,8 @@
 // ignore_for_file: unused_import
 
-import 'package:instaflutter/core/ui/chat/api/custom_backend/chat_custom_backend.dart';
-import 'package:instaflutter/core/ui/chat/api/firebase/chat_firebase.dart';
-import 'package:instaflutter/core/ui/chat/api/local/chat_local_data.dart';
+import 'package:caribtap/core/ui/chat/api/custom_backend/chat_custom_backend.dart';
+import 'package:caribtap/core/ui/chat/api/firebase/chat_firebase.dart';
+import 'package:caribtap/core/ui/chat/api/local/chat_local_data.dart';
 
 /// Uncomment these if you want to remove firebase and add local data:
 // var chatApiManager = ChatLocalData();

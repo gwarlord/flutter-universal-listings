@@ -1,4 +1,4 @@
-import 'package:instaflutter/core/model/chat_feed_model.dart';
+import 'package:caribtap/core/model/chat_feed_model.dart';
 
 class ConversationsDataFactory {
   List<ChatFeedModel> liveConversations = [];

@@ -3,11 +3,11 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/services/menu_service.dart';
-import 'package:instaflutter/models/menu_models.dart';
-import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
-import 'package:instaflutter/core/utils/helper.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/services/menu_service.dart';
+import 'package:caribtap/models/menu_models.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/core/utils/helper.dart';
 
 class MenuItemEditorScreen extends StatefulWidget {
   final ListingModel listing;

@@ -3,37 +3,39 @@ import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:instaflutter/listings/utils/caribbean_countries.dart';
-import 'package:instaflutter/listings/utils/country_search_dialog.dart';
+import 'package:caribtap/listings/utils/caribbean_countries.dart';
+import 'package:caribtap/listings/utils/country_search_dialog.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_google_places_hoc081098/flutter_google_places_hoc081098.dart';
 import 'package:flutter_google_places_hoc081098/google_maps_webservice_places.dart';
-import 'package:instaflutter/constants.dart';
-import 'package:instaflutter/core/ui/full_screen_image_viewer/full_screen_image_viewer.dart';
-import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/listings/listings_module/add_listing/add_listing_bloc.dart';
-import 'package:instaflutter/listings/listings_module/add_listing/add_listing_event.dart';
-import 'package:instaflutter/listings/listings_module/add_listing/add_listing_state.dart';
-import 'package:instaflutter/listings/listings_module/add_listing/description_editor.dart';
-import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
-import 'package:instaflutter/listings/services/gemini_ai_service.dart';
-import 'package:instaflutter/listings/listings_module/filters/filters_screen.dart';
-import 'package:instaflutter/widgets/menu/menu_edit_section_widget.dart';
-import 'package:instaflutter/listings/model/categories_model.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/utils/opening_hours_editor.dart';
-import 'package:instaflutter/listings/utils/subscription_helper.dart';
-import 'package:instaflutter/screens/store/catalog_manager_screen.dart';
+import 'package:caribtap/constants.dart';
+import 'package:caribtap/core/ui/full_screen_image_viewer/full_screen_image_viewer.dart';
+import 'package:caribtap/core/ui/loading/loading_cubit.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/listings_module/add_listing/add_listing_bloc.dart';
+import 'package:caribtap/listings/listings_module/add_listing/add_listing_event.dart';
+import 'package:caribtap/listings/listings_module/add_listing/add_listing_state.dart';
+import 'package:caribtap/listings/listings_module/add_listing/description_editor.dart';
+import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
+import 'package:caribtap/listings/services/gemini_ai_service.dart';
+import 'package:caribtap/listings/listings_module/filters/filters_screen.dart';
+import 'package:caribtap/widgets/menu/menu_edit_section_widget.dart';
+import 'package:caribtap/listings/model/categories_model.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/utils/opening_hours_editor.dart';
+import 'package:caribtap/listings/utils/subscription_helper.dart';
+import 'package:caribtap/screens/store/catalog_manager_screen.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
-import 'package:instaflutter/listings/model/rental_config.dart';
-import 'package:instaflutter/listings/ui/rentals/rental_bookings_screen.dart';
-import 'package:instaflutter/screens/rentals/rental_catalog_manager_screen.dart';
+import 'package:caribtap/listings/model/rental_config.dart';
+import 'package:caribtap/listings/ui/rentals/rental_bookings_screen.dart';
+import 'package:caribtap/screens/rentals/rental_catalog_manager_screen.dart';
+import 'package:caribtap/listings/ui/photo_enhancement/photo_enhancement.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AddListingWrappingWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -42,12 +44,33 @@ class AddListingWrappingWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => AddListingBloc(
-        currentUser: currentUser,
-        listingsRepository: listingApiManager,
-      ),
-      child: AddListingScreen(currentUser: currentUser),
+    return FutureBuilder<SharedPreferences>(
+      future: SharedPreferences.getInstance(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final prefs = snapshot.data!;
+        return BlocProvider(
+          create: (context) => AddListingBloc(
+            currentUser: currentUser,
+            listingsRepository: listingApiManager,
+          ),
+          child: BlocProvider(
+            create: (context) => PhotoEnhancementCubit(
+              enhancementService: PhotoEnhancementService(),
+              quotaManager: QuotaManager(),
+              userQuotaManager: UserQuotaManager(),
+              offlineQueue: OfflineQueueManager(prefs: prefs),
+              analytics: EnhancementAnalytics(),
+            ),
+            child: AddListingScreen(currentUser: currentUser),
+          ),
+        );
+      },
     );
   }
 }
@@ -64,15 +87,36 @@ class EditListingWrappingWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => AddListingBloc(
-        currentUser: currentUser,
-        listingsRepository: listingApiManager,
-      ),
-      child: AddListingScreen(
-        currentUser: currentUser,
-        listingToEdit: listingToEdit,
-      ),
+    return FutureBuilder<SharedPreferences>(
+      future: SharedPreferences.getInstance(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final prefs = snapshot.data!;
+        return BlocProvider(
+          create: (context) => AddListingBloc(
+            currentUser: currentUser,
+            listingsRepository: listingApiManager,
+          ),
+          child: BlocProvider(
+            create: (context) => PhotoEnhancementCubit(
+              enhancementService: PhotoEnhancementService(),
+              quotaManager: QuotaManager(),
+              userQuotaManager: UserQuotaManager(),
+              offlineQueue: OfflineQueueManager(prefs: prefs),
+              analytics: EnhancementAnalytics(),
+            ),
+            child: AddListingScreen(
+              currentUser: currentUser,
+              listingToEdit: listingToEdit,
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -1003,6 +1047,83 @@ class _AddListingScreenState extends State<AddListingScreen> {
     if (pickedFiles.isNotEmpty) {
       final files = pickedFiles.map((xFile) => File(xFile.path)).toList();
       context.read<AddListingBloc>().add(AddImagesToListingEvent(images: files));
+    }
+  }
+
+  void _showPhotoEnhancementModal(BuildContext context) {
+    // Validate listing is saved before enhancement
+    if (widget.listingToEdit?.id == null || widget.listingToEdit!.id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please save the listing first before enhancing photos'.tr()),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (builderContext) => BlocProvider.value(
+        value: context.read<PhotoEnhancementCubit>(),
+        child: PhotoEnhancementBottomSheet(
+          listingId: widget.listingToEdit!.id,
+          category: 'product',
+          subscriptionTier: currentUser.subscriptionTier ?? 'free',
+          userId: currentUser.userID,
+          onVariantSaved: (variantId) => _onEnhancedPhotoSaved(variantId),
+        ),
+      ),
+    );
+  }
+
+  /// Handle saved enhanced photo - add it to listing's photos
+  Future<void> _onEnhancedPhotoSaved(String variantId) async {
+    try {
+      if (widget.listingToEdit?.id == null) return;
+
+      // Fetch the variant to get the enhanced image URL
+      final variantDoc = await FirebaseFirestore.instance
+          .collection('listings')
+          .doc(widget.listingToEdit!.id)
+          .collection('image_variants')
+          .doc(variantId)
+          .get();
+
+      if (!variantDoc.exists) return;
+
+      final variantData = variantDoc.data();
+      final enhancedImageUrl = variantData?['variantUrl'] as String?;
+
+      if (enhancedImageUrl == null || enhancedImageUrl.isEmpty) return;
+
+      // Add the enhanced photo URL to the listing's photos array
+      await FirebaseFirestore.instance
+          .collection('listings')
+          .doc(widget.listingToEdit!.id)
+          .update({
+        'photos': FieldValue.arrayUnion([enhancedImageUrl]),
+      });
+
+      // Update local state to refresh the photo grid
+      if (mounted) {
+        setState(() {
+          _existingPhotoUrls.add(enhancedImageUrl);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error adding enhanced photo to listing: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Enhanced photo saved, but failed to add to carousel'.tr()),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
     }
   }
 
@@ -2051,10 +2172,68 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 buildWhen: (old, current) => old != current && current is ListingImagesUpdatedState,
                 builder: (context, state) {
                   if (state is ListingImagesUpdatedState) _newImages = state.images;
-                  return _buildPhotoGrid(isDarkMode(context));
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildPhotoGrid(isDarkMode(context)),
+                      const SizedBox(height: 12),
+                      EnhanceButtonWidget(
+                        onPressed: () => _showPhotoEnhancementModal(context),
+                        enabled: isEdit,
+                        label: 'Enhance Photos'.tr(),
+                        width: double.infinity,
+                      ),
+                      if (!isEdit)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            'Save listing to enable enhancements'.tr(),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDarkMode(context) ? Colors.grey.shade400 : Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      if ((_existingPhotoUrls.isNotEmpty || _newImages.isNotEmpty) && currentUser.subscriptionTier?.toLowerCase().contains('professional') == true)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: ElevatedButton.icon(
+                            onPressed: () => _showPhotoEnhancementModal(context),
+                            icon: const Icon(Icons.auto_fix_high),
+                            label: const Text('AI Enhance Photos'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(colorPrimary),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ),
+                      // Live quota display
+                      if (isEdit && currentUser.userID.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: FutureBuilder<UserEnhancementQuota?>(
+                            future: context.read<PhotoEnhancementCubit>().fetchUserQuota(currentUser.userID),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasData && snapshot.data != null) {
+                                return UsageCounterWidget(
+                                  quota: snapshot.data!,
+                                  compact: true,
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                        ),
+                    ],
+                  );
                 },
               ),
 
+              const SizedBox(height: 16),
               _buildSectionHeader('Videos (max 3)'.tr()),
               BlocBuilder<AddListingBloc, AddListingState>(
                 buildWhen: (old, current) => old != current && current is ListingVideosUpdatedState,
@@ -2567,16 +2746,17 @@ class _ListingImageWidgetState extends State<ListingImageWidget> {
       );
 }
 
-class ListingVideoWidget extends StatefulWidget {
+// Video widget for displaying and managing listing videos
+class _ListingVideoWidget extends StatefulWidget {
   final File? videoFile;
   final bool isAddButton;
-  const ListingVideoWidget({super.key, required this.videoFile, required this.isAddButton});
+  const _ListingVideoWidget({super.key, required this.videoFile, required this.isAddButton});
 
   @override
-  State<ListingVideoWidget> createState() => _ListingVideoWidgetState();
+  State<_ListingVideoWidget> createState() => _ListingVideoWidgetState();
 }
 
-class _ListingVideoWidgetState extends State<ListingVideoWidget> {
+class _ListingVideoWidgetState extends State<_ListingVideoWidget> {
   Uint8List? _thumbnailData;
 
   @override
@@ -2588,7 +2768,7 @@ class _ListingVideoWidgetState extends State<ListingVideoWidget> {
   }
 
   @override
-  void didUpdateWidget(ListingVideoWidget oldWidget) {
+  void didUpdateWidget(_ListingVideoWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.videoFile != oldWidget.videoFile && widget.videoFile != null) {
       _generateThumbnail();

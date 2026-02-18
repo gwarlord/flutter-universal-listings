@@ -1,5 +1,5 @@
-import 'package:instaflutter/core/model/user.dart';
-import 'package:instaflutter/core/utils/user_report/api/user_report_repository.dart';
+import 'package:caribtap/core/model/user.dart';
+import 'package:caribtap/core/utils/user_report/api/user_report_repository.dart';
 
 class UserReportingCustomBackend extends UserReportRepository {
   @override

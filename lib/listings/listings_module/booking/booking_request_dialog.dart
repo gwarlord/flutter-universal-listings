@@ -1,17 +1,17 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:instaflutter/constants.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/listings/listings_module/api/booking_api_manager.dart';
-import 'package:instaflutter/listings/listings_module/booking/booking_bloc.dart';
-import 'package:instaflutter/listings/listings_module/booking/booking_event.dart';
-import 'package:instaflutter/listings/listings_module/booking/booking_state.dart';
-import 'package:instaflutter/listings/listings_module/booking/widgets/date_range_picker.dart';
-import 'package:instaflutter/listings/model/booking_model.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:caribtap/constants.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/listings_module/api/booking_api_manager.dart';
+import 'package:caribtap/listings/listings_module/booking/booking_bloc.dart';
+import 'package:caribtap/listings/listings_module/booking/booking_event.dart';
+import 'package:caribtap/listings/listings_module/booking/booking_state.dart';
+import 'package:caribtap/listings/listings_module/booking/widgets/date_range_picker.dart';
+import 'package:caribtap/listings/model/booking_model.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
 
 class BookingRequestDialog extends StatefulWidget {
   final ListingModel listing;

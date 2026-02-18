@@ -80,6 +80,35 @@ service cloud.firestore {
       }
     }
     
+    // Enhancement Quotas (AI Photo Enhancement)
+    match /enhancement_quotas/{listingId} {
+      // Allow read if:
+      // 1. User is listing author
+      // 2. User is an active collaborator
+      // 3. Admin
+      allow read: if isSignedIn() && (
+        request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID ||
+        (exists(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)).data.isActive == true) ||
+        isAdmin()
+      );
+
+      // Allow create/update by Cloud Functions only
+      // (Cloud Functions enforces subscription tier, quota limits, etc.)
+      allow create, update: if request.auth.token.serviceAccount == true || isAdmin();
+      allow delete: if false; // Never delete quotas (audit trail)
+    }
+
+    // User Enhancement Quotas (Per-User Monthly Quotas)
+    match /user_enhancement_quotas/{userId} {
+      // Allow users to read and update their own quota document
+      allow read, create, update: if isSignedIn() && request.auth.uid == userId;
+      // Allow admins full access
+      allow read, write: if isAdmin();
+      // Never delete quota records (audit trail)
+      allow delete: if false;
+    }
+    
     // Users collection
     match /users/{userId} {
       allow read: if isSignedIn();
@@ -279,6 +308,35 @@ service cloud.firestore {
 
         // NEVER allow client-side writes (Cloud Functions only)
         allow create, update, delete: if false;
+      }
+
+      // Image Variants (AI Photo Enhancement)
+      match /image_variants/{variantId} {
+        // Allow read/list if:
+        // 1. User is the listing author (can view all variants)
+        // 2. User is an active collaborator
+        // 3. Admin
+        allow read, list: if isSignedIn() && (
+          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID ||
+          (exists(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)) &&
+           get(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)).data.isActive == true) ||
+          isAdmin()
+        );
+
+        // Allow create if listing author (Cloud Functions will validate subscription tier & quota)
+        allow create: if isSignedIn() && 
+          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID;
+
+        // Allow update if listing author or active collaborator (for publishing/rating variants)
+        allow update: if isSignedIn() && (
+          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID ||
+          (exists(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)) &&
+           get(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)).data.isActive == true)
+        );
+
+        // Allow delete if listing author only (can't delete other's variants)
+        allow delete: if isSignedIn() && 
+          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID;
       }
     }
     

@@ -3,10 +3,10 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:instaflutter/listings/model/proof_of_payment_model.dart';
-import 'package:instaflutter/listings/services/proof_of_payment_service.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/constants.dart';
+import 'package:caribtap/listings/model/proof_of_payment_model.dart';
+import 'package:caribtap/listings/services/proof_of_payment_service.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/constants.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProofOfPaymentUploadWidget extends StatefulWidget {

@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:instaflutter/core/model/channel_data_model.dart';
-import 'package:instaflutter/core/model/chat_feed_model.dart';
-import 'package:instaflutter/core/model/media_container.dart';
-import 'package:instaflutter/core/model/user.dart';
+import 'package:caribtap/core/model/channel_data_model.dart';
+import 'package:caribtap/core/model/chat_feed_model.dart';
+import 'package:caribtap/core/model/media_container.dart';
+import 'package:caribtap/core/model/user.dart';
 
 abstract class ChatRepository {
   /// A stream to this [homeConversationModel], should listen to the conversation model updates

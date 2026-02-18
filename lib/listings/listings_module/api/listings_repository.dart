@@ -1,13 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter_google_places_hoc081098/google_maps_webservice_places.dart';
-import 'package:instaflutter/listings/model/categories_model.dart';
-import 'package:instaflutter/listings/model/filter_model.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/listing_review_model.dart';
-import 'package:instaflutter/listings/model/paged_reviews_result.dart';
-import 'package:instaflutter/listings/model/reported_listing_model.dart';
-import 'package:instaflutter/listings/model/suspension_info.dart';
+import 'package:caribtap/listings/model/categories_model.dart';
+import 'package:caribtap/listings/model/filter_model.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listing_review_model.dart';
+import 'package:caribtap/listings/model/paged_reviews_result.dart';
+import 'package:caribtap/listings/model/reported_listing_model.dart';
+import 'package:caribtap/listings/model/suspension_info.dart';
 
 abstract class ListingsRepository {
   // Categories / filters

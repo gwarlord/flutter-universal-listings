@@ -2,10 +2,10 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/model/listing_review_model.dart';
-import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
-import 'package:instaflutter/listings/listings_module/listing_details/all_reviews_bloc.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/model/listing_review_model.dart';
+import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
+import 'package:caribtap/listings/listings_module/listing_details/all_reviews_bloc.dart';
 
 class AllReviewsScreen extends StatefulWidget {
   final String listingId;

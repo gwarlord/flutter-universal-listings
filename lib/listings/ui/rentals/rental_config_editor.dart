@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:instaflutter/constants.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/constants.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import '../../model/rental_config.dart';
 
 class RentalConfigEditor extends StatefulWidget {

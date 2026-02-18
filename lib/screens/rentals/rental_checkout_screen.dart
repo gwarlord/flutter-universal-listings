@@ -1,13 +1,13 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:instaflutter/constants.dart';
-import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/model/rental_config.dart';
-import 'package:instaflutter/screens/rentals/rental_item_models.dart';
-import 'package:instaflutter/screens/rentals/rental_browse_service.dart';
+import 'package:caribtap/constants.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/rental_config.dart';
+import 'package:caribtap/screens/rentals/rental_item_models.dart';
+import 'package:caribtap/screens/rentals/rental_browse_service.dart';
 
 /// Rental checkout screen - Review cart and complete booking
 class RentalCheckoutScreen extends StatefulWidget {

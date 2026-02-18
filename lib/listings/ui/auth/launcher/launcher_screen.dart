@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
-import 'package:instaflutter/listings/ui/auth/onBoarding/on_boarding_screen.dart';
-import 'package:instaflutter/listings/ui/auth/welcome/welcome_screen.dart';
-import 'package:instaflutter/listings/ui/container/container_screen.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
+import 'package:caribtap/listings/ui/auth/onBoarding/on_boarding_screen.dart';
+import 'package:caribtap/listings/ui/auth/welcome/welcome_screen.dart';
+import 'package:caribtap/listings/ui/container/container_screen.dart';
 
 class LauncherScreen extends StatefulWidget {
   const LauncherScreen({super.key});

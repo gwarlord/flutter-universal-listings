@@ -1,4 +1,4 @@
-import 'package:instaflutter/listings/model/booking_model.dart';
+import 'package:caribtap/listings/model/booking_model.dart';
 
 abstract class BookingState {
   const BookingState();

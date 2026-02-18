@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/services/menu_service.dart';
-import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/screens/menu/menu_builder_screen.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/services/menu_service.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/screens/menu/menu_builder_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:io';

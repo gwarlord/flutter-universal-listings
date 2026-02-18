@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:instaflutter/listings/model/proof_of_payment_model.dart';
+import 'package:caribtap/listings/model/proof_of_payment_model.dart';
 import 'package:flutter/foundation.dart';
 
 class ProofOfPaymentService {

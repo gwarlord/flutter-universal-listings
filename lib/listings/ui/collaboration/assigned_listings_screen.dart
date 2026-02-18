@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_module/api/collaboration_api_manager.dart';
-import 'package:instaflutter/listings/model/collaboration_model.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/listings_module/api/collaboration_api_manager.dart';
+import 'package:caribtap/listings/model/collaboration_model.dart';
 
 class AssignedListingsScreen extends StatefulWidget {
   final String userId;

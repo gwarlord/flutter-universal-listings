@@ -7,7 +7,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:instaflutter/listings/ui/auth/api/authentication_repository.dart';
+import 'package:caribtap/listings/ui/auth/api/authentication_repository.dart';
 
 part 'phone_number_input_event.dart';
 

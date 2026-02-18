@@ -3,7 +3,7 @@ import '../model/deal_ad_model.dart';
 import 'package:http/http.dart' as http; // New import
 import 'dart:convert'; // New import
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // New import for .env
-import 'package:instaflutter/listings/model/listings_user.dart'; // Changed import to ListingsUser
+import 'package:caribtap/listings/model/listings_user.dart'; // Changed import to ListingsUser
 
 class DealAdService {
   final _adsRef = FirebaseFirestore.instance.collection('deal_ads');

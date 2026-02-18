@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:instaflutter/listings/model/order_request.dart';
-import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
-import 'package:instaflutter/core/utils/helper.dart';
+import 'package:caribtap/listings/model/order_request.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/core/utils/helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Widget to display shipping tracking information to customers

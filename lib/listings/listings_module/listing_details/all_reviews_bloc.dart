@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:instaflutter/listings/model/listing_review_model.dart';
-import 'package:instaflutter/listings/listings_module/api/listings_repository.dart';
+import 'package:caribtap/listings/model/listing_review_model.dart';
+import 'package:caribtap/listings/listings_module/api/listings_repository.dart';
 
 part 'all_reviews_event.dart';
 part 'all_reviews_state.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:instaflutter/listings/listings_module/api/booking_repository.dart';
-import 'package:instaflutter/listings/listings_module/booking/booking_event.dart';
-import 'package:instaflutter/listings/listings_module/booking/booking_state.dart';
+import 'package:caribtap/listings/listings_module/api/booking_repository.dart';
+import 'package:caribtap/listings/listings_module/booking/booking_event.dart';
+import 'package:caribtap/listings/listings_module/booking/booking_state.dart';
 
 class BookingBloc extends Bloc<BookingEvent, BookingState> {
   final BookingRepository bookingRepository;

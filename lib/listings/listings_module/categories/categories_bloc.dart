@@ -1,8 +1,8 @@
 import 'dart:developer' as dev;
 
 import 'package:bloc/bloc.dart';
-import 'package:instaflutter/listings/model/categories_model.dart';
-import 'package:instaflutter/listings/listings_module/api/listings_repository.dart';
+import 'package:caribtap/listings/model/categories_model.dart';
+import 'package:caribtap/listings/listings_module/api/listings_repository.dart';
 
 part 'categories_event.dart';
 part 'categories_state.dart';

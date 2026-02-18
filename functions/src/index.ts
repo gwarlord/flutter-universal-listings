@@ -53,6 +53,9 @@ export * from "./brand_functions";
 // Export proof of payment functions
 export * from "./proof_of_payment_functions";
 
+// Export AI photo enhancement functions
+export * from "./photo_enhancement";
+
 const db = admin.firestore();
 const messaging = admin.messaging();
 

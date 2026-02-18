@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:instaflutter/listings/model/redemption_model.dart';
-import 'package:instaflutter/listings/services/redemption_service.dart';
+import 'package:caribtap/listings/model/redemption_model.dart';
+import 'package:caribtap/listings/services/redemption_service.dart';
 
 // --- States ---
 abstract class RedemptionState extends Equatable {

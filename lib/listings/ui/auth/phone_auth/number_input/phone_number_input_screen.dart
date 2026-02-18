@@ -4,17 +4,17 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/ui/auth/api/auth_api_manager.dart';
-import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
-import 'package:instaflutter/listings/ui/auth/phone_auth/code_input/code_input_screen.dart';
-import 'package:instaflutter/listings/ui/auth/phone_auth/number_input/phone_number_input_bloc.dart';
-import 'package:instaflutter/listings/ui/container/container_screen.dart';
-import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/ui/auth/api/auth_api_manager.dart';
+import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
+import 'package:caribtap/listings/ui/auth/phone_auth/code_input/code_input_screen.dart';
+import 'package:caribtap/listings/ui/auth/phone_auth/number_input/phone_number_input_bloc.dart';
+import 'package:caribtap/listings/ui/container/container_screen.dart';
+import 'package:caribtap/core/ui/loading/loading_cubit.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:instaflutter/constants.dart';
+import 'package:caribtap/constants.dart';
 
 File? _image;
 

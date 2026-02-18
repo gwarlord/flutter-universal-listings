@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/models/menu_models.dart';
-import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
-import 'package:instaflutter/core/utils/helper.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/models/menu_models.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/core/utils/helper.dart';
 import 'menu_item_editor_screen.dart';
 
 class MenuSectionEditorScreen extends StatefulWidget {

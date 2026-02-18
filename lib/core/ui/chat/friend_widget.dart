@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:instaflutter/core/model/user.dart';
-import 'package:instaflutter/core/utils/helper.dart';
+import 'package:caribtap/core/model/user.dart';
+import 'package:caribtap/core/utils/helper.dart';
 
 class FriendWidget extends StatelessWidget {
   final User friend;

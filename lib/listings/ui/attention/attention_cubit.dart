@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:instaflutter/listings/model/attention_state_model.dart';
-import 'package:instaflutter/listings/services/attention_service.dart';
+import 'package:caribtap/listings/model/attention_state_model.dart';
+import 'package:caribtap/listings/services/attention_service.dart';
 
 part 'attention_state.dart';
 

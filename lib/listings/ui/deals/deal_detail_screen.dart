@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/listings/model/deal_ad_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/services/deal_ad_service.dart';
-import 'package:instaflutter/listings/services/redemption_service.dart';
-import 'package:instaflutter/listings/ui/deals/deal_analytics_screen.dart';
-import 'package:instaflutter/listings/ui/deals/redemption_cubit.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/model/deal_ad_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/services/deal_ad_service.dart';
+import 'package:caribtap/listings/services/redemption_service.dart';
+import 'package:caribtap/listings/ui/deals/deal_analytics_screen.dart';
+import 'package:caribtap/listings/ui/deals/redemption_cubit.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 

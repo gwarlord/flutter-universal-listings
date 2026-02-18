@@ -1,6 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:instaflutter/core/utils/helper.dart';
+import 'package:caribtap/core/utils/helper.dart';
 
 class OpeningHoursEditorSheet {
   /// Opens a bottom sheet and returns the saved text, or null if cancelled.

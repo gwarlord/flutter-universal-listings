@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:instaflutter/listings/model/redemption_model.dart';
+import 'package:caribtap/listings/model/redemption_model.dart';
 
 class RedemptionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

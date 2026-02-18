@@ -1,10 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:instaflutter/core/model/channel_data_model.dart';
-import 'package:instaflutter/core/model/chat_feed_model.dart';
-import 'package:instaflutter/core/model/user.dart';
-import 'package:instaflutter/core/utils/helper.dart';
+import 'package:caribtap/core/model/channel_data_model.dart';
+import 'package:caribtap/core/model/chat_feed_model.dart';
+import 'package:caribtap/core/model/user.dart';
+import 'package:caribtap/core/utils/helper.dart';
 
 import 'chat/chat_screen.dart';
 

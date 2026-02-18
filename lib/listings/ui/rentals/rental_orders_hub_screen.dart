@@ -1,12 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/model/rental_booking.dart';
-import 'package:instaflutter/listings/services/rental_service.dart';
-import 'package:instaflutter/listings/utils/subscription_helper.dart';
-import 'package:instaflutter/listings/ui/rentals/rental_booking_detail_screen.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/rental_booking.dart';
+import 'package:caribtap/listings/services/rental_service.dart';
+import 'package:caribtap/listings/utils/subscription_helper.dart';
+import 'package:caribtap/listings/ui/rentals/rental_booking_detail_screen.dart';
 
 class RentalOrdersHubScreen extends StatefulWidget {
   final ListingsUser currentUser;

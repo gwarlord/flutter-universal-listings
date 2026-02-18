@@ -5,7 +5,7 @@ import 'package:flutter_chat_ui/flutter_chat_ui.dart' as chat_ui;
 import 'package:flutter_chat_ui/flutter_chat_ui.dart' show InMemoryChatController;
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:instaflutter/constants.dart';
+import 'package:caribtap/constants.dart';
 import 'package:uuid/uuid.dart';
 
 class FirestoreChatScreenLegacy extends StatefulWidget {

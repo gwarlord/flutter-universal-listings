@@ -4,11 +4,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_google_places_hoc081098/google_maps_webservice_places.dart';
-import 'package:instaflutter/listings/listings_module/add_listing/add_listing_event.dart';
-import 'package:instaflutter/listings/listings_module/add_listing/add_listing_state.dart';
-import 'package:instaflutter/listings/listings_module/api/listings_repository.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:caribtap/listings/listings_module/add_listing/add_listing_event.dart';
+import 'package:caribtap/listings/listings_module/add_listing/add_listing_state.dart';
+import 'package:caribtap/listings/listings_module/api/listings_repository.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
 
 /// Caribbean + Caribbean territories (ISO 3166-1 alpha-2)
 const Set<String> kCaribbeanCountryCodes = {

@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:instaflutter/listings/model/ad_targeting_model.dart';
+import 'package:caribtap/listings/model/ad_targeting_model.dart';
 
 class DealAdModel {
   final String id;

@@ -1,9 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:instaflutter/listings/model/home_filter_state.dart';
-import 'package:instaflutter/listings/model/categories_model.dart';
-import 'package:instaflutter/listings/listings_app_config.dart' as cfg;
-import 'package:instaflutter/core/utils/helper.dart';
+import 'package:caribtap/listings/model/home_filter_state.dart';
+import 'package:caribtap/listings/model/categories_model.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/core/utils/helper.dart';
 
 /// Filter panel/bottom sheet for Home screen
 class HomeFilterPanel extends StatefulWidget {

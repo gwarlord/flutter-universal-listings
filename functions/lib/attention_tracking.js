@@ -190,7 +190,7 @@ exports.onOrderCreatedUpdateAttention = functions.firestore
  * Update attention for rentals (new rental or status change)
  */
 exports.onRentalBookingStatusChangedUpdateAttention = functions.firestore
-    .document("rentalBookings/{bookingId}")
+    .document("rental_bookings/{bookingId}")
     .onUpdate(async (change, context) => {
     const before = change.before.data();
     const after = change.after.data();
@@ -242,7 +242,7 @@ exports.onRentalBookingStatusChangedUpdateAttention = functions.firestore
  * Update attention when new rental booking is created
  */
 exports.onRentalBookingCreatedUpdateAttention = functions.firestore
-    .document("rentalBookings/{bookingId}")
+    .document("rental_bookings/{bookingId}")
     .onCreate(async (snap, context) => {
     const booking = snap.data();
     if (!booking)

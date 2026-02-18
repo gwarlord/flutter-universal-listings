@@ -1,12 +1,12 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/listing_review_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
-import 'package:instaflutter/listings/model/review_removal_request_model.dart';
-import 'package:instaflutter/listings/listings_module/api/listings_api_manager.dart';
-import 'package:instaflutter/listings/services/review_removal_request_service.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listing_review_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/review_removal_request_model.dart';
+import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
+import 'package:caribtap/listings/services/review_removal_request_service.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
 class ManageReviewsScreen extends StatefulWidget {

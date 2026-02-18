@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:instaflutter/listings/model/rental_config.dart';
-import 'package:instaflutter/listings/model/rental_booking.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
-import 'package:instaflutter/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/rental_config.dart';
+import 'package:caribtap/listings/model/rental_booking.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:instaflutter/core/utils/helper.dart';
+import 'package:caribtap/core/utils/helper.dart';
 
 class RentalBookingDialog extends StatefulWidget {
   final ListingModel listing;

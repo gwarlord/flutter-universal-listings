@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:instaflutter/constants.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/core/model/user.dart';
-import 'package:instaflutter/core/utils/helper.dart';
+import 'package:caribtap/constants.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/core/model/user.dart';
+import 'package:caribtap/core/utils/helper.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class FirestoreChatScreenV2 extends StatefulWidget {

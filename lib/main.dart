@@ -11,9 +11,9 @@ import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:app_links/app_links.dart';
-import 'package:instaflutter/listings/main.dart' as listings_app; // Added alias
-import 'package:instaflutter/listings/services/deep_link_service.dart';
-import 'package:instaflutter/listings/services/deal_notification_service.dart';
+import 'package:caribtap/listings/main.dart' as listings_app; // Added alias
+import 'package:caribtap/listings/services/deep_link_service.dart';
+import 'package:caribtap/listings/services/deal_notification_service.dart';
 
 // Global navigator key for navigation without context
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();

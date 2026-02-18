@@ -2,8 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:instaflutter/listings/model/brand_model.dart';
-import 'package:instaflutter/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/brand_model.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
 
 /// Service for managing brands and multi-location operations
 class BrandService {

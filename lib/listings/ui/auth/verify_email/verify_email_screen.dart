@@ -1,12 +1,12 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:instaflutter/core/ui/loading/loading_cubit.dart';
-import 'package:instaflutter/core/utils/helper.dart';
-import 'package:instaflutter/listings/listings_app_config.dart';
-import 'package:instaflutter/listings/ui/auth/authentication_bloc.dart';
-import 'package:instaflutter/listings/ui/auth/verify_email/verify_email_bloc.dart';
-import 'package:instaflutter/listings/ui/container/container_screen.dart';
+import 'package:caribtap/core/ui/loading/loading_cubit.dart';
+import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
+import 'package:caribtap/listings/ui/auth/verify_email/verify_email_bloc.dart';
+import 'package:caribtap/listings/ui/container/container_screen.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   final String email;
