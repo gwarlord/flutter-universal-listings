@@ -177,6 +177,8 @@ class ListingModel {
   String email;
   String website;
   String openingHours;
+  String companyRegistration; // Business registration number
+  String vatNumber; // VAT/Tax ID number
 
   /// Booking
   bool bookingEnabled;
@@ -300,6 +302,8 @@ class ListingModel {
     this.email = '',
     this.website = '',
     this.openingHours = '',
+    this.companyRegistration = '',
+    this.vatNumber = '',
     this.bookingEnabled = false,
     this.bookingUrl = '',
     this.allowQuantitySelection = false,
@@ -409,6 +413,8 @@ class ListingModel {
       email: json['email'] ?? '',
       website: json['website'] ?? '',
       openingHours: json['openingHours'] ?? '',
+      companyRegistration: json['companyRegistration'] ?? '',
+      vatNumber: json['vatNumber'] ?? '',
       bookingEnabled: json['bookingEnabled'] ?? false,
       bookingUrl: json['bookingUrl'] ?? '',
       allowQuantitySelection: json['allowQuantitySelection'] ?? false,
@@ -506,6 +512,8 @@ class ListingModel {
       'email': email,
       'website': website,
       'openingHours': openingHours,
+      'companyRegistration': companyRegistration,
+      'vatNumber': vatNumber,
       'bookingEnabled': bookingEnabled,
       'bookingUrl': bookingUrl,
       'allowQuantitySelection': allowQuantitySelection,

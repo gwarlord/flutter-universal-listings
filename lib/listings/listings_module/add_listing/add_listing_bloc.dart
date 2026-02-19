@@ -299,6 +299,8 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
     /* -------------------- Publish (Add or Edit) -------------------- */
 
     on<PublishListingEvent>((event, emit) async {
+      print('🔧 DEBUG [PublishListingEvent handler]: isEdit=${event.isEdit}, companyRegistration="${event.listingModel.companyRegistration}", vatNumber="${event.listingModel.vatNumber}"');
+      
       // Upload NEW logo
       String? logoUrl;
       if (event.newLogoFile != null) {
@@ -421,6 +423,8 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           'phone': event.listingModel.phone,
           'email': event.listingModel.email,
           'website': event.listingModel.website,
+          'companyRegistration': event.listingModel.companyRegistration,
+          'vatNumber': event.listingModel.vatNumber,
           'openingHours': event.listingModel.openingHours,
           'bookingEnabled': event.listingModel.bookingEnabled,
           'bookingUrl': event.listingModel.bookingUrl,

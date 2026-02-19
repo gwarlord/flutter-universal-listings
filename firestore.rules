@@ -138,6 +138,22 @@ service cloud.firestore {
         allow read: if isOwner(userId) || isAdmin();
         allow create, update, delete: if isOwner(userId);
       }
+
+      match /clients/{clientId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /quotes/{quoteId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /invoices/{invoiceId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /counters/{counterId} {
+        allow read, write: if isOwner(userId);
+      }
       
       // Assigned Listings (Lister Collaboration)
       // Quick lookup for collaborators to see which listings they're assigned to
@@ -154,6 +170,15 @@ service cloud.firestore {
         // Users cannot write directly to prevent tampering
         allow write: if request.auth.token.serviceAccount == true || isAdmin();
       }
+    }
+
+    match /public_docs/{token} {
+      allow read: if true;
+      allow create: if isSignedIn() &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.type in ['quote', 'invoice'];
+      allow update, delete: if request.auth.token.serviceAccount == true ||
+        (isSignedIn() && request.auth.uid == resource.data.ownerUid);
     }
     
     // Listings collection
@@ -643,6 +668,52 @@ service cloud.firestore {
         // Writes only via Cloud Functions
         allow write: if false;
       }
+    }
+
+    // ========================================================================
+    // AI SEARCH COLLECTIONS
+    // ========================================================================
+
+    // Search Index Collections (read-only for clients, written by Cloud Functions)
+    // NOTE: Reads allowed for authenticated users; App Check optional in debug mode
+    match /search_index_listings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only Cloud Functions can write
+    }
+
+    match /search_index_deals/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only Cloud Functions can write
+    }
+
+    // Query Cache (read-only for clients, written by Cloud Functions)
+    // NOTE: Reads allowed for authenticated users; App Check optional in debug mode
+    match /search_query_cache/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only Cloud Functions can write
+    }
+
+    // Saved Searches (user-specific)
+    match /saved_searches/{docId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // Rate Limits (user-specific read, Cloud Functions write only)
+    match /search_rate_limits/{userId} {
+      allow read: if isSignedIn() && userId == request.auth.uid;
+      allow write: if false; // Only Cloud Functions can write
+    }
+
+    // Search Analytics (no direct client access)
+    match /search_analytics/{docId} {
+      allow read, write: if false;
+    }
+
+    // Search Costs (no direct client access)
+    match /search_costs/{docId} {
+      allow read, write: if false;
     }
 
     // ========================================================================

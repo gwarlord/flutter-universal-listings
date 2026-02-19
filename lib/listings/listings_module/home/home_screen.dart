@@ -26,6 +26,7 @@ import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:caribtap/listings/utils/caribbean_countries.dart';
 import 'package:caribtap/listings/model/deal_ad_model.dart';
 import 'package:caribtap/listings/services/deal_ad_service.dart';
+import 'package:caribtap/listings/ai_search/ui/screens/ai_search_screen.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import '../../ui/deals/deals_feed_screen.dart';
 
@@ -653,6 +654,88 @@ class HomeScreenState extends State<HomeScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                  
+                  // AI Search Banner
+                  SliverToBoxAdapter(
+                    child: GestureDetector(
+                      onTap: () {
+                        // Navigate to AI Search screen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => _buildAiSearchScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFF9C27B0),
+                              Color(0xFF673AB7),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0xFF9C27B0).withOpacity(0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.auto_awesome,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Search with AI'.tr(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Try "best pizza near me" or "gyms open now"'.tr(),
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              color: Colors.white.withOpacity(0.8),
+                              size: 20,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                   
                   // 1. Deals & Promotions Section
                   if (_dealAds.isNotEmpty)
@@ -1295,6 +1378,11 @@ class HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  // Build AI Search Screen
+  Widget _buildAiSearchScreen() {
+    return AiSearchScreen(userId: widget.currentUser.userID);
+  }
 }
 
 class DealAdCarouselItem extends StatefulWidget {
@@ -1793,4 +1881,5 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
           ),
         ),
       );
+
 }

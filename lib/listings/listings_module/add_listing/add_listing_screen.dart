@@ -163,6 +163,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _websiteController = TextEditingController();
+  final TextEditingController _companyRegistrationController = TextEditingController();
+  final TextEditingController _vatNumberController = TextEditingController();
 
   final TextEditingController _instagramController = TextEditingController();
   final TextEditingController _facebookController = TextEditingController();
@@ -289,6 +291,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _phoneController.text = (l.phone ?? '').trim();
     _emailController.text = (l.email ?? '').trim();
     _websiteController.text = (l.website ?? '').trim();
+    _companyRegistrationController.text = (l.companyRegistration ?? '').trim();
+    _vatNumberController.text = (l.vatNumber ?? '').trim();
     _instagramController.text = (l.instagram ?? '').trim();
     _facebookController.text = (l.facebook ?? '').trim();
     _tiktokController.text = (l.tiktok ?? '').trim();
@@ -1760,6 +1764,16 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 decoration: _getInputDecoration(label: 'Website'.tr(), icon: Icons.language),
               ),
               const SizedBox(height: 16),
+              TextField(
+                controller: _companyRegistrationController,
+                decoration: _getInputDecoration(label: 'Company Registration #'.tr(), icon: Icons.business),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _vatNumberController,
+                decoration: _getInputDecoration(label: 'VAT / Tax ID #'.tr(), icon: Icons.receipt_long),
+              ),
+              const SizedBox(height: 16),
               // Menu Section
               if (isEdit && widget.listingToEdit != null)
                 MenuEditSectionWidget(
@@ -2265,6 +2279,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _whatsappController.dispose();
     _youtubeController.dispose();
     _xController.dispose();
+    _companyRegistrationController.dispose();
+    _vatNumberController.dispose();
     _openingHoursController.dispose();
     _bookingUrlController.dispose();
     _serviceNameController.dispose();
@@ -2332,6 +2348,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
       whatsapp: _whatsappController.text.trim(),
       youtube: _youtubeController.text.trim(),
       x: _xController.text.trim(),
+      companyRegistration: _companyRegistrationController.text.trim(),
+      vatNumber: _vatNumberController.text.trim(),
       filters: _filters ?? {},
       countryCode: _countryCode ?? '',
       verified: _verified,

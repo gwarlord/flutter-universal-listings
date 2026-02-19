@@ -1,6 +1,12 @@
-import * as functions from "firebase-functions/v1";
+import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import axios from "axios";
+import { revenuecatKeySecret } from "./common/secrets";
+
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 
 const db = admin.firestore();
 
@@ -86,14 +92,14 @@ async function verifyPremiumEntitlement(uid: string): Promise<boolean> {
 
   // 2. Check RevenueCat
   try {
-    const revenueCatApiKey = functions.config().revenuecat?.key;
+    const revenueCatApiKey = await revenuecatKeySecret.value();
     if (!revenueCatApiKey) {
       functions.logger.warn("RevenueCat API key not configured - allowing access for development");
       // In development (no API key configured), allow access
       return true;
     }
 
-    // Note: You need to set this via firebase functions:config:set revenuecat.key="your_api_key"
+    // Note: You need to set this via firebase functions:secrets:set revenuecat_key
     const response = await axios.get(
       `https://api.revenuecat.com/v1/subscribers/${uid}`,
       {

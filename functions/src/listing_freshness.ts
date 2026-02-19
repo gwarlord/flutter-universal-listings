@@ -1,17 +1,17 @@
-import * as functions from "firebase-functions/v1";
+import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import sgMail from "@sendgrid/mail";
+import { sendgridKeySecret, appUrlSecret } from "./common/secrets";
+
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 
 const db = admin.firestore();
 const messaging = admin.messaging();
 
-const SENDGRID_KEY = functions.config().sendgrid?.key;
-const APP_URL = functions.config().app?.url || "https://caribtap.com";
 const EMAIL_FROM = { email: "admin@caribtap.com", name: "CaribTap" };
-
-if (SENDGRID_KEY) {
-  sgMail.setApiKey(SENDGRID_KEY);
-}
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEV_MODE =
@@ -355,8 +355,12 @@ async function sendFreshnessNotification(params: {
     "America/Port_of_Spain"
   );
 
+  // Get secrets asynchronously
+  const appUrl = await appUrlSecret.value() || "https://caribtap.com";
+  const sendgridKey = await sendgridKeySecret.value();
+
   const deepLink = `caribtap://listing_manage?listingId=${params.listingId}`;
-  const webLink = `${APP_URL}/l/${params.listingId}`;
+  const webLink = `${appUrl}/l/${params.listingId}`;
 
   const emailContent = buildEmailTemplate({
     listingTitle: params.listingTitle,
@@ -366,8 +370,9 @@ async function sendFreshnessNotification(params: {
     type: params.type,
   });
 
-  if (email && SENDGRID_KEY) {
+  if (email && sendgridKey) {
     try {
+      sgMail.setApiKey(sendgridKey);
       await sgMail.send({
         to: email,
         from: EMAIL_FROM,

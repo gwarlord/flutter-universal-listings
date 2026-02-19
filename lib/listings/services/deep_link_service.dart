@@ -15,6 +15,7 @@ class DeepLinkService {
   static const String _customScheme = 'caribtap';
   static const String _listingHost = 'listing';
   static const String _listingManageHost = 'listing_manage';
+  static const String _proDocHost = 'prodoc';
   
   // Web domain (requires server-side configuration with assetlinks.json and apple-app-site-association)
   static const String _baseDomain = 'caribtap.com';
@@ -201,6 +202,27 @@ class DeepLinkService {
   static bool isListingManageDeepLink(String url) {
     return parseListingManageIdFromUrl(url) != null;
   }
+
+  static ProDocDeepLink? parseProDocFromUrl(String url) {
+    try {
+      final uri = Uri.parse(url);
+      if (uri.scheme == _customScheme && uri.host == _proDocHost) {
+        if (uri.pathSegments.length < 2) return null;
+        final type = uri.pathSegments[0];
+        final token = uri.pathSegments[1];
+        if (type.isEmpty || token.isEmpty) return null;
+        return ProDocDeepLink(type: type, token: token);
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error parsing pro doc deep link: $e');
+      return null;
+    }
+  }
+
+  static bool isProDocDeepLink(String url) {
+    return parseProDocFromUrl(url) != null;
+  }
   
   /// Get a listing by ID from Firestore
   /// 
@@ -285,4 +307,14 @@ class DeepLinkService {
     }
   }
   */
+}
+
+class ProDocDeepLink {
+  final String type;
+  final String token;
+
+  const ProDocDeepLink({
+    required this.type,
+    required this.token,
+  });
 }

@@ -37,14 +37,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.cleanupExpiredCodes = exports.verifyEmailCode = exports.sendVerificationCode = void 0;
-const functions = __importStar(require("firebase-functions/v1"));
+const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
-// Initialize SendGrid (you'll need to set this API key in Firebase config)
-// Run: firebase functions:config:set sendgrid.key="YOUR_SENDGRID_API_KEY"
-const SENDGRID_API_KEY = functions.config().sendgrid?.key;
-if (SENDGRID_API_KEY) {
-    mail_1.default.setApiKey(SENDGRID_API_KEY);
+const secrets_1 = require("./common/secrets");
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+    admin.initializeApp();
 }
 // Generate a 6-digit verification code
 function generateVerificationCode() {
@@ -85,8 +84,10 @@ exports.sendVerificationCode = functions.https.onCall(async (data, context) => {
     });
     // Send email with verification code
     try {
-        if (SENDGRID_API_KEY) {
+        const sendgridKey = await secrets_1.sendgridKeySecret.value();
+        if (sendgridKey) {
             // Using SendGrid
+            mail_1.default.setApiKey(sendgridKey);
             const msg = {
                 to: email,
                 from: 'noreply@caribtap.com', // Change to your verified sender

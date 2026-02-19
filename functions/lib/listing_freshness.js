@@ -37,17 +37,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onListingCreated = exports.refreshListingFreshness = exports.processListingFreshness = void 0;
-const functions = __importStar(require("firebase-functions/v1"));
+const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
+const secrets_1 = require("./common/secrets");
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+    admin.initializeApp();
+}
 const db = admin.firestore();
 const messaging = admin.messaging();
-const SENDGRID_KEY = functions.config().sendgrid?.key;
-const APP_URL = functions.config().app?.url || "https://caribtap.com";
 const EMAIL_FROM = { email: "admin@caribtap.com", name: "CaribTap" };
-if (SENDGRID_KEY) {
-    mail_1.default.setApiKey(SENDGRID_KEY);
-}
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEV_MODE = process.env.NODE_ENV === "development" ||
     process.env.FUNCTIONS_EMULATOR === "true";
@@ -307,8 +307,11 @@ async function sendFreshnessNotification(params) {
     const pushToken = user.pushToken;
     const allowPush = user.settings?.allowPushNotifications !== false;
     const hideAtFormatted = formatDateForTimezone(params.hideAt, "America/Port_of_Spain");
+    // Get secrets asynchronously
+    const appUrl = await secrets_1.appUrlSecret.value() || "https://caribtap.com";
+    const sendgridKey = await secrets_1.sendgridKeySecret.value();
     const deepLink = `caribtap://listing_manage?listingId=${params.listingId}`;
-    const webLink = `${APP_URL}/l/${params.listingId}`;
+    const webLink = `${appUrl}/l/${params.listingId}`;
     const emailContent = buildEmailTemplate({
         listingTitle: params.listingTitle,
         hideAtFormatted,
@@ -316,8 +319,9 @@ async function sendFreshnessNotification(params) {
         webLink,
         type: params.type,
     });
-    if (email && SENDGRID_KEY) {
+    if (email && sendgridKey) {
         try {
+            mail_1.default.setApiKey(sendgridKey);
             await mail_1.default.send({
                 to: email,
                 from: EMAIL_FROM,

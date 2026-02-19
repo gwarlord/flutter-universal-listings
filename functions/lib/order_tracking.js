@@ -37,13 +37,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendTrackingEmail = exports.setOrderTracking = void 0;
-const functions = __importStar(require("firebase-functions/v1"));
+const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
-const SENDGRID_KEY = functions.config().sendgrid?.key;
-const REVENUECAT_API_KEY = functions.config().revenuecat?.api_key;
-if (SENDGRID_KEY) {
-    mail_1.default.setApiKey(SENDGRID_KEY);
+const secrets_1 = require("./common/secrets");
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+    admin.initializeApp();
 }
 /**
  * Verify RevenueCat entitlement server-side using REST API
@@ -52,7 +52,8 @@ if (SENDGRID_KEY) {
  * @returns true if user has active entitlement, false otherwise
  */
 async function hasRevenueCatEntitlement(appUserId, entitlementId) {
-    if (!REVENUECAT_API_KEY) {
+    const revenuecatKey = await secrets_1.revenuecatKeySecret.value();
+    if (!revenuecatKey) {
         functions.logger.warn("RevenueCat API key not configured, skipping entitlement check");
         // In development, allow without RevenueCat verification
         return true; // TODO: Change to false in production
@@ -61,7 +62,7 @@ async function hasRevenueCatEntitlement(appUserId, entitlementId) {
         const response = await fetch(`https://api.revenuecat.com/v1/subscribers/${appUserId}`, {
             method: "GET",
             headers: {
-                Authorization: `Bearer ${REVENUECAT_API_KEY}`,
+                Authorization: `Bearer ${revenuecatKey}`,
                 "Accept": "application/json",
             },
         });
@@ -188,7 +189,9 @@ exports.setOrderTracking = functions.https.onCall(async (data, context) => {
           </div>
         `;
             try {
-                if (SENDGRID_KEY) {
+                const sendgridKey = await secrets_1.sendgridKeySecret.value();
+                if (sendgridKey) {
+                    mail_1.default.setApiKey(sendgridKey);
                     await mail_1.default.send({
                         to: customer.email,
                         from: { email: "admin@caribtap.com", name: "CaribTap" },
@@ -262,7 +265,9 @@ exports.sendTrackingEmail = functions.https.onCall(async (data, context) => {
         </div>
       </div>
     `;
-        if (SENDGRID_KEY) {
+        const sendgridKey = await secrets_1.sendgridKeySecret.value();
+        if (sendgridKey) {
+            mail_1.default.setApiKey(sendgridKey);
             await mail_1.default.send({
                 to: customer.email,
                 from: { email: "admin@caribtap.com", name: "CaribTap" },

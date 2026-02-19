@@ -1,0 +1,73 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.acceptQuoteByToken = void 0;
+const functions = __importStar(require("firebase-functions/v1"));
+const admin = __importStar(require("firebase-admin"));
+const db = admin.firestore();
+exports.acceptQuoteByToken = functions.https.onCall(async (data) => {
+    const token = (data.token || "").trim();
+    if (!token) {
+        throw new functions.https.HttpsError("invalid-argument", "Missing token");
+    }
+    const publicDoc = await db.collection("public_docs").doc(token).get();
+    if (!publicDoc.exists) {
+        throw new functions.https.HttpsError("not-found", "Token not found");
+    }
+    const publicData = publicDoc.data() || {};
+    if (publicData.type !== "quote") {
+        throw new functions.https.HttpsError("failed-precondition", "Token is not for a quote");
+    }
+    const expiresAt = publicData.expiresAt?.toDate?.();
+    if (expiresAt && expiresAt.getTime() < Date.now()) {
+        throw new functions.https.HttpsError("deadline-exceeded", "Token has expired");
+    }
+    const ownerUid = publicData.ownerUid;
+    const docId = publicData.docId;
+    if (!ownerUid || !docId) {
+        throw new functions.https.HttpsError("failed-precondition", "Token is missing owner or document reference");
+    }
+    const quoteRef = db.collection("users").doc(ownerUid).collection("quotes").doc(docId);
+    await quoteRef.set({
+        status: "accepted",
+        acceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return {
+        success: true,
+        ownerUid,
+        quoteId: docId,
+    };
+});

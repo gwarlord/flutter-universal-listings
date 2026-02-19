@@ -29,6 +29,9 @@ import 'package:caribtap/listings/listings_module/chat_settings/chat_settings_sc
 import 'package:caribtap/listings/ui/profile/profile/profile_screen.dart';
 import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
 import 'package:caribtap/listings/services/deep_link_service.dart';
+import 'package:caribtap/listings/ui/pro_docs/public_invoice_view_screen.dart';
+import 'package:caribtap/listings/ui/pro_docs/public_quote_view_screen.dart';
+import 'package:caribtap/listings/ui/pro_docs/quote_list_screen.dart';
 import 'package:caribtap/screens/brand/my_brands_screen.dart';
 import 'package:caribtap/main.dart' as main_entry;
 import 'package:caribtap/listings/ui/widgets/attention_badge.dart'; // Import the new widget
@@ -156,6 +159,23 @@ class _ContainerState extends State<ContainerScreen> {
           initialListingId: pendingManageId,
         ),
       );
+      return;
+    }
+
+    final pendingProDocType = main_entry.getPendingProDocType();
+    final pendingProDocToken = main_entry.getPendingProDocToken();
+    if (pendingProDocType != null && pendingProDocToken != null) {
+      if (pendingProDocType == 'quote') {
+        await push(
+          context,
+          PublicQuoteViewScreen(token: pendingProDocToken),
+        );
+      } else if (pendingProDocType == 'invoice') {
+        await push(
+          context,
+          PublicInvoiceViewScreen(token: pendingProDocToken),
+        );
+      }
       return;
     }
 
@@ -753,6 +773,22 @@ class _ContainerState extends State<ContainerScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       push(context, DealsPromotionScreen());
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'Quotes & Invoices'.tr(),
+                    icon: Icons.receipt_long_rounded,
+                    trailing: isPaidUser(currentUser) ? _tierBadge('PRO', Colors.blue) : _lockIcon(),
+                    onTap: () {
+                      if (isPaidUser(currentUser)) {
+                        Navigator.pop(context);
+                        push(context, QuoteListScreen(currentUser: currentUser));
+                      } else {
+                        Navigator.pop(context);
+                        _showUpgradeDialog(context, 'Quotes & Invoices', 'Professional');
+                      }
                     },
                     isDark: isDark,
                     primaryColor: primaryColorValue,

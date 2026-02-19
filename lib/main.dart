@@ -162,9 +162,36 @@ Future<void> _handleListingManageDeepLink(String? link) async {
   }
 }
 
+// Handle pro doc deep links
+Future<void> _handleProDocDeepLink(String? link) async {
+  if (link == null) return;
+
+  try {
+    print('🔗 Processing pro doc deep link: $link');
+    final proDoc = DeepLinkService.parseProDocFromUrl(link);
+    if (proDoc == null) {
+      print('⚠️ Invalid pro doc link: $link');
+      return;
+    }
+
+    _pendingProDocType = proDoc.type;
+    _pendingProDocToken = proDoc.token;
+  } catch (e) {
+    print('❌ Error processing pro doc deep link: $e');
+    if (navigatorKey.currentContext != null) {
+      showSnackBar(
+        navigatorKey.currentContext!,
+        'Failed to open shared document. Please try again.'.tr(),
+      );
+    }
+  }
+}
+
 // Store pending listing navigation
 String? _pendingListingId;
 String? _pendingListingManageId;
+String? _pendingProDocType;
+String? _pendingProDocToken;
 
 // Get and clear pending listing ID
 String? getPendingListingId() {
@@ -177,6 +204,18 @@ String? getPendingListingManageId() {
   final id = _pendingListingManageId;
   _pendingListingManageId = null;
   return id;
+}
+
+String? getPendingProDocType() {
+  final value = _pendingProDocType;
+  _pendingProDocType = null;
+  return value;
+}
+
+String? getPendingProDocToken() {
+  final value = _pendingProDocToken;
+  _pendingProDocToken = null;
+  return value;
 }
 
 // Show snackbar
@@ -309,15 +348,23 @@ void main() async {
       androidProvider: kDebugMode 
           ? AndroidProvider.debug 
           : AndroidProvider.playIntegrity,
-      appleProvider: AppleProvider.deviceCheck,
+      appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
+      webProvider: kDebugMode ? ReCaptchaV3Provider('6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI') : ReCaptchaV3Provider('6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'),
     );
     print('✅ Firebase App Check activated successfully');
+    
+    // Enable token auto-refresh for better token availability
+    await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
+    print('✅ App Check token auto-refresh enabled');
   } catch (e) {
     // App Check failure should not block app startup
     print('⚠️ Firebase App Check activation error: $e');
+    print('💡 In debug mode, if App Check fails:');
+    print('   - Make sure you are on a real device or properly configured emulator');
+    print('   - For Android emulator: The app may work despite the error');
+    print('   - For iOS simulator: SafetyNet attestation is not available');
+    print('   - The app will continue with reduced security');
   }
-  
-  await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
 
   // Initialize deal notification service
   try {
@@ -327,7 +374,7 @@ void main() async {
     print('⚠️ Deal notification service initialization error: $e');
   }
 
-  // Handle deep links for Firebase email verification and listing sharing
+  // Handle deep links for Firebase email verification, listings, and pro docs
   final appLinks = AppLinks();
   
   // Listen for incoming links while app is running
@@ -335,8 +382,10 @@ void main() async {
     print('🔗 Deep link received: $uri');
     final url = uri.toString();
     
-    // Check if it's a listing deep link
-    if (DeepLinkService.isListingManageDeepLink(url)) {
+    // Check if it's a listing or pro doc deep link
+    if (DeepLinkService.isProDocDeepLink(url)) {
+      _handleProDocDeepLink(url);
+    } else if (DeepLinkService.isListingManageDeepLink(url)) {
       _handleListingManageDeepLink(url);
     } else if (DeepLinkService.isListingDeepLink(url)) {
       _handleListingDeepLink(url);
@@ -355,8 +404,10 @@ void main() async {
       print('🔗 Initial deep link: $initialUri');
       final url = initialUri.toString();
       
-      // Check if it's a listing deep link
-      if (DeepLinkService.isListingManageDeepLink(url)) {
+      // Check if it's a listing or pro doc deep link
+      if (DeepLinkService.isProDocDeepLink(url)) {
+        await _handleProDocDeepLink(url);
+      } else if (DeepLinkService.isListingManageDeepLink(url)) {
         await _handleListingManageDeepLink(url);
       } else if (DeepLinkService.isListingDeepLink(url)) {
         await _handleListingDeepLink(url);

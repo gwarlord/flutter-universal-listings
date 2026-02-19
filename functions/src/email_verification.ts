@@ -1,12 +1,11 @@
-import * as functions from 'firebase-functions/v1';
+import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import sgMail from '@sendgrid/mail';
+import { sendgridKeySecret } from './common/secrets';
 
-// Initialize SendGrid (you'll need to set this API key in Firebase config)
-// Run: firebase functions:config:set sendgrid.key="YOUR_SENDGRID_API_KEY"
-const SENDGRID_API_KEY = functions.config().sendgrid?.key;
-if (SENDGRID_API_KEY) {
-  sgMail.setApiKey(SENDGRID_API_KEY);
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+  admin.initializeApp();
 }
 
 // Generate a 6-digit verification code
@@ -57,10 +56,12 @@ export const sendVerificationCode = functions.https.onCall(async (data, context)
     attempts: 0,
   });
 
-  // Send email with verification code
+// Send email with verification code
   try {
-    if (SENDGRID_API_KEY) {
+    const sendgridKey = await sendgridKeySecret.value();
+    if (sendgridKey) {
       // Using SendGrid
+      sgMail.setApiKey(sendgridKey);
       const msg = {
         to: email,
         from: 'noreply@caribtap.com', // Change to your verified sender

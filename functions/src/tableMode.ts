@@ -1,7 +1,13 @@
-import * as functions from "firebase-functions/v1";
+import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import axios from "axios";
 import * as crypto from "crypto";
+import { revenuecatKeySecret } from "./common/secrets";
+
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 
 const db = admin.firestore();
 const messaging = admin.messaging();
@@ -44,7 +50,7 @@ async function verifyPremiumEntitlement(uid: string): Promise<boolean> {
   }
 
   try {
-    const revenueCatApiKey = functions.config().revenuecat?.key;
+    const revenueCatApiKey = await revenuecatKeySecret.value();
     if (!revenueCatApiKey) {
       functions.logger.warn("RevenueCat API key not configured - allowing for development");
       return true;

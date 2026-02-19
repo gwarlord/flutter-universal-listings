@@ -37,18 +37,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onBookingUpdated = exports.onBookingCreated = exports.sendBookingReminders = void 0;
-const functions = __importStar(require("firebase-functions/v1"));
+const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
+const secrets_1 = require("./common/secrets");
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+    admin.initializeApp();
+}
 const db = admin.firestore();
 const messaging = admin.messaging();
 // Configuration
-const SENDGRID_KEY = functions.config().sendgrid?.key;
-const APP_URL = functions.config().app?.url || "https://caribtap.com";
 const EMAIL_FROM = { email: "bookings@caribtap.com", name: "CaribTap Bookings" };
-if (SENDGRID_KEY) {
-    mail_1.default.setApiKey(SENDGRID_KEY);
-}
 // Reminder windows (in milliseconds)
 const REMINDER_24H = 24 * 60 * 60 * 1000; // 24 hours
 const REMINDER_1H = 1 * 60 * 60 * 1000; // 1 hour
@@ -208,9 +208,12 @@ async function sendBookingReminder(booking, bookingId, listingId, reminderType) 
     const emailSubject = `Reminder: Your booking is in ${timeLabel}`;
     // Build deep link
     const deepLink = `caribtap://booking/${bookingId}`;
-    const webLink = `${APP_URL}/booking/${bookingId}`;
+    // Get secrets asynchronously
+    const appUrl = await secrets_1.appUrlSecret.value() || "https://caribtap.com";
+    const sendgridKey = await secrets_1.sendgridKeySecret.value();
+    const webLink = `${appUrl}/booking/${bookingId}`;
     // Send email reminder
-    if (emailEnabled && customer?.email && SENDGRID_KEY) {
+    if (emailEnabled && customer?.email && sendgridKey) {
         try {
             const emailHtml = buildReminderEmailTemplate({
                 customerName: booking.customerName || customer?.firstName || "Guest",
@@ -225,7 +228,9 @@ async function sendBookingReminder(booking, bookingId, listingId, reminderType) 
                 currency: booking.currency || "USD",
                 bookingReference: bookingId.substring(0, 8).toUpperCase(),
                 deepLink: webLink,
+                appUrl,
             });
+            mail_1.default.setApiKey(sendgridKey);
             await mail_1.default.send({
                 to: customer.email,
                 from: EMAIL_FROM,
@@ -398,7 +403,7 @@ function buildReminderEmailTemplate(data) {
       <div style="text-align: center; padding: 20px; font-size: 12px; color: #999;">
         <p style="margin: 5px 0;">CaribTap - Your Local Marketplace</p>
         <p style="margin: 5px 0;">
-          <a href="${APP_URL}/settings/notifications" style="color: #667eea;">Manage notification preferences</a>
+          <a href="${data.appUrl}/settings/notifications" style="color: #667eea;">Manage notification preferences</a>
         </p>
       </div>
     </body>

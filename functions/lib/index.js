@@ -40,9 +40,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.recomputeAllTapCounts = exports.onTapDeleted = exports.onTapCreated = exports.onChatMessageCreated = exports.onDealAdApproved = exports.migrateListingTierSnapshots = exports.sendSubscriptionReminders = exports.onBookingUpdated = exports.onBookingCreated = void 0;
-const functions = __importStar(require("firebase-functions/v1"));
+const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
+const secrets_1 = require("./common/secrets");
 // Initialize Firebase Admin before any imports that use it
 admin.initializeApp();
 // Export email verification functions
@@ -79,26 +80,14 @@ __exportStar(require("./brand_functions"), exports);
 __exportStar(require("./proof_of_payment_functions"), exports);
 // Export AI photo enhancement functions
 __exportStar(require("./photo_enhancement"), exports);
+// Export AI search functions
+__exportStar(require("./ai_search/index"), exports);
+// Export pro docs functions
+__exportStar(require("./pro_docs/quote_acceptance"), exports);
 const db = admin.firestore();
 const messaging = admin.messaging();
-// Set your SendGrid API key in Functions config: firebase functions:config:set sendgrid.key="YOUR_KEY"
-const SENDGRID_KEY = functions.config().sendgrid?.key;
-if (SENDGRID_KEY) {
-    mail_1.default.setApiKey(SENDGRID_KEY);
-}
-// Simple email sender
-async function sendEmail(to, subject, html) {
-    if (!SENDGRID_KEY) {
-        functions.logger.warn("SendGrid key not set, skipping email", { to, subject });
-        return;
-    }
-    await mail_1.default.send({
-        to,
-        from: { email: "admin@caribtap.com", name: "CaribTap" },
-        subject,
-        html,
-    });
-}
+// Remove old sendEmail helper - use the one from common/secrets.ts if needed
+// For functions that need to send emails, import sendgridKeySecret and use it within the function
 // Send push notification to user
 async function sendPushNotification(userId, title, body, data) {
     try {
@@ -198,17 +187,45 @@ exports.onBookingCreated = functions.firestore
     // Send email to lister
     if (data.listersEmail) {
         const email = bookingRequestedEmail(data);
-        await sendEmail(data.listersEmail, email.subject, email.html);
+        try {
+            const sendgridKey = await secrets_1.sendgridKeySecret.value();
+            if (sendgridKey) {
+                mail_1.default.setApiKey(sendgridKey);
+                await mail_1.default.send({
+                    to: data.listersEmail,
+                    from: { email: "admin@caribtap.com", name: "CaribTap" },
+                    subject: email.subject,
+                    html: email.html,
+                });
+            }
+        }
+        catch (error) {
+            functions.logger.error("Error sending email", { error, to: data.listersEmail });
+        }
     }
     // Send push notification to lister
     await sendPushNotification(data.listersUserId, "New Booking Request", `${data.customerName} requested to book ${data.listingTitle}`, { bookingId: data.id, listingId: data.listingId, type: "booking_request" });
     // Send confirmation email to customer
     if (data.customerEmail) {
-        await sendEmail(data.customerEmail, `Booking request sent: ${data.listingTitle}`, `
-          <p>Your booking request was sent.</p>
-          <p>Listing: ${data.listingTitle}</p>
-          <p>Dates: ${data.checkInDate} → ${data.checkOutDate}</p>
-        `);
+        try {
+            const sendgridKey = await secrets_1.sendgridKeySecret.value();
+            if (sendgridKey) {
+                mail_1.default.setApiKey(sendgridKey);
+                await mail_1.default.send({
+                    to: data.customerEmail,
+                    from: { email: "admin@caribtap.com", name: "CaribTap" },
+                    subject: `Booking request sent: ${data.listingTitle}`,
+                    html: `
+              <p>Your booking request was sent.</p>
+              <p>Listing: ${data.listingTitle}</p>
+              <p>Dates: ${data.checkInDate} → ${data.checkOutDate}</p>
+            `,
+                });
+            }
+        }
+        catch (error) {
+            functions.logger.error("Error sending email", { error, to: data.customerEmail });
+        }
     }
     // Send confirmation push to customer
     await sendPushNotification(data.customerId, "Booking Sent", `Your booking request for ${data.listingTitle} has been sent`, { bookingId: data.id, listingId: data.listingId, type: "booking_sent" });
@@ -228,7 +245,21 @@ exports.onBookingUpdated = functions.firestore
     // Send to customer
     if (after.customerEmail && ["confirmed", "rejected", "cancelled"].includes(nextStatus)) {
         const email = buildStatusEmail(after, nextStatus);
-        await sendEmail(after.customerEmail, email.subject, email.html);
+        try {
+            const sendgridKey = await secrets_1.sendgridKeySecret.value();
+            if (sendgridKey) {
+                mail_1.default.setApiKey(sendgridKey);
+                await mail_1.default.send({
+                    to: after.customerEmail,
+                    from: { email: "admin@caribtap.com", name: "CaribTap" },
+                    subject: email.subject,
+                    html: email.html,
+                });
+            }
+        }
+        catch (error) {
+            functions.logger.error("Error sending email", { error, to: after.customerEmail });
+        }
         // Send push to customer
         const notificationTitle = nextStatus === "confirmed" ? "Booking Confirmed!" : `Booking ${nextStatus}`;
         const notificationBody = `Your booking for ${after.listingTitle} has been ${nextStatus}`;
@@ -241,12 +272,26 @@ exports.onBookingUpdated = functions.firestore
     }
     // Send to lister on cancellation
     if (after.listersEmail && nextStatus === "cancelled") {
-        await sendEmail(after.listersEmail, `Booking cancelled: ${after.listingTitle}`, `
-          <p>A booking was cancelled.</p>
-          <p>Guest: ${after.customerName} (${after.customerEmail})</p>
-          <p>Listing: ${after.listingTitle}</p>
-          <p>Dates: ${after.checkInDate} → ${after.checkOutDate}</p>
-        `);
+        try {
+            const sendgridKey = await secrets_1.sendgridKeySecret.value();
+            if (sendgridKey) {
+                mail_1.default.setApiKey(sendgridKey);
+                await mail_1.default.send({
+                    to: after.listersEmail,
+                    from: { email: "admin@caribtap.com", name: "CaribTap" },
+                    subject: `Booking cancelled: ${after.listingTitle}`,
+                    html: `
+              <p>A booking was cancelled.</p>
+              <p>Guest: ${after.customerName} (${after.customerEmail})</p>
+              <p>Listing: ${after.listingTitle}</p>
+              <p>Dates: ${after.checkInDate} → ${after.checkOutDate}</p>
+            `,
+                });
+            }
+        }
+        catch (error) {
+            functions.logger.error("Error sending email", { error, to: after.listersEmail });
+        }
         // Send push to lister
         await sendPushNotification(after.listersUserId, "Booking Cancelled", `${after.customerName} cancelled their booking for ${after.listingTitle}`, { bookingId: after.id, listingId: after.listingId, type: "booking_cancelled" });
     }
@@ -301,7 +346,21 @@ exports.sendSubscriptionReminders = functions.pubsub
             continue; // already sent for this window
         const email = buildReminderEmail(data, expiresAt);
         if (data.email) {
-            await sendEmail(data.email, email.subject, email.html);
+            try {
+                const sendgridKey = await secrets_1.sendgridKeySecret.value();
+                if (sendgridKey) {
+                    mail_1.default.setApiKey(sendgridKey);
+                    await mail_1.default.send({
+                        to: data.email,
+                        from: { email: "admin@caribtap.com", name: "CaribTap" },
+                        subject: email.subject,
+                        html: email.html,
+                    });
+                }
+            }
+            catch (error) {
+                functions.logger.error("Error sending email", { error, to: data.email });
+            }
         }
         if (settings.allowPushNotifications !== false) {
             await sendPushNotification(doc.id, "Subscription expiring soon", `Renews by ${expiresAt.toDateString()}`, { type: "subscription_reminder" });

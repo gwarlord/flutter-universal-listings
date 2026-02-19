@@ -37,10 +37,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.closeTableSession = exports.requestBill = exports.acknowledgeSummon = exports.summonWaiter = exports.assignWaiterToSession = exports.createTableSession = exports.deactivateTable = exports.upsertTable = exports.setTableModeSettings = void 0;
-const functions = __importStar(require("firebase-functions/v1"));
+const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
 const crypto = __importStar(require("crypto"));
+const secrets_1 = require("./common/secrets");
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+    admin.initializeApp();
+}
 const db = admin.firestore();
 const messaging = admin.messaging();
 // =============================================================================
@@ -75,7 +80,7 @@ async function verifyPremiumEntitlement(uid) {
         return true;
     }
     try {
-        const revenueCatApiKey = functions.config().revenuecat?.key;
+        const revenueCatApiKey = await secrets_1.revenuecatKeySecret.value();
         if (!revenueCatApiKey) {
             functions.logger.warn("RevenueCat API key not configured - allowing for development");
             return true;

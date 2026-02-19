@@ -37,9 +37,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendOrderChatMessage = exports.setBookingStatus = exports.setRentalStatus = exports.updateListingEditableFields = exports.setOrderFulfillment = exports.setOrderStatus = exports.updateListingCollaboratorPermissions = exports.removeListingCollaborator = exports.addListingCollaborator = void 0;
-const functions = __importStar(require("firebase-functions/v1"));
+const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
+const secrets_1 = require("./common/secrets");
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+    admin.initializeApp();
+}
 const db = admin.firestore();
 // =============================================================================
 // REVENUECAT VERIFICATION
@@ -72,13 +77,13 @@ async function verifyPremiumEntitlement(uid) {
     }
     // 2. Check RevenueCat
     try {
-        const revenueCatApiKey = functions.config().revenuecat?.key;
+        const revenueCatApiKey = await secrets_1.revenuecatKeySecret.value();
         if (!revenueCatApiKey) {
             functions.logger.warn("RevenueCat API key not configured - allowing access for development");
             // In development (no API key configured), allow access
             return true;
         }
-        // Note: You need to set this via firebase functions:config:set revenuecat.key="your_api_key"
+        // Note: You need to set this via firebase functions:secrets:set revenuecat_key
         const response = await axios_1.default.get(`https://api.revenuecat.com/v1/subscribers/${uid}`, {
             headers: {
                 Authorization: `Bearer ${revenueCatApiKey}`,

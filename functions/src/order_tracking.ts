@@ -1,12 +1,11 @@
-import * as functions from "firebase-functions/v1";
+import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import sgMail from "@sendgrid/mail";
+import { sendgridKeySecret, revenuecatKeySecret } from "./common/secrets";
 
-const SENDGRID_KEY = functions.config().sendgrid?.key;
-const REVENUECAT_API_KEY = functions.config().revenuecat?.api_key;
-
-if (SENDGRID_KEY) {
-  sgMail.setApiKey(SENDGRID_KEY);
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+  admin.initializeApp();
 }
 
 /**
@@ -16,7 +15,8 @@ if (SENDGRID_KEY) {
  * @returns true if user has active entitlement, false otherwise
  */
 async function hasRevenueCatEntitlement(appUserId: string, entitlementId: string): Promise<boolean> {
-  if (!REVENUECAT_API_KEY) {
+  const revenuecatKey = await revenuecatKeySecret.value();
+  if (!revenuecatKey) {
     functions.logger.warn("RevenueCat API key not configured, skipping entitlement check");
     // In development, allow without RevenueCat verification
     return true; // TODO: Change to false in production
@@ -26,7 +26,7 @@ async function hasRevenueCatEntitlement(appUserId: string, entitlementId: string
     const response = await fetch(`https://api.revenuecat.com/v1/subscribers/${appUserId}`, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${REVENUECAT_API_KEY}`,
+        Authorization: `Bearer ${revenuecatKey}`,
         "Accept": "application/json",
       },
     });
@@ -187,7 +187,9 @@ export const setOrderTracking = functions.https.onCall(async (data, context) => 
         `;
 
       try {
-        if (SENDGRID_KEY) {
+        const sendgridKey = await sendgridKeySecret.value();
+        if (sendgridKey) {
+          sgMail.setApiKey(sendgridKey);
           await sgMail.send({
             to: customer.email,
             from: { email: "admin@caribtap.com", name: "CaribTap" },
@@ -272,7 +274,9 @@ export const sendTrackingEmail = functions.https.onCall(async (data, context) =>
       </div>
     `;
 
-    if (SENDGRID_KEY) {
+    const sendgridKey = await sendgridKeySecret.value();
+    if (sendgridKey) {
+      sgMail.setApiKey(sendgridKey);
       await sgMail.send({
         to: customer.email,
         from: { email: "admin@caribtap.com", name: "CaribTap" },
