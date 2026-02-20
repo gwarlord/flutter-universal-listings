@@ -2,6 +2,7 @@ import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/invoice_model.dart';
 import 'package:caribtap/listings/model/quote_model.dart';
+import 'package:caribtap/listings/model/pro_doc_shared.dart';
 import 'package:caribtap/listings/services/invoice_service.dart';
 import 'package:caribtap/listings/services/quote_service.dart';
 import 'package:caribtap/listings/services/tier_gate_service.dart';
@@ -27,7 +28,12 @@ class QuoteListScreen extends StatefulWidget {
 
 class _QuoteListScreenState extends State<QuoteListScreen> {
   String _statusFilter = 'all';
-  final NumberFormat _currency = NumberFormat.simpleCurrency();
+
+  NumberFormat _currencyFor({required String code, required String symbol}) {
+    final finalCode = code.isNotEmpty ? code : defaultCurrencyCode();
+    final finalSymbol = symbol.isNotEmpty ? symbol : defaultCurrencySymbol(finalCode);
+    return NumberFormat.currency(name: finalCode, symbol: finalSymbol);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -125,6 +131,7 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
   }
 
   Widget _buildQuotesTab(QuoteListLoaded state, List<QuoteModel> quotes) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       children: [
         _buildFilters(),
@@ -132,20 +139,38 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
           _buildLimitCard(state.limit!),
         Expanded(
           child: quotes.isEmpty
-              ? Center(child: Text('No quotes yet'.tr()))
+              ? Center(
+                  child: Text(
+                    'No quotes yet'.tr(),
+                    style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+                  ),
+                )
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemBuilder: (context, index) {
                     final quote = quotes[index];
+                    final currency = _currencyFor(
+                      code: quote.currencyCode,
+                      symbol: quote.currencySymbol,
+                    );
                     return ListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      title: Text(quote.quoteNumber.isNotEmpty ? quote.quoteNumber : 'Draft'.tr()),
-                      subtitle: Text(_clientLine(quote)),
+                      title: Text(
+                        quote.quoteNumber.isNotEmpty ? quote.quoteNumber : 'Draft'.tr(),
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                      ),
+                      subtitle: Text(
+                        _clientLine(quote),
+                        style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+                      ),
                       trailing: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(_currency.format(quote.total)),
+                          Text(
+                            currency.format(quote.total),
+                            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                          ),
                           const SizedBox(height: 4),
                           _statusChip(quote.status),
                         ],
@@ -189,23 +214,42 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
           }
 
           final invoices = (state as InvoiceListLoaded).invoices;
+          final isDark = Theme.of(context).brightness == Brightness.dark;
           if (invoices.isEmpty) {
-            return Center(child: Text('No invoices yet'.tr()));
+            return Center(
+              child: Text(
+                'No invoices yet'.tr(),
+                style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+              ),
+            );
           }
 
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemBuilder: (context, index) {
               final invoice = invoices[index];
+              final currency = _currencyFor(
+                code: invoice.currencyCode,
+                symbol: invoice.currencySymbol,
+              );
               return ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                title: Text(invoice.invoiceNumber.isNotEmpty ? invoice.invoiceNumber : 'Draft'.tr()),
-                subtitle: Text(_invoiceClientLine(invoice)),
+                title: Text(
+                  invoice.invoiceNumber.isNotEmpty ? invoice.invoiceNumber : 'Draft'.tr(),
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                ),
+                subtitle: Text(
+                  _invoiceClientLine(invoice),
+                  style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+                ),
                 trailing: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(_currency.format(invoice.total)),
+                    Text(
+                      currency.format(invoice.total),
+                      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                    ),
                     const SizedBox(height: 4),
                     _statusChip(invoice.status),
                   ],

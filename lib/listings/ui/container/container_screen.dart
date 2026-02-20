@@ -2,6 +2,9 @@ import 'dart:io';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:caribtap/core/ui/chat/api/chat_api_manager.dart';
+import 'package:caribtap/core/ui/chat/conversation/archived_conversations_screen.dart';
+import 'package:caribtap/core/ui/chat/conversation/conversation_bloc.dart';
 import 'package:caribtap/core/ui/chat/conversation/conversations_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:caribtap/core/utils/helper.dart';
@@ -35,6 +38,8 @@ import 'package:caribtap/listings/ui/pro_docs/quote_list_screen.dart';
 import 'package:caribtap/screens/brand/my_brands_screen.dart';
 import 'package:caribtap/main.dart' as main_entry;
 import 'package:caribtap/listings/ui/widgets/attention_badge.dart'; // Import the new widget
+import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
+import 'package:caribtap/listings/utils/opening_hours_editor.dart';
 import '../deals/deals_promotion_screen.dart';
 import '../deals/ad_review_approval_screen.dart';
 import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart' as listings_api; // Corrected import with alias
@@ -450,6 +455,42 @@ class _ContainerState extends State<ContainerScreen> {
                             currentUser: currentUser,
                           ),
                         ),
+                      ),
+                    if (_currentWidget is ConversationsWrapperWidget)
+                      IconButton(
+                        tooltip: 'Chat Hours'.tr(),
+                        icon: const Icon(Icons.settings),
+                        onPressed: () async {
+                          final initial = currentUser.settings.chatAvailabilityHours;
+                          final result = await OpeningHoursEditorSheet.show(
+                            context,
+                            initialValue: initial,
+                          );
+                          if (result == null) return;
+                          currentUser.settings.chatAvailabilityHours = result.trim();
+                          await profileApiManager.updateCurrentUser(currentUser);
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Chat hours updated'.tr())),
+                          );
+                        },
+                      ),
+                    if (_currentWidget is ConversationsWrapperWidget)
+                      IconButton(
+                        tooltip: 'Archived'.tr(),
+                        icon: const Icon(Icons.archive),
+                        onPressed: () {
+                          push(
+                            context,
+                            BlocProvider(
+                              create: (_) => ConversationsBloc(
+                                chatRepository: chatApiManager,
+                                currentUser: currentUser,
+                              ),
+                              child: ArchivedConversationsScreen(user: currentUser),
+                            ),
+                          );
+                        },
                       ),
                   ],
                   title: Text(

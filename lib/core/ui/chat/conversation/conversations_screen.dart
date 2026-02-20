@@ -19,7 +19,6 @@ import 'package:collection/collection.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:caribtap/listings/ui/attention/attention_cubit.dart';
 import 'package:caribtap/listings/model/attention_state_model.dart';
-import 'archived_conversations_screen.dart';
 
 class ConversationsWrapperWidget extends StatelessWidget {
   const ConversationsWrapperWidget({super.key, required this.user});
@@ -117,25 +116,6 @@ class _ConversationsState extends State<ConversationsScreen> {
       builder: (context, state) {
         return Scaffold(
           backgroundColor: isDark ? Colors.black : Colors.white,
-          appBar: AppBar(
-            backgroundColor: isDark ? Colors.black : Colors.white,
-            title: Text('Conversations'.tr()),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.archive),
-                onPressed: () {
-                   Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => BlocProvider.value(
-                        value: BlocProvider.of<ConversationsBloc>(context),
-                        child: ArchivedConversationsScreen(user: widget.user),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
           body: RefreshIndicator(
             color: Color(colorPrimary),
             onRefresh: () async {
@@ -217,6 +197,7 @@ class _ConversationsState extends State<ConversationsScreen> {
         key: ValueKey(conversation.id + (conversation.markedAsRead ? 'read' : 'unread') + conversation.chatFeedContent.content),
         conversation: conversation,
         currentUserId: user.userID,
+        chatAvailabilityHours: user.settings.chatAvailabilityHours,
       ),
     );
   }
@@ -241,11 +222,13 @@ class _ConversationsState extends State<ConversationsScreen> {
 class _ConversationItem extends StatefulWidget {
   final ChatFeedModel conversation;
   final String currentUserId;
+  final String chatAvailabilityHours;
 
   const _ConversationItem({
     super.key,
     required this.conversation,
     required this.currentUserId,
+    required this.chatAvailabilityHours,
   });
 
   @override
@@ -255,6 +238,122 @@ class _ConversationItem extends StatefulWidget {
 class _ConversationItemState extends State<_ConversationItem> {
   User? _otherUser;
   StreamSubscription? _userSub;
+
+  String _formatHoursSummary(String hours) {
+    final trimmed = hours.trim();
+    if (trimmed.isEmpty) return 'Hours not set'.tr();
+    final lines = trimmed.split('\n').map((line) => line.trim()).where((line) => line.isNotEmpty).toList();
+    if (lines.isEmpty) return 'Hours not set'.tr();
+    if (lines.length <= 2) return lines.join('\n');
+    return '${lines[0]}\n${lines[1]}\n...';
+  }
+
+  Future<String> _fetchListingHours() async {
+    final listingId = widget.conversation.listingId.trim();
+    if (listingId.isEmpty) return '';
+    try {
+      final doc = await FirebaseFirestore.instance.collection(listingsCollection).doc(listingId).get();
+      return doc.data()?['openingHours']?.toString() ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  Future<void> _showHoursDialog() async {
+    final hours = await _fetchListingHours();
+    final summary = _formatHoursSummary(hours);
+    if (!mounted) return;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        title: Text('Chat Hours'.tr(), style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+        content: Text(summary, style: TextStyle(color: isDark ? Colors.white70 : Colors.black87)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text('OK'.tr(), style: TextStyle(color: Theme.of(context).primaryColor)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _isChatAvailableNow(String hoursString) {
+    final trimmed = hoursString.trim();
+    if (trimmed.isEmpty) return true;
+    
+    final lower = trimmed.toLowerCase();
+    if (lower.contains('24/7') || lower.contains('always open')) return true;
+    
+    final now = DateTime.now();
+    final weekday = now.weekday;
+    final currentMinutes = now.hour * 60 + now.minute;
+    final dayNames = const ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    
+    String? lineForDay;
+    for (final line in trimmed.split('\n')) {
+      final matched = dayNames.firstWhereOrNull((d) => line.startsWith('$d:'));
+      if (matched != null && dayNames.indexOf(matched) + 1 == weekday) {
+        lineForDay = line;
+        break;
+      }
+    }
+    
+    if (lineForDay == null) return true;
+    
+    final content = lineForDay.split(':').sublist(1).join(':').trim();
+    if (content.toLowerCase() == 'closed') return false;
+    
+    final parts = content.split(content.contains('→') ? '→' : '-');
+    if (parts.length != 2) return true;
+    
+    try {
+      final open = DateFormat.jm().parse(parts[0].trim());
+      final close = DateFormat.jm().parse(parts[1].trim());
+      final openMinutes = open.hour * 60 + open.minute;
+      final closeMinutes = close.hour * 60 + close.minute;
+      
+      if (closeMinutes < openMinutes) {
+        return currentMinutes >= openMinutes || currentMinutes < closeMinutes;
+      }
+      return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<void> _showClosedDialog() async {
+    final hours = await _fetchListingHours();
+    final summary = _formatHoursSummary(hours);
+    if (!mounted) return;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        title: Text('Business Closed'.tr(), style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('This business is currently closed.'.tr(), style: TextStyle(color: isDark ? Colors.white70 : Colors.black87)),
+            const SizedBox(height: 16),
+            Text('Hours:'.tr(), style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(summary, style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 13)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text('OK'.tr(), style: TextStyle(color: Theme.of(context).primaryColor)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -310,7 +409,15 @@ class _ConversationItemState extends State<_ConversationItem> {
     final listingLogo = widget.conversation.listingImage;
 
     return InkWell(
-      onTap: () {
+      onTap: () async {
+        final hoursString = await _fetchListingHours();
+        if (!mounted) return;
+        
+        if (!_isChatAvailableNow(hoursString)) {
+          await _showClosedDialog();
+          return;
+        }
+        
         push(
           context,
           ChatWrapperWidget(
@@ -474,6 +581,11 @@ class _ConversationItemState extends State<_ConversationItem> {
                   ),
                 ],
               ),
+            ),
+            IconButton(
+              tooltip: 'Chat Hours'.tr(),
+              icon: Icon(Icons.info_outline, size: 18, color: isDark ? Colors.white70 : Colors.black45),
+              onPressed: widget.conversation.listingId.trim().isEmpty ? null : _showHoursDialog,
             ),
           ],
         ),

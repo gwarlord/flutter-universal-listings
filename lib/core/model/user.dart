@@ -93,6 +93,7 @@ class UserSettings {
   bool bookingEmailReminders;
   bool bookingPushReminders;
   String? languageCode; // null = system default, 'en', 'es', 'fr', 'nl', 'ht'
+  String chatAvailabilityHours;
 
   UserSettings({
     this.allowPushNotifications = true,
@@ -100,6 +101,7 @@ class UserSettings {
     this.bookingEmailReminders = true,
     this.bookingPushReminders = true,
     this.languageCode,
+    this.chatAvailabilityHours = '',
   });
 
   factory UserSettings.fromJson(Map<dynamic, dynamic> parsedJson) {
@@ -117,6 +119,7 @@ class UserSettings {
       bookingEmailReminders: parsedJson['bookingEmailReminders'] ?? true,
       bookingPushReminders: parsedJson['bookingPushReminders'] ?? true,
       languageCode: parsedJson['languageCode'] as String?,
+      chatAvailabilityHours: parsedJson['chatAvailabilityHours']?.toString() ?? '',
     );
   }
 
@@ -127,6 +130,7 @@ class UserSettings {
       'bookingEmailReminders': bookingEmailReminders,
       'bookingPushReminders': bookingPushReminders,
       'languageCode': languageCode,
+      'chatAvailabilityHours': chatAvailabilityHours,
     };
   }
 }
