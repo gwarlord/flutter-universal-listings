@@ -33,7 +33,6 @@ import 'package:caribtap/listings/listings_module/booking/booking_event.dart';
 import 'package:caribtap/listings/listings_module/booking/booking_request_dialog.dart';
 import 'package:caribtap/listings/listings_module/api/booking_api_manager.dart';
 import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
-import 'package:caribtap/listings/ui/subscription/paywall_screen.dart';
 import 'package:caribtap/listings/ui/widgets/tap_widgets.dart';
 import 'package:caribtap/listings/services/tap_service.dart';
 import 'package:caribtap/listings/listings_module/api/firebase/tap_firebase.dart';
@@ -1871,7 +1870,10 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   }
 
   Widget _buildStickyBottomBar(bool isDark, Color primaryColor) {
-    bool showBooking = listing.bookingEnabled;
+    // Only show Book Now if:
+    // 1. Listing has booking enabled
+    // 2. AND the listing author currently has professional+ tier (check _authorIsPremium which is fresh from Firestore)
+    bool showBooking = listing.bookingEnabled && (_authorIsPremium ?? false);
     bool showChat = currentUser.userID != listing.authorID && listing.chatEnabled;
 
     if (!showBooking && !showChat) return const SizedBox.shrink();

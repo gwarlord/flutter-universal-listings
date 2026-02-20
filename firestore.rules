@@ -48,6 +48,7 @@ service cloud.firestore {
 
     function canEditListingFreshnessExempt() {
       return isAdmin() ||
+        (resource.data.freshness == null && request.resource.data.freshness == null) ||
         (resource.data.freshness == null && request.resource.data.freshness.exempt == false) ||
         (request.resource.data.freshness.exempt == resource.data.freshness.exempt);
     }
@@ -201,7 +202,8 @@ service cloud.firestore {
         ) && 
         // Prevent client-side modification of tap fields (Cloud Functions only)
         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['tapCount', 'tapBadge']) || isAdmin()) &&
-        canEditListingFreshnessExempt();
+        // Allow authors/admins to update even if freshness structure is missing
+        (request.auth.uid == resource.data.authorID || isAdmin() || canEditListingFreshnessExempt());
       
       allow delete: if isSignedIn() && (request.auth.uid == resource.data.authorID || isAdmin());
       

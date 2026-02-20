@@ -310,6 +310,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _allowMultipleBookingsPerDay = l.allowMultipleBookingsPerDay;
     _enableCustomQuestions = l.enableCustomQuestions;
 
+    if (!_canUseBooking()) {
+      _bookingEnabled = false;
+      _allowQuantitySelection = false;
+      _useTimeBlocks = false;
+      _allowMultipleBookingsPerDay = false;
+      _enableCustomQuestions = false;
+    }
+
     // ✅ Load existing services
     _services.clear();
     _services.addAll(l.services);
@@ -586,42 +594,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
     );
   }
 
-  // ✅ New Service Menu Widget
+  // ✅ Service Menu Widget (available to all tiers)
   Widget _buildServiceMenuEditor(bool dark) {
-    // Check if user has subscription tier that unlocks booking services
-    final canUseServices = widget.currentUser.hasBookingServices;
-    
-    if (!canUseServices) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Booking Services are available on Professional plans.'.tr(),
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: dark ? Colors.white : Colors.black,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Upgrade your subscription to enable services for this listing.'.tr(),
-              style: TextStyle(
-                color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1745,6 +1719,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   ),
                 ),
 
+              // Booking section (Professional+ only)
+              _buildBookingSection(isDarkMode(context), _canUseBooking()),
+              const SizedBox(height: 20),
+
               _buildSectionHeader('Contact & Social'.tr()),
               TextField(
                 controller: _phoneController,
@@ -1764,6 +1742,23 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 decoration: _getInputDecoration(label: 'Website'.tr(), icon: Icons.language),
               ),
               const SizedBox(height: 16),
+              Text(
+                'Business Details'.tr(),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: dark ? Colors.white : Colors.black,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Not seen on listing, used for quote and invoice generation'.tr(),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: _companyRegistrationController,
                 decoration: _getInputDecoration(label: 'Company Registration #'.tr(), icon: Icons.business),
@@ -1983,29 +1978,31 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   ),
                   const SizedBox(height: 12),
                 ],
-                // Accept Proof of Payment toggle
-                SwitchListTile(
-                  value: _acceptProofOfPayment,
-                  onChanged: (value) => setState(() => _acceptProofOfPayment = value),
-                  title: Text(
-                    'Accept Proof of Payment',
-                    style: TextStyle(
-                      color: dark ? Colors.white : Colors.black,
-                      fontWeight: FontWeight.w500,
+                // Accept Proof of Payment toggle (paid tiers only)
+                if (isPaidUser(currentUser)) ...[
+                  SwitchListTile(
+                    value: _acceptProofOfPayment,
+                    onChanged: (value) => setState(() => _acceptProofOfPayment = value),
+                    title: Text(
+                      'Accept Proof of Payment',
+                      style: TextStyle(
+                        color: dark ? Colors.white : Colors.black,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  subtitle: Text(
-                    'Require customers to provide proof of payment (photo/receipt) for orders',
-                    style: TextStyle(
-                      color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+                    subtitle: Text(
+                      'Require customers to provide proof of payment (photo/receipt) for orders',
+                      style: TextStyle(
+                        color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+                      ),
                     ),
+                    activeColor: Color(colorPrimary),
+                    activeTrackColor: Color(colorPrimary).withOpacity(0.5),
+                    inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
+                    inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
                   ),
-                  activeColor: Color(colorPrimary),
-                  activeTrackColor: Color(colorPrimary).withOpacity(0.5),
-                  inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
-                  inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
-                ),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 12),
+                ],
               ],
               const SizedBox(height: 20),
 
@@ -2186,62 +2183,49 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 buildWhen: (old, current) => old != current && current is ListingImagesUpdatedState,
                 builder: (context, state) {
                   if (state is ListingImagesUpdatedState) _newImages = state.images;
+                  final normalizedTier = currentUser.subscriptionTier.toLowerCase();
+                  final canUsePhotoEnhancement = currentUser.isAdmin ||
+                      const ['professional', 'pro', 'premium', 'business'].contains(normalizedTier);
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildPhotoGrid(isDarkMode(context)),
                       const SizedBox(height: 12),
-                      EnhanceButtonWidget(
-                        onPressed: () => _showPhotoEnhancementModal(context),
-                        enabled: isEdit,
-                        label: 'Enhance Photos'.tr(),
-                        width: double.infinity,
-                      ),
-                      if (!isEdit)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                            'Save listing to enable enhancements'.tr(),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDarkMode(context) ? Colors.grey.shade400 : Colors.grey.shade600,
-                            ),
-                          ),
+                      if (canUsePhotoEnhancement) ...[
+                        EnhanceButtonWidget(
+                          onPressed: () => _showPhotoEnhancementModal(context),
+                          enabled: isEdit,
+                          label: 'Enhance Photos'.tr(),
+                          width: double.infinity,
                         ),
-                      if ((_existingPhotoUrls.isNotEmpty || _newImages.isNotEmpty) && currentUser.subscriptionTier?.toLowerCase().contains('professional') == true)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: ElevatedButton.icon(
-                            onPressed: () => _showPhotoEnhancementModal(context),
-                            icon: const Icon(Icons.auto_fix_high),
-                            label: const Text('AI Enhance Photos'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(colorPrimary),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                        if (!isEdit)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              'Save listing to enable enhancements'.tr(),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDarkMode(context) ? Colors.grey.shade400 : Colors.grey.shade600,
                               ),
                             ),
                           ),
-                        ),
-                      // Live quota display
-                      if (isEdit && currentUser.userID.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: FutureBuilder<UserEnhancementQuota?>(
-                            future: context.read<PhotoEnhancementCubit>().fetchUserQuota(currentUser.userID),
-                            builder: (context, snapshot) {
-                              if (snapshot.hasData && snapshot.data != null) {
-                                return UsageCounterWidget(
-                                  quota: snapshot.data!,
-                                  compact: true,
-                                );
-                              }
-                              return const SizedBox.shrink();
-                            },
+                        if (isEdit && currentUser.userID.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: FutureBuilder<UserEnhancementQuota?>(
+                              future: context.read<PhotoEnhancementCubit>().fetchUserQuota(currentUser.userID),
+                              builder: (context, snapshot) {
+                                if (snapshot.hasData && snapshot.data != null) {
+                                  return UsageCounterWidget(
+                                    quota: snapshot.data!,
+                                    compact: true,
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
+                            ),
                           ),
-                        ),
+                      ],
                     ],
                   );
                 },
@@ -2313,6 +2297,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
     final latitude = _placeDetail?.geometry?.location.lat ?? (isEdit ? widget.listingToEdit?.latitude ?? 0 : 0);
     final longitude = _placeDetail?.geometry?.location.lng ?? (isEdit ? widget.listingToEdit?.longitude ?? 0 : 0);
 
+    // Auto-disable bookings for Free tier users (cannot use bookings)
+    final bookingEnabledValue = _canUseBooking() ? _bookingEnabled : false;
+
     final listingModel = ListingModel(
       title: _titleController.text.trim(),
       description: _description.trim(),
@@ -2325,7 +2312,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       email: _emailController.text.trim(),
       website: _websiteController.text.trim(),
       openingHours: _openingHoursController.text.trim(),
-      bookingEnabled: _bookingEnabled,
+      bookingEnabled: bookingEnabledValue,
       bookingUrl: _bookingUrlController.text.trim(),
       allowQuantitySelection: _allowQuantitySelection,
       useTimeBlocks: _useTimeBlocks,

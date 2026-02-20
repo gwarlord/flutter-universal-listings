@@ -1,7 +1,9 @@
 import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_google_places_hoc081098/google_maps_webservice_places.dart';
 import 'package:caribtap/listings/listings_module/add_listing/add_listing_event.dart';
@@ -409,6 +411,10 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
 
       emit(AddListingProgressState(progressMessage: 'Updating Listing...'.tr()));
       try {
+        // Determine if user can use professional features (bookings, custom questions, services)
+        final userTierLower = currentUser.subscriptionTier.toLowerCase();
+        final canUseBookings = currentUser.isAdmin || kBookingEligibleTiers.contains(userTierLower);
+        
         final updateData = <String, dynamic>{
           'title': event.listingModel.title,
           'description': event.listingModel.description,
@@ -426,14 +432,18 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           'companyRegistration': event.listingModel.companyRegistration,
           'vatNumber': event.listingModel.vatNumber,
           'openingHours': event.listingModel.openingHours,
-          'bookingEnabled': event.listingModel.bookingEnabled,
-          'bookingUrl': event.listingModel.bookingUrl,
-          'allowQuantitySelection': event.listingModel.allowQuantitySelection,
-          'useTimeBlocks': event.listingModel.useTimeBlocks,
-          'allowMultipleBookingsPerDay': event.listingModel.allowMultipleBookingsPerDay,
-          'timeBlocks': event.listingModel.timeBlocks,
+          // Booking fields (Professional+ only)
+          'bookingEnabled': canUseBookings ? event.listingModel.bookingEnabled : false,
+          'bookingUrl': canUseBookings ? event.listingModel.bookingUrl : '',
+          'allowQuantitySelection': canUseBookings ? event.listingModel.allowQuantitySelection : false,
+          'useTimeBlocks': canUseBookings ? event.listingModel.useTimeBlocks : false,
+          'allowMultipleBookingsPerDay': canUseBookings ? event.listingModel.allowMultipleBookingsPerDay : false,
+          'timeBlocks': canUseBookings ? event.listingModel.timeBlocks : [],
           'services': event.listingModel.services.map((e) => e.toJson()).toList(),
-          'blockedDates': event.listingModel.blockedDates,
+          'blockedDates': canUseBookings ? event.listingModel.blockedDates : [],
+          'enableCustomQuestions': canUseBookings ? event.listingModel.enableCustomQuestions : false,
+          'customQuestions': canUseBookings ? event.listingModel.customQuestions : [],
+          // Store fields (Premium only - for now handled by app-side validation)
           'storeEnabled': event.listingModel.storeEnabled,
           'storeUrl': event.listingModel.storeUrl,
           'storeMode': event.listingModel.storeMode,
@@ -457,10 +467,7 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           'currencyCode': event.listingModel.currencyCode,
           'countryCode': (event.listingModel.countryCode).toUpperCase(),
           'verified': event.listingModel.verified,
-          // Ensure custom booking questions are updated
-          'enableCustomQuestions': event.listingModel.enableCustomQuestions,
-          'customQuestions': event.listingModel.customQuestions,
-          // Premium Rentals
+          // Premium Rentals (Premium+ only)
           'rentalConfig': event.listingModel.rentalConfig?.toJson(),
         };
 
@@ -471,6 +478,24 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           // keep existing videos in Firestore unless user removed them
           // (if you want “remove all videos” behavior, pass explicit empty list)
         }
+
+        print('DEBUG [PublishListingEvent]: uid=${FirebaseAuth.instance.currentUser?.uid}');
+        print('DEBUG [PublishListingEvent]: projectId=${FirebaseFirestore.instance.app.options.projectId}');
+        print('DEBUG [PublishListingEvent]: tier=$userTierLower isAdmin=${currentUser.isAdmin} canUseBookings=$canUseBookings');
+        print('DEBUG [PublishListingEvent]: updateData keys=${updateData.keys.toList()}');
+        print('DEBUG [PublishListingEvent]: bookingEnabled=${updateData['bookingEnabled']} useTimeBlocks=${updateData['useTimeBlocks']} servicesCount=${(updateData['services'] as List).length}');
+
+        print('DEBUG [PublishListingEvent]: reading listing doc...');
+        final existingDoc = await FirebaseFirestore.instance
+          .collection('listings')
+          .doc(event.listingIdToUpdate)
+          .get();
+        final existingData = existingDoc.data();
+        print('DEBUG [PublishListingEvent]: listing doc read complete');
+        print('DEBUG [PublishListingEvent]: listingExists=${existingDoc.exists}');
+        final existingAuthorId = existingData?['authorID'];
+        final existingCustomerId = existingData?['customerId'];
+        print('DEBUG [PublishListingEvent]: authorID=$existingAuthorId customerId=$existingCustomerId');
 
         await FirebaseFirestore.instance
             .collection('listings')
@@ -483,7 +508,16 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
         // Set the ID for the updated listing
         event.listingModel.id = event.listingIdToUpdate!;
         emit(ListingUpdatedState(updatedListing: event.listingModel));
-      } catch (_) {
+      } on FirebaseException catch (e, stackTrace) {
+        print('ERROR [PublishListingEvent]: code=${e.code} message=${e.message}');
+        print('ERROR [PublishListingEvent]: $stackTrace');
+        emit(AddListingErrorState(
+          errorTitle: 'Update Failed'.tr(),
+          errorMessage: 'We could not update your listing. Please try again.'.tr(),
+        ));
+      } catch (e, stackTrace) {
+        print('ERROR [PublishListingEvent]: $e');
+        print('ERROR [PublishListingEvent]: $stackTrace');
         emit(AddListingErrorState(
           errorTitle: 'Update Failed'.tr(),
           errorMessage: 'We could not update your listing. Please try again.'.tr(),
