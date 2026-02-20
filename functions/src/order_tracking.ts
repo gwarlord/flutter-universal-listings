@@ -1,7 +1,7 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import sgMail from "@sendgrid/mail";
-import { sendgridKeySecret, revenuecatKeySecret } from "./common/secrets";
+import { sendgridKeySecret } from "./common/secrets";
 
 // Initialize Firebase Admin if not already initialized
 if (!admin.apps.length) {
@@ -9,45 +9,47 @@ if (!admin.apps.length) {
 }
 
 /**
- * Verify RevenueCat entitlement server-side using REST API
- * @param appUserId - The Firebase UID (used as appUserId in RevenueCat)
- * @param entitlementId - The entitlement to check (e.g., "CaribTap Pro")
- * @returns true if user has active entitlement, false otherwise
+ * Verify entitlement server-side using Firestore source of truth
+ * @param uid - The Firebase UID
+ * @param minTier - Minimum tier required
+ * @returns true if user has active entitlement and tier is sufficient
  */
-async function hasRevenueCatEntitlement(appUserId: string, entitlementId: string): Promise<boolean> {
-  const revenuecatKey = await revenuecatKeySecret.value();
-  if (!revenuecatKey) {
-    functions.logger.warn("RevenueCat API key not configured, skipping entitlement check");
-    // In development, allow without RevenueCat verification
-    return true; // TODO: Change to false in production
-  }
-
+async function hasActiveEntitlement(uid: string, minTier: number): Promise<boolean> {
   try {
-    const response = await fetch(`https://api.revenuecat.com/v1/subscribers/${appUserId}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${revenuecatKey}`,
-        "Accept": "application/json",
-      },
-    });
+    const userSnap = await admin.firestore().collection("users").doc(uid).get();
+    if (userSnap.exists && userSnap.data()?.isAdmin === true) {
+      return true;
+    }
 
-    if (!response.ok) {
-      functions.logger.error("RevenueCat API error", { status: response.status });
+    const entSnap = await admin
+      .firestore()
+      .collection("users")
+      .doc(uid)
+      .collection("entitlements")
+      .doc("subscription")
+      .get();
+
+    if (!entSnap.exists) {
       return false;
     }
 
-    const data = await response.json() as any;
-    const subscriber = data.subscriber;
+    const entitlement = entSnap.data() || {};
+    const status = entitlement.status as string | undefined;
+    const tier = Number(entitlement.tier || 0);
+    const expiresAt = entitlement.expiresAt?.toDate?.() as Date | undefined;
+    const now = new Date();
 
-    // Check if user has active entitlement
-    if (subscriber?.entitlements && subscriber.entitlements[entitlementId]) {
-      const entitlement = subscriber.entitlements[entitlementId];
-      return entitlement.expires_date ? new Date(entitlement.expires_date) > new Date() : false;
+    if (status !== "active") {
+      return false;
     }
 
-    return false;
+    if (expiresAt && expiresAt <= now) {
+      return false;
+    }
+
+    return tier >= minTier;
   } catch (error) {
-    functions.logger.error("Error checking RevenueCat entitlement", { error, appUserId });
+    functions.logger.error("Error checking entitlement", { error, uid });
     return false;
   }
 }
@@ -117,8 +119,8 @@ export const setOrderTracking = functions.https.onCall(async (data, context) => 
       );
     }
 
-    // CRITICAL: Verify user has active RevenueCat entitlement for "CaribTap Pro"
-    const hasProEntitlement = await hasRevenueCatEntitlement(uid, "CaribTap Pro");
+    // CRITICAL: Verify user has active entitlement (tier 1+)
+    const hasProEntitlement = await hasActiveEntitlement(uid, 1);
 
     if (!hasProEntitlement) {
       throw new functions.https.HttpsError(

@@ -193,24 +193,28 @@ class _ConversationItemState extends State<_ConversationItem> {
   }
 
   Future<void> _showHoursDialog() async {
-    final hours = await _fetchListingHours();
-    final summary = _formatHoursSummary(hours);
-    if (!mounted) return;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
-        title: Text('Chat Hours'.tr(), style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
-        content: Text(summary, style: TextStyle(color: isDark ? Colors.white70 : Colors.black87)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text('OK'.tr(), style: TextStyle(color: Theme.of(context).primaryColor)),
-          ),
-        ],
-      ),
-    );
+    try {
+      final hours = await _fetchListingHours();
+      final summary = _formatHoursSummary(hours);
+      if (!mounted) return;
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+          title: Text('Chat Hours'.tr(), style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+          content: Text(summary, style: TextStyle(color: isDark ? Colors.white70 : Colors.black87)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text('OK'.tr(), style: TextStyle(color: Theme.of(context).primaryColor)),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error showing hours dialog: $e');
+    }
   }
 
   bool _isChatAvailableNow(String hoursString) {
@@ -341,187 +345,193 @@ class _ConversationItemState extends State<_ConversationItem> {
     final profilePic = _otherUser?.profilePictureURL ?? '';
     final listingLogo = widget.conversation.listingImage;
 
-    return InkWell(
-      onTap: () async {
-        final hoursString = await _fetchListingHours();
-        if (!mounted) return;
-        
-        if (!_isChatAvailableNow(hoursString)) {
-          await _showClosedDialog();
-          return;
-        }
-        
-        push(
-          context,
-          ChatWrapperWidget(
-            channelDataModel: ChannelDataModel(
-              id: widget.conversation.id,
-              participants: widget.conversation.participants,
-              participantProfilePictureURLs: widget.conversation.chatFeedContent.participantProfilePictureURLs,
-              name: widget.conversation.title,
-              channelID: widget.conversation.id,
-              lastMessage: widget.conversation.chatFeedContent,
-              lastMessageDate: widget.conversation.chatFeedContent.createdAt,
-              lastThreadMessageId: widget.conversation.chatFeedContent.id,
-              listingId: widget.conversation.listingId,
-              listingTitle: widget.conversation.listingTitle,
-              listingImage: widget.conversation.listingImage,
-            ),
-            currentUser: ListingsUser(userID: widget.currentUserId),
-            colorPrimary: Color(colorPrimary),
-            colorAccent: Color(colorAccent),
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: isUnread 
-              ? (isDark ? Color(colorPrimary).withOpacity(0.12) : Color(colorPrimary).withOpacity(0.07)) 
-              : Colors.transparent,
-          border: isUnread 
-              ? Border(left: BorderSide(color: Color(colorPrimary), width: 4))
-              : null,
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 60,
-              height: 60,
-              child: Stack(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: isUnread 
+            ? (isDark ? Color(colorPrimary).withOpacity(0.12) : Color(colorPrimary).withOpacity(0.07)) 
+            : Colors.transparent,
+        border: isUnread 
+            ? Border(left: BorderSide(color: Color(colorPrimary), width: 4))
+            : null,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              onTap: () async {
+                final hoursString = await _fetchListingHours();
+                if (!mounted) return;
+                
+                if (!_isChatAvailableNow(hoursString)) {
+                  await _showClosedDialog();
+                  return;
+                }
+                
+                push(
+                  context,
+                  ChatWrapperWidget(
+                    channelDataModel: ChannelDataModel(
+                      id: widget.conversation.id,
+                      participants: widget.conversation.participants,
+                      participantProfilePictureURLs: widget.conversation.chatFeedContent.participantProfilePictureURLs,
+                      name: widget.conversation.title,
+                      channelID: widget.conversation.id,
+                      lastMessage: widget.conversation.chatFeedContent,
+                      lastMessageDate: widget.conversation.chatFeedContent.createdAt,
+                      lastThreadMessageId: widget.conversation.chatFeedContent.id,
+                      listingId: widget.conversation.listingId,
+                      listingTitle: widget.conversation.listingTitle,
+                      listingImage: widget.conversation.listingImage,
+                    ),
+                    currentUser: ListingsUser(userID: widget.currentUserId),
+                    colorPrimary: Color(colorPrimary),
+                    colorAccent: Color(colorAccent),
+                  ),
+                );
+              },
+              child: Row(
                 children: [
-                  Center(
-                    child: Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isUnread ? Color(colorPrimary).withOpacity(0.5) : Colors.transparent,
-                          width: 2
-                        ),
-                        color: Colors.white,
-                      ),
-                      child: listingLogo.isNotEmpty
-                          ? ClipOval(
-                              child: Image.network(
-                                listingLogo,
-                                width: 50,
-                                height: 50,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                  SizedBox(
+                    width: 60,
+                    height: 60,
+                    child: Stack(
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 54,
+                            height: 54,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isUnread ? Color(colorPrimary).withOpacity(0.5) : Colors.transparent,
+                                width: 2
                               ),
-                            )
-                          : Icon(Icons.store, size: 32, color: Colors.grey[400]),
+                              color: Colors.white,
+                            ),
+                            child: listingLogo.isNotEmpty
+                                ? ClipOval(
+                                    child: Image.network(
+                                      listingLogo,
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                                    ),
+                                  )
+                                : Icon(Icons.store, size: 32, color: Colors.grey[400]),
+                          ),
+                        ),
+                        if (profilePic.isNotEmpty)
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))],
+                              ),
+                              child: ClipOval(
+                                child: displayCircleImage(profilePic, 22, false),
+                              ),
+                            ),
+                          ),
+                        if (isActive)
+                          Positioned(
+                            right: 4,
+                            top: 4,
+                            child: Container(
+                              width: 14,
+                              height: 14,
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: isDark ? Colors.black : Colors.white, width: 2.5),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                  if (profilePic.isNotEmpty)
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        width: 22,
-                        height: 22,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))],
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                displayName,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: isUnread ? FontWeight.w900 : FontWeight.w600,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text(
+                              timeStr,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isUnread ? Color(colorPrimary) : Colors.grey,
+                                fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                          ],
                         ),
-                        child: ClipOval(
-                          child: displayCircleImage(profilePic, 22, false),
+                        const SizedBox(height: 3),
+                        if (widget.conversation.listingTitle.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 2),
+                            child: Text(
+                              widget.conversation.listingTitle,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(colorPrimary).withOpacity(0.9),
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                lastMsg,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: isUnread 
+                                      ? (isDark ? Colors.white : Colors.black87) 
+                                      : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                                  fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
+                      ],
                     ),
-                  if (isActive)
-                    Positioned(
-                      right: 4,
-                      top: 4,
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: isDark ? Colors.black : Colors.white, width: 2.5),
-                        ),
-                      ),
-                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          displayName,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: isUnread ? FontWeight.w900 : FontWeight.w600,
-                            color: isDark ? Colors.white : Colors.black87,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Text(
-                        timeStr,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isUnread ? Color(colorPrimary) : Colors.grey,
-                          fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  if (widget.conversation.listingTitle.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 2),
-                      child: Text(
-                        widget.conversation.listingTitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(colorPrimary).withOpacity(0.9),
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          lastMsg,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: isUnread 
-                                ? (isDark ? Colors.white : Colors.black87) 
-                                : (isDark ? Colors.grey[400] : Colors.grey[600]),
-                            fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              tooltip: 'Chat Hours'.tr(),
-              icon: Icon(Icons.info_outline, size: 18, color: isDark ? Colors.white70 : Colors.black45),
-              onPressed: widget.conversation.listingId.trim().isEmpty ? null : _showHoursDialog,
-            ),
-          ],
-        ),
+          ),
+          IconButton(
+            tooltip: 'Chat Hours'.tr(),
+            icon: Icon(Icons.info_outline, size: 18, color: isDark ? Colors.white70 : Colors.black45),
+            onPressed: () => _showHoursDialog(),
+          ),
+        ],
       ),
     );
   }

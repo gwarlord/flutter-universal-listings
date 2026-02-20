@@ -3,9 +3,10 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/listings/model/order_request.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
-import 'package:caribtap/listings/services/revenue_cat_service.dart';
+import 'package:caribtap/listings/services/entitlement_service.dart';
+import 'package:caribtap/listings/services/pro_gate.dart';
 import 'package:caribtap/listings/services/store_service.dart';
-import 'package:caribtap/listings/ui/subscription/paywall_screen.dart';
+import 'package:caribtap/listings/ui/subscription/pro_upgrade_screen.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/screens/store/barcode_scanner_field.dart';
 
@@ -34,7 +35,7 @@ class ShippingTrackingCard extends StatefulWidget {
 
 class _ShippingTrackingCardState extends State<ShippingTrackingCard> {
   final StoreService _storeService = StoreService();
-  final RevenueCatService _revenueCatService = RevenueCatService();
+  final EntitlementService _entitlementService = EntitlementService();
 
   late TextEditingController _carrierController;
   late TextEditingController _trackingNumberController;
@@ -68,20 +69,13 @@ class _ShippingTrackingCardState extends State<ShippingTrackingCard> {
 
   Future<void> _checkProfessionalEntitlement() async {
     try {
-      final localTier = widget.currentUser.subscriptionTier.trim().toLowerCase();
-      final localHasAccess = widget.currentUser.isSubscriptionActive &&
-          (widget.currentUser.isAdmin ||
-              localTier == 'professional' ||
-              localTier == 'premium' ||
-              localTier == 'business');
-
-      bool hasPro = localHasAccess;
-
-      if (!hasPro) {
-        final tier = await _revenueCatService.getSubscriptionTier();
-        // Grant access for both 'professional' and 'premium' tiers
-        hasPro = tier == 'professional' || tier == 'premium';
-      }
+      final entitlement =
+          await _entitlementService.fetchEntitlement(widget.currentUser.userID);
+      final hasPro = ProGate.tierAtLeast(
+        entitlement,
+        1,
+        isAdmin: widget.currentUser.isAdmin,
+      );
 
       setState(() {
         _hasProfessional = hasPro;
@@ -197,7 +191,7 @@ class _ShippingTrackingCardState extends State<ShippingTrackingCard> {
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => PaywallScreen(currentUser: widget.currentUser),
+        builder: (_) => ProUpgradeScreen(currentUser: widget.currentUser),
       ),
     );
 

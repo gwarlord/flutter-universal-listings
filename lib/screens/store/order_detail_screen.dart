@@ -20,7 +20,8 @@ import 'package:caribtap/listings/model/order_request.dart';
 import 'package:caribtap/listings/model/table_mode_models.dart';
 import 'package:caribtap/listings/api/firebase/table_mode_firebase.dart';
 import 'package:caribtap/listings/services/store_service.dart';
-import 'package:caribtap/listings/utils/subscription_helper.dart';
+import 'package:caribtap/listings/services/entitlement_service.dart';
+import 'package:caribtap/listings/services/pro_gate.dart';
 import 'package:caribtap/screens/store/order_chat_helper.dart';
 import 'package:caribtap/screens/store/shipping_tracking_card.dart';
 import 'package:caribtap/screens/store/shipping_tracking_display.dart';
@@ -47,6 +48,7 @@ class OrderDetailScreen extends StatefulWidget {
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
   final StoreService _storeService = StoreService();
   final OrderChatHelper _chatHelper = OrderChatHelper();
+  final EntitlementService _entitlementService = EntitlementService();
   ListingsUser? _customer;
   ListingModel? _listing;
   bool _isUpdating = false;
@@ -62,16 +64,28 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     // CRITICAL: Verify Premium access only for listers viewing order requests
     // Customers can always view their own orders
-    if (widget.viewAsLister && !isPremiumUser(widget.currentUser)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        showSnackBar(context, '🔒 Premium subscription required');
-        Navigator.pop(context);
-      });
+    if (widget.viewAsLister) {
+      _ensurePremiumAccess();
     }
 
     _loadListing();
     _loadCustomer();
     _loadTableSession();
+  }
+
+  Future<void> _ensurePremiumAccess() async {
+    final entitlement =
+        await _entitlementService.fetchEntitlement(widget.currentUser.userID);
+    final hasAccess = ProGate.tierAtLeast(
+      entitlement,
+      2,
+      isAdmin: widget.currentUser.isAdmin,
+    );
+
+    if (!hasAccess && mounted) {
+      showSnackBar(context, '🔒 Premium subscription required');
+      Navigator.pop(context);
+    }
   }
 
   Future<void> _loadListing() async {

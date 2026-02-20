@@ -8,7 +8,8 @@ import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/order_request.dart';
 import 'package:caribtap/listings/services/store_service.dart';
-import 'package:caribtap/listings/utils/subscription_helper.dart';
+import 'package:caribtap/listings/services/entitlement_service.dart';
+import 'package:caribtap/listings/services/pro_gate.dart';
 import 'package:caribtap/listings/ui/table_mode/staff_table_sessions_screen.dart';
 import 'package:caribtap/screens/store/order_detail_screen.dart';
 import 'package:caribtap/screens/store/shipping_tracking_display.dart';
@@ -29,6 +30,7 @@ class OrdersManagementScreen extends StatefulWidget {
 class _OrdersManagementScreenState extends State<OrdersManagementScreen>
     with TickerProviderStateMixin {
   final StoreService _storeService = StoreService();
+  final EntitlementService _entitlementService = EntitlementService();
   late TabController _tabController;
   final Map<String, ListingsUser> _customerCache = {};
   final Map<String, ListingModel> _listingCache = {};
@@ -70,14 +72,24 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
     super.initState();
 
     // CRITICAL: Verify Premium access
-    if (!isPremiumUser(widget.currentUser)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        showSnackBar(context, '🔒 Premium subscription required');
-        Navigator.pop(context);
-      });
-    }
+    _ensurePremiumAccess();
 
     _tabController = TabController(length: _statusFilters.length, vsync: this, initialIndex: 0);
+  }
+
+  Future<void> _ensurePremiumAccess() async {
+    final entitlement =
+        await _entitlementService.fetchEntitlement(widget.currentUser.userID);
+    final hasAccess = ProGate.tierAtLeast(
+      entitlement,
+      2,
+      isAdmin: widget.currentUser.isAdmin,
+    );
+
+    if (!hasAccess && mounted) {
+      showSnackBar(context, '🔒 Premium subscription required');
+      Navigator.pop(context);
+    }
   }
 
   @override

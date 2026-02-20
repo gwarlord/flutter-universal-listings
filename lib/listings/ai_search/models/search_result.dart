@@ -3,6 +3,28 @@ import 'package:equatable/equatable.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/deal_ad_model.dart';
 
+/// Predefined icon mapping for search explainability chips
+/// Maps icon code points to actual IconData constants to avoid tree-shake issues
+final Map<int, IconData> _predefinedIcons = {
+  Icons.info.codePoint: Icons.info,
+  Icons.location_on.codePoint: Icons.location_on,
+  Icons.category.codePoint: Icons.category,
+  Icons.price_check.codePoint: Icons.price_check,
+  Icons.star.codePoint: Icons.star,
+  Icons.verified.codePoint: Icons.verified,
+  Icons.trending_up.codePoint: Icons.trending_up,
+  Icons.check_circle.codePoint: Icons.check_circle,
+  Icons.warning.codePoint: Icons.warning,
+  Icons.search.codePoint: Icons.search,
+  Icons.label.codePoint: Icons.label,
+  Icons.description.codePoint: Icons.description,
+};
+
+/// Helper function to get IconData from code point with fallback
+IconData _getIconFromCodePoint(int codePoint) {
+  return _predefinedIcons[codePoint] ?? Icons.info;
+}
+
 /// Explainability chip for search results
 class ExplainabilityChip extends Equatable {
   final String label;
@@ -85,7 +107,7 @@ class SearchResult extends Equatable {
 
     return ExplainabilityChip(
       label: label,
-      icon: IconData(iconCode, fontFamily: 'MaterialIcons'),
+      icon: _getIconFromCodePoint(iconCode),
       color: Color(colorValue),
     );
   }

@@ -18,6 +18,9 @@ export * from "./order_tracking";
 // Export rental booking notification functions
 export * from "./rental_booking_notifications";
 
+// Export booking notification functions
+export * from "./booking_notifications";
+
 // Export user suspension notification functions
 export * from "./user_suspension_notifications";
 
@@ -62,6 +65,9 @@ export * from "./ai_search/index";
 
 // Export pro docs functions
 export * from "./pro_docs/quote_acceptance";
+
+// Export subscription verification functions
+export * from "./subscriptions";
 
 const db = admin.firestore();
 const messaging = admin.messaging();

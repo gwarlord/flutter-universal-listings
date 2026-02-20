@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "17296052844-lj3jqshqf3qrd18psg657b576un0kbp1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.caribtap.instaflutter.android",
+            "certificate_hash": "dd4578d45097ba2ceb74d73b89fa5f16a56fe6ba"
+          }
+        },
+        {
           "client_id": "17296052844-2f0s8q50mn9uasqo2n0861qo444so0th.apps.googleusercontent.com",
           "client_type": 3
         }

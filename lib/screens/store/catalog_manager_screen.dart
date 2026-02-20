@@ -8,7 +8,8 @@ import 'package:caribtap/listings/model/catalog_item.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/services/store_service.dart';
-import 'package:caribtap/listings/utils/subscription_helper.dart';
+import 'package:caribtap/listings/services/entitlement_service.dart';
+import 'package:caribtap/listings/services/pro_gate.dart';
 import 'package:caribtap/screens/store/catalog_item_editor_screen.dart';
 import 'package:caribtap/screens/store/store_settings_screen.dart';
 
@@ -30,6 +31,7 @@ class CatalogManagerScreen extends StatefulWidget {
 
 class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
   final StoreService _storeService = StoreService();
+  final EntitlementService _entitlementService = EntitlementService();
   String _selectedCategory = 'All';
   bool _migrationDone = false;
 
@@ -44,11 +46,14 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
   }
 
   Future<void> _checkAndSyncPremiumAccess() async {
-    // Use local subscription tier (already synced with RevenueCat during auth)
-    final isPremium = widget.currentUser.isPremium || 
-                      widget.currentUser.isProfessional ||
-                      widget.currentUser.isAdmin;
-    
+    final entitlement =
+        await _entitlementService.fetchEntitlement(widget.currentUser.userID);
+    final isPremium = ProGate.tierAtLeast(
+      entitlement,
+      2,
+      isAdmin: widget.currentUser.isAdmin,
+    );
+
     if (!isPremium) {
       if (mounted) {
         showSnackBar(context, '🔒 Premium subscription required'.tr());

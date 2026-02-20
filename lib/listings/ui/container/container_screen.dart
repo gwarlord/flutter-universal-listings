@@ -21,8 +21,7 @@ import 'package:caribtap/listings/listings_module/booking_services/booking_servi
 import 'package:caribtap/listings/listings_module/booking/my_bookings_screen.dart';
 import 'package:caribtap/listings/listings_module/booking/booking_management_screen.dart';
 import 'package:caribtap/listings/ui/rentals/rental_orders_hub_screen.dart';
-import 'package:caribtap/listings/ui/subscription/paywall_screen.dart';
-import 'package:caribtap/listings/ui/subscription/customer_center_screen.dart';
+import 'package:caribtap/listings/ui/subscription/pro_upgrade_screen.dart';
 import 'package:caribtap/listings/utils/subscription_helper.dart';
 import 'package:caribtap/screens/store/orders_management_screen.dart';
 import 'package:caribtap/screens/store/customer_orders_screen.dart';
@@ -272,7 +271,7 @@ class _ContainerState extends State<ContainerScreen> {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => PaywallScreen(
+                  builder: (context) => ProUpgradeScreen(
                     currentUser: currentUser,
                   ),
                 ),
@@ -914,7 +913,7 @@ class _ContainerState extends State<ContainerScreen> {
                       icon: Icons.card_membership_rounded,
                       onTap: () {
                         Navigator.pop(context);
-                        push(context, CustomerCenterScreen(currentUser: currentUser));
+                        push(context, ProUpgradeScreen(currentUser: currentUser));
                       },
                       isDark: isDark,
                       primaryColor: primaryColorValue,
@@ -1156,7 +1155,7 @@ class _ContainerState extends State<ContainerScreen> {
         child: InkWell(
           onTap: () {
             Navigator.pop(context);
-            push(context, PaywallScreen(currentUser: currentUser));
+            push(context, ProUpgradeScreen(currentUser: currentUser));
           },
           borderRadius: BorderRadius.circular(12),
           child: Padding(

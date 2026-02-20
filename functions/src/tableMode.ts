@@ -1,8 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import axios from "axios";
 import * as crypto from "crypto";
-import { revenuecatKeySecret } from "./common/secrets";
 
 // Initialize Firebase Admin if not already initialized
 if (!admin.apps.length) {
@@ -41,7 +39,7 @@ async function isAdminUser(uid: string): Promise<boolean> {
 }
 
 /**
- * Verify if user has active Premium entitlement via RevenueCat
+ * Verify if user has active Premium entitlement via Firestore
  */
 async function verifyPremiumEntitlement(uid: string): Promise<boolean> {
   const isAdmin = await isAdminUser(uid);
@@ -50,27 +48,34 @@ async function verifyPremiumEntitlement(uid: string): Promise<boolean> {
   }
 
   try {
-    const revenueCatApiKey = await revenuecatKeySecret.value();
-    if (!revenueCatApiKey) {
-      functions.logger.warn("RevenueCat API key not configured - allowing for development");
-      return true;
+    const entSnap = await db
+      .collection("users")
+      .doc(uid)
+      .collection("entitlements")
+      .doc("subscription")
+      .get();
+
+    if (!entSnap.exists) {
+      return false;
     }
 
-    const response = await axios.get(
-      `https://api.revenuecat.com/v1/subscribers/${uid}`,
-      {
-        headers: {
-          Authorization: `Bearer ${revenueCatApiKey}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const entitlement = entSnap.data() || {};
+    const status = entitlement.status as string | undefined;
+    const tier = Number(entitlement.tier || 0);
+    const expiresAt = entitlement.expiresAt?.toDate?.() as Date | undefined;
+    const now = new Date();
 
-    const customer = response.data.subscriber;
-    const activeEntitlements = customer.entitlements.active || {};
-    return "CaribTap Pro" in activeEntitlements;
+    if (status !== "active") {
+      return false;
+    }
+
+    if (expiresAt && expiresAt <= now) {
+      return false;
+    }
+
+    return tier >= 2;
   } catch (error: any) {
-    functions.logger.error("RevenueCat verification failed", { uid, error: error.message });
+    functions.logger.error("Entitlement verification failed", { uid, error: error.message });
     return false;
   }
 }

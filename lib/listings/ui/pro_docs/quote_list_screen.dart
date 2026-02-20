@@ -11,7 +11,7 @@ import 'package:caribtap/listings/ui/pro_docs/cubit/quote_list_cubit.dart';
 import 'package:caribtap/listings/ui/pro_docs/quote_builder_screen.dart';
 import 'package:caribtap/listings/ui/pro_docs/quote_detail_screen.dart';
 import 'package:caribtap/listings/ui/pro_docs/invoice_detail_screen.dart';
-import 'package:caribtap/listings/ui/subscription/paywall_screen.dart';
+import 'package:caribtap/listings/ui/subscription/pro_upgrade_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -120,7 +120,7 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                push(context, PaywallScreen(currentUser: widget.currentUser));
+                push(context, ProUpgradeScreen(currentUser: widget.currentUser));
               },
               child: Text('Upgrade'.tr()),
             ),
@@ -325,7 +325,7 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
           ),
           TextButton(
             onPressed: () {
-              push(context, PaywallScreen(currentUser: widget.currentUser));
+              push(context, ProUpgradeScreen(currentUser: widget.currentUser));
             },
             child: Text('Upgrade'.tr()),
           ),

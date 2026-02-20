@@ -7,6 +7,9 @@ export const sendgridKeySecret = defineSecret("SENDGRID_KEY");
 export const geminiKeySecret = defineSecret("GEMINI_KEY");
 export const revenuecatKeySecret = defineSecret("REVENUECAT_KEY");
 export const appUrlSecret = defineSecret("APP_URL");
+export const appleSharedSecret = defineSecret("APPLE_SHARED_SECRET");
+export const googleServiceAccountJsonSecret = defineSecret("GOOGLE_SERVICE_ACCOUNT_JSON");
+export const entitlementTokenKeySecret = defineSecret("ENTITLEMENT_TOKEN_KEY");
 
 /**
  * Initialize SendGrid with API key if available

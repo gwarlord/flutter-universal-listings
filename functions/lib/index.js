@@ -54,6 +54,8 @@ __exportStar(require("./order_notifications"), exports);
 __exportStar(require("./order_tracking"), exports);
 // Export rental booking notification functions
 __exportStar(require("./rental_booking_notifications"), exports);
+// Export booking notification functions
+__exportStar(require("./booking_notifications"), exports);
 // Export user suspension notification functions
 __exportStar(require("./user_suspension_notifications"), exports);
 // Export listing suspension notification functions

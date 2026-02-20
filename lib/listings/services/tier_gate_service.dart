@@ -1,5 +1,7 @@
 import 'package:caribtap/listings/model/listings_user.dart';
-import 'package:caribtap/listings/services/revenue_cat_service.dart';
+import 'package:caribtap/listings/model/entitlement_subscription.dart';
+import 'package:caribtap/listings/services/entitlement_service.dart';
+import 'package:caribtap/listings/services/pro_gate.dart';
 
 enum ProTier {
   none,
@@ -9,36 +11,33 @@ enum ProTier {
 }
 
 class TierGateService {
-  final RevenueCatService _revenueCatService;
+  final EntitlementService _entitlementService;
 
   TierGateService({
-    RevenueCatService? revenueCatService,
-  }) : _revenueCatService = revenueCatService ?? RevenueCatService();
+    EntitlementService? entitlementService,
+  }) : _entitlementService = entitlementService ?? EntitlementService();
 
   ProTier resolveTierFromUser(ListingsUser user) {
-    if (user.isAdmin) return ProTier.tier3;
-    if (!user.isSubscriptionActive) return ProTier.none;
-
-    final tier = user.subscriptionTier.trim().toLowerCase();
-    switch (tier) {
-      case 'professional':
-        return ProTier.tier1;
-      case 'premium':
-        return ProTier.tier2;
-      case 'business':
-        return ProTier.tier3;
-      default:
-        return ProTier.none;
-    }
+    final entitlement = _entitlementService.currentEntitlement;
+    return resolveTierFromEntitlement(entitlement, isAdmin: user.isAdmin);
   }
 
-  Future<ProTier> refreshTierFromRevenueCat() async {
-    final tier = await _revenueCatService.getSubscriptionTier();
-    switch (tier) {
-      case 'professional':
+  ProTier resolveTierFromEntitlement(
+    EntitlementSubscription? entitlement, {
+    required bool isAdmin,
+  }) {
+    final tierValue = ProGate.resolveTier(
+      entitlement: entitlement,
+      isAdmin: isAdmin,
+    );
+
+    switch (tierValue) {
+      case 1:
         return ProTier.tier1;
-      case 'premium':
+      case 2:
         return ProTier.tier2;
+      case 3:
+        return ProTier.tier3;
       default:
         return ProTier.none;
     }

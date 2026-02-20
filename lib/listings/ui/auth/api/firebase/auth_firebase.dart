@@ -16,7 +16,8 @@ import 'package:caribtap/constants.dart';
 import 'package:caribtap/core/model/user.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
-import 'package:caribtap/listings/services/revenue_cat_service.dart';
+import 'package:caribtap/listings/services/entitlement_service.dart';
+import 'package:caribtap/listings/services/subscription_service.dart';
 import 'package:caribtap/listings/ui/auth/api/authentication_repository.dart';
 import 'package:caribtap/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -91,12 +92,8 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       }
         await _updateCurrentUser(user);
         
-        // Initialize RevenueCat for this user
-        try {
-          await RevenueCatService().initialize(userId: user.userID);
-        } catch (e) {
-          debugPrint('❌ Failed to initialize RevenueCat: $e');
-        }
+        // Start entitlement listener for this user
+        EntitlementService().startListening(user.userID);
       }
       return user;
     } on auth.FirebaseAuthException catch (e, s) {
@@ -530,6 +527,8 @@ class AuthFirebaseUtils extends AuthenticationRepository {
     user.active = false;
     user.lastOnlineTimestamp = Timestamp.now().seconds;
     await _updateCurrentUser(user);
+    EntitlementService().stopListening();
+    await SubscriptionService().stopListening();
     await auth.FirebaseAuth.instance.signOut();
   }
 

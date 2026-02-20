@@ -5,7 +5,8 @@ import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/rental_booking.dart';
 import 'package:caribtap/listings/services/rental_service.dart';
-import 'package:caribtap/listings/utils/subscription_helper.dart';
+import 'package:caribtap/listings/services/entitlement_service.dart';
+import 'package:caribtap/listings/services/pro_gate.dart';
 import 'package:caribtap/listings/ui/rentals/rental_booking_detail_screen.dart';
 
 class RentalOrdersHubScreen extends StatefulWidget {
@@ -25,23 +26,46 @@ class RentalOrdersHubScreen extends StatefulWidget {
 class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     with SingleTickerProviderStateMixin {
   final RentalService _rentalService = RentalService();
+  final EntitlementService _entitlementService = EntitlementService();
   final Map<String, String> _currencyCodeCache = {};
   final Map<String, _CustomerPreview> _customerPreviewCache = {};
   late TabController _tabController;
+  late VoidCallback _entitlementListener;
   String _selectedStatus = 'all';
   bool _showHistory = false; // Toggle between active orders and all orders
-
-  bool get _showListerTab =>
-      isPremiumUser(widget.currentUser) || widget.currentUser.isAdmin;
+  bool _showListerTab = false;
 
   @override
   void initState() {
     super.initState();
+    _showListerTab = ProGate.tierAtLeast(
+      _entitlementService.currentEntitlement,
+      2,
+      isAdmin: widget.currentUser.isAdmin,
+    );
     _tabController = TabController(length: _showListerTab ? 2 : 1, vsync: this);
+
+    _entitlementListener = () {
+      final hasAccess = ProGate.tierAtLeast(
+        _entitlementService.currentEntitlement,
+        2,
+        isAdmin: widget.currentUser.isAdmin,
+      );
+      if (hasAccess != _showListerTab && mounted) {
+        setState(() {
+          _showListerTab = hasAccess;
+          _tabController.dispose();
+          _tabController =
+              TabController(length: _showListerTab ? 2 : 1, vsync: this);
+        });
+      }
+    };
+    _entitlementService.entitlementNotifier.addListener(_entitlementListener);
   }
 
   @override
   void dispose() {
+    _entitlementService.entitlementNotifier.removeListener(_entitlementListener);
     _tabController.dispose();
     super.dispose();
   }

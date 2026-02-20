@@ -171,6 +171,13 @@ service cloud.firestore {
         // Users cannot write directly to prevent tampering
         allow write: if request.auth.token.serviceAccount == true || isAdmin();
       }
+
+      // Entitlements/Subscription subcollection
+      match /entitlements/{entitlementId} {
+        allow read: if isOwner(userId) || isAdmin();
+        // Cloud Functions can write (server-side subscription updates)
+        allow write: if request.auth.token.serviceAccount == true || isAdmin();
+      }
     }
 
     match /public_docs/{token} {

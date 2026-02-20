@@ -29,6 +29,7 @@ import 'package:caribtap/listings/ui/table_mode/staff_table_sessions_screen.dart
 import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
 import 'package:caribtap/listings/services/attention_service.dart';
 import 'package:caribtap/listings/ui/attention/attention_cubit.dart';
+import 'package:caribtap/listings/listings_module/booking/booking_management_screen.dart';
 
 runListings() {
   appName = 'Flutter Universal Listings';
@@ -302,6 +303,25 @@ void _handleNotification(Map<String, dynamic> data, GlobalKey<NavigatorState> na
           ],
         ),
       );
+      return;
+    }
+
+    // Handle booking notifications
+    if (data['type'] == 'new_booking' || data['type'] == 'booking_status_changed') {
+      debugPrint('🔔 Booking notification: ${data['bookingNumber']} - ${data['status']}');
+      
+      try {
+        // Navigate to booking management screen
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => BookingManagementScreen(
+              currentUser: user,
+            ),
+          ),
+        );
+      } catch (e) {
+        debugPrint('Error navigating to booking screen: $e');
+      }
       return;
     }
 

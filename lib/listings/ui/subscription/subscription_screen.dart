@@ -5,6 +5,7 @@ import 'package:caribtap/constants.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/ui/subscription/pro_upgrade_screen.dart';
 import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -407,17 +408,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Integrate with RevenueCat payment flow
-      await Future.delayed(const Duration(seconds: 2)); // Simulate API call
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Payment processing will be integrated with RevenueCat'.tr()),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProUpgradeScreen(currentUser: widget.currentUser),
+        ),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -429,8 +425,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
-      }
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProUpgradeScreen(currentUser: widget.currentUser),
+                ),
+              );
     }
   }
 }

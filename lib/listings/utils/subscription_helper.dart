@@ -1,4 +1,6 @@
 import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/services/entitlement_service.dart';
+import 'package:caribtap/listings/services/pro_gate.dart';
 
 /// Subscription tier helper utilities for CaribTap
 /// 
@@ -14,20 +16,22 @@ import 'package:caribtap/listings/model/listings_user.dart';
 /// Returns true ONLY for subscriptionTier == "premium"
 bool isPremiumUser(ListingsUser user) {
   if (user.isAdmin) return true; // Admins have all access
-  return user.isPremium && user.isSubscriptionActive;
+  final entitlement = EntitlementService().currentEntitlement;
+  return ProGate.tierAtLeast(entitlement, 2, isAdmin: user.isAdmin);
 }
 
 /// Checks if user has PROFESSIONAL subscription tier (NOT premium)
 bool isProfessionalUser(ListingsUser user) {
   if (user.isAdmin) return true;
-  return user.isProfessional && user.isSubscriptionActive;
+  final entitlement = EntitlementService().currentEntitlement;
+  return ProGate.tierAtLeast(entitlement, 1, isAdmin: user.isAdmin);
 }
 
 /// Checks if user has any paid tier (professional OR premium)
 bool isPaidUser(ListingsUser user) {
   if (user.isAdmin) return true;
-  return (user.isProfessional || user.isPremium || user.isBusiness) && 
-         user.isSubscriptionActive;
+  final entitlement = EntitlementService().currentEntitlement;
+  return ProGate.tierAtLeast(entitlement, 1, isAdmin: user.isAdmin);
 }
 
 /// Returns a user-friendly display name for subscription tier

@@ -6,7 +6,8 @@ import 'package:caribtap/constants.dart';
 import 'package:caribtap/core/ui/loading/loading_cubit.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
-import 'package:caribtap/listings/services/revenue_cat_service.dart';
+import 'package:caribtap/listings/services/entitlement_service.dart';
+import 'package:caribtap/listings/services/subscription_service.dart';
 import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:caribtap/listings/ui/auth/login/login_bloc.dart';
 import 'package:caribtap/listings/ui/auth/phone_auth/number_input/phone_number_input_screen.dart';
@@ -62,14 +63,9 @@ class _LoginScreen extends State<LoginScreen> {
             listener: (context, state) async {
               context.read<LoadingCubit>().hideLoading();
               if (state.authState == AuthState.authenticated) {
-                // Initialize RevenueCat after successful login
-                try {
-                  await RevenueCatService().initialize(userId: state.user!.userID);
-                  print('✅ RevenueCat initialized for ${state.user!.userID}');
-                } catch (e) {
-                  print('⚠️ RevenueCat initialization failed: $e');
-                  // Don't block login if RevenueCat fails
-                }
+                // Start entitlement listener and purchase stream after login
+                EntitlementService().startListening(state.user!.userID);
+                SubscriptionService().startListening(userId: state.user!.userID);
                 
                 if (mounted) {
                   pushAndRemoveUntil(

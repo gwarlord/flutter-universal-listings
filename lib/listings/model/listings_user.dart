@@ -140,7 +140,7 @@ class ListingsUser extends User {
     if (isFree) return true;
     
     // For paid tiers without expiration date (legacy or manually set), treat as active
-    // This handles users set to professional/premium in Firestore before RevenueCat integration
+    // This handles users set to professional/premium in Firestore before native billing integration
     if (subscriptionExpiresAt == null && !isFree) return true;
     
     // Allow a small grace window on expiration to tolerate timezone and clock drift

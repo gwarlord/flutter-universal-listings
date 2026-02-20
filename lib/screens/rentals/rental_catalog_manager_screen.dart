@@ -7,7 +7,8 @@ import 'package:caribtap/listings/model/rental_catalog_item.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/services/rental_catalog_service.dart';
-import 'package:caribtap/listings/utils/subscription_helper.dart';
+import 'package:caribtap/listings/services/entitlement_service.dart';
+import 'package:caribtap/listings/services/pro_gate.dart';
 import 'package:caribtap/screens/rentals/rental_item_editor_screen.dart';
 
 /// Rental Catalog Manager Screen - Premium Only
@@ -28,6 +29,7 @@ class RentalCatalogManagerScreen extends StatefulWidget {
 
 class _RentalCatalogManagerScreenState extends State<RentalCatalogManagerScreen> {
   final RentalCatalogService _rentalService = RentalCatalogService();
+  final EntitlementService _entitlementService = EntitlementService();
   String _selectedCategory = 'All';
 
   @override
@@ -35,11 +37,21 @@ class _RentalCatalogManagerScreenState extends State<RentalCatalogManagerScreen>
     super.initState();
     
     // CRITICAL: Verify Premium access
-    if (!isPremiumUser(widget.currentUser)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        showSnackBar(context, '🔒 Premium subscription required');
-        Navigator.pop(context);
-      });
+    _ensurePremiumAccess();
+  }
+
+  Future<void> _ensurePremiumAccess() async {
+    final entitlement =
+        await _entitlementService.fetchEntitlement(widget.currentUser.userID);
+    final hasAccess = ProGate.tierAtLeast(
+      entitlement,
+      2,
+      isAdmin: widget.currentUser.isAdmin,
+    );
+
+    if (!hasAccess && mounted) {
+      showSnackBar(context, '🔒 Premium subscription required');
+      Navigator.pop(context);
     }
   }
 
