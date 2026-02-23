@@ -32,16 +32,11 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.closeTableSession = exports.requestBill = exports.acknowledgeSummon = exports.summonWaiter = exports.assignWaiterToSession = exports.createTableSession = exports.deactivateTable = exports.upsertTable = exports.setTableModeSettings = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
-const axios_1 = __importDefault(require("axios"));
 const crypto = __importStar(require("crypto"));
-const secrets_1 = require("./common/secrets");
 // Initialize Firebase Admin if not already initialized
 if (!admin.apps.length) {
     admin.initializeApp();
@@ -72,7 +67,7 @@ async function isAdminUser(uid) {
     return adminUserIds.includes(uid);
 }
 /**
- * Verify if user has active Premium entitlement via RevenueCat
+ * Verify if user has active Premium entitlement via Firestore
  */
 async function verifyPremiumEntitlement(uid) {
     const isAdmin = await isAdminUser(uid);
@@ -80,23 +75,30 @@ async function verifyPremiumEntitlement(uid) {
         return true;
     }
     try {
-        const revenueCatApiKey = await secrets_1.revenuecatKeySecret.value();
-        if (!revenueCatApiKey) {
-            functions.logger.warn("RevenueCat API key not configured - allowing for development");
-            return true;
+        const entSnap = await db
+            .collection("users")
+            .doc(uid)
+            .collection("entitlements")
+            .doc("subscription")
+            .get();
+        if (!entSnap.exists) {
+            return false;
         }
-        const response = await axios_1.default.get(`https://api.revenuecat.com/v1/subscribers/${uid}`, {
-            headers: {
-                Authorization: `Bearer ${revenueCatApiKey}`,
-                "Content-Type": "application/json",
-            },
-        });
-        const customer = response.data.subscriber;
-        const activeEntitlements = customer.entitlements.active || {};
-        return "CaribTap Pro" in activeEntitlements;
+        const entitlement = entSnap.data() || {};
+        const status = entitlement.status;
+        const tier = Number(entitlement.tier || 0);
+        const expiresAt = entitlement.expiresAt?.toDate?.();
+        const now = new Date();
+        if (status !== "active") {
+            return false;
+        }
+        if (expiresAt && expiresAt <= now) {
+            return false;
+        }
+        return tier >= 2;
     }
     catch (error) {
-        functions.logger.error("RevenueCat verification failed", { uid, error: error.message });
+        functions.logger.error("Entitlement verification failed", { uid, error: error.message });
         return false;
     }
 }

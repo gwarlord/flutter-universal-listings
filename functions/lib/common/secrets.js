@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.appUrlSecret = exports.revenuecatKeySecret = exports.geminiKeySecret = exports.sendgridKeySecret = void 0;
+exports.entitlementTokenKeySecret = exports.googleServiceAccountJsonSecret = exports.appleSharedSecret = exports.appUrlSecret = exports.revenuecatKeySecret = exports.geminiKeySecret = exports.sendgridKeySecret = void 0;
 exports.initializeSendGrid = initializeSendGrid;
 exports.sendEmail = sendEmail;
 const params_1 = require("firebase-functions/params");
@@ -14,6 +14,9 @@ exports.sendgridKeySecret = (0, params_1.defineSecret)("SENDGRID_KEY");
 exports.geminiKeySecret = (0, params_1.defineSecret)("GEMINI_KEY");
 exports.revenuecatKeySecret = (0, params_1.defineSecret)("REVENUECAT_KEY");
 exports.appUrlSecret = (0, params_1.defineSecret)("APP_URL");
+exports.appleSharedSecret = (0, params_1.defineSecret)("APPLE_SHARED_SECRET");
+exports.googleServiceAccountJsonSecret = (0, params_1.defineSecret)("GOOGLE_SERVICE_ACCOUNT_JSON");
+exports.entitlementTokenKeySecret = (0, params_1.defineSecret)("ENTITLEMENT_TOKEN_KEY");
 /**
  * Initialize SendGrid with API key if available
  */

@@ -356,6 +356,10 @@ void main() async {
     // Enable token auto-refresh for better token availability
     await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
     print('✅ App Check token auto-refresh enabled');
+
+    FirebaseAppCheck.instance.onTokenChange.listen((token) {
+      print('🔐 AppCheck Token: $token');
+    });
   } catch (e) {
     // App Check failure should not block app startup
     print('⚠️ Firebase App Check activation error: $e');

@@ -32,22 +32,17 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendOrderChatMessage = exports.setBookingStatus = exports.setRentalStatus = exports.updateListingEditableFields = exports.setOrderFulfillment = exports.setOrderStatus = exports.updateListingCollaboratorPermissions = exports.removeListingCollaborator = exports.addListingCollaborator = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
-const axios_1 = __importDefault(require("axios"));
-const secrets_1 = require("./common/secrets");
 // Initialize Firebase Admin if not already initialized
 if (!admin.apps.length) {
     admin.initializeApp();
 }
 const db = admin.firestore();
 // =============================================================================
-// REVENUECAT VERIFICATION
+// ENTITLEMENT VERIFICATION
 // =============================================================================
 /**
  * Check if user is an admin
@@ -64,9 +59,8 @@ async function isAdminUser(uid) {
     return adminUserIds.includes(uid);
 }
 /**
- * Verify if user has active Premium entitlement via RevenueCat
+ * Verify if user has active Premium entitlement via Firestore
  * Admins bypass premium check
- * If RevenueCat is not configured (development), allow access
  */
 async function verifyPremiumEntitlement(uid) {
     // 1. Check if user is admin (admins always have access)
@@ -75,34 +69,34 @@ async function verifyPremiumEntitlement(uid) {
         functions.logger.info("Premium check bypassed for admin", { uid });
         return true;
     }
-    // 2. Check RevenueCat
+    // 2. Check Firestore entitlement
     try {
-        const revenueCatApiKey = await secrets_1.revenuecatKeySecret.value();
-        if (!revenueCatApiKey) {
-            functions.logger.warn("RevenueCat API key not configured - allowing access for development");
-            // In development (no API key configured), allow access
-            return true;
+        const entSnap = await db
+            .collection("users")
+            .doc(uid)
+            .collection("entitlements")
+            .doc("subscription")
+            .get();
+        if (!entSnap.exists) {
+            return false;
         }
-        // Note: You need to set this via firebase functions:secrets:set revenuecat_key
-        const response = await axios_1.default.get(`https://api.revenuecat.com/v1/subscribers/${uid}`, {
-            headers: {
-                Authorization: `Bearer ${revenueCatApiKey}`,
-                "Content-Type": "application/json",
-            },
-        });
-        const customer = response.data.subscriber;
-        const activeEntitlements = customer.entitlements.active || {};
-        // Check for "CaribTap Pro" entitlement
-        const hasProEntitlement = "CaribTap Pro" in activeEntitlements;
+        const entitlement = entSnap.data() || {};
+        const status = entitlement.status;
+        const tier = Number(entitlement.tier || 0);
+        const expiresAt = entitlement.expiresAt?.toDate?.();
+        const now = new Date();
+        const isActive = status === "active" && (!expiresAt || expiresAt > now);
+        const hasProEntitlement = isActive && tier >= 2;
         functions.logger.info("Premium check", {
             uid,
             hasProEntitlement,
-            entitlements: Object.keys(activeEntitlements),
+            tier,
+            status,
         });
         return hasProEntitlement;
     }
     catch (error) {
-        functions.logger.error("RevenueCat verification failed", {
+        functions.logger.error("Entitlement verification failed", {
             uid,
             error: error.message,
         });
@@ -149,7 +143,7 @@ async function logActivity(listingId, data) {
  * Callable: Add a collaborator to a listing
  * Requires:
  *  - Caller is listing owner/admin
- *  - Caller has active Premium subscription (RevenueCat)
+ *  - Caller has active Premium entitlement
  *  - Valid collaborator email or UID
  */
 exports.addListingCollaborator = functions.https.onCall(async (data, context) => {

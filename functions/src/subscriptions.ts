@@ -31,12 +31,51 @@ function getTierForProduct(productId: string): number {
   return PRODUCT_TIER_MAP[productId] ?? 0;
 }
 
+function getSubscriptionTierName(tier: number): string {
+  if (tier >= 3) {
+    return "premium";
+  }
+  if (tier >= 2) {
+    return "professional";
+  }
+  if (tier >= 1) {
+    return "professional";
+  }
+  return "free";
+}
+
 function isEmulator(): boolean {
   return !!process.env.FUNCTIONS_EMULATOR || !!process.env.FIREBASE_AUTH_EMULATOR_HOST;
 }
 
+function normalizeAesKey(keyValue: string): Buffer {
+  const base64Key = Buffer.from(keyValue, "base64");
+  if (base64Key.length === 32) {
+    return base64Key;
+  }
+
+  if (/^[0-9a-fA-F]+$/.test(keyValue) && keyValue.length === 64) {
+    return Buffer.from(keyValue, "hex");
+  }
+
+  const utf8Key = Buffer.from(keyValue, "utf8");
+  if (utf8Key.length === 32) {
+    return utf8Key;
+  }
+
+  functions.logger.warn(
+    "Entitlement key is not 32 bytes after decoding; deriving with SHA-256.",
+    {
+      base64Len: base64Key.length,
+      utf8Len: utf8Key.length,
+    }
+  );
+
+  return crypto.createHash("sha256").update(keyValue, "utf8").digest();
+}
+
 function encryptPayload(payload: string, keyBase64: string) {
-  const key = Buffer.from(keyBase64, "base64");
+  const key = normalizeAesKey(keyBase64);
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
   const encrypted = Buffer.concat([cipher.update(payload, "utf8"), cipher.final()]);
@@ -277,6 +316,23 @@ export const verifyPurchase = functions
       .doc("subscription")
       .set(entitlementDoc, { merge: true });
 
+    const userTier = status === "active" || expiresAt
+      ? getSubscriptionTierName(tier)
+      : "free";
+
+    await db
+      .collection("users")
+      .doc(uid)
+      .set(
+        {
+          subscriptionTier: userTier,
+          subscriptionExpiresAt: expiresAt
+            ? admin.firestore.Timestamp.fromDate(expiresAt)
+            : null,
+        },
+        { merge: true }
+      );
+
     await db
       .collection("users")
       .doc(uid)
@@ -360,7 +416,8 @@ export const refreshEntitlementsDaily = functions
         const iv = Buffer.from(tokenData.iv as string, "base64");
         const tag = Buffer.from(tokenData.tag as string, "base64");
         const encrypted = Buffer.from(tokenData.encryptedPayload as string, "base64");
-        const decipher = crypto.createDecipheriv("aes-256-gcm", Buffer.from(key, "base64"), iv);
+        const normalizedKey = normalizeAesKey(key);
+        const decipher = crypto.createDecipheriv("aes-256-gcm", normalizedKey, iv);
         decipher.setAuthTag(tag);
         const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
 

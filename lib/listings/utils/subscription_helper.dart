@@ -6,8 +6,8 @@ import 'package:caribtap/listings/services/pro_gate.dart';
 /// 
 /// Business Rules:
 /// - free: Basic access
-/// - professional: Bookings + Analytics  
-/// - premium: All professional features + Mini Store, Order Requests, Commerce features
+/// - professional: Tier 2 access
+/// - premium: Tier 3 access
 /// 
 /// CRITICAL: professional ≠ premium
 /// Only Premium users get commerce features (Mini Store, Order Requests, Rentals)
@@ -17,21 +17,21 @@ import 'package:caribtap/listings/services/pro_gate.dart';
 bool isPremiumUser(ListingsUser user) {
   if (user.isAdmin) return true; // Admins have all access
   final entitlement = EntitlementService().currentEntitlement;
-  return ProGate.tierAtLeast(entitlement, 2, isAdmin: user.isAdmin);
+  return ProGate.tierAtLeast(entitlement, 3, isAdmin: user.isAdmin);
 }
 
 /// Checks if user has PROFESSIONAL subscription tier (NOT premium)
 bool isProfessionalUser(ListingsUser user) {
   if (user.isAdmin) return true;
   final entitlement = EntitlementService().currentEntitlement;
-  return ProGate.tierAtLeast(entitlement, 1, isAdmin: user.isAdmin);
+  return ProGate.tierAtLeast(entitlement, 2, isAdmin: user.isAdmin);
 }
 
 /// Checks if user has any paid tier (professional OR premium)
 bool isPaidUser(ListingsUser user) {
   if (user.isAdmin) return true;
   final entitlement = EntitlementService().currentEntitlement;
-  return ProGate.tierAtLeast(entitlement, 1, isAdmin: user.isAdmin);
+  return ProGate.tierAtLeast(entitlement, 2, isAdmin: user.isAdmin);
 }
 
 /// Returns a user-friendly display name for subscription tier

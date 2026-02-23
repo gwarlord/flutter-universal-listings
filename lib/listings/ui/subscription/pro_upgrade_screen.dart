@@ -10,13 +10,16 @@ import 'package:caribtap/listings/services/subscription_products.dart';
 import 'package:caribtap/listings/services/subscription_service.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProUpgradeScreen extends StatefulWidget {
   final ListingsUser currentUser;
+  final int? initialTier;
 
   const ProUpgradeScreen({
     super.key,
     required this.currentUser,
+    this.initialTier,
   });
 
   @override
@@ -30,11 +33,13 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   List<ProductDetails> _products = const [];
+  int? _selectedTier;
 
   @override
   void initState() {
     super.initState();
     _subscriptionService.startListening(userId: widget.currentUser.userID);
+    _selectedTier = widget.initialTier;
     _loadProducts();
   }
 
@@ -77,6 +82,14 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
     await _subscriptionService.restorePurchases();
   }
 
+  Future<void> _openManageSubscriptions() async {
+    final uri = Uri.parse('https://play.google.com/store/account/subscriptions');
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      showSnackBar(context, 'Unable to open Google Play subscriptions'.tr());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
@@ -85,14 +98,15 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
     return Scaffold(
       backgroundColor: dark ? Colors.black : Colors.white,
       appBar: AppBar(
-        backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
-        title: Text('CaribTap Pro'.tr()),
+        backgroundColor: Color(cfg.colorPrimary),
+        foregroundColor: Colors.white,
+        title: Text('CaribTap Subscriptions'.tr()),
         actions: [
           TextButton(
             onPressed: _restorePurchases,
             child: Text(
               'Restore'.tr(),
-              style: TextStyle(color: Color(cfg.colorPrimary)),
+              style: const TextStyle(color: Colors.white),
             ),
           ),
         ],
@@ -144,13 +158,23 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
         return RefreshIndicator(
           onRefresh: _loadProducts,
           child: ListView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 48),
             children: [
               _buildHeader(theme, tier),
               const SizedBox(height: 20),
-              _buildBenefits(theme, tier),
-              const SizedBox(height: 24),
-              ..._products.map((product) => _buildProductCard(theme, product)),
+              _buildPlanSection(
+                theme,
+                tier: 2,
+                currentTier: tier,
+                products: _productsForTier(2),
+              ),
+              const SizedBox(height: 16),
+              _buildPlanSection(
+                theme,
+                tier: 3,
+                currentTier: tier,
+                products: _productsForTier(3),
+              ),
               const SizedBox(height: 20),
               _buildFooter(theme, entitlement),
             ],
@@ -162,8 +186,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
 
   Widget _buildHeader(ThemeData theme, int tier) {
     final headline = tier > 0
-        ? 'Current Tier: ${_tierLabel(tier)}'.tr()
-        : 'Upgrade to CaribTap Pro'.tr();
+        ? 'Current plan: ${_tierLabel(tier)}'.tr()
+        : 'Choose a plan'.tr();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,10 +198,145 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Unlock premium tools for listings, rentals, and invoices.'.tr(),
+          'Pick Professional or Premium to unlock business tools.'.tr(),
           style: theme.textTheme.bodyMedium,
         ),
       ],
+    );
+  }
+
+  List<ProductDetails> _productsForTier(int tier) {
+    final products = _products
+        .where((product) {
+          final definition = productDefinitionForId(product.id);
+          final productTier = definition?.tier ?? tierForProductId(product.id);
+          return productTier == tier;
+        })
+        .toList();
+
+    products.sort((a, b) {
+      final aDef = productDefinitionForId(a.id);
+      final bDef = productDefinitionForId(b.id);
+      final aLabel = aDef?.billingPeriodLabel ?? '';
+      final bLabel = bDef?.billingPeriodLabel ?? '';
+      final aOrder = aLabel.toLowerCase() == 'monthly' ? 0 : 1;
+      final bOrder = bLabel.toLowerCase() == 'monthly' ? 0 : 1;
+      return aOrder.compareTo(bOrder);
+    });
+
+    return products;
+  }
+
+  String _planDescription(int tier) {
+    for (final product in subscriptionProducts) {
+      if (product.tier == tier) {
+        return product.description;
+      }
+    }
+    return '';
+  }
+
+  List<String> _planBenefits(int tier) {
+    final professionalBenefits = [
+      'AI photo enhancement'.tr(),
+      'Professional quotes'.tr(),
+      'Invoices & receipts'.tr(),
+      'Watermarking tools'.tr(),
+      'Priority support'.tr(),
+    ];
+
+    if (tier == 3) {
+      return [
+        'Everything in Professional'.tr(),
+        'Full suite with premium business features.'.tr(),
+      ];
+    }
+
+    return professionalBenefits;
+  }
+
+  Widget _buildPlanSection(
+    ThemeData theme, {
+    required int tier,
+    required int currentTier,
+    required List<ProductDetails> products,
+  }) {
+    final label = _tierLabel(tier);
+    final isSelected = _selectedTier == tier;
+    final isCurrent = currentTier == tier;
+    final description = _planDescription(tier);
+    final benefits = _planBenefits(tier);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? theme.colorScheme.primary.withOpacity(0.08)
+            : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isSelected ? Color(cfg.colorPrimary) : theme.dividerColor,
+          width: isSelected ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ),
+              if (isCurrent)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Current plan'.tr(),
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (description.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(description, style: theme.textTheme.bodySmall),
+          ],
+          const SizedBox(height: 12),
+          ...benefits.map(
+            (benefit) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle, size: 18, color: Color(cfg.colorPrimary)),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(benefit)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...products.map((product) => _buildProductCard(theme, product)),
+        ],
+      ),
     );
   }
 
@@ -272,6 +431,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                 onPressed: () => _subscriptionService.purchase(product),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(cfg.colorPrimary),
+                  foregroundColor: Colors.white,
                 ),
                 child: Text('Subscribe'.tr()),
               ),
@@ -284,10 +444,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
 
   Widget _buildFooter(ThemeData theme, EntitlementSubscription? entitlement) {
     if (entitlement == null) {
-      return Text(
-        'Your entitlement will appear here once verified.'.tr(),
-        style: theme.textTheme.bodySmall,
-      );
+      return const SizedBox.shrink();
     }
 
     final expiresAt = entitlement.expiresAt;
@@ -295,35 +452,55 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
         ? DateFormat('yyyy-MM-dd').format(expiresAt)
         : 'No expiration'.tr();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Status: ${entitlementStatusToString(entitlement.status)}'.tr(),
-          style: theme.textTheme.bodySmall,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Expires: $expiresText'.tr(),
-          style: theme.textTheme.bodySmall,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Auto-renew: ${entitlement.willRenew == true ? 'On' : 'Off'}'.tr(),
-          style: theme.textTheme.bodySmall,
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Status: ${entitlementStatusToString(entitlement.status)}'.tr(),
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Expires: $expiresText'.tr(),
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Auto-renew: ${entitlement.willRenew == true ? 'On' : 'Off'}'.tr(),
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _openManageSubscriptions,
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              alignment: Alignment.centerLeft,
+              foregroundColor: Color(cfg.colorPrimary),
+            ),
+            child: Text(
+              'Manage subscription in Google Play'.tr(),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: Color(cfg.colorPrimary),
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   String _tierLabel(int tier) {
     switch (tier) {
       case 1:
-        return 'Tier 1';
+        return 'Professional';
       case 2:
-        return 'Tier 2';
+        return 'Professional';
       case 3:
-        return 'Tier 3';
+        return 'Premium';
       default:
         return 'Free';
     }

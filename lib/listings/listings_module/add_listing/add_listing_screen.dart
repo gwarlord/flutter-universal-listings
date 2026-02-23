@@ -35,6 +35,7 @@ import 'package:caribtap/listings/model/rental_config.dart';
 import 'package:caribtap/listings/ui/rentals/rental_bookings_screen.dart';
 import 'package:caribtap/screens/rentals/rental_catalog_manager_screen.dart';
 import 'package:caribtap/listings/ui/photo_enhancement/photo_enhancement.dart';
+import 'package:caribtap/listings/listings_module/booking_services/booking_services_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AddListingWrappingWidget extends StatelessWidget {
@@ -457,6 +458,59 @@ class _AddListingScreenState extends State<AddListingScreen> {
           ],
         ),
       );
+    }
+
+    if (isEdit && !_bookingEnabled) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Turn on "Booking Services" from the Activate Booking screen.',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: dark ? Colors.white : Colors.black,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Booking options are disabled here to avoid conflicting settings.',
+              style: TextStyle(
+                color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  push(
+                    context,
+                    BookingServicesScreen(currentUser: currentUser),
+                  );
+                },
+                icon: const Icon(Icons.settings),
+                label: Text('Open Booking Services'.tr()),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Color(colorPrimary),
+                  side: BorderSide(color: Color(colorPrimary)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (isEdit) {
+      return const SizedBox.shrink();
     }
 
     return Column(

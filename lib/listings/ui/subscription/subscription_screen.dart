@@ -5,6 +5,7 @@ import 'package:caribtap/constants.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/services/entitlement_service.dart';
 import 'package:caribtap/listings/ui/subscription/pro_upgrade_screen.dart';
 import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -22,6 +23,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   bool _isLoading = false;
   String _selectedBillingPeriod = 'monthly'; // monthly or yearly
   late ListingsUser currentUser;
+  final EntitlementService _entitlementService = EntitlementService();
+  String? _currentProductId;
+  String? _currentBillingPeriod;
 
   final List<Map<String, dynamic>> _tiers = [
     {
@@ -45,12 +49,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       'color': Colors.blue,
       'popular': true,
       'features': [
-        'Unlimited listings',
-        'Booking services integration',
-        'Priority search visibility',
-        'Advanced listing customization',
-        'Email support',
-        'Analytics dashboard',
+        'Booking system with email & reminders',
+        'Standard Analytics on listing performance',
+        'AI photo enhancements',
       ],
     },
     {
@@ -60,13 +61,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       'yearlyPrice': 399.99,
       'color': Colors.purple,
       'features': [
-        'Everything in Professional',
-        'Featured listings placement',
-        'Advanced analytics & insights',
-        'Priority 24/7 support',
-        'White-label customization',
-        'API access',
-        'Dedicated account manager',
+        'All Professional Services',
+        'Enable Chat to talk directly with customers',
+        'Enable Quotes & Invoices',
+        'Unlock Advance Analytics',
       ],
     },
   ];
@@ -75,6 +73,32 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   void initState() {
     super.initState();
     currentUser = widget.currentUser;
+    _loadCurrentEntitlement();
+  }
+
+  String? _billingPeriodFromProductId(String? productId) {
+    if (productId == null) return null;
+    if (productId.endsWith('_monthly')) return 'monthly';
+    if (productId.endsWith('_annual')) return 'yearly';
+    return null;
+  }
+
+  Future<void> _loadCurrentEntitlement() async {
+    try {
+      final entitlement =
+          await _entitlementService.fetchEntitlement(currentUser.userID);
+      if (!mounted) return;
+      setState(() {
+        _currentProductId = entitlement?.productId;
+        _currentBillingPeriod = _billingPeriodFromProductId(_currentProductId);
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _currentProductId = null;
+        _currentBillingPeriod = null;
+      });
+    }
   }
 
   Future<void> _refreshUserData() async {
@@ -89,6 +113,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       if (!mounted) return;
       setState(() => currentUser = freshUser);
       context.read<AuthenticationBloc>().add(UpdateAuthUserEvent(freshUser));
+      await _loadCurrentEntitlement();
     } catch (e) {
       if (!mounted) return;
       showSnackBar(context, 'Failed to refresh subscription'.tr());
@@ -190,6 +215,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   Widget _buildTierCard(Map<String, dynamic> tier, bool dark) {
     final isCurrentPlan = currentUser.subscriptionTier.toLowerCase() == tier['tier'];
+    final isCurrentProduct = isCurrentPlan &&
+      _currentBillingPeriod != null &&
+      _currentBillingPeriod == _selectedBillingPeriod;
     final isPopular = tier['popular'] == true;
     final price = _selectedBillingPeriod == 'monthly'
         ? tier['monthlyPrice']
@@ -280,6 +308,28 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                   color: dark ? Colors.white70 : Colors.black54,
                                 ),
                               ),
+                              if (isCurrentProduct)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8, bottom: 4),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'Current'.tr(),
+                                      style: const TextStyle(
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                       ],
@@ -411,7 +461,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ProUpgradeScreen(currentUser: widget.currentUser),
+          builder: (_) => ProUpgradeScreen(
+            currentUser: widget.currentUser,
+            initialTier: tier == 'premium' ? 3 : 2,
+          ),
         ),
       );
     } catch (e) {
@@ -428,7 +481,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => ProUpgradeScreen(currentUser: widget.currentUser),
+                  builder: (_) => ProUpgradeScreen(
+                    currentUser: widget.currentUser,
+                    initialTier: tier == 'premium' ? 3 : 2,
+                  ),
                 ),
               );
     }
