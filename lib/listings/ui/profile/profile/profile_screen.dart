@@ -954,7 +954,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: ListTile(
           leading: Icon(icon, color: iconColor, size: 28),
           title: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-          subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
+          subtitle: subtitle != null ? Text(subtitle, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))) : null,
           onTap: onTap,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           tileColor: Theme.of(context).colorScheme.surface,
