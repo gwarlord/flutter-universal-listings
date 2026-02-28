@@ -27,7 +27,7 @@ class PaymentMethodsWidget extends StatelessWidget {
     return Card(
       color: cardColor,
       elevation: 0,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.only(top: 32, bottom: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: borderColor),
