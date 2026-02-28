@@ -66,11 +66,10 @@ class PaymentDetailsCubit extends Cubit<PaymentDetailsState> {
     emit(PaymentDetailsState.saving(profile));
 
     try {
-      // Check entitlement
-      final entitlement = await entitlementService.fetchEntitlement(userId);
-      final isPro = entitlement?.isActive == true && (entitlement?.tier ?? 0) >= 2;
+      // Check access (admins are always allowed)
+      final hasAccess = await checkProAccess();
 
-      if (!isPro) {
+      if (!hasAccess) {
         emit(PaymentDetailsState.error(
           'Payment details feature requires Professional tier or higher',
           profile,
