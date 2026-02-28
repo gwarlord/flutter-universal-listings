@@ -22,6 +22,7 @@ class PaymentDetailsScreen extends StatelessWidget {
         paymentDetailsService: PaymentDetailsService(),
         entitlementService: EntitlementService(),
         userId: user.userID,
+        isAdmin: user.isAdmin,
       )..loadOnce(),
       child: _PaymentDetailsScreenContent(user: user),
     );

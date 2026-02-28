@@ -12,6 +12,7 @@ class PaymentDetailsCubit extends Cubit<PaymentDetailsState> {
   final PaymentDetailsService paymentDetailsService;
   final EntitlementService entitlementService;
   final String userId;
+  final bool isAdmin;
 
   StreamSubscription<PaymentDetailsProfile>? _profileStreamSub;
 
@@ -19,6 +20,7 @@ class PaymentDetailsCubit extends Cubit<PaymentDetailsState> {
     required this.paymentDetailsService,
     required this.entitlementService,
     required this.userId,
+    this.isAdmin = false,
   }) : super(const PaymentDetailsState.initial());
 
   /// Start listening to payment details updates
@@ -86,7 +88,13 @@ class PaymentDetailsCubit extends Cubit<PaymentDetailsState> {
   }
 
   /// Check if user has Pro tier access
+  /// Admins automatically have access to all features
   Future<bool> checkProAccess() async {
+    if (isAdmin) {
+      debugPrint('✅ Admin user has automatic access to payment details');
+      return true;
+    }
+    
     try {
       final entitlement = await entitlementService.fetchEntitlement(userId);
       return entitlement?.isActive == true && (entitlement?.tier ?? 0) >= 2;
