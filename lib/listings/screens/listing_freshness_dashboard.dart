@@ -163,17 +163,21 @@ class _ListingFreshnessDashboardState
     List<ListingModel> hidden,
     List<ListingModel> exempt,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Card(
+      color: isDark ? Colors.grey[850] : Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Overview',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black,
               ),
             ),
             const SizedBox(height: 16),
@@ -275,20 +279,21 @@ class _ListingFreshnessDashboardState
 
   Widget _buildBulkActionBar() {
     final selectedCount = _selectedListings.length;
+      final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Card(
-      color: Colors.blue.shade50,
+      color: isDark ? Colors.blue.shade900 : Colors.blue.shade50,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.blue.shade700),
+            Icon(Icons.check_circle, color: isDark ? Colors.blue.shade300 : Colors.blue.shade700),
             const SizedBox(width: 8),
             Text(
               '$selectedCount selected',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Colors.blue.shade700,
+                color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
               ),
             ),
             const Spacer(),
