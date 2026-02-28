@@ -3,7 +3,6 @@ import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -225,23 +224,9 @@ void showSnackBar(BuildContext context, String message) {
   );
 }
 
-// Update notification badge
+// Update notification badge (deprecated - flutter_app_badger removed)
 Future<void> _updateBadge(RemoteMessage message) async {
-  if (await FlutterAppBadger.isAppBadgeSupported()) {
-    int badgeCount = 0;
-    if (message.data.containsKey('badge')) {
-      try {
-        badgeCount = int.parse(message.data['badge'].toString());
-      } catch (e) {
-        print('Error parsing badge count: $e');
-      }
-    }
-    if (badgeCount > 0) {
-      FlutterAppBadger.updateBadgeCount(badgeCount);
-    } else {
-      FlutterAppBadger.removeBadge();
-    }
-  }
+  // Badge functionality removed due to package discontinuation
 }
 
 // Handle background messages

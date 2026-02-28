@@ -147,106 +147,135 @@ class _MoreLocationsSectionState extends State<MoreLocationsSection> {
   }
 
   Widget _buildLocationCard(ListingModel location, bool dark) {
-    return GestureDetector(
-      onTap: () {
-        final user = widget.currentUser ?? context.read<AuthenticationBloc>().state.user;
-        if (user == null) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ListingDetailsWrappingWidget(
-              listing: location,
-              currentUser: user,
-            ),
-          ),
-        );
-      },
-      child: Container(
-        width: 140,
-        decoration: BoxDecoration(
-          color: dark ? Colors.grey.shade900 : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Image
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
-                child: location.photo.isNotEmpty
-                    ? Image.network(
-                        location.photo,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.image_not_supported,
-                            color: dark ? Colors.grey.shade700 : Colors.grey.shade400,
-                          );
-                        },
-                      )
-                    : Icon(
-                        Icons.store,
-                        color: dark ? Colors.grey.shade700 : Colors.grey.shade400,
-                      ),
-              ),
-            ),
+    final isSuspended = location.suspended;
 
-            // Gradient overlay
-            Container(
-              decoration: BoxDecoration(
+    return GestureDetector(
+      onTap: isSuspended
+          ? null
+          : () {
+              final user = widget.currentUser ?? context.read<AuthenticationBloc>().state.user;
+              if (user == null) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ListingDetailsWrappingWidget(
+                    listing: location,
+                    currentUser: user,
+                  ),
+                ),
+              );
+            },
+      child: Opacity(
+        opacity: isSuspended ? 0.5 : 1.0,
+        child: Container(
+          width: 140,
+          decoration: BoxDecoration(
+            color: dark ? Colors.grey.shade900 : Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+            ),
+          ),
+          child: Stack(
+            children: [
+              // Image
+              ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.6),
-                  ],
+                child: Container(
+                  color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+                  child: location.photo.isNotEmpty
+                      ? Image.network(
+                          location.photo,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Icons.image_not_supported,
+                              color: dark ? Colors.grey.shade700 : Colors.grey.shade400,
+                            );
+                          },
+                        )
+                      : Icon(
+                          Icons.store,
+                          color: dark ? Colors.grey.shade700 : Colors.grey.shade400,
+                        ),
                 ),
               ),
-            ),
 
-            // Text overlay
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      location.locationLabel ?? location.title,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+              // Gradient overlay
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.6),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Suspended badge overlay
+              if (isSuspended)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'Suspended',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
-                    if (location.place.isNotEmpty)
+                  ),
+                ),
+
+              // Text overlay
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       Text(
-                        location.place,
+                        location.locationLabel ?? location.title,
                         style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                  ],
+                      const SizedBox(height: 2),
+                      if (location.place.isNotEmpty)
+                        Text(
+                          location.place,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.white70,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -88,6 +88,8 @@ __exportStar(require("./ai_search/index"), exports);
 __exportStar(require("./pro_docs/quote_acceptance"), exports);
 // Export subscription verification functions
 __exportStar(require("./subscriptions"), exports);
+// Export featured listing functions
+__exportStar(require("./featured_functions"), exports);
 const db = admin.firestore();
 const messaging = admin.messaging();
 // Remove old sendEmail helper - use the one from common/secrets.ts if needed

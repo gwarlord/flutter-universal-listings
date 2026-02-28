@@ -60,9 +60,32 @@ service cloud.firestore {
         (request.resource.data.listingFreshnessExempt == resource.data.listingFreshnessExempt);
     }
 
+    function hasActiveSubscription() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      let tier = userDoc.subscriptionTier;
+      // Check for professional or premium (case-insensitive)
+      return tier == 'professional' || tier == 'Professional' || tier == 'PROFESSIONAL' ||
+             tier == 'premium' || tier == 'Premium' || tier == 'PREMIUM';
+    }
+
+    function hasActiveListingForAdCreate() {
+      // Validate the referenced listing exists and belongs to the signed-in user.
+      // "Active" check is based on listing freshness not being hidden when present.
+      let listingId = request.resource.data.listingId;
+      let listingPath = /databases/$(database)/documents/listings/$(listingId);
+      return listingId is string &&
+        listingId.size() > 0 &&
+        exists(listingPath) &&
+        get(listingPath).data.authorID == request.auth.uid &&
+        (
+          get(listingPath).data.freshness == null ||
+          get(listingPath).data.freshness.status != 'HIDDEN'
+        );
+    }
+
     // DEAL ADS collection
     match /deal_ads/{adId} {
-      allow create: if isSignedIn();
+      allow create: if isSignedIn() && hasActiveSubscription() && hasActiveListingForAdCreate();
       allow update: if isSignedIn() && (request.auth.uid == resource.data.authorID || isAdmin());
       allow read: if true;
       allow delete: if isAdmin();
@@ -102,6 +125,16 @@ service cloud.firestore {
 
     // User Enhancement Quotas (Per-User Monthly Quotas)
     match /user_enhancement_quotas/{userId} {
+      // Allow users to read and update their own quota document
+      allow read, create, update: if isSignedIn() && request.auth.uid == userId;
+      // Allow admins full access
+      allow read, write: if isAdmin();
+      // Never delete quota records (audit trail)
+      allow delete: if false;
+    }
+
+    // Deal Ad Quotas (Per-User Monthly Ad Posting Quotas)
+    match /deal_ad_quotas/{userId} {
       // Allow users to read and update their own quota document
       allow read, create, update: if isSignedIn() && request.auth.uid == userId;
       // Allow admins full access
@@ -177,6 +210,18 @@ service cloud.firestore {
         allow read: if isOwner(userId) || isAdmin();
         // Cloud Functions can write (server-side subscription updates)
         allow write: if request.auth.token.serviceAccount == true || isAdmin();
+      }
+
+      // Payment Details - Private Profile (owner only)
+      match /payment_details/profile {
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow write: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      // Payment Details - Public Snapshot (authenticated read)
+      match /payment_details/public {
+        allow read: if isSignedIn();
+        allow write: if (isSignedIn() && request.auth.uid == userId) || isAdmin() || request.auth.token.serviceAccount == true;
       }
     }
 
@@ -371,6 +416,52 @@ service cloud.firestore {
         // Allow delete if listing author only (can't delete other's variants)
         allow delete: if isSignedIn() && 
           request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID;
+      }
+
+      // Activity Tracking - Customer engagement tracking
+      match /activities/{activityId} {
+        // Customers can write activities (record their own engagement)
+        allow create: if isSignedIn() && 
+          request.resource.data.customerId == request.auth.uid;
+        
+        // Listing author and admins can read activity data
+        allow read: if isSignedIn() && (
+          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID ||
+          isAdmin()
+        );
+        
+        // Cloud functions and admins can update
+        allow update: if request.auth.token.serviceAccount == true || isAdmin();
+        
+        // No deletes except by admins (preserve activity history)
+        allow delete: if isAdmin();
+      }
+
+      // Activity Score - Cached aggregated activity (read-only for users)
+      match /metadata/activity_score {
+        // Listing author and admins can read activity scores
+        allow read: if isSignedIn() && (
+          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID ||
+          isAdmin()
+        );
+        
+        // Only cloud functions can write (calculation is server-side)
+        allow write: if request.auth.token.serviceAccount == true || isAdmin();
+      }
+
+      // Auto-refresh Records - Track when listings were auto-refreshed
+      match /auto_refreshes/{refreshId} {
+        // Listing author and admins can read
+        allow read: if isSignedIn() && (
+          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID ||
+          isAdmin()
+        );
+        
+        // Only cloud functions can write
+        allow write: if request.auth.token.serviceAccount == true || isAdmin();
+        
+        // No deletes except by admins
+        allow delete: if isAdmin();
       }
     }
     
@@ -749,5 +840,36 @@ service cloud.firestore {
         isAdmin()
       );
     }
+
+  // Featured Requests Collection
+  match /featured_requests/{requestId} {
+    // Allow users to read their own requests
+    allow read: if isSignedIn() && 
+      resource.data.userId == request.auth.uid;
+    // Allow admins to read all requests
+    allow read: if isAdmin();
+    // Only Cloud Functions can create/update/delete
+    allow create, update, delete: if request.auth.token.serviceAccount == true || isAdmin();
+  }
+
+  // Featured Usage Collection (Track monthly usage)
+  match /featured_usage/{userId} {
+    // Allow users to read their own usage
+    allow read: if isSignedIn() && request.auth.uid == userId;
+    // Allow admins to read all usage
+    allow read: if isAdmin();
+    // Only Cloud Functions can write
+    allow create, update, delete: if request.auth.token.serviceAccount == true || isAdmin();
+  }
+
+  // Featured Grants Collection (Monthly allocations)
+  match /featured_grants/{userId} {
+    // Allow users to read their own grants
+    allow read: if isSignedIn() && request.auth.uid == userId;
+    // Allow admins to read all grants
+    allow read: if isAdmin();
+    // Only Cloud Functions and admins can write
+    allow create, update, delete: if request.auth.token.serviceAccount == true || isAdmin();
+  }
   }
 }

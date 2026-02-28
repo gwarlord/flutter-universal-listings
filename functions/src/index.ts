@@ -69,6 +69,9 @@ export * from "./pro_docs/quote_acceptance";
 // Export subscription verification functions
 export * from "./subscriptions";
 
+// Export featured listing functions
+export * from "./featured_functions";
+
 const db = admin.firestore();
 const messaging = admin.messaging();
 

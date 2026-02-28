@@ -10,6 +10,7 @@ import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:caribtap/listings/ui/profile/settings/settings_bloc.dart';
 import 'package:caribtap/listings/ui/auth/reset_password/reset_password_screen.dart';
+import 'package:caribtap/listings/ui/profile/payment_details/payment_details_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -259,6 +260,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                             ],
                           ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      Text('BUSINESS SETTINGS'.tr(), style: titleStyle),
+                      const SizedBox(height: 12),
+                      Card(
+                        color: cardColor,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(
+                            color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            _buildSettingTile(
+                              context,
+                              title: 'Payment Details'.tr(),
+                              icon: Icons.payment,
+                              onTap: () {
+                                push(context, PaymentDetailsScreen(user: user));
+                              },
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 32),

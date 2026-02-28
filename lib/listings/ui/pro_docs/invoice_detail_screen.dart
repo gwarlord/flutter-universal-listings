@@ -5,6 +5,7 @@ import 'package:caribtap/listings/services/pdf_service.dart';
 import 'package:caribtap/listings/services/share_link_service.dart';
 import 'package:caribtap/listings/services/tier_gate_service.dart';
 import 'package:caribtap/listings/ui/pro_docs/cubit/invoice_detail_cubit.dart';
+import 'package:caribtap/listings/ui/widgets/payment_methods_stream_widget.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -83,6 +84,8 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                   _totalRow('Tax'.tr(), _currency.format(invoice.tax.applyTo(invoice.subtotal))),
                 const Divider(),
                 _totalRow('Total'.tr(), _currency.format(invoice.total), isBold: true),
+                const SizedBox(height: 16),
+                PaymentMethodsStreamWidget(userId: widget.uid),
                 const SizedBox(height: 16),
                 if (invoice.notes.isNotEmpty) ...[
                   _sectionTitle('Notes'.tr()),

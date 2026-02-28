@@ -13,6 +13,8 @@ import 'package:caribtap/listings/ui/deals/ad_review_screen.dart';
 import 'package:caribtap/listings/utils/caribbean_countries.dart';
 import 'package:caribtap/listings/model/ad_targeting_model.dart';
 import 'package:caribtap/listings/model/categories_model.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/deal_ad_quota.dart';
 import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
@@ -330,6 +332,11 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
   List<CategoriesModel> _availableCategories = [];
   bool _loadingCategories = false;
   
+  // Listing selection variables
+  List<ListingModel> _userActiveListings = [];
+  String? _selectedListingId;
+  bool _loadingListings = false;
+  
   // Deal Settings (Redemption) variables - REMOVED, but keeping defaults
   final String _redemptionType = 'IN_APP_CLAIM';
   final String? _promoCode = null;
@@ -349,6 +356,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
     _scrollController.addListener(_onScroll);
     _expireAt = DateTime.now().add(const Duration(days: 30));
     _loadCategories();
+    _loadUserListings();
     if (widget.adToEdit != null) {
       final ad = widget.adToEdit!;
       _captionController.text = ad.caption;
@@ -365,6 +373,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
       _selectedAudience = List<String>.from(ad.targeting.audience);
       _scheduleAt = ad.scheduleAt;
       _expireAt = ad.expireAt;
+      _selectedListingId = ad.listingId; // Pre-select the listing for edit mode
     }
   }
   
@@ -392,6 +401,47 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
     } catch (e) {
       debugPrint('Failed to load categories: $e');
       setState(() => _loadingCategories = false);
+    }
+  }
+
+  Future<void> _loadUserListings() async {
+    setState(() => _loadingListings = true);
+    try {
+      final authBloc = context.read<AuthenticationBloc>();
+      final user = authBloc.user;
+      if (user == null) {
+        setState(() {
+          _loadingListings = false;
+        });
+        return;
+      }
+
+      final allListings = await listingApiManager.getMyListings(
+        currentUserID: user.userID,
+        favListingsIDs: [],
+      );
+
+      // Filter to only active (non-hidden) listings
+      final activeListings = allListings.where((listing) {
+        // Check if listing is not hidden
+        final freshness = listing.freshness;
+        if (freshness != null && freshness.status == 'HIDDEN') {
+          return false;
+        }
+        return true;
+      }).toList();
+
+      setState(() {
+        _userActiveListings = activeListings;
+        _loadingListings = false;
+        // Auto-select first listing if only one exists
+        if (_selectedListingId == null && activeListings.length == 1) {
+          _selectedListingId = activeListings.first.id;
+        }
+      });
+    } catch (e) {
+      debugPrint('Failed to load user listings: $e');
+      setState(() => _loadingListings = false);
     }
   }
 
@@ -440,10 +490,16 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
   }
 
   Future<void> _selectPromoDates() async {
+    final authBloc = context.read<AuthenticationBloc>();
+    final user = authBloc.user;
+    final tier = DealAdQuota.normalizeTier(user?.subscriptionTier);
+    final maxDays = tier == 'professional' ? 7 : (tier == 'premium' ? 30 : 7);
+    final today = DateTime.now();
+    
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      firstDate: today,
+      lastDate: today.add(Duration(days: maxDays)),
       initialDateRange: _promoStartDate != null && _promoEndDate != null
           ? DateTimeRange(start: _promoStartDate!, end: _promoEndDate!)
           : null,
@@ -468,10 +524,24 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
     );
 
     if (picked != null) {
+      final duration = picked.end.difference(picked.start).inDays + 1;
+      if (duration > maxDays) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${tier == 'premium' ? 'Premium' : 'Professional'} users can set a maximum promo period of $maxDays days.',
+                style: const TextStyle(color: Colors.white)),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
       setState(() {
         _promoStartDate = picked.start;
         _promoEndDate = picked.end;
-        _adDays = picked.duration.inDays + 1;
+        _adDays = duration;
       });
     }
   }
@@ -762,8 +832,20 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
     if ((_mediaFile == null && _existingMediaUrl == null) || !_acceptedTerms) return;
     
     final listerId = widget.adToEdit?.listerId ?? context.read<AuthenticationBloc>().user?.userID ?? 'demoListerId';
-    final listingId = widget.adToEdit?.listingId ?? 'demoListingId';
-    final pricePerDay = 10.0;
+    final listingId = widget.adToEdit?.listingId ?? _selectedListingId;
+    
+    // Validate listing selection
+    if (listingId == null || listingId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please select a listing for your deal'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    final pricePerDay = 0.0;
     final pricePaid = pricePerDay * _adDays * _seasonalMultiplier;
     
     final targeting = AdTargeting(
@@ -950,6 +1032,84 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
 
             const SizedBox(height: 24),
             
+            // Listing Selection Section
+            Text('Select Listing', style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+            Text('Choose which listing this deal is for', style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 12)),
+            const SizedBox(height: 12),
+            _loadingListings
+                ? Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(child: CircularProgressIndicator(color: primaryColor)),
+                  )
+                : _userActiveListings.isEmpty
+                    ? Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.orange, width: 1),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'You need an active listing to post a deal. Please create a listing first.',
+                                style: TextStyle(color: adaptiveTextColor, fontSize: 14),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _selectedListingId == null ? Colors.red.withOpacity(0.5) : Colors.transparent,
+                            width: 1,
+                          ),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: _selectedListingId,
+                            hint: Text(
+                              'Select a listing...',
+                              style: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+                            ),
+                            dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                            style: TextStyle(color: adaptiveTextColor, fontSize: 14),
+                            icon: Icon(Icons.arrow_drop_down, color: primaryColor),
+                            items: _userActiveListings.map((listing) {
+                              return DropdownMenuItem<String>(
+                                value: listing.id,
+                                child: Text(
+                                  listing.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(color: adaptiveTextColor),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedListingId = value;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+            
+            const SizedBox(height: 24),
+            
             // Caption Section
             Text('Describe your deal', style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 12),
@@ -968,6 +1128,16 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                 contentPadding: const EdgeInsets.all(16),
               ),
               maxLines: 3,
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Ad Duration Section (before promo period)
+            AdPricingSelector(
+              selectedDays: _adDays,
+              onDaysChanged: (days) => setState(() => _adDays = days),
+              pricePerDay: 0.0,
+              seasonalMultiplier: _seasonalMultiplier,
             ),
             
             const SizedBox(height: 24),
@@ -1232,29 +1402,6 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
             
             const SizedBox(height: 24),
             
-            // Pricing Section
-            AdPricingSelector(
-              selectedDays: _adDays,
-              // Logic already implemented to disable interaction
-              onDaysChanged: (days) => setState(() => _adDays = days),
-              pricePerDay: 10.0,
-              seasonalMultiplier: _seasonalMultiplier,
-            ),
-            
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                '$_seasonLabel Pricing Active',
-                style: TextStyle(
-                  color: Colors.orange,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 24),
-            
             // Terms and Conditions
             Row(
               children: [
@@ -1302,7 +1449,13 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: _isSubmitting || (_mediaFile == null && _existingMediaUrl == null) || !_acceptedTerms ? null : _navigateToReview,
+                onPressed: _isSubmitting || 
+                    (_mediaFile == null && _existingMediaUrl == null) || 
+                    !_acceptedTerms || 
+                    (_selectedListingId == null && widget.adToEdit == null) || 
+                    _userActiveListings.isEmpty
+                    ? null 
+                    : _navigateToReview,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

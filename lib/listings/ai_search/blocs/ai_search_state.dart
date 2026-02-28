@@ -63,15 +63,17 @@ class AiSearchError extends AiSearchState {
   final String message;
   final bool canRetry;
   final String? originalQuery;
+  final bool isFallback;
 
   const AiSearchError({
     required this.message,
     this.canRetry = true,
     this.originalQuery,
+    this.isFallback = false,
   });
 
   @override
-  List<Object?> get props => [message, canRetry, originalQuery];
+  List<Object?> get props => [message, canRetry, originalQuery, isFallback];
 }
 
 /// Rate limit exceeded state

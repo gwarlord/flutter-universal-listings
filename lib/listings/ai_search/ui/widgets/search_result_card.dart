@@ -31,10 +31,18 @@ class SearchResultCard extends StatelessWidget {
         ? (listing.reviewsSum / listing.reviewsCount)
         : null;
     final reviewCount = listing?.reviewsCount ?? 0;
+    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final placeholderColor = isDark ? Colors.grey[700] : Colors.grey[300];
+    final iconColor = isDark ? Colors.grey[400] : Colors.grey[600];
+    final textSecondaryColor = isDark ? Colors.grey[400] : Colors.grey[600];
+    final descriptionColor = isDark ? Colors.grey[400] : Colors.grey[700];
+    final cardColor = isDark ? Colors.grey[900] : Colors.white;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: 2,
+      color: cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
@@ -54,24 +62,24 @@ class SearchResultCard extends StatelessWidget {
                         height: 100,
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Container(
-                          color: Colors.grey[300],
+                          color: placeholderColor,
                           child: const Center(
                             child: CircularProgressIndicator(),
                           ),
                         ),
                         errorWidget: (context, url, error) => Container(
-                          color: Colors.grey[300],
+                          color: placeholderColor,
                           child: const Icon(Icons.image_not_supported),
                         ),
                       )
                     : Container(
                         width: 100,
                         height: 100,
-                        color: Colors.grey[300],
+                        color: placeholderColor,
                         child: Icon(
                           Icons.image,
                           size: 40,
-                          color: Colors.grey[600],
+                          color: iconColor,
                         ),
                       ),
               ),
@@ -108,7 +116,7 @@ class SearchResultCard extends StatelessWidget {
                             ' ($reviewCount)',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[600],
+                              color: textSecondaryColor,
                             ),
                           ),
                         ],
@@ -120,7 +128,7 @@ class SearchResultCard extends StatelessWidget {
                       description,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.grey[700],
+                        color: descriptionColor,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -144,13 +152,13 @@ class SearchResultCard extends StatelessWidget {
                         children: [
                           Icon(Icons.location_on, 
                               size: 14, 
-                              color: Colors.grey[600]),
+                              color: textSecondaryColor),
                           const SizedBox(width: 2),
                           Text(
                             SearchHelpers.formatDistance(result.distance),
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[600],
+                              color: textSecondaryColor,
                             ),
                           ),
                         ],

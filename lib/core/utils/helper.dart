@@ -15,7 +15,7 @@ import 'package:location/location.dart' as loc;
 
 
 String? validateName(String? value) {
-  String pattern = r'(^[a-zA-Z ]*$)';
+  String pattern = r"(^[a-zA-Z '\-]*$)";
   RegExp regExp = RegExp(pattern);
   if (value?.isEmpty ?? true) {
     return 'Name is required'.tr();

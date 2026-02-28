@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/cupertino.dart';
@@ -28,6 +29,7 @@ import 'package:caribtap/listings/ui/profile/contact_us/contact_us_screen.dart';
 import 'package:caribtap/listings/ui/profile/settings/settings_screen.dart';
 import 'package:caribtap/listings/ui/profile/profile/profile_bloc.dart';
 import 'package:caribtap/core/ui/theme/theme_cubit.dart';
+import 'package:caribtap/listings/screens/listing_freshness_dashboard.dart';
 import 'package:caribtap/listings/utils/populate_test_data.dart';
 import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
 import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
@@ -538,6 +540,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             _modernListTile(
                               context,
+                              icon: Icons.schedule_outlined,
+                              iconColor: Theme.of(context).colorScheme.primary,
+                              title: 'Listing Freshness'.tr(),
+                              subtitle: 'Manage your active listings'.tr(),
+                              onTap: () => _openFreshnessDashboard(context, currentUser),
+                            ),
+                            _modernListTile(
+                              context,
                               icon: Icons.favorite_outline,
                               iconColor: Theme.of(context).colorScheme.primary,
                               title: 'My Favorites'.tr(),
@@ -935,7 +945,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
 
-  Widget _modernListTile(BuildContext context, {required IconData icon, required Color iconColor, required String title, required VoidCallback onTap}) {
+  Widget _modernListTile(BuildContext context, {required IconData icon, required Color iconColor, required String title, String? subtitle, required VoidCallback onTap}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
       child: Card(
@@ -944,11 +954,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: ListTile(
           leading: Icon(icon, color: iconColor, size: 28),
           title: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+          subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
           onTap: onTap,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           tileColor: Theme.of(context).colorScheme.surface,
         ),
       ),
     );
+  }
+
+  Future<void> _openFreshnessDashboard(BuildContext context, ListingsUser currentUser) async {
+    // Load listings for the current user
+    try {
+      final db = FirebaseFirestore.instance;
+      final listingsSnapshot = await db
+          .collection('listings')
+          .where('authorID', isEqualTo: currentUser.userID)
+          .get();
+      
+      final listings = listingsSnapshot.docs
+          .map((doc) => ListingModel.fromJson(doc.data()))
+          .toList();
+      
+      if (!context.mounted) return;
+      
+      push(
+        context,
+        ListingFreshnessDashboard(
+          listings: listings,
+          onRefreshListing: (listing) => _refreshSingleListing(context, listing),
+          onRefreshMultiple: (listings) => _refreshMultipleListings(context, listings),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading listings: $e')),
+      );
+    }
+  }
+
+  Future<void> _refreshSingleListing(BuildContext context, ListingModel listing) async {
+    try {
+      await FirebaseFunctions.instance.httpsCallable('refreshListingFreshness').call({
+        'listingId': listing.id,
+      });
+      
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Listing refreshed successfully'.tr())),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  Future<void> _refreshMultipleListings(BuildContext context, List<ListingModel> listings) async {
+    try {
+      await FirebaseFunctions.instance.httpsCallable('bulkRefreshListings').call({
+        'listingIds': listings.map((l) => l.id).toList(),
+      });
+      
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Listings refreshed successfully'.tr())),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
   }
 }

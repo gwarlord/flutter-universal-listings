@@ -170,6 +170,11 @@ class ListingModel {
   List<String> videos;
   String logo; // Business/listing logo (square mini logo)
 
+  /// Location Photos (Optional)
+  String? exteriorImageUrl; // Show entrance/signage
+  String? interiorImageUrl; // Show customer/service area
+  String? locationInstructions; // Directions/finding instructions (e.g., "3rd floor, turn left")
+
   /// Optional
   String price; // Changed back to String to match your existing Firestore data and UI logic
   String currencyCode;
@@ -296,6 +301,9 @@ class ListingModel {
     this.photos = const [],
     this.videos = const [],
     this.logo = '',
+    this.exteriorImageUrl,
+    this.interiorImageUrl,
+    this.locationInstructions,
     this.price = '',
     this.currencyCode = 'USD',
     this.phone = '',
@@ -407,6 +415,9 @@ class ListingModel {
       photos: List<String>.from(json['photos'] ?? []),
       videos: List<String>.from(json['videos'] ?? []),
       logo: json['logo'] ?? '',
+      exteriorImageUrl: json['exteriorImageUrl'],
+      interiorImageUrl: json['interiorImageUrl'],
+      locationInstructions: json['locationInstructions'],
       price: json['price']?.toString() ?? '',
       currencyCode: json['currencyCode']?.toString() ?? 'USD',
       phone: json['phone'] ?? '',
@@ -506,6 +517,9 @@ class ListingModel {
       'photos': photos,
       'videos': videos,
       'logo': logo,
+      'exteriorImageUrl': exteriorImageUrl,
+      'interiorImageUrl': interiorImageUrl,
+      'locationInstructions': locationInstructions,
       'price': price,
       'currencyCode': currencyCode,
       'phone': phone,
@@ -595,6 +609,9 @@ class ListingModel {
     List<String>? photos,
     List<String>? videos,
     String? logo,
+    String? exteriorImageUrl,
+    String? interiorImageUrl,
+    String? locationInstructions,
     String? price,
     String? currencyCode,
     String? phone,
@@ -653,6 +670,9 @@ class ListingModel {
       photos: photos ?? this.photos,
       videos: videos ?? this.videos,
       logo: logo ?? this.logo,
+      exteriorImageUrl: exteriorImageUrl ?? this.exteriorImageUrl,
+      interiorImageUrl: interiorImageUrl ?? this.interiorImageUrl,
+      locationInstructions: locationInstructions ?? this.locationInstructions,
       price: price ?? this.price,
       currencyCode: currencyCode ?? this.currencyCode,
       phone: phone ?? this.phone,

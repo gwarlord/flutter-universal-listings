@@ -27,6 +27,7 @@ import 'package:caribtap/widgets/menu/menu_edit_section_widget.dart';
 import 'package:caribtap/listings/model/categories_model.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/ui/widgets/location_photos_editor.dart';
 import 'package:caribtap/listings/utils/opening_hours_editor.dart';
 import 'package:caribtap/listings/utils/subscription_helper.dart';
 import 'package:caribtap/screens/store/catalog_manager_screen.dart';
@@ -194,6 +195,11 @@ class _AddListingScreenState extends State<AddListingScreen> {
   List<File> _newImages = [];
   List<File> _newVideos = [];
   
+  // Location Photos (Optional)
+  String? _exteriorImageUrl;
+  String? _interiorImageUrl;
+  String? _locationInstructions;
+  
   // Logo state
   String? _existingLogoUrl;
   File? _newLogo;
@@ -287,6 +293,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _existingVideoUrls.addAll(
       List<String>.from(l.videos ?? []).where((e) => e.trim().isNotEmpty),
     );
+    _exteriorImageUrl = (l.exteriorImageUrl ?? '').trim().isEmpty ? null : l.exteriorImageUrl;
+    _interiorImageUrl = (l.interiorImageUrl ?? '').trim().isEmpty ? null : l.interiorImageUrl;
+    _locationInstructions = (l.locationInstructions ?? '').trim().isEmpty ? null : l.locationInstructions;
     _existingLogoUrl = (l.logo ?? '').trim().isEmpty ? null : l.logo;
 
     _phoneController.text = (l.phone ?? '').trim();
@@ -1219,9 +1228,33 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       );
                     },
                   )
-                : Center(
-                    child: Icon(Icons.videocam, size: 40, color: Colors.grey.shade600),
-                  ),
+                : url != null
+                    ? FutureBuilder<Uint8List?>(
+                        future: _generateVideoThumbnailFromUrl(url),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData && snapshot.data != null) {
+                            return Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.memory(snapshot.data!, fit: BoxFit.cover),
+                                Center(
+                                  child: Icon(
+                                    Icons.play_circle_fill,
+                                    size: 32,
+                                    color: Colors.white.withOpacity(0.8),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
+                          return Center(
+                            child: Icon(Icons.videocam, size: 40, color: Colors.grey.shade600),
+                          );
+                        },
+                      )
+                    : Center(
+                        child: Icon(Icons.videocam, size: 40, color: Colors.grey.shade600),
+                      ),
           ),
         ),
         Positioned(
@@ -1247,6 +1280,19 @@ class _AddListingScreenState extends State<AddListingScreen> {
     try {
       return await VideoThumbnail.thumbnailData(
         video: videoFile.path,
+        imageFormat: ImageFormat.PNG,
+        maxHeight: 100,
+        quality: 75,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Uint8List?> _generateVideoThumbnailFromUrl(String videoUrl) async {
+    try {
+      return await VideoThumbnail.thumbnailData(
+        video: videoUrl,
         imageFormat: ImageFormat.PNG,
         maxHeight: 100,
         quality: 75,
@@ -1795,42 +1841,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 keyboardType: TextInputType.url,
                 decoration: _getInputDecoration(label: 'Website'.tr(), icon: Icons.language),
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Business Details'.tr(),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: dark ? Colors.white : Colors.black,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Not seen on listing, used for quote and invoice generation'.tr(),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _companyRegistrationController,
-                decoration: _getInputDecoration(label: 'Company Registration #'.tr(), icon: Icons.business),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _vatNumberController,
-                decoration: _getInputDecoration(label: 'VAT / Tax ID #'.tr(), icon: Icons.receipt_long),
-              ),
-              const SizedBox(height: 16),
-              // Menu Section
-              if (isEdit && widget.listingToEdit != null)
-                MenuEditSectionWidget(
-                  listing: widget.listingToEdit!,
-                  onMenuUpdated: () {
-                    if (mounted) setState(() {});
-                  },
-                ),
               const SizedBox(height: 24),
               _buildSectionHeader('Social Media'.tr(), isSocial: true),
               TextField(
@@ -1862,6 +1872,42 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 controller: _xController,
                 decoration: _getInputDecoration(label: 'X (Twitter) URL', icon: Icons.alternate_email),
               ),
+              const SizedBox(height: 24),
+              Text(
+                'Business Details'.tr(),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: dark ? Colors.white : Colors.black,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Not seen on listing, used for quote and invoice generation'.tr(),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _companyRegistrationController,
+                decoration: _getInputDecoration(label: 'Company Registration #'.tr(), icon: Icons.business),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _vatNumberController,
+                decoration: _getInputDecoration(label: 'VAT / Tax ID #'.tr(), icon: Icons.receipt_long),
+              ),
+              const SizedBox(height: 24),
+              // Menu Section
+              if (isEdit && widget.listingToEdit != null)
+                MenuEditSectionWidget(
+                  listing: widget.listingToEdit!,
+                  onMenuUpdated: () {
+                    if (mounted) setState(() {});
+                  },
+                ),
               const SizedBox(height: 24),
               _buildSectionHeader('Store / Ecommerce (Optional)'),
               SwitchListTile(
@@ -2286,6 +2332,24 @@ class _AddListingScreenState extends State<AddListingScreen> {
               ),
 
               const SizedBox(height: 16),
+              // Location Photos (Optional)
+              LocationPhotosEditor(
+                exteriorImageUrl: _exteriorImageUrl,
+                interiorImageUrl: _interiorImageUrl,
+                locationInstructions: _locationInstructions,
+                onPhotosChanged: (exteriorUrl, interiorUrl, instructions) {
+                  setState(() {
+                    _exteriorImageUrl = exteriorUrl;
+                    _interiorImageUrl = interiorUrl;
+                    _locationInstructions = instructions;
+                  });
+                },
+                uploadImages: (images) => listingApiManager.uploadListingImages(images: images),
+                isDark: isDarkMode(context),
+                primaryColor: Color(colorPrimary),
+              ),
+
+              const SizedBox(height: 16),
               _buildSectionHeader('Videos (max 3)'.tr()),
               BlocBuilder<AddListingBloc, AddListingState>(
                 buildWhen: (old, current) => old != current && current is ListingVideosUpdatedState,
@@ -2401,6 +2465,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
       place: place,
       latitude: latitude,
       longitude: longitude,
+      exteriorImageUrl: _exteriorImageUrl,
+      interiorImageUrl: _interiorImageUrl,
+      locationInstructions: _locationInstructions,
     );
 
     // DEBUG: Log proof of address toggle state

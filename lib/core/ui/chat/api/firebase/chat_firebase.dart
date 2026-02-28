@@ -18,6 +18,7 @@ import 'package:caribtap/core/model/chat_feed_model.dart';
 import 'package:caribtap/core/model/media_container.dart';
 import 'package:caribtap/core/model/user.dart';
 import 'package:caribtap/core/ui/chat/api/chat_repository.dart';
+import 'package:caribtap/listings/services/listing_activity_service.dart';
 import 'package:caribtap/core/utils/helper.dart';
 
 import 'package:path_provider/path_provider.dart';
@@ -448,6 +449,20 @@ class ChatFireStoreUtils extends ChatRepository {
       }
 
       await batch.commit();
+
+      // Record activity if this message is about a listing
+      if (channelDataModel.listingId != null && channelDataModel.listingId!.isNotEmpty) {
+        try {
+          final activityService = ListingActivityService();
+          await activityService.recordMessage(
+            channelDataModel.listingId!,
+            message.senderID,
+          );
+        } catch (e) {
+          // Log but don't fail the message if activity tracking fails
+          debugPrint('Activity tracking error: $e');
+        }
+      }
 
       // Notifications logic
       for (var participant in channelDataModel.participants) {

@@ -30,6 +30,8 @@ import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart'
 import 'package:caribtap/listings/services/attention_service.dart';
 import 'package:caribtap/listings/ui/attention/attention_cubit.dart';
 import 'package:caribtap/listings/listings_module/booking/booking_management_screen.dart';
+import 'package:caribtap/listings/location/location_scope_cubit.dart';
+import 'package:caribtap/listings/location/location_scope_service.dart';
 
 runListings() {
   appName = 'Flutter Universal Listings';
@@ -67,6 +69,17 @@ runListings() {
           create: (_) => AttentionCubit(
             attentionService: AttentionService(),
           ),
+        ),
+        // Location Scope Cubit for managing geographic filtering
+        BlocProvider(
+          create: (_) {
+            final service = LocationScopeService();
+            service.init(); // Initialize SharedPreferences
+            return LocationScopeCubit(
+              service: service,
+              userId: null, // Will be set after authentication
+            );
+          },
         ),
       ],
       child: const MyApp(),

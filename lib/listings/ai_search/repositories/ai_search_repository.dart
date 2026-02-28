@@ -1,11 +1,21 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:caribtap/listings/ai_search/models/search_interpretation.dart';
 import 'package:caribtap/listings/ai_search/models/search_result.dart';
 import 'package:caribtap/listings/ai_search/models/saved_search.dart';
 import 'package:caribtap/listings/ai_search/services/ai_interpretation_service.dart';
 import 'package:caribtap/listings/ai_search/services/search_rate_limit_service.dart';
 import 'package:caribtap/listings/ai_search/services/geolocation_service.dart';
+
+/// Custom Exception for when the AI search fails and fallback is used
+class AiSearchFallbackException implements Exception {
+  final String message;
+  final dynamic originalException;
+  AiSearchFallbackException(this.message, this.originalException);
+}
 
 /// Repository for AI-assisted search operations
 class AiSearchRepository {
@@ -58,23 +68,51 @@ class AiSearchRepository {
         }
       }
 
-      // 3. Execute search with Cloud Function
-      final callable = _functions.httpsCallable('searchListings');
-      final result = await callable.call<Map<String, dynamic>>({
-        'interpretation': updatedInterpretation.toJson(),
-        'contentType': contentType,
-      });
+      // 3. Execute search with Cloud Function (REST HTTPS)
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('User must be authenticated to perform search.');
+      }
+      final idToken = await user.getIdToken();
 
-      final data = result.data;
-      final results = (data['results'] as List<dynamic>?)
-              ?.map((e) => SearchResult.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [];
+      try {
+        final searchUrl = 'https://us-central1-caribtap.cloudfunctions.net/searchListingsRest';
+        final response = await http.post(
+          Uri.parse(searchUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $idToken',
+          },
+          body: jsonEncode({
+            'interpretation': updatedInterpretation.toJson(),
+            'contentType': contentType,
+          }),
+        ).timeout(const Duration(seconds: 30));
 
-      print('✅ Search complete: ${results.length} results');
-      return results;
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          final results = (data['results'] as List<dynamic>?)
+                  ?.map((e) => SearchResult.fromJson(e as Map<String, dynamic>))
+                  .toList() ??
+              [];
+
+          print('✅ Search complete: ${results.length} results');
+          return results;
+        } else {
+            throw Exception('Cloud function failed with status code: ${response.statusCode}');
+        }
+      } catch (funcError) {
+        print('⚠️ Cloud Function search failed: $funcError. Falling back to direct search.');
+        // Instead of continuing, we throw a specific exception
+        throw AiSearchFallbackException(
+            'AI search failed, falling back to keyword search.', funcError);
+      }
     } catch (e) {
+      if (e is AiSearchFallbackException) {
+        rethrow; // rethrow our custom exception
+      }
       print('❌ Search error: $e');
+      // For other errors, we can also wrap them or rethrow
       rethrow;
     }
   }

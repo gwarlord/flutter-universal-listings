@@ -17,6 +17,9 @@ class AiSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.grey[100] : Colors.black87;
+    
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
@@ -31,6 +34,7 @@ class AiSearchBar extends StatelessWidget {
       ),
       child: TextField(
         controller: controller,
+        style: TextStyle(color: textColor),
         decoration: InputDecoration(
           hintText: hintPrompt ?? 'Search with AI...'.tr(),
           hintStyle: TextStyle(color: Colors.grey[400]),

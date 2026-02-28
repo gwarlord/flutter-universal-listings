@@ -127,6 +127,10 @@ class _AiSearchScreenState extends State<AiSearchScreen> {
   }
 
   Widget _buildInitialState() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconColor = isDark ? Colors.grey[400] : Colors.grey[500];
+    final textColor = isDark ? Colors.grey[400] : Colors.grey[600];
+    
     return Center(
       child: SingleChildScrollView(
         child: Column(
@@ -135,7 +139,7 @@ class _AiSearchScreenState extends State<AiSearchScreen> {
           Icon(
             Icons.search,
             size: 80,
-            color: Colors.grey[400],
+            color: iconColor,
           ),
           const SizedBox(height: 16),
           Text(
@@ -148,7 +152,7 @@ class _AiSearchScreenState extends State<AiSearchScreen> {
             child: Text(
               'Type naturally: "best pizza near me" or "gyms open now"'.tr(),
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: textColor),
             ),
           ),
           const SizedBox(height: 32),
@@ -193,12 +197,18 @@ class _AiSearchScreenState extends State<AiSearchScreen> {
   }
 
   Widget _buildLoadedState(AiSearchLoaded state) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconColor = isDark ? Colors.grey[400] : Colors.grey[500];
+    final textColor = isDark ? Colors.grey[400] : Colors.grey[600];
+    final containerBg = isDark ? Colors.grey[850] : SearchConstants.aiIndicatorColor.withOpacity(0.1);
+    final containerTextColor = isDark ? Colors.grey[200] : Colors.black87;
+    
     if (state.results.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off, size: 80, color: Colors.grey[400]),
+            Icon(Icons.search_off, size: 80, color: iconColor),
             const SizedBox(height: 16),
             Text(
               'No results found'.tr(),
@@ -207,7 +217,7 @@ class _AiSearchScreenState extends State<AiSearchScreen> {
             const SizedBox(height: 8),
             Text(
               'Try different keywords or filters'.tr(),
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: textColor),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -228,7 +238,7 @@ class _AiSearchScreenState extends State<AiSearchScreen> {
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(12),
-          color: SearchConstants.aiIndicatorColor.withOpacity(0.1),
+          color: containerBg,
           child: Row(
             children: [
               const Icon(Icons.auto_awesome, 
@@ -238,7 +248,7 @@ class _AiSearchScreenState extends State<AiSearchScreen> {
               Expanded(
                 child: Text(
                   state.interpretation.naturalLanguageSummary,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  style: TextStyle(fontWeight: FontWeight.w500, color: containerTextColor),
                 ),
               ),
             ],
@@ -280,7 +290,7 @@ class _AiSearchScreenState extends State<AiSearchScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ListingDetailsScreen(
+                        builder: (context) => ListingDetailsWrappingWidget(
                           listing: result.listing!,
                           currentUser: context.read<AuthenticationBloc>().state.user!,
                         ),
@@ -297,6 +307,9 @@ class _AiSearchScreenState extends State<AiSearchScreen> {
   }
 
   Widget _buildErrorState(AiSearchError state) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.grey[400] : Colors.grey[600];
+    
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
@@ -320,7 +333,7 @@ class _AiSearchScreenState extends State<AiSearchScreen> {
                     Text(
                       state.message,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(color: textColor),
                     ),
                     if (state.canRetry) ...[
                       const SizedBox(height: 24),

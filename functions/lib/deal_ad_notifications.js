@@ -53,6 +53,12 @@ exports.onDealAdApproved = functions.firestore
     const { listingId, listerId, mediaUrl, mediaType, caption } = after;
     if (!listingId)
         return;
+    // Get the listing details to retrieve the title
+    const listingDoc = await db.collection("listings").doc(listingId).get();
+    if (!listingDoc.exists)
+        return;
+    const listingData = listingDoc.data();
+    const listingTitle = listingData?.title || "a listing";
     // Find all users who have this listing in their likedListingsIDs
     const usersSnap = await db.collection("users")
         .where("likedListingsIDs", "array-contains", listingId)
@@ -60,8 +66,8 @@ exports.onDealAdApproved = functions.firestore
     if (usersSnap.empty)
         return;
     // Prepare notification
-    const title = "New Deal from Your Favorite Lister!";
-    const body = caption ? caption : "Check out the latest deal or promotion.";
+    const title = "New Deal from one of your Favourite Listing!";
+    const body = listingTitle;
     const adUrl = `caribtap://deals/${context.params.adId}`;
     for (const userDoc of usersSnap.docs) {
         const user = userDoc.data();

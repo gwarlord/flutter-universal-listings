@@ -83,6 +83,9 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
             ),
           ),
           activeColor: Color(cfg.colorPrimary),
+          activeTrackColor: Color(cfg.colorPrimary).withOpacity(0.5),
+          inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
+          inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
         ),
         const SizedBox(height: 16),
 

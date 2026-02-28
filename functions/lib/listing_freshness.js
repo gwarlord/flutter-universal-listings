@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onListingCreated = exports.refreshListingFreshness = exports.processListingFreshness = void 0;
+exports.processActivityAutoRefresh = exports.onListingCreated = exports.bulkRefreshListings = exports.refreshListingFreshness = exports.processListingFreshness = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
@@ -84,10 +84,10 @@ exports.refreshListingFreshness = functions.https.onCall(async (data, context) =
     if (listing.authorID !== uid && !isAdmin) {
         throw new functions.https.HttpsError("permission-denied", "You do not have permission to refresh this listing");
     }
-    const days = parseFreshnessDays(listing.freshness?.days);
+    const days = getFreshnessForCategory(listing.category, listing.freshness?.days);
     const now = admin.firestore.Timestamp.now();
     const hideAt = admin.firestore.Timestamp.fromMillis(now.toMillis() + days * DAY_MS);
-    await listingRef.update({
+    const updateData = {
         hidden: false,
         "freshness.enabled": true,
         "freshness.days": days,
@@ -97,8 +97,76 @@ exports.refreshListingFreshness = functions.https.onCall(async (data, context) =
         "freshness.warn10SentAt": admin.firestore.FieldValue.delete(),
         "freshness.warn1SentAt": admin.firestore.FieldValue.delete(),
         "freshness.hiddenNotifiedAt": admin.firestore.FieldValue.delete(),
-    });
+    };
+    // Track verification if provided
+    if (data?.verified) {
+        updateData["freshness.lastVerified"] = now;
+        updateData["freshness.verificationChecklist"] = data.verificationChecklist || {};
+    }
+    await listingRef.update(updateData);
     return { ok: true, hideAt: hideAt.toDate().toISOString() };
+});
+// Bulk refresh multiple listings
+exports.bulkRefreshListings = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
+    }
+    const listingIds = data?.listingIds;
+    if (!Array.isArray(listingIds) || listingIds.length === 0) {
+        throw new functions.https.HttpsError("invalid-argument", "listingIds array is required");
+    }
+    if (listingIds.length > 50) {
+        throw new functions.https.HttpsError("invalid-argument", "Cannot refresh more than 50 listings at once");
+    }
+    const uid = context.auth.uid;
+    const isAdmin = await isAdminUser(uid);
+    const now = admin.firestore.Timestamp.now();
+    const batch = db.batch();
+    let refreshedCount = 0;
+    const errors = [];
+    for (const listingId of listingIds) {
+        try {
+            const listingRef = db.collection("listings").doc(listingId);
+            const listingSnap = await listingRef.get();
+            if (!listingSnap.exists) {
+                errors.push(`${listingId}: Not found`);
+                continue;
+            }
+            const listing = listingSnap.data() || {};
+            if (listing.authorID !== uid && !isAdmin) {
+                errors.push(`${listingId}: Permission denied`);
+                continue;
+            }
+            const days = getFreshnessForCategory(listing.category, listing.freshness?.days);
+            const hideAt = admin.firestore.Timestamp.fromMillis(now.toMillis() + days * DAY_MS);
+            const updateData = {
+                hidden: false,
+                "freshness.enabled": true,
+                "freshness.days": days,
+                "freshness.lastRefreshedAt": now,
+                "freshness.hideAt": hideAt,
+                "freshness.status": "ACTIVE",
+                "freshness.warn10SentAt": admin.firestore.FieldValue.delete(),
+                "freshness.warn1SentAt": admin.firestore.FieldValue.delete(),
+                "freshness.hiddenNotifiedAt": admin.firestore.FieldValue.delete(),
+            };
+            if (data?.verified) {
+                updateData["freshness.lastVerified"] = now;
+            }
+            batch.update(listingRef, updateData);
+            refreshedCount++;
+        }
+        catch (error) {
+            errors.push(`${listingId}: ${error}`);
+        }
+    }
+    await batch.commit();
+    return {
+        ok: true,
+        refreshedCount,
+        totalCount: listingIds.length,
+        errors: errors.length > 0 ? errors : null,
+    };
 });
 exports.onListingCreated = functions.firestore
     .document("listings/{listingId}")
@@ -109,7 +177,8 @@ exports.onListingCreated = functions.firestore
     }
     const now = new Date();
     const createdAt = resolveListingCreatedAt(listing, now);
-    const days = parseFreshnessDays(listing.freshness?.days);
+    // Use category-based freshness period
+    const days = getFreshnessForCategory(listing.category, listing.freshness?.days);
     const hideAt = new Date(createdAt.getTime() + days * DAY_MS);
     await snapshot.ref.set({
         freshness: {
@@ -471,4 +540,235 @@ async function isAdminUser(uid) {
         return false;
     const adminUserIds = adminDoc.data()?.adminUserIds || [];
     return adminUserIds.includes(uid);
+}
+// Category-based freshness periods (in days)
+const CATEGORY_FRESHNESS = {
+    // Short-term
+    deals: 30,
+    flash_sales: 14,
+    events: 14,
+    limited_offers: 21,
+    seasonal: 30,
+    daily_specials: 7,
+    market_fresh: 7,
+    // Standard
+    restaurants: 90,
+    services: 90,
+    products: 90,
+    retail: 90,
+    beauty: 90,
+    fitness: 90,
+    automotive: 90,
+    home_services: 90,
+    // Long-term
+    real_estate: 120,
+    rentals: 120,
+    property_management: 120,
+    professionals: 180,
+    healthcare: 120,
+    education: 120,
+    legal_services: 180,
+};
+function getFreshnessForCategory(category, customDays) {
+    if (customDays && customDays > 0)
+        return customDays;
+    if (!category)
+        return DEFAULT_FRESHNESS_DAYS;
+    const normalized = category.toLowerCase().replace(/\s+/g, "_");
+    return CATEGORY_FRESHNESS[normalized] || DEFAULT_FRESHNESS_DAYS;
+}
+// Activity-based auto-refresh
+exports.processActivityAutoRefresh = functions.pubsub
+    .schedule("every 12 hours")
+    .onRun(async () => {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY_MS);
+    // Find listings expiring in next 14 days
+    const expiringListings = await db
+        .collection("listings")
+        .where("freshness.enabled", "==", true)
+        .where("freshness.exempt", "==", false)
+        .where("hidden", "==", false)
+        .where("freshness.hideAt", "<=", new Date(now.getTime() + 14 * DAY_MS))
+        .where("freshness.hideAt", ">", now)
+        .get();
+    let autoRefreshed = 0;
+    let skipped = 0;
+    for (const doc of expiringListings.docs) {
+        const listing = doc.data();
+        // Check if lister is exempt
+        if (await isListerExempt(listing.authorID)) {
+            skipped++;
+            continue;
+        }
+        // Calculate activity score
+        const activityScore = await calculateActivityScore(doc.id);
+        // Check if qualifies for auto-refresh
+        if (activityScore.score30Days >= 20 ||
+            activityScore.score7Days >= 15 ||
+            activityScore.totalBookings >= 3 ||
+            (activityScore.totalReviews >= 2 && activityScore.totalMessages >= 5)) {
+            // Auto-refresh the listing
+            const days = getFreshnessForCategory(listing.category, listing.freshness?.days);
+            const newHideAt = admin.firestore.Timestamp.fromMillis(now.getTime() + days * DAY_MS);
+            await doc.ref.update({
+                "freshness.lastRefreshedAt": admin.firestore.FieldValue.serverTimestamp(),
+                "freshness.hideAt": newHideAt,
+                "freshness.status": "ACTIVE",
+                "freshness.warn10SentAt": admin.firestore.FieldValue.delete(),
+                "freshness.warn1SentAt": admin.firestore.FieldValue.delete(),
+                "freshness.autoRefreshedAt": admin.firestore.FieldValue.serverTimestamp(),
+                "freshness.autoRefreshReason": "customer_engagement",
+            });
+            // Record auto-refresh event
+            await doc.ref.collection("auto_refreshes").add({
+                refreshedAt: admin.firestore.FieldValue.serverTimestamp(),
+                reason: "customer_engagement",
+                activityScore: activityScore.score30Days,
+                activityBreakdown: {
+                    bookings: activityScore.totalBookings,
+                    reviews: activityScore.totalReviews,
+                    messages: activityScore.totalMessages,
+                    saves: activityScore.totalSaves,
+                    shares: activityScore.totalShares,
+                },
+                notificationSent: false,
+            });
+            // Send notification to lister
+            await sendAutoRefreshNotification(listing, activityScore);
+            autoRefreshed++;
+        }
+        else {
+            skipped++;
+        }
+    }
+    functions.logger.info("Activity auto-refresh completed", {
+        autoRefreshed,
+        skipped,
+    });
+    return null;
+});
+async function calculateActivityScore(listingId) {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY_MS);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * DAY_MS);
+    const activitiesSnap = await db
+        .collection("listings")
+        .doc(listingId)
+        .collection("activities")
+        .where("timestamp", ">=", admin.firestore.Timestamp.fromDate(thirtyDaysAgo))
+        .get();
+    let score30Days = 0;
+    let score7Days = 0;
+    let totalBookings = 0;
+    let totalReviews = 0;
+    let totalMessages = 0;
+    let totalSaves = 0;
+    let totalShares = 0;
+    for (const actDoc of activitiesSnap.docs) {
+        const activity = actDoc.data();
+        const activityValue = activity.value || 0;
+        const activityTime = activity.timestamp.toDate();
+        score30Days += activityValue;
+        if (activityTime >= sevenDaysAgo) {
+            score7Days += activityValue;
+        }
+        switch (activity.type) {
+            case "booking":
+                totalBookings++;
+                break;
+            case "review":
+                totalReviews++;
+                break;
+            case "message":
+                totalMessages++;
+                break;
+            case "save":
+                totalSaves++;
+                break;
+            case "share":
+                totalShares++;
+                break;
+        }
+    }
+    return {
+        score30Days,
+        score7Days,
+        totalBookings,
+        totalReviews,
+        totalMessages,
+        totalSaves,
+        totalShares,
+    };
+}
+async function sendAutoRefreshNotification(listing, activityScore) {
+    const userSnap = await db.collection("users").doc(listing.authorID).get();
+    if (!userSnap.exists)
+        return;
+    const user = userSnap.data() || {};
+    const email = user.email;
+    const pushToken = user.pushToken;
+    const allowPush = user.settings?.allowPushNotifications !== false;
+    const message = `Great news! Your listing "${listing.title}" was automatically refreshed for another ${listing.freshness?.days || 90} days due to strong customer engagement!`;
+    // Send push notification
+    if (pushToken && allowPush) {
+        try {
+            await messaging.send({
+                token: pushToken,
+                notification: {
+                    title: "🎉 Listing Auto-Refreshed!",
+                    body: message,
+                },
+                data: {
+                    type: "listing_auto_refresh",
+                    listingId: listing.id,
+                    activityScore: activityScore.score30Days.toString(),
+                },
+            });
+        }
+        catch (error) {
+            functions.logger.error("Error sending auto-refresh push", { error });
+        }
+    }
+    // Send email if available
+    const sendgridKey = await secrets_1.sendgridKeySecret.value();
+    if (email && sendgridKey) {
+        try {
+            mail_1.default.setApiKey(sendgridKey);
+            await mail_1.default.send({
+                to: email,
+                from: EMAIL_FROM,
+                subject: "🎉 Your Listing Was Auto-Refreshed!",
+                html: buildAutoRefreshEmail(listing, activityScore),
+            });
+        }
+        catch (error) {
+            functions.logger.error("Error sending auto-refresh email", { error });
+        }
+    }
+}
+function buildAutoRefreshEmail(listing, activityScore) {
+    return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #4CAF50;">🎉 Great News!</h2>
+      <p>Your listing <strong>"${listing.title}"</strong> has been automatically refreshed!</p>
+      
+      <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+        <h3 style="margin-top: 0;">Why?</h3>
+        <p>Your listing has shown strong customer engagement:</p>
+        <ul>
+          <li>📊 Activity Score: ${activityScore.score30Days} points</li>
+          <li>📅 Bookings: ${activityScore.totalBookings}</li>
+          <li>⭐ Reviews: ${activityScore.totalReviews}</li>
+          <li>💬 Messages: ${activityScore.totalMessages}</li>
+        </ul>
+      </div>
+
+      <p>Your listing will now remain active for another <strong>${listing.freshness?.days || 90} days</strong>.</p>
+      
+      <p style="color: #666; font-size: 14px;">
+        Keep up the great work! Active listings with customer engagement are automatically kept fresh.
+      </p>
+    </div>
+  `;
 }

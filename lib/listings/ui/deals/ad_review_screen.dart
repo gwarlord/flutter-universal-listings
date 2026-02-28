@@ -3,12 +3,16 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/listings/model/ad_targeting_model.dart';
 import 'package:caribtap/listings/model/deal_ad_model.dart';
+import 'package:caribtap/listings/model/deal_ad_quota.dart';
 import 'package:caribtap/listings/services/deal_ad_service.dart';
 import 'package:caribtap/listings/services/media_upload_service.dart';
+import 'package:caribtap/listings/services/deal_ad_quota_manager.dart';
+import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:caribtap/listings/ui/deals/ad_card_preview.dart';
 import 'package:caribtap/listings/utils/caribbean_countries.dart';
 import 'package:uuid/uuid.dart';
@@ -119,6 +123,43 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
   Future<void> _confirmAndSubmit() async {
     setState(() => _isSubmitting = true);
     try {
+      // Get current user data from context
+      final authBloc = context.read<AuthenticationBloc>();
+      final user = authBloc.user;
+      
+      if (user == null) {
+        throw 'User not authenticated';
+      }
+      final normalizedTier = DealAdQuota.normalizeTier(user.subscriptionTier);
+
+      // Check if this is an edit (editing existing ads doesn't count against quota)
+      if (widget.adToEdit == null) {
+        // Check quota for new ads
+        final quotaManager = DealAdQuotaManager();
+        final hasQuota = await quotaManager.hasRemainingQuota(
+          user.userID,
+          normalizedTier,
+        );
+
+        if (!hasQuota) {
+          if (!mounted) return;
+          final resetDate = await quotaManager.getResetDateString(user.userID, normalizedTier);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                normalizedTier == 'free'
+                    ? 'Upgrade to Professional or Premium to post ads'
+                    : 'Monthly ad posting quota exhausted. Try again $resetDate',
+              ),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+          setState(() => _isSubmitting = false);
+          return;
+        }
+      }
+
       final adId = widget.adToEdit?.id ?? const Uuid().v4();
       final mediaService = MediaUploadService();
 
@@ -179,6 +220,12 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
       );
 
       await DealAdService().submitAd(ad);
+      
+      // Increment quota after successful submission (new ads only)
+      if (widget.adToEdit == null && user.userID.isNotEmpty) {
+        final quotaManager = DealAdQuotaManager();
+        await quotaManager.incrementAdPosted(user.userID, normalizedTier);
+      }
       
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -430,10 +477,9 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
                       spacing: 6,
                       runSpacing: 6,
                       children: widget.targeting.categories.map((catId) {
-                        final cat = (widget.availableCategories ?? []).firstWhere(
-                          (c) => c.id == catId,
-                          orElse: () => null,
-                        );
+                        final cat = (widget.availableCategories ?? [])
+                            .where((c) => c.id == catId)
+                            .firstOrNull;
                         final catName = cat != null && cat.title != null ? cat.title : catId;
                         return _buildChip(catName, isDark, primaryColor);
                       }).toList(),

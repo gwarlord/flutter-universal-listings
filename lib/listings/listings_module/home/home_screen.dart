@@ -24,11 +24,14 @@ import 'package:caribtap/listings/model/home_filter_state.dart';
 import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:caribtap/listings/utils/caribbean_countries.dart';
+import 'package:caribtap/listings/utils/listing_filter_helpers.dart';
 import 'package:caribtap/listings/model/deal_ad_model.dart';
 import 'package:caribtap/listings/services/deal_ad_service.dart';
-import 'package:caribtap/listings/ai_search/ui/screens/ai_search_screen.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import '../../ui/deals/deals_feed_screen.dart';
+import 'package:caribtap/listings/location/location_scope_cubit.dart';
+import 'package:caribtap/listings/location/location_scope_model.dart';
+import 'package:caribtap/listings/location/ui/location_scope_floating_button.dart';
 
 // Country filter selection dialog widget
 class _HomeCountrySelectionDialog extends StatefulWidget {
@@ -382,8 +385,22 @@ class HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  List<ListingModel> _getFilteredListings() {
+  List<ListingModel> _getFilteredListings({LocationScope? locationScope}) {
     return listings.where((listing) {
+      // Filter by location scope (Caribbean mode shows all Caribbean countries, Local mode shows selected country only)
+      if (locationScope != null) {
+        final effectiveCountry = locationScope.getEffectiveCountry();
+        if (locationScope.mode == LocationScopeMode.local && effectiveCountry != null) {
+          if (listing.countryCode != effectiveCountry) {
+            return false;
+          }
+        } else if (locationScope.mode == LocationScopeMode.caribbean) {
+          if (!CaribbeanCountries.isAllowedCode(listing.countryCode)) {
+            return false;
+          }
+        }
+      }
+
       // Filter by search query
       final matchesSearch = _searchQuery.isEmpty ||
           listing.title.toLowerCase().contains(_searchQuery) ||
@@ -401,8 +418,80 @@ class HomeScreenState extends State<HomeScreen> {
     }).toList();
   }
 
-  List<ListingModel?> _getFilteredListingsWithAds() {
-    final filtered = _getFilteredListings();
+  List<ListingModel> _getFilteredFeaturedListings({LocationScope? locationScope}) {
+    return _featuredListings.where((listing) {
+      // Filter by location scope (Caribbean mode shows all Caribbean countries, Local mode shows selected country only)
+      if (locationScope != null) {
+        final effectiveCountry = locationScope.getEffectiveCountry();
+        if (locationScope.mode == LocationScopeMode.local && effectiveCountry != null) {
+          if (listing.countryCode != effectiveCountry) {
+            return false;
+          }
+        } else if (locationScope.mode == LocationScopeMode.caribbean) {
+          if (!CaribbeanCountries.isAllowedCode(listing.countryCode)) {
+            return false;
+          }
+        }
+      }
+
+      // Apply the same filters as regular listings
+      // Filter by search query
+      final matchesSearch = _searchQuery.isEmpty ||
+          listing.title.toLowerCase().contains(_searchQuery) ||
+          listing.description.toLowerCase().contains(_searchQuery) ||
+          listing.place.toLowerCase().contains(_searchQuery) ||
+          listing.services.any((service) => 
+            service.name.toLowerCase().contains(_searchQuery) ||
+            service.duration.toLowerCase().contains(_searchQuery));
+
+      // Filter by country (if countries are selected, listing must be in that list)
+      final matchesCountry = _selectedCountryCodes.isEmpty ||
+          _selectedCountryCodes.contains(listing.countryCode);
+
+      // Filter by standard filter options (open now, has mini store, etc.)
+      if (_currentFilters.openNowOnly && !ListingFilterHelpers.isOpenNow(listing)) {
+        return false;
+      }
+
+      if (_currentFilters.hasMiniStore && !listing.storeEnabled) {
+        return false;
+      }
+
+      if (_currentFilters.hasRentals && listing.rentalConfig == null) {
+        return false;
+      }
+
+      if (_currentFilters.hasBooking && !listing.bookingEnabled) {
+        return false;
+      }
+
+      if (_currentFilters.hasDeals && !listing.menuEnabled && !listing.storeEnabled) {
+        return false;
+      }
+
+      if (_currentFilters.supportsDelivery && !listing.storeDeliveryEnabled) {
+        return false;
+      }
+
+      if (_currentFilters.supportsPickup && !listing.storePickupEnabled) {
+        return false;
+      }
+
+      if (_currentFilters.supportsDineIn && !listing.storeDineInEnabled) {
+        return false;
+      }
+
+      if (_currentFilters.categoryIds.isNotEmpty &&
+          !_currentFilters.categoryIds.contains(listing.categoryID)) {
+        return false;
+      }
+
+      return matchesSearch && matchesCountry;
+    }).toList();
+  }
+
+  List<ListingModel?> _getFilteredListingsWithAds({LocationScope? locationScope}) {
+    final filtered = _getFilteredListings(locationScope: locationScope);
     final result = <ListingModel?>[];
     
     for (int i = 0; i < filtered.length; i++) {
@@ -586,17 +675,24 @@ class HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final bool dark = isDarkMode(context);
 
-    return Scaffold(
-      backgroundColor: dark ? Colors.black : Colors.grey[50],
-      body: RefreshIndicator(
-        onRefresh: () async {
-          context.read<HomeBloc>().add(LoadingEvent());
-          context.read<HomeBloc>().add(GetCategoriesEvent());
-          context.read<HomeBloc>().add(GetListingsEvent());
-          await _loadFeaturedListings();
-          await _loadDeals();
-        },
-        child: BlocConsumer<HomeBloc, HomeState>(
+    return BlocListener<LocationScopeCubit, LocationScopeState>(
+      listener: (context, locationState) {
+        // When location scope changes, refresh listings
+        context.read<HomeBloc>().add(GetListingsEvent());
+      },
+      child: Scaffold(
+        backgroundColor: dark ? Colors.black : Colors.grey[50],
+        body: Stack(
+          children: [
+          RefreshIndicator(
+            onRefresh: () async {
+              context.read<HomeBloc>().add(LoadingEvent());
+              context.read<HomeBloc>().add(GetCategoriesEvent());
+              context.read<HomeBloc>().add(GetListingsEvent());
+              await _loadFeaturedListings();
+              await _loadDeals();
+            },
+            child: BlocConsumer<HomeBloc, HomeState>(
           listener: (context, state) {
             if (state is CategoriesListState) {
               loadingCategories = false;
@@ -654,88 +750,6 @@ class HomeScreenState extends State<HomeScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                  
-                  // AI Search Banner
-                  SliverToBoxAdapter(
-                    child: GestureDetector(
-                      onTap: () {
-                        // Navigate to AI Search screen
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => _buildAiSearchScreen(),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Color(0xFF9C27B0),
-                              Color(0xFF673AB7),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0xFF9C27B0).withOpacity(0.3),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.auto_awesome,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Search with AI'.tr(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Try "best pizza near me" or "gyms open now"'.tr(),
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(
-                              Icons.arrow_forward_ios,
-                              color: Colors.white.withOpacity(0.8),
-                              size: 20,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
                   
                   // 1. Deals & Promotions Section
                   if (_dealAds.isNotEmpty)
@@ -1142,30 +1156,39 @@ class HomeScreenState extends State<HomeScreen> {
                   ),
 
                   // 4. Featured Listings Section
-                  if (_featuredListings.isNotEmpty) ...[
-                    SliverToBoxAdapter(
-                      child: _buildSectionHeader(title: 'Featured Listings'.tr(), isDark: dark),
-                    ),
-                    SliverToBoxAdapter(
-                      child: Container(
-                        height: 260,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          color: Color(cfg.colorPrimary).withOpacity(dark ? 0.05 : 0.03),
+                  Builder(
+                    builder: (context) {
+                      final locationScope = context.read<LocationScopeCubit>().state.scope;
+                      final filteredFeaturedListings = _getFilteredFeaturedListings(locationScope: locationScope);
+                      if (filteredFeaturedListings.isEmpty) {
+                        return const SliverToBoxAdapter(child: SizedBox.shrink());
+                      }
+                      return SliverToBoxAdapter(
+                        child: Column(
+                          children: [
+                            _buildSectionHeader(title: 'Featured Listings'.tr(), isDark: dark),
+                            Container(
+                              height: 260,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                color: Color(cfg.colorPrimary).withOpacity(dark ? 0.05 : 0.03),
+                              ),
+                              child: ListView.builder(
+                                controller: _featuredScrollController,
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.all(12),
+                                itemCount: filteredFeaturedListings.length,
+                                itemBuilder: (context, index) {
+                                  final listing = filteredFeaturedListings[index];
+                                  return _buildFeaturedCard(listing, dark);
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                        child: ListView.builder(
-                           controller: _featuredScrollController,
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.all(12),
-                          itemCount: _featuredListings.length,
-                          itemBuilder: (context, index) {
-                            final listing = _featuredListings[index];
-                            return _buildFeaturedCard(listing, dark);
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
+                      );
+                    },
+                  ),
 
                   // 5. Main Listings Grid
                   SliverToBoxAdapter(
@@ -1177,7 +1200,8 @@ class HomeScreenState extends State<HomeScreen> {
                   else
                     Builder(
                       builder: (context) {
-                        final filteredListingsWithAds = _getFilteredListingsWithAds();
+                        final locationScope = context.read<LocationScopeCubit>().state.scope;
+                        final filteredListingsWithAds = _getFilteredListingsWithAds(locationScope: locationScope);
                         if (filteredListingsWithAds.isEmpty) {
                           return SliverToBoxAdapter(
                             child: Padding(
@@ -1223,7 +1247,8 @@ class HomeScreenState extends State<HomeScreen> {
                   // Show All Button
                   Builder(
                     builder: (context) {
-                      final filteredListingsWithAds = _getFilteredListingsWithAds();
+                      final locationScope = context.read<LocationScopeCubit>().state.scope;
+                      final filteredListingsWithAds = _getFilteredListingsWithAds(locationScope: locationScope);
                       return SliverToBoxAdapter(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 32),
@@ -1258,7 +1283,13 @@ class HomeScreenState extends State<HomeScreen> {
           },
         ),
       ),
-    );
+      
+      // Floating location scope button
+      LocationScopeFloatingButton(),
+    ],
+    ),
+  ),
+);
   }
 
   Widget _buildFeaturedCard(ListingModel listing, bool dark) {
@@ -1379,10 +1410,6 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Build AI Search Screen
-  Widget _buildAiSearchScreen() {
-    return AiSearchScreen(userId: widget.currentUser.userID);
-  }
 }
 
 class DealAdCarouselItem extends StatefulWidget {

@@ -4,18 +4,18 @@ import 'package:caribtap/listings/ai_search/repositories/ai_search_repository.da
 import 'package:caribtap/listings/ai_search/models/search_filter.dart';
 import 'package:caribtap/listings/ai_search/models/search_interpretation.dart' as models;
 import 'package:caribtap/listings/ai_search/services/ai_interpretation_service.dart';
-import 'package:caribtap/listings/listings_module/search/search_bloc.dart' as keyword_search;
+import 'package:caribtap/listings/listings_module/search/search_bloc.dart';
 
 /// Cubit for managing AI search feature
 class AiSearchCubit extends Cubit<AiSearchState> {
   final AiSearchRepository _repository;
   final String userId;
-  final keyword_search.SearchBloc? _keywordSearchBloc;
+  final SearchBloc? _keywordSearchBloc;
 
   AiSearchCubit({
     required this.userId,
     AiSearchRepository? repository,
-    keyword_search.SearchBloc? keywordSearchBloc,
+    SearchBloc? keywordSearchBloc,
   })  : _repository = repository ?? AiSearchRepository(),
         _keywordSearchBloc = keywordSearchBloc,
         super(const AiSearchInitial());
@@ -74,36 +74,33 @@ class AiSearchCubit extends Cubit<AiSearchState> {
         upgradeMessage: 'Upgrade to Professional for more searches',
         originalQuery: query,
       ));
-    } catch (e) {
+    } on AiSearchFallbackException catch (e) {
+        print('🔄 Falling back to keyword search due to: ${e.originalException}');
+        if (_keywordSearchBloc != null) {
+            // Dispatch event to keyword search bloc
+            _keywordSearchBloc!.add(SearchListingsEvent(query: query));
+            emit(AiSearchError(
+                message: 'AI Search is unavailable. Switched to keyword search.',
+                originalQuery: query,
+                isFallback: true,
+                canRetry: true,
+            ));
+        } else {
+            emit(AiSearchError(
+                message: 'AI Search failed and no fallback is available.',
+                originalQuery: query,
+                canRetry: true,
+            ));
+        }
+    }
+    catch (e) {
       print('❌ Search error in cubit: $e');
 
-      // Try fallback to keyword search
-      if (_keywordSearchBloc != null) {
-        try {
-          print('🔄 Falling back to keyword search');
-          emit(const AiSearchLoading(message: 'Using keyword search...'));
-
-          // This would trigger the keyword search
-          // For now, emit error with fallback option
-          emit(AiSearchError(
-            message: 'AI search unavailable. Using keyword search instead.',
-            canRetry: true,
-            originalQuery: query,
-          ));
-        } catch (fallbackError) {
-          emit(AiSearchError(
-            message: 'Search failed. Please try again.',
-            canRetry: true,
-            originalQuery: query,
-          ));
-        }
-      } else {
-        emit(AiSearchError(
-          message: 'Failed to search. Please try again.',
-          canRetry: true,
-          originalQuery: query,
-        ));
-      }
+      emit(AiSearchError(
+        message: 'Failed to search. Please try again.',
+        canRetry: true,
+        originalQuery: query,
+      ));
     }
   }
 

@@ -34,7 +34,10 @@ import 'package:caribtap/listings/listings_module/booking/booking_request_dialog
 import 'package:caribtap/listings/listings_module/api/booking_api_manager.dart';
 import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:caribtap/listings/ui/widgets/tap_widgets.dart';
+import 'package:caribtap/listings/ui/widgets/location_photos_display.dart';
+import 'package:caribtap/listings/ui/widgets/payment_methods_stream_widget.dart';
 import 'package:caribtap/listings/services/tap_service.dart';
+import 'package:caribtap/listings/services/featured_service.dart';
 import 'package:caribtap/listings/listings_module/api/firebase/tap_firebase.dart';
 import 'package:caribtap/listings/ui/collaboration/collaborators_management_screen.dart';
 import 'package:caribtap/listings/ui/collaboration/chat_scope_integration.dart';
@@ -61,6 +64,7 @@ import 'package:caribtap/screens/store/store_browse_screen.dart';
 import 'package:caribtap/screens/rentals/rental_browse_screen.dart';
 import 'package:caribtap/listings/utils/caribbean_countries.dart';
 import 'package:caribtap/listings/utils/world_countries.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import 'package:metadata_fetch/metadata_fetch.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -600,104 +604,98 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Title with Verified badge
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        child: GestureDetector(
-                                          onTap: () {
-                                            showDialog(
-                                              context: context,
-                                              builder: (context) => AlertDialog(
-                                                backgroundColor: dark ? Colors.grey[800] : Colors.white,
-                                                title: Text(
-                                                  'Full Listing Title'.tr(),
-                                                  style: TextStyle(color: adaptiveTextColor),
-                                                ),
-                                                content: Text(
-                                                  listing.title,
-                                                  style: TextStyle(color: adaptiveTextColor),
-                                                ),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () => Navigator.pop(context),
-                                                    child: Text('Close'.tr()),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          },
-                                          child: Text(
+                                  // Title
+                                  GestureDetector(
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          backgroundColor: dark ? Colors.grey[800] : Colors.white,
+                                          title: Text(
+                                            'Full Listing Title'.tr(),
+                                            style: TextStyle(color: adaptiveTextColor),
+                                          ),
+                                          content: Text(
                                             listing.title,
-                                            style: const TextStyle(
-                                              fontSize: 24,
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: -0.5,
+                                            style: TextStyle(color: adaptiveTextColor),
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context),
+                                              child: Text('Close'.tr()),
                                             ),
-                                            softWrap: true,
-                                            maxLines: 3,
-                                            overflow: TextOverflow.ellipsis,
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                    child: Text(
+                                      listing.title,
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: -0.5,
+                                      ),
+                                      softWrap: true,
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  // Verified and Premium Badges
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      if (listing.verified)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: primaryColor.withOpacity(0.12),
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(color: primaryColor, width: 1.2),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.verified, color: primaryColor, size: 18),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'Verified',
+                                                style: TextStyle(
+                                                  color: primaryColor,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 13,
+                                                  letterSpacing: 0.2,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          if (listing.verified)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: primaryColor.withOpacity(0.12),
-                                                borderRadius: BorderRadius.circular(16),
-                                                border: Border.all(color: primaryColor, width: 1.2),
+                                      if (_authorIsPremium == true)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.amber.withOpacity(0.08),
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(color: Colors.amber.withOpacity(0.35), width: 1.0),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.star, color: Colors.amber.shade400, size: 18),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'Premium Listing'.tr(),
+                                                style: TextStyle(
+                                                  color: Colors.amber.shade700.withOpacity(0.7),
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 13,
+                                                  letterSpacing: 0.2,
+                                                ),
                                               ),
-                                              child: Row(
-                                                children: [
-                                                  Icon(Icons.verified, color: primaryColor, size: 18),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    'Verified',
-                                                    style: TextStyle(
-                                                      color: primaryColor,
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 13,
-                                                      letterSpacing: 0.2,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          if (_authorIsPremium == true && listing.verified)
-                                            const SizedBox(height: 4),
-                                          if (_authorIsPremium == true)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: Colors.amber.withOpacity(0.08),
-                                                borderRadius: BorderRadius.circular(16),
-                                                border: Border.all(color: Colors.amber.withOpacity(0.35), width: 1.0),
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Icon(Icons.star, color: Colors.amber.shade400, size: 18),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    'Premium Listing'.tr(),
-                                                    style: TextStyle(
-                                                      color: Colors.amber.shade700.withOpacity(0.7),
-                                                      fontWeight: FontWeight.w600,
-                                                      fontSize: 13,
-                                                      letterSpacing: 0.2,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                        ],
-                                      ),
+                                            ],
+                                          ),
+                                        ),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
@@ -737,6 +735,21 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                           ),
                           Divider(height: 48, thickness: 1, color: dividerColor),
                         ],
+                        // Location Photos Display
+                        LocationPhotosDisplay(
+                          exteriorImageUrl: listing.exteriorImageUrl,
+                          interiorImageUrl: listing.interiorImageUrl,
+                          locationInstructions: listing.locationInstructions,
+                          onThumbnailTap: (imageUrl, title) {
+                            push(context, FullScreenImageViewer(
+                              galleryImagesList: [imageUrl],
+                              index: 0,
+                              imageUrl: '',
+                            ));
+                          },
+                          isDark: dark,
+                        ),
+                        Divider(height: 48, thickness: 1, color: dividerColor),
                         // Description
                         Text(
                           'About'.tr(),
@@ -938,6 +951,8 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                           const SizedBox(height: 16),
                           _buildDetailsList(dark, primaryColor),
                         ],
+                        // Payment Methods
+                        PaymentMethodsStreamWidget(userId: listing.authorID),
                         // Reviews
                         const SizedBox(height: 32),
                         _buildReviewsSection(dark, primaryColor),
@@ -1021,6 +1036,27 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                       ),
                     );
                     if (updated is ListingModel) setState(() => listing = updated);
+                  },
+                ),
+              ),
+            if (_canEditOrDelete)
+              PopupMenuItem(
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.star, color: Colors.amber),
+                  title: Text(
+                    'Request Featured'.tr(),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                      fontFamily: 'Roboto',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await _requestFeatured();
                   },
                 ),
               ),
@@ -2155,6 +2191,125 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _requestFeatured() async {
+    try {
+      context.read<LoadingCubit>().showLoading(context, 'Submitting request...'.tr(), false, Color(cfg.colorPrimary));
+      
+      final service = FeaturedService();
+      final result = await service.requestFeaturedListing(listing.id);
+      
+      context.read<LoadingCubit>().hideLoading();
+      
+      if (result.status == 'activated') {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text('Featured Activated!'.tr()),
+            content: Text(
+              'Your listing is now featured until ${result.featuredUntil != null ? DateFormat.yMMMd().format(DateTime.parse(result.featuredUntil!)) : 'the end of the period'}.\n\n'
+              'Slots used: ${result.usedSlots}/${result.allocatedSlots}',
+            ),
+            actions: [
+              TextButton(
+                child: Text('OK'),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ],
+          ),
+        );
+        // Reload listing to show updated featured status
+        if (mounted) {
+          final updatedSnap = await FirebaseFirestore.instance
+              .collection('listings')
+              .doc(listing.id)
+              .get();
+          if (updatedSnap.exists) {
+            final updatedListing = ListingModel.fromJson(updatedSnap.data()!);
+            updatedListing.id = listing.id;
+            setState(() => listing = updatedListing);
+          }
+        }
+      } else if (result.status == 'pending') {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text('Request Submitted'.tr()),
+            content: Text('Your request is pending admin review.'),
+            actions: [
+              TextButton(
+                child: Text('OK'),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ],
+          ),
+        );
+      } else if (result.status == 'rejected') {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text('Listing Not Eligible'.tr()),
+            content: Text(
+              'Your listing does not meet featured requirements:\n\n' +
+              result.eligibilityReasons.join('\n'),
+            ),
+            actions: [
+              TextButton(
+                child: Text('OK'),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ],
+          ),
+        );
+      }
+    } on FirebaseFunctionsException catch (e) {
+      context.read<LoadingCubit>().hideLoading();
+      
+      String message = e.message ?? 'An error occurred';
+      
+      if (e.code == 'resource-exhausted') {
+        final details = e.details as Map<String, dynamic>?;
+        final allocated = details?['allocatedSlots'] ?? 0;
+        final used = details?['usedSlots'] ?? 0;
+        
+        message = 'No featured slots remaining this month.\n\n'
+            'Used: $used/$allocated\n\n'
+            'Upgrade to Premium for more slots!';
+      } else if (e.code == 'failed-precondition' && e.message?.contains('subscription') == true) {
+        message = 'An active Professional or Premium subscription is required.\n\n'
+            'Upgrade to feature your listings!';
+      }
+      
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text('Cannot Request Featured'.tr()),
+          content: Text(message),
+          actions: [
+            TextButton(
+              child: Text('OK'),
+              onPressed: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      context.read<LoadingCubit>().hideLoading();
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text('Error'.tr()),
+          content: Text(e.toString()),
+          actions: [
+            TextButton(
+              child: Text('OK'),
+              onPressed: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
+      );
     }
   }
 

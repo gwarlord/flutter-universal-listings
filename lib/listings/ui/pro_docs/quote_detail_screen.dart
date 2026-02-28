@@ -8,6 +8,7 @@ import 'package:caribtap/listings/services/tier_gate_service.dart';
 import 'package:caribtap/listings/ui/pro_docs/cubit/quote_detail_cubit.dart';
 import 'package:caribtap/listings/ui/pro_docs/invoice_builder_screen.dart';
 import 'package:caribtap/listings/ui/pro_docs/quote_builder_screen.dart';
+import 'package:caribtap/listings/ui/widgets/payment_methods_stream_widget.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -101,6 +102,8 @@ class _QuoteDetailScreenState extends State<QuoteDetailScreen> {
                 const SizedBox(height: 16),
                 _sectionTitle('Totals'.tr()),
                 _totalsSection(quote, _currencyFor(quote)),
+                const SizedBox(height: 16),
+                PaymentMethodsStreamWidget(userId: widget.currentUser.userID),
                 const SizedBox(height: 16),
                 _sectionTitle('Dates'.tr()),
                 _dateRow('Valid until'.tr(), _formatDate(quote.validUntil)),

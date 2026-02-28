@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:caribtap/listings/listings_module/api/booking_repository.dart';
 import 'package:caribtap/listings/listings_module/booking/booking_event.dart';
 import 'package:caribtap/listings/listings_module/booking/booking_state.dart';
+import 'package:caribtap/listings/services/listing_activity_service.dart';
 
 class BookingBloc extends Bloc<BookingEvent, BookingState> {
   final BookingRepository bookingRepository;
@@ -23,6 +24,19 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
     emit(const BookingLoading());
     try {
       final bookingId = await bookingRepository.createBooking(booking: event.booking);
+      
+      // Record activity for listing freshness tracking
+      try {
+        final activityService = ListingActivityService();
+        await activityService.recordBooking(
+          event.booking.listingId,
+          event.booking.customerId,
+        );
+      } catch (e) {
+        // Log but don't fail the booking if activity tracking fails
+        print('Activity tracking error: $e');
+      }
+      
       if (!emit.isDone) {
         emit(BookingCreatedState(bookingId: bookingId));
       }

@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "17296052844",
+    "project_id": "caribtap",
+    "storage_bucket": "caribtap.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:17296052844:android:9ace86a8c7f6174931fe49",
+        "android_client_info": {
+          "package_name": "com.caribtap.instaflutter.android"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "17296052844-8oe92ople2meneus9fcqto6e4uer22eu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.caribtap.instaflutter.android",
+            "certificate_hash": "0c42c18fa7156cffbc6b854817b6a8d02bc49ce7"
+          }
+        },
+        {
+          "client_id": "17296052844-lj3jqshqf3qrd18psg657b576un0kbp1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.caribtap.instaflutter.android",
+            "certificate_hash": "dd4578d45097ba2ceb74d73b89fa5f16a56fe6ba"
+          }
+        },
+        {
+          "client_id": "17296052844-2f0s8q50mn9uasqo2n0861qo444so0th.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwO__qZEr5hqIpd3V1IjJtjFWMVsMM2Zo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "17296052844-2f0s8q50mn9uasqo2n0861qo444so0th.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

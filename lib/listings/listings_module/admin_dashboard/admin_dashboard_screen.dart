@@ -17,6 +17,7 @@ import 'package:caribtap/listings/listings_module/admin_dashboard/review_removal
 import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
 import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
 import 'package:caribtap/listings/services/review_removal_request_service.dart';
+import 'package:caribtap/listings/services/featured_service.dart';
 import 'package:caribtap/core/ui/loading/loading_cubit.dart';
 import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -81,7 +82,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     currentUser = widget.currentUser;
     _loadAllData();
     _loadPendingRequestsCount();
@@ -207,6 +208,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             Tab(text: 'Listings'.tr()),
             Tab(text: 'Verification'.tr()),
             Tab(text: 'Reports'.tr()),
+            Tab(text: 'Featured'.tr()),
           ],
         ),
       ),
@@ -245,6 +247,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               _buildAllListingsTab(),
               _buildVerificationTab(),
               _buildReportsTab(),
+              _buildFeaturedTab(),
             ],
           );
         },
@@ -1113,6 +1116,286 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         SnackBar(content: Text('Error: $e')),
       );
     }
+  }
+
+  Future<void> _viewListing(String listingId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('listings')
+          .doc(listingId)
+          .get();
+
+      if (!doc.exists) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Listing not found')),
+          );
+        }
+        return;
+      }
+
+      final listing = ListingModel.fromJson(doc.data()!);
+      listing.id = listingId;
+
+      if (mounted) {
+        await push(
+          context,
+          ListingDetailsWrappingWidget(
+            listing: listing,
+            currentUser: currentUser,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _approveRequest(FeaturedRequest request) async {
+    final noteController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Approve Featured Request'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Are you sure you want to approve this request?'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: noteController,
+              decoration: const InputDecoration(
+                labelText: 'Admin Note (optional)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Approve'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      if (mounted) {
+        context.read<LoadingCubit>().showLoading(context, 'Approving...', false, Color(colorPrimary));
+      }
+
+      final service = FeaturedService();
+      await service.adminApproveFeaturedRequest(
+        request.id,
+        adminNote: noteController.text.isNotEmpty ? noteController.text : null,
+      );
+
+      if (mounted) {
+        context.read<LoadingCubit>().hideLoading();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Featured request approved!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        context.read<LoadingCubit>().hideLoading();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  Widget _buildFeaturedTab() {
+    final isDark = isDarkMode(context);
+    final service = FeaturedService();
+
+    return StreamBuilder<List<FeaturedRequest>>(
+      stream: service.streamPendingRequests(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final requests = snapshot.data ?? [];
+
+        if (requests.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.star_outline, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                Text(
+                  'No pending featured requests',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: isDark ? Colors.white70 : Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: requests.length,
+          itemBuilder: (context, index) {
+            final request = requests[index];
+            return Card(
+              color: isDark ? Colors.grey[850] : Colors.white,
+              margin: const EdgeInsets.only(bottom: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.star, color: Colors.amber, size: 24),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Featured Request',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ),
+                        Chip(
+                          label: Text(
+                            request.tierAtRequest?.toUpperCase() ?? 'UNKNOWN',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          backgroundColor: request.tierAtRequest == 'premium'
+                              ? Colors.purple[100]
+                              : Colors.blue[100],
+                        ),
+                      ],
+                    ),
+                    const Divider(),
+                    _buildFeaturedInfoRow('Listing ID', request.listingId.substring(0, 12) + '...', isDark),
+                    _buildFeaturedInfoRow('Owner UID', request.ownerUid.substring(0, 12) + '...', isDark),
+                    _buildFeaturedInfoRow('Country', request.country ?? 'N/A', isDark),
+                    _buildFeaturedInfoRow('Category', request.category ?? 'N/A', isDark),
+                    _buildFeaturedInfoRow('Requested', DateFormat.yMMMd().add_jm().format(request.createdAt), isDark),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Eligibility:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    if (request.eligibilityPassed)
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green, size: 16),
+                          const SizedBox(width: 4),
+                          Text('Passed all checks', style: TextStyle(color: Colors.green)),
+                        ],
+                      )
+                    else
+                      ...request.eligibilityReasons.map((reason) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          children: [
+                            Icon(Icons.cancel, color: Colors.red, size: 16),
+                            const SizedBox(width: 4),
+                            Expanded(child: Text(reason, style: TextStyle(color: Colors.red))),
+                          ],
+                        ),
+                      )),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton.icon(
+                          onPressed: () async {
+                            await _viewListing(request.listingId);
+                          },
+                          icon: const Icon(Icons.visibility),
+                          label: const Text('View Listing'),
+                        ),
+                        const SizedBox(width: 8),
+                        if (request.eligibilityPassed)
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              await _approveRequest(request);
+                            },
+                            icon: const Icon(Icons.check),
+                            label: const Text('Approve'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                            ),
+                          )
+                        else
+                          ElevatedButton.icon(
+                            onPressed: null,
+                            icon: const Icon(Icons.block),
+                            label: const Text('Not Eligible'),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFeaturedInfoRow(String label, String value, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: isDark ? Colors.white70 : Colors.black54,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

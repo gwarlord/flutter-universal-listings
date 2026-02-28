@@ -38,7 +38,9 @@ export interface SearchInterpretation {
 }
 
 
-export const processSearchQuery = functions.https.onRequest(async (req, res) => {
+export const processSearchQuery = functions
+    .runWith({ secrets: [geminiKeySecret] })
+    .https.onRequest(async (req, res) => {
     res.set("Access-Control-Allow-Origin", "*");
     res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
     if (req.method === "OPTIONS") {
@@ -66,16 +68,48 @@ export const processSearchQuery = functions.https.onRequest(async (req, res) => 
         }
 
         const genAI = await getGenAI();
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const prompt = `You are a Caribbean business search assistant. Interpret this search query: "${query}" and return structured JSON...`; // Your full prompt
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        
+        const prompt = `You are searching for businesses in the Caribbean. Interpret this query STRICTLY as a structured JSON object with NO other text.
+
+Query: "${query}"
+
+Return ONLY this JSON structure (no markdown, no explanation, no text before or after):
+{
+  "intent": "user's goal (e.g. find, buy, book)",
+  "contentType": "listings",
+  "category": {
+    "keywords": ["${query.split(" ").join('", "')}"]
+  },
+  "location": {
+    "useUserLocation": true
+  },
+  "filters": {},
+  "naturalLanguageSummary": "${query}",
+  "confidence": 0.7
+}`;
 
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
         let interpretation: SearchInterpretation;
 
         try {
-            const cleanedText = responseText.replace(/```json\n?|```/g, "").trim();
-            interpretation = JSON.parse(cleanedText);
+            // Try to extract JSON from the response (may be wrapped in markdown or text)
+            let jsonText = responseText;
+            
+            // Remove markdown code blocks if present
+            const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+            if (jsonMatch) {
+              jsonText = jsonMatch[1];
+            } else {
+              // Try to find JSON object directly
+              const objectMatch = responseText.match(/\{[\s\S]*\}/);
+              if (objectMatch) {
+                jsonText = objectMatch[0];
+              }
+            }
+            
+            interpretation = JSON.parse(jsonText.trim());
         } catch (parseError) {
              functions.logger.error("Failed to parse Gemini response", { responseText, parseError });
              interpretation = {
@@ -90,11 +124,24 @@ export const processSearchQuery = functions.https.onRequest(async (req, res) => 
         res.json({ interpretation, cachedFromIndex: false });
 
     } catch (error: any) {
-        functions.logger.error("Error in processSearchQuery", { message: error.message });
-        if (error.message?.includes("authentication")) {
+        const message = error?.message || "";
+        functions.logger.error("Error in processSearchQuery", {
+            message,
+            name: error?.name,
+            stack: error?.stack,
+        });
+
+        const normalized = message.toLowerCase();
+        if (normalized.includes("authorization") || normalized.includes("authentication")) {
             res.status(401).json({ error: "Authentication failed." });
-        } else {
-            res.status(500).json({ error: "An internal error occurred." });
+            return;
         }
+
+        if (normalized.includes("gemini api key")) {
+            res.status(500).json({ error: "AI service not configured." });
+            return;
+        }
+
+        res.status(500).json({ error: "An internal error occurred." });
     }
 });

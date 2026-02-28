@@ -14,6 +14,7 @@ import 'package:caribtap/listings/listings_module/my_listings/my_listings_bloc.d
 import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:caribtap/listings/ui/collaboration/assigned_listings_screen.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:caribtap/listings/widgets/freshness_indicators.dart';
 
 class MyListingsWrapperWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -497,6 +498,12 @@ class _MyListingCardState extends State<MyListingCard> {
                     : Colors.grey.shade800,
                 fontWeight: FontWeight.bold),
           ),
+          // Freshness Status Badge
+          if (!isSuspended && widget.listing.freshness.enabled && !widget.listing.freshness.exempt)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: FreshnessStatusBadge(listing: widget.listing, compact: true),
+            ),
           if (!isSuspended && showExpiryBadge)
             Padding(
               padding: const EdgeInsets.only(top: 4),

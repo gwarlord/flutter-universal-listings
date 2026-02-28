@@ -6,6 +6,7 @@ import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:caribtap/listings/ui/auth/onBoarding/on_boarding_screen.dart';
 import 'package:caribtap/listings/ui/auth/welcome/welcome_screen.dart';
 import 'package:caribtap/listings/ui/container/container_screen.dart';
+import 'package:caribtap/listings/location/location_scope_cubit.dart';
 
 class LauncherScreen extends StatefulWidget {
   const LauncherScreen({super.key});
@@ -32,6 +33,11 @@ class _LauncherScreenState extends State<LauncherScreen> {
               pushReplacement(context, const OnBoardingScreen());
               break;
             case AuthState.authenticated:
+              // Initialize LocationScopeCubit with authenticated user
+              final locationCubit = context.read<LocationScopeCubit>();
+              locationCubit.setUserId(state.user!.userID);
+              locationCubit.init();
+              
               pushReplacement(
                   context, ContainerWrapperWidget(currentUser: state.user!));
               break;

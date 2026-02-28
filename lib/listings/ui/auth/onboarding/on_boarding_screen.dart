@@ -82,7 +82,12 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
                 Visibility(
                   visible: state.currentPageCount + 1 == _titlesList.length,
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: EdgeInsets.only(
+                      left: 16.0,
+                      right: 16.0,
+                      top: 16.0,
+                      bottom: 80.0 + MediaQuery.of(context).padding.bottom,
+                    ),
                     child: Align(
                       alignment: Directionality.of(context) == TextDirection.ltr
                           ? Alignment.bottomRight

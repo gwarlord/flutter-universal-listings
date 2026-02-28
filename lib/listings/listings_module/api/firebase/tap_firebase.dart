@@ -4,6 +4,7 @@ import 'package:caribtap/listings/constants/tap_constants.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/listings/listings_module/api/tap_repository.dart';
 import 'package:caribtap/listings/model/tap_model.dart';
+import 'package:caribtap/listings/services/listing_activity_service.dart';
 
 /// Firebase implementation of TapRepository
 class TapFirebase extends TapRepository {
@@ -29,6 +30,15 @@ class TapFirebase extends TapRepository {
           .collection(tapsSubcollection)
           .doc(userId)
           .set(tapModel.toJson());
+
+      // Record activity for listing freshness tracking
+      try {
+        final activityService = ListingActivityService();
+        await activityService.recordSave(listingId, userId);
+      } catch (e) {
+        // Log but don't fail the tap if activity tracking fails
+        debugPrint('Activity tracking error: $e');
+      }
 
       debugPrint('✅ Tap created: $listingId by $userId');
       return true;

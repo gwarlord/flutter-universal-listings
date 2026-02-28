@@ -16,6 +16,13 @@ class ListingsUser extends User {
   String gender;
   String ageRange;
   bool listingFreshnessExempt;
+  bool isSubscriptionActiveOverride;
+
+  // Location Scope fields (additive - backwards compatible)
+  String? homeCountry;
+  String? selectedCountry;
+  String? locationScopeMode;
+  bool strictLocalOnly;
 
   List<String> likedListingsIDs;
 
@@ -41,7 +48,14 @@ class ListingsUser extends User {
     this.ageRange = 'Prefer not to say',
     this.listingFreshnessExempt = false,
     this.likedListingsIDs = const [],
-  }) : super(
+    bool? isSubscriptionActive,
+    // Location Scope parameters
+    this.homeCountry,
+    this.selectedCountry,
+    this.locationScopeMode,
+    this.strictLocalOnly = false,
+  })  : isSubscriptionActiveOverride = isSubscriptionActive ?? false,
+        super(
           firstName: firstName,
           lastName: lastName,
           userID: userID,
@@ -91,6 +105,12 @@ class ListingsUser extends User {
       listingFreshnessExempt: parsedJson['listingFreshnessExempt'] ?? false,
       likedListingsIDs:
           List<String>.from(parsedJson['likedListingsIDs'] ?? const []),
+      isSubscriptionActive: parsedJson['isSubscriptionActive'],
+      // Location Scope fields
+      homeCountry: parsedJson['homeCountry'] as String?,
+      selectedCountry: parsedJson['selectedCountry'] as String?,
+      locationScopeMode: parsedJson['locationScopeMode'] as String?,
+      strictLocalOnly: parsedJson['strictLocalOnly'] as bool? ?? false,
     );
   }
 
@@ -117,10 +137,16 @@ class ListingsUser extends User {
       'suspended': suspended,
       'suspensionInfo': suspensionInfo?.toJson(),
       'countryCode': countryCode,
+      // Location Scope fields
+      'homeCountry': homeCountry,
+      'selectedCountry': selectedCountry,
+      'locationScopeMode': locationScopeMode,
+      'strictLocalOnly': strictLocalOnly,
       'gender': gender,
       'ageRange': ageRange,
       'listingFreshnessExempt': listingFreshnessExempt,
       'likedListingsIDs': likedListingsIDs,
+      'isSubscriptionActive': isSubscriptionActive,
     };
   }
 
@@ -131,22 +157,25 @@ class ListingsUser extends User {
   bool get isProfessional => _normalizedTier == 'professional';
   bool get isPremium => _normalizedTier == 'premium';
   bool get isBusiness => _normalizedTier == 'business';
-  
+
   bool get isSubscriptionActive {
     // Admins always have active access
     if (isAdmin) return true;
-    
-    // Free tier is always active
-    if (isFree) return true;
-    
-    // For paid tiers without expiration date (legacy or manually set), treat as active
-    // This handles users set to professional/premium in Firestore before native billing integration
-    if (subscriptionExpiresAt == null && !isFree) return true;
-    
-    // Allow a small grace window on expiration to tolerate timezone and clock drift
-    final graceExpiry = subscriptionExpiresAt!.add(const Duration(hours: 24));
-    final now = DateTime.now();
-    return now.isBefore(graceExpiry) || now.isAtSameMomentAs(graceExpiry);
+
+    // Use the override field from Firestore if it exists
+    if (isSubscriptionActiveOverride) return true;
+
+    // If there's an expiration date, check if it's in the future.
+    if (subscriptionExpiresAt != null) {
+      return subscriptionExpiresAt!.isAfter(DateTime.now());
+    }
+
+    // Fallback for non-free tiers without an expiration date (legacy users)
+    if (!isFree) {
+      return true;
+    }
+
+    return false; // Default to inactive
   }
 
   // Feature access helpers
