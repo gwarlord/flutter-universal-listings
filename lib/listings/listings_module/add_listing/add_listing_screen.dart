@@ -175,6 +175,21 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final TextEditingController _youtubeController = TextEditingController();
   final TextEditingController _xController = TextEditingController();
 
+  // Expansion state tracking for collapsible sections
+  bool _basicInfoExpanded = true;
+  bool _detailsHoursExpanded = false;
+  bool _contactSocialExpanded = true;
+  bool _businessDetailsExpanded = false;
+  bool _menuExpanded = false;
+  bool _storeExpanded = false;
+  bool _rentalsExpanded = false;
+  bool _servicesExpanded = false;
+  bool _mediaExpanded = false;
+  bool _bookingExpanded = false;
+  bool _logoExpanded = false;
+  bool _photosExpanded = true;
+  bool _videosExpanded = false;
+
   final TextEditingController _openingHoursController = TextEditingController();
   final TextEditingController _bookingUrlController = TextEditingController();
 
@@ -433,6 +448,52 @@ class _AddListingScreenState extends State<AddListingScreen> {
           color: isSocial ? const Color(0xFFff5a66) : Color(colorPrimary),
           letterSpacing: 0.5,
         ),
+      ),
+    );
+  }
+
+  Widget _buildCollapsibleSection({
+    required String title,
+    required List<Widget> children,
+    required bool isExpanded,
+    required ValueChanged<bool> onExpansionChanged,
+    bool hasBorder = true,
+  }) {
+    final dark = isDarkMode(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: hasBorder
+          ? BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: dark ? Colors.grey.shade700 : Colors.grey.shade300,
+              ),
+            )
+          : null,
+      child: ExpansionTile(
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: dark ? Colors.white : Colors.black87,
+          ),
+        ),
+        initiallyExpanded: isExpanded,
+        onExpansionChanged: onExpansionChanged,
+        collapsedBackgroundColor: dark ? Colors.grey.shade800 : Colors.grey.shade50,
+        backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: children,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1498,867 +1559,866 @@ class _AddListingScreenState extends State<AddListingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Publish toggle inline with "Basic Information" header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              // Publish toggle 
+              if (_basicInfoExpanded)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _isPublished ? 'Public'.tr() : 'Draft'.tr(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: _isPublished ? Colors.green : Colors.grey,
+                        ),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Publish'.tr(),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          const SizedBox(width: 8),
+                          Switch(
+                            value: _isPublished,
+                            onChanged: (value) {
+                              setState(() => _isPublished = value);
+                            },
+                            activeColor: Colors.green,
+                            inactiveThumbColor: Colors.grey,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Basic Information Section
+              _buildCollapsibleSection(
+                title: 'Basic Information'.tr(),
+                isExpanded: _basicInfoExpanded,
+                onExpansionChanged: (expanded) {
+                  setState(() => _basicInfoExpanded = expanded);
+                },
                 children: [
-                  _buildSectionHeader('Basic Information'.tr()),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 24, 4, 12),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _isPublished ? 'Public'.tr() : 'Draft'.tr(),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: _isPublished ? Colors.green : Colors.grey,
+                  TextField(
+                    controller: _titleController,
+                    textInputAction: TextInputAction.next,
+                    decoration: _getInputDecoration(
+                      label: 'Title'.tr(),
+                      hint: 'Start typing'.tr(),
+                      icon: Icons.title,
+                      isRequired: true,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: () async {
+                      final selected = await showCountrySearchDialog(context, _countryCode);
+                      if (selected != null) setState(() => _countryCode = selected);
+                    },
+                    child: AbsorbPointer(
+                      child: TextFormField(
+                        controller: TextEditingController(
+                          text: CaribbeanCountries.all.firstWhere(
+                            (c) => c.code == _countryCode,
+                            orElse: () => CaribbeanCountry(code: '', name: ''),
+                          ).name,
+                        ),
+                        decoration: _getInputDecoration(
+                          label: 'Country'.tr(),
+                          icon: Icons.public,
+                          isRequired: true,
+                        ),
+                        readOnly: true,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: TextField(
+                          controller: _priceController,
+                          keyboardType: TextInputType.number,
+                          decoration: _getInputDecoration(
+                            label: 'Base Price'.tr(),
+                            hint: 'Optional'.tr(),
+                            icon: Icons.attach_money,
+                            alwaysFloatLabel: true,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Switch(
-                          value: _isPublished,
-                          onChanged: (value) {
-                            setState(() => _isPublished = value);
-                          },
-                          activeColor: Colors.green,
-                          inactiveThumbColor: Colors.grey,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: DropdownButtonFormField<String>(
+                          isExpanded: true,
+                          value: _selectedCurrencyCode,
+                          decoration: _getInputDecoration(
+                            label: 'Currency'.tr(),
+                            icon: Icons.money,
+                          ),
+                          items: _currencies
+                              .map((currency) => DropdownMenuItem<String>(
+                                    value: currency['code'],
+                                    child: Text(currency['code'] ?? ''),
+                                  ))
+                              .toList(),
+                          onChanged: (value) => setState(() => _selectedCurrencyCode = value ?? 'USD'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  BlocBuilder<AddListingBloc, AddListingState>(
+                    buildWhen: (old, current) =>
+                        old != current &&
+                        (current is CategoriesFetchedState || current is CategorySelectedState),
+                    builder: (context, state) {
+                      if (state is CategoriesFetchedState) {
+                        isLoadingCategories = false;
+                        _categories = state.categories;
+                        if (isEdit && _categoryValue == null) {
+                          final l = widget.listingToEdit!;
+                          try {
+                            _categoryValue = _categories.firstWhere((c) => c.id == l.categoryID);
+                          } catch (_) {}
+                        }
+                      } else if (state is CategorySelectedState) {
+                        _categoryValue = state.category;
+                      }
+
+                      return DropdownButtonFormField<CategoriesModel>(
+                        isExpanded: true,
+                        decoration: _getInputDecoration(
+                          label: 'Category'.tr(),
+                          icon: Icons.category,
+                          isRequired: true,
+                        ),
+                        dropdownColor: dark ? Colors.grey[900] : Colors.white,
+                        hint: Text('Choose Category'.tr()),
+                        value: _categoryValue,
+                        items: (_categories.toList()..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase())))
+                          .map((category) => DropdownMenuItem<CategoriesModel>(
+                              value: category,
+                              child: Text(category.title, overflow: TextOverflow.ellipsis),
+                            ))
+                          .toList(),
+                        onChanged: isLoadingCategories
+                            ? null
+                            : (CategoriesModel? model) => context
+                                .read<AddListingBloc>()
+                                .add(CategorySelectedEvent(categoriesModel: model)),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: () async {
+                      final prediction = await PlacesAutocomplete.show(
+                        context: context,
+                        apiKey: googleApiKey,
+                        mode: Mode.fullscreen,
+                        language: 'en',
+                      );
+                      debugPrint('*** DEBUG: Place selected from autocomplete: '
+                          '${prediction?.description ?? prediction?.toString()}');
+                      if (prediction != null) {
+                        setState(() {
+                          _selectedPrediction = prediction;
+                          _isFetchingPlaceDetails = true;
+                          _placeManuallySelected = true;
+                        });
+                        if (!mounted) return;
+                        context.read<AddListingBloc>().add(GetPlaceDetailsEvent(prediction: prediction));
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: _getInputDecoration(
+                        label: 'Location'.tr(),
+                        icon: Icons.location_on,
+                        isRequired: false,
+                      ),
+                      child: Builder(
+                        builder: (context) {
+                          final displayText = _isFetchingPlaceDetails
+                              ? 'Loading...'.tr()
+                              : (_placeDetail?.formattedAddress?.trim().isNotEmpty ?? false)
+                                  ? _placeDetail!.formattedAddress!
+                                  : (_selectedPrediction?.description?.trim().isNotEmpty ?? false)
+                                      ? _selectedPrediction!.description!
+                                      : (isEdit
+                                          ? (widget.listingToEdit?.place ?? 'Select Place'.tr())
+                                          : 'Select Place'.tr());
+                          return Text(
+                            displayText,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DescriptionEditor(
+                    initialText: _description,
+                    onChanged: (text) {
+                      // Update description value without setState to avoid build-phase errors
+                      _description = text;
+                      // Schedule a rebuild after the current frame completes
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() {});
+                        }
+                      });
+                    },
+                    maxCharacters: 2000,
+                    draftKey: isEdit 
+                        ? 'listing_description_draft_${widget.listingToEdit!.id}'
+                        : 'listing_description_draft_new',
+                  ),
+                  const SizedBox(height: 8),
+                  // AI Enhancement Buttons
+                  if (GeminiAIService().isReady)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.auto_awesome, size: 18),
+                            label: Text(
+                              _description.trim().isEmpty ? 'Generate with AI' : 'Enhance with AI',
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Color(colorPrimary),
+                              side: BorderSide(color: Color(colorPrimary).withOpacity(0.5)),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                            ),
+                            onPressed: () => _showAIDescriptionDialog(context, dark),
+                          ),
                         ),
                       ],
                     ),
-                  ),
                 ],
-              ),
-              TextField(
-                controller: _titleController,
-                textInputAction: TextInputAction.next,
-                decoration: _getInputDecoration(
-                  label: 'Title'.tr(),
-                  hint: 'Start typing'.tr(),
-                  icon: Icons.title,
-                  isRequired: true,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () async {
-                        final selected = await showCountrySearchDialog(context, _countryCode);
-                        if (selected != null) setState(() => _countryCode = selected);
-                      },
-                      child: AbsorbPointer(
-                        child: TextFormField(
-                          controller: TextEditingController(
-                            text: CaribbeanCountries.all.firstWhere(
-                              (c) => c.code == _countryCode,
-                              orElse: () => CaribbeanCountry(code: '', name: ''),
-                            ).name,
-                          ),
-                          decoration: _getInputDecoration(
-                            label: 'Country'.tr(),
-                            icon: Icons.public,
-                            isRequired: true,
-                          ),
-                          readOnly: true,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: TextField(
-                      controller: _priceController,
-                      keyboardType: TextInputType.number,
-                      decoration: _getInputDecoration(
-                        label: 'Base Price'.tr(),
-                        hint: 'Optional'.tr(),
-                        icon: Icons.attach_money,
-                        alwaysFloatLabel: true,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: DropdownButtonFormField<String>(
-                      isExpanded: true,
-                      value: _selectedCurrencyCode,
-                      decoration: _getInputDecoration(
-                        label: 'Currency'.tr(),
-                        icon: Icons.money,
-                      ),
-                      items: _currencies
-                          .map((currency) => DropdownMenuItem<String>(
-                                value: currency['code'],
-                                child: Text(currency['code'] ?? ''),
-                              ))
-                          .toList(),
-                      onChanged: (value) => setState(() => _selectedCurrencyCode = value ?? 'USD'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              BlocBuilder<AddListingBloc, AddListingState>(
-                buildWhen: (old, current) =>
-                    old != current &&
-                    (current is CategoriesFetchedState || current is CategorySelectedState),
-                builder: (context, state) {
-                  if (state is CategoriesFetchedState) {
-                    isLoadingCategories = false;
-                    _categories = state.categories;
-                    if (isEdit && _categoryValue == null) {
-                      final l = widget.listingToEdit!;
-                      try {
-                        _categoryValue = _categories.firstWhere((c) => c.id == l.categoryID);
-                      } catch (_) {}
-                    }
-                  } else if (state is CategorySelectedState) {
-                    _categoryValue = state.category;
-                  }
-
-                  return DropdownButtonFormField<CategoriesModel>(
-                    isExpanded: true,
-                    decoration: _getInputDecoration(
-                      label: 'Category'.tr(),
-                      icon: Icons.category,
-                      isRequired: true,
-                    ),
-                    dropdownColor: dark ? Colors.grey[900] : Colors.white,
-                    hint: Text('Choose Category'.tr()),
-                    value: _categoryValue,
-                    items: (_categories.toList()..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase())))
-                      .map((category) => DropdownMenuItem<CategoriesModel>(
-                          value: category,
-                          child: Text(category.title, overflow: TextOverflow.ellipsis),
-                        ))
-                      .toList(),
-                    onChanged: isLoadingCategories
-                        ? null
-                        : (CategoriesModel? model) => context
-                            .read<AddListingBloc>()
-                            .add(CategorySelectedEvent(categoriesModel: model)),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              InkWell(
-                onTap: () async {
-                  final prediction = await PlacesAutocomplete.show(
-                    context: context,
-                    apiKey: googleApiKey,
-                    mode: Mode.fullscreen,
-                    language: 'en',
-                  );
-                  debugPrint('*** DEBUG: Place selected from autocomplete: '
-                      '${prediction?.description ?? prediction?.toString()}');
-                  if (prediction != null) {
-                    setState(() {
-                      _selectedPrediction = prediction;
-                      _isFetchingPlaceDetails = true;
-                      _placeManuallySelected = true;
-                    });
-                    if (!mounted) return;
-                    context.read<AddListingBloc>().add(GetPlaceDetailsEvent(prediction: prediction));
-                  }
-                },
-                child: InputDecorator(
-                  decoration: _getInputDecoration(
-                    label: 'Location'.tr(),
-                    icon: Icons.location_on,
-                    isRequired: false,
-                  ),
-                  child: Builder(
-                    builder: (context) {
-                      final displayText = _isFetchingPlaceDetails
-                          ? 'Loading...'.tr()
-                          : (_placeDetail?.formattedAddress?.trim().isNotEmpty ?? false)
-                              ? _placeDetail!.formattedAddress!
-                              : (_selectedPrediction?.description?.trim().isNotEmpty ?? false)
-                                  ? _selectedPrediction!.description!
-                                  : (isEdit
-                                      ? (widget.listingToEdit?.place ?? 'Select Place'.tr())
-                                      : 'Select Place'.tr());
-                      return Text(
-                        displayText,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      );
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              DescriptionEditor(
-                initialText: _description,
-                onChanged: (text) {
-                  // Update description value without setState to avoid build-phase errors
-                  _description = text;
-                  // Schedule a rebuild after the current frame completes
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) {
-                      setState(() {});
-                    }
-                  });
-                },
-                maxCharacters: 2000,
-                draftKey: isEdit 
-                    ? 'listing_description_draft_${widget.listingToEdit!.id}'
-                    : 'listing_description_draft_new',
               ),
               const SizedBox(height: 8),
-              // AI Enhancement Buttons
-              if (GeminiAIService().isReady)
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.auto_awesome, size: 18),
-                        label: Text(
-                          _description.trim().isEmpty ? 'Generate with AI' : 'Enhance with AI',
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Color(colorPrimary),
-                          side: BorderSide(color: Color(colorPrimary).withOpacity(0.5)),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                        ),
-                        onPressed: () => _showAIDescriptionDialog(context, dark),
-                      ),
-                    ),
-                  ],
-                ),
 
-              _buildSectionHeader('Details & Hours'.tr()),
-              InkWell(
-                onTap: () async {
-                  final result = await OpeningHoursEditorSheet.show(
-                    context,
-                    initialValue: _openingHoursController.text.trim(),
-                  );
-                  if (result != null) {
-                    setState(() => _openingHoursController.text = result.trim());
-                  }
+              // Details & Hours Section
+              _buildCollapsibleSection(
+                title: 'Details & Hours'.tr(),
+                isExpanded: _detailsHoursExpanded,
+                onExpansionChanged: (expanded) {
+                  setState(() => _detailsHoursExpanded = expanded);
                 },
-                child: InputDecorator(
-                  decoration: _getInputDecoration(
-                    label: 'Opening Hours'.tr(),
-                    icon: Icons.access_time,
-                  ),
-                  child: Text(
-                    _openingHoursController.text.trim().isEmpty
-                        ? 'Tap to set opening hours'.tr()
-                        : _openingHoursController.text.trim().replaceAll('\n', ' • '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              InkWell(
-                onTap: () async {
-                  final filters = await showModalBottomSheet<Map<String, String>>(
-                    isScrollControlled: true,
-                    context: context,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                    ),
-                    builder: (context) => FilterWrappingWidget(filtersValue: _filters ?? {}),
-                  );
-                  if (filters != null) {
-                    if (!mounted) return;
-                    context.read<AddListingBloc>().add(SetFiltersEvent(filters: filters));
-                  }
-                },
-                child: InputDecorator(
-                  decoration: _getInputDecoration(
-                    label: 'Filters'.tr(),
-                    icon: Icons.filter_list,
-                  ),
-                  child: BlocBuilder<AddListingBloc, AddListingState>(
-                    buildWhen: (old, current) => old != current && current is SetFiltersState,
-                    builder: (context, state) {
-                      if (state is SetFiltersState) _filters = state.filters ?? {};
-                      return Text(
-                        _filters?.isEmpty ?? true ? 'Optional'.tr() : 'Edit Filters'.tr(),
+                children: [
+                  InkWell(
+                    onTap: () async {
+                      final result = await OpeningHoursEditorSheet.show(
+                        context,
+                        initialValue: _openingHoursController.text.trim(),
+                      );
+                      if (result != null) {
+                        setState(() => _openingHoursController.text = result.trim());
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: _getInputDecoration(
+                        label: 'Opening Hours'.tr(),
+                        icon: Icons.access_time,
+                      ),
+                      child: Text(
+                        _openingHoursController.text.trim().isEmpty
+                            ? 'Tap to set opening hours'.tr()
+                            : _openingHoursController.text.trim().replaceAll('\n', ' • '),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: () async {
+                      final filters = await showModalBottomSheet<Map<String, String>>(
+                        isScrollControlled: true,
+                        context: context,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                        ),
+                        builder: (context) => FilterWrappingWidget(filtersValue: _filters ?? {}),
                       );
+                      if (filters != null) {
+                        if (!mounted) return;
+                        context.read<AddListingBloc>().add(SetFiltersEvent(filters: filters));
+                      }
                     },
+                    child: InputDecorator(
+                      decoration: _getInputDecoration(
+                        label: 'Filters'.tr(),
+                        icon: Icons.filter_list,
+                      ),
+                      child: BlocBuilder<AddListingBloc, AddListingState>(
+                        buildWhen: (old, current) => old != current && current is SetFiltersState,
+                        builder: (context, state) {
+                          if (state is SetFiltersState) _filters = state.filters ?? {};
+                          return Text(
+                            _filters?.isEmpty ?? true ? 'Optional'.tr() : 'Edit Filters'.tr(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          );
+                        },
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  if (currentUser.isAdmin)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDarkMode(context) ? Colors.grey[900] : Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDarkMode(context) ? Colors.grey[800]! : Colors.grey[300]!,
+                        ),
+                      ),
+                      child: CheckboxListTile(
+                        title: Text(
+                          'Verified',
+                          style: TextStyle(color: Color(colorPrimary), fontWeight: FontWeight.bold),
+                        ),
+                        value: _verified,
+                        onChanged: (value) => setState(() => _verified = value ?? false),
+                        activeColor: Color(colorPrimary),
+                      ),
+                    ),
+                ],
               ),
-
-              const SizedBox(height: 16),
-              if (currentUser.isAdmin)
-                Container(
-                  decoration: BoxDecoration(
-                    color: isDarkMode(context) ? Colors.grey[900] : Colors.grey[50],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isDarkMode(context) ? Colors.grey[800]! : Colors.grey[300]!,
-                    ),
-                  ),
-                  child: CheckboxListTile(
-                    title: Text(
-                      'Verified',
-                      style: TextStyle(color: Color(colorPrimary), fontWeight: FontWeight.bold),
-                    ),
-                    value: _verified,
-                    onChanged: (value) => setState(() => _verified = value ?? false),
-                    activeColor: Color(colorPrimary),
-                  ),
-                ),
+              const SizedBox(height: 8),
 
               // Booking section (Professional+ only)
-              _buildBookingSection(isDarkMode(context), _canUseBooking()),
-              const SizedBox(height: 20),
+              if (canUseBooking)
+                _buildCollapsibleSection(
+                  title: 'Booking Services'.tr(),
+                  isExpanded: _bookingExpanded,
+                  onExpansionChanged: (expanded) {
+                    setState(() => _bookingExpanded = expanded);
+                  },
+                  children: [
+                    _buildBookingSection(isDarkMode(context), _canUseBooking()),
+                  ],
+                ),
+              const SizedBox(height: 8),
 
-              _buildSectionHeader('Contact & Social'.tr()),
-              TextField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: _getInputDecoration(label: 'Phone'.tr(), icon: Icons.phone),
+              // Contact & Social Section
+              _buildCollapsibleSection(
+                title: 'Contact Information'.tr(),
+                isExpanded: _contactSocialExpanded,
+                onExpansionChanged: (expanded) {
+                  setState(() => _contactSocialExpanded = expanded);
+                },
+                children: [
+                  TextField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: _getInputDecoration(label: 'Phone'.tr(), icon: Icons.phone),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: _getInputDecoration(label: 'Email'.tr(), icon: Icons.email),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _websiteController,
+                    keyboardType: TextInputType.url,
+                    decoration: _getInputDecoration(label: 'Website'.tr(), icon: Icons.language),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: _getInputDecoration(label: 'Email'.tr(), icon: Icons.email),
+              const SizedBox(height: 8),
+
+              // Social Media Section
+              _buildCollapsibleSection(
+                title: 'Social Media'.tr(),
+                isExpanded: _mediaExpanded,
+                onExpansionChanged: (expanded) {
+                  setState(() => _mediaExpanded = expanded);
+                },
+                children: [
+                  TextField(
+                    controller: _instagramController,
+                    decoration: _getInputDecoration(label: 'Instagram URL', icon: Icons.camera_alt),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _facebookController,
+                    decoration: _getInputDecoration(label: 'Facebook URL', icon: Icons.facebook),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _whatsappController,
+                    decoration: _getInputDecoration(label: 'WhatsApp Phone', icon: Icons.message),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _tiktokController,
+                    decoration: _getInputDecoration(label: 'TikTok URL', icon: Icons.music_note),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _youtubeController,
+                    decoration: _getInputDecoration(label: 'YouTube URL', icon: Icons.ondemand_video),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _xController,
+                    decoration: _getInputDecoration(label: 'X (Twitter) URL', icon: Icons.alternate_email),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _websiteController,
-                keyboardType: TextInputType.url,
-                decoration: _getInputDecoration(label: 'Website'.tr(), icon: Icons.language),
+              const SizedBox(height: 8),
+
+              // Business Details Section
+              _buildCollapsibleSection(
+                title: 'Business Details'.tr(),
+                isExpanded: _businessDetailsExpanded,
+                onExpansionChanged: (expanded) {
+                  setState(() => _businessDetailsExpanded = expanded);
+                },
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      'Not seen on listing, used for quote and invoice generation'.tr(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                  TextField(
+                    controller: _companyRegistrationController,
+                    decoration: _getInputDecoration(label: 'Company Registration #'.tr(), icon: Icons.business),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _vatNumberController,
+                    decoration: _getInputDecoration(label: 'VAT / Tax ID #'.tr(), icon: Icons.receipt_long),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-              _buildSectionHeader('Social Media'.tr(), isSocial: true),
-              TextField(
-                controller: _instagramController,
-                decoration: _getInputDecoration(label: 'Instagram URL', icon: Icons.camera_alt),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _facebookController,
-                decoration: _getInputDecoration(label: 'Facebook URL', icon: Icons.facebook),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _whatsappController,
-                decoration: _getInputDecoration(label: 'WhatsApp Phone', icon: Icons.message),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _tiktokController,
-                decoration: _getInputDecoration(label: 'TikTok URL', icon: Icons.music_note),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _youtubeController,
-                decoration: _getInputDecoration(label: 'YouTube URL', icon: Icons.ondemand_video),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _xController,
-                decoration: _getInputDecoration(label: 'X (Twitter) URL', icon: Icons.alternate_email),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Business Details'.tr(),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: dark ? Colors.white : Colors.black,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Not seen on listing, used for quote and invoice generation'.tr(),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _companyRegistrationController,
-                decoration: _getInputDecoration(label: 'Company Registration #'.tr(), icon: Icons.business),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _vatNumberController,
-                decoration: _getInputDecoration(label: 'VAT / Tax ID #'.tr(), icon: Icons.receipt_long),
-              ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 8),
+
               // Menu Section
               if (isEdit && widget.listingToEdit != null)
-                MenuEditSectionWidget(
-                  listing: widget.listingToEdit!,
-                  onMenuUpdated: () {
-                    if (mounted) setState(() {});
+                _buildCollapsibleSection(
+                  title: 'Menu (Food & Beverage)'.tr(),
+                  isExpanded: _menuExpanded,
+                  onExpansionChanged: (expanded) {
+                    setState(() => _menuExpanded = expanded);
                   },
-                ),
-              const SizedBox(height: 24),
-              _buildSectionHeader('Store / Ecommerce (Optional)'),
-              SwitchListTile(
-                value: _storeEnabled,
-                onChanged: (value) => setState(() => _storeEnabled = value),
-                title: Text('Enable Store/Ecommerce'),
-                subtitle: Text(
-                  'Allow users to visit your online store or shop.',
-                  style: isDarkMode(context)
-                      ? const TextStyle(color: Colors.white, fontSize: 14)
-                      : const TextStyle(fontSize: 14),
-                ),
-                activeColor: Color(colorPrimary),
-                activeTrackColor: Color(colorPrimary).withOpacity(0.5),
-                inactiveThumbColor: isDarkMode(context) ? Colors.grey.shade600 : Colors.grey.shade400,
-                inactiveTrackColor: isDarkMode(context) ? Colors.grey.shade800 : Colors.grey.shade300,
-              ),
-              if (_storeEnabled) ...[
-                const SizedBox(height: 12),
-                // Store Mode Dropdown (Premium-gated)
-                DropdownButtonFormField<String>(
-                  value: _storeMode,
-                  decoration: _getInputDecoration(
-                    label: 'Store Mode',
-                    icon: Icons.storefront,
-                  ),
-                  dropdownColor: isDarkMode(context) ? Colors.grey.shade800 : Colors.white,
-                  style: TextStyle(
-                    color: isDarkMode(context) ? Colors.white : Colors.black,
-                    fontSize: 16,
-                  ),
-                  items: [
-                    DropdownMenuItem(
-                      value: 'external_url',
-                      child: Text('External URL Only'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'internal_catalog',
-                      enabled: isPremiumUser(currentUser),
-                      child: Row(
-                        children: [
-                          Text('Internal Catalog'),
-                          if (!isPremiumUser(currentUser)) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Color(0xFFFFD700),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                'PREMIUM',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'both',
-                      enabled: isPremiumUser(currentUser),
-                      child: Row(
-                        children: [
-                          Text('Both (URL + Catalog)'),
-                          if (!isPremiumUser(currentUser)) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Color(0xFFFFD700),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                'PREMIUM',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                  children: [
+                    MenuEditSectionWidget(
+                      listing: widget.listingToEdit!,
+                      onMenuUpdated: () {
+                        if (mounted) setState(() {});
+                      },
                     ),
                   ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      // Block non-Premium users from selecting internal catalog options
-                      if ((value == 'internal_catalog' || value == 'both') && !isPremiumUser(currentUser)) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Internal Catalog requires Premium subscription'.tr()),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
-                        return;
-                      }
-                      setState(() => _storeMode = value);
-                    }
-                  },
                 ),
-                const SizedBox(height: 12),
-                // External URL field (show if mode is external_url or both)
-                if (_storeMode == 'external_url' || _storeMode == 'both') ...[
-                  TextField(
-                    controller: _storeUrlController,
-                    keyboardType: TextInputType.url,
-                    decoration: _getInputDecoration(label: 'Store URL', icon: Icons.link),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                // Lead Time Hours
-                TextField(
-                  keyboardType: TextInputType.number,
-                  decoration: _getInputDecoration(
-                    label: 'Lead Time (Hours)',
-                    icon: Icons.access_time,
-                    hint: 'Minimum hours needed to prepare orders',
-                  ),
-                  controller: TextEditingController(text: _storeLeadTimeHours.toString())
-                    ..selection = TextSelection.fromPosition(
-                      TextPosition(offset: _storeLeadTimeHours.toString().length),
-                    ),
-                  onChanged: (value) {
-                    final parsed = int.tryParse(value);
-                    if (parsed != null && parsed >= 0) {
-                      _storeLeadTimeHours = parsed;
-                    }
-                  },
-                ),
-                const SizedBox(height: 12),
-                // Manage Catalog button (Premium-only)
-                if ((_storeMode == 'internal_catalog' || _storeMode == 'both') && isPremiumUser(currentUser)) ...[
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      // Navigate to CatalogManagerScreen (only after listing is saved)
-                      if (!isEdit) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Please save the listing first, then you can manage catalog items'.tr()),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
-                        return;
-                      }
-                      // For edit mode, navigate to catalog manager
-                      push(context, CatalogManagerScreen(
-                        listing: widget.listingToEdit!,
-                        currentUser: currentUser,
-                      ));
-                    },
-                    icon: Icon(Icons.inventory_2),
-                    label: Text(isEdit ? 'Manage Catalog Items' : 'Save Listing First'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isEdit ? Color(colorPrimary) : Colors.grey,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                // Accept Proof of Payment toggle (paid tiers only)
-                if (isPaidUser(currentUser)) ...[
+              const SizedBox(height: 8),
+
+              // Store / Ecommerce Section
+              _buildCollapsibleSection(
+                title: 'Store / Ecommerce (Optional)'.tr(),
+                isExpanded: _storeExpanded,
+                onExpansionChanged: (expanded) {
+                  setState(() => _storeExpanded = expanded);
+                },
+                children: [
                   SwitchListTile(
-                    value: _acceptProofOfPayment,
-                    onChanged: (value) => setState(() => _acceptProofOfPayment = value),
-                    title: Text(
-                      'Accept Proof of Payment',
-                      style: TextStyle(
-                        color: dark ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    contentPadding: EdgeInsets.zero,
+                    value: _storeEnabled,
+                    onChanged: (value) => setState(() => _storeEnabled = value),
+                    title: Text('Enable Store/Ecommerce'),
                     subtitle: Text(
-                      'Require customers to provide proof of payment (photo/receipt) for orders',
-                      style: TextStyle(
-                        color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
-                      ),
+                      'Allow users to visit your online store or shop.',
+                      style: TextStyle(fontSize: 12),
                     ),
                     activeColor: Color(colorPrimary),
                     activeTrackColor: Color(colorPrimary).withOpacity(0.5),
                     inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
                     inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
                   ),
-                  const SizedBox(height: 12),
+                  if (_storeEnabled) ...[
+                    const SizedBox(height: 12),
+                    // Store Mode Dropdown (Premium-gated)
+                    DropdownButtonFormField<String>(
+                      value: _storeMode,
+                      decoration: _getInputDecoration(
+                        label: 'Store Mode',
+                        icon: Icons.storefront,
+                      ),
+                      dropdownColor: isDarkMode(context) ? Colors.grey.shade800 : Colors.white,
+                      style: TextStyle(
+                        color: isDarkMode(context) ? Colors.white : Colors.black,
+                        fontSize: 16,
+                      ),
+                      items: [
+                        DropdownMenuItem(
+                          value: 'external_url',
+                          child: Text('External URL Only'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'internal_catalog',
+                          enabled: isPremiumUser(currentUser),
+                          child: Row(
+                            children: [
+                              Text('Internal Catalog'),
+                              if (!isPremiumUser(currentUser)) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Color(0xFFFFD700),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'PREMIUM',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'both',
+                          enabled: isPremiumUser(currentUser),
+                          child: Row(
+                            children: [
+                              Text('Both (URL + Catalog)'),
+                              if (!isPremiumUser(currentUser)) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Color(0xFFFFD700),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'PREMIUM',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          // Block non-Premium users from selecting internal catalog options
+                          if ((value == 'internal_catalog' || value == 'both') && !isPremiumUser(currentUser)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Internal Catalog requires Premium subscription'.tr()),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                            return;
+                          }
+                          setState(() => _storeMode = value);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    // External URL field (show if mode is external_url or both)
+                    if (_storeMode == 'external_url' || _storeMode == 'both') ...[
+                      TextField(
+                        controller: _storeUrlController,
+                        keyboardType: TextInputType.url,
+                        decoration: _getInputDecoration(label: 'Store URL', icon: Icons.link),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    // Lead Time Hours
+                    TextField(
+                      keyboardType: TextInputType.number,
+                      decoration: _getInputDecoration(
+                        label: 'Lead Time (Hours)',
+                        icon: Icons.access_time,
+                        hint: 'Minimum hours needed to prepare orders',
+                      ),
+                      controller: TextEditingController(text: _storeLeadTimeHours.toString())
+                        ..selection = TextSelection.fromPosition(
+                          TextPosition(offset: _storeLeadTimeHours.toString().length),
+                        ),
+                      onChanged: (value) {
+                        final parsed = int.tryParse(value);
+                        if (parsed != null && parsed >= 0) {
+                          _storeLeadTimeHours = parsed;
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    // Manage Catalog button (Premium-only)
+                    if ((_storeMode == 'internal_catalog' || _storeMode == 'both') && isPremiumUser(currentUser)) ...[
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          // Navigate to CatalogManagerScreen (only after listing is saved)
+                          if (!isEdit) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Please save the listing first, then you can manage catalog items'.tr()),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                            return;
+                          }
+                          // For edit mode, navigate to catalog manager
+                          push(context, CatalogManagerScreen(
+                            listing: widget.listingToEdit!,
+                            currentUser: currentUser,
+                          ));
+                        },
+                        icon: Icon(Icons.inventory_2),
+                        label: Text(isEdit ? 'Manage Catalog Items' : 'Save Listing First'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isEdit ? Color(colorPrimary) : Colors.grey,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    // Accept Proof of Payment toggle (paid tiers only)
+                    if (isPaidUser(currentUser)) ...[
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: _acceptProofOfPayment,
+                        onChanged: (value) => setState(() => _acceptProofOfPayment = value),
+                        title: Text(
+                          'Accept Proof of Payment',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        subtitle: Text(
+                          'Require customers to provide proof of payment (photo/receipt) for orders',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        activeColor: Color(colorPrimary),
+                        activeTrackColor: Color(colorPrimary).withOpacity(0.5),
+                        inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
+                        inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
+                      ),
+                    ],
+                  ],
                 ],
-              ],
-              const SizedBox(height: 20),
+              ),
+              const SizedBox(height: 8),
 
               // Rentals section (Premium-gated)
-              if (isPremiumUser(currentUser)) ...[
-                _buildSectionHeader('Rentals'.tr()),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  title: Text(
-                    'Enable Rentals'.tr(),
-                    style: TextStyle(color: dark ? Colors.white : Colors.black),
-                  ),
-                  subtitle: Text(
-                    'Allow customers to rent items from this listing'.tr(),
-                    style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
-                  ),
-                  value: _rentalConfig?.isRentalEnabled ?? false,
-                  onChanged: (value) {
-                    setState(() {
-                      if (value) {
-                        // Create a basic rental config when enabling
-                        _rentalConfig = RentalConfig(
-                          isRentalEnabled: true,
-                          rentalType: RentalType.general,
-                          defaultPricingUnit: RentalPricingUnit.daily,
-                          basePrice: 0.0,
-                          termsAndConditions: '',
-                        );
-                      } else {
-                        // Disable rentals
-                        _rentalConfig = _rentalConfig?.copyWith(isRentalEnabled: false);
-                      }
-                    });
+              if (isPremiumUser(currentUser))
+                _buildCollapsibleSection(
+                  title: 'Rentals'.tr(),
+                  isExpanded: _rentalsExpanded,
+                  onExpansionChanged: (expanded) {
+                    setState(() => _rentalsExpanded = expanded);
                   },
-                  activeColor: Color(colorPrimary),
-                  inactiveTrackColor: dark ? Colors.grey.shade700 : Colors.grey.shade300,
-                  inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
-                ),
-                const SizedBox(height: 12),
-                // Rental Management buttons (only when editing and rentals are enabled)
-                if (isEdit && (_rentalConfig?.isRentalEnabled ?? false)) ...[  
-                  // Manage Rental Catalog button
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      push(context, RentalCatalogManagerScreen(
-                        listing: widget.listingToEdit!,
-                        currentUser: currentUser,
-                      ));
-                    },
-                    icon: const Icon(Icons.inventory_2),
-                    label: Text('Manage Rental Catalog'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(colorPrimary),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                  children: [
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('Enable Rentals'.tr()),
+                      subtitle: Text('Allow customers to rent items from this listing'.tr(), style: TextStyle(fontSize: 12)),
+                      value: _rentalConfig?.isRentalEnabled ?? false,
+                      onChanged: (value) {
+                        setState(() {
+                          if (value) {
+                            // Create a basic rental config when enabling
+                            _rentalConfig = RentalConfig(
+                              isRentalEnabled: true,
+                              rentalType: RentalType.general,
+                              defaultPricingUnit: RentalPricingUnit.daily,
+                              basePrice: 0.0,
+                              termsAndConditions: '',
+                            );
+                          } else {
+                            // Disable rentals
+                            _rentalConfig = _rentalConfig?.copyWith(isRentalEnabled: false);
+                          }
+                        });
+                      },
+                      activeColor: Color(colorPrimary),
+                      inactiveTrackColor: dark ? Colors.grey.shade700 : Colors.grey.shade300,
+                      inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                const SizedBox(height: 20),
-              ],
+                    // Rental Management buttons (only when editing and rentals are enabled)
+                    if (isEdit && (_rentalConfig?.isRentalEnabled ?? false)) ...[
+                      const SizedBox(height: 12),
+                      // Manage Rental Catalog button
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          push(context, RentalCatalogManagerScreen(
+                            listing: widget.listingToEdit!,
+                            currentUser: currentUser,
+                          ));
+                        },
+                        icon: const Icon(Icons.inventory_2),
+                        label: Text('Manage Rental Catalog'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(colorPrimary),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              if (isPremiumUser(currentUser))
+                const SizedBox(height: 8),
 
               // Services section (always available)
-              _buildSectionHeader('Services'.tr()),
-              const SizedBox(height: 16),
-              _buildServiceMenuEditor(isDarkMode(context)),
-              const SizedBox(height: 20),
-
-              // Time Blocks Editor (only if booking with time blocks is enabled)
-              if (_bookingEnabled && _useTimeBlocks) ...[
-                _buildSectionHeader('Time Blocks'.tr()),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Define hourly time slots (e.g., 09:00-10:00, 10:00-11:00)',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          ..._timeBlocks.map((block) => Chip(
-                            label: Text(block),
-                            deleteIcon: Icon(Icons.close, size: 18),
-                            onDeleted: () => setState(() => _timeBlocks.remove(block)),
-                            backgroundColor: dark ? Colors.grey.shade800 : Colors.grey.shade200,
-                            labelStyle: TextStyle(color: dark ? Colors.white : Colors.black87),
-                          )),
-                          ActionChip(
-                            label: Text('+ Add Time Block'),
-                            onPressed: () => _showAddTimeBlockDialog(dark),
-                            backgroundColor: Color(colorPrimary).withOpacity(0.1),
-                            labelStyle: TextStyle(color: Color(colorPrimary)),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
-
-              // Custom Booking Questions (only if booking enabled)
-              if (_bookingEnabled) ...[
-                _buildSectionHeader('Custom Booking Questions'.tr()),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Add questions customers must answer when they book.'.tr(),
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      if (_enableCustomQuestions) ...[
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            ..._customQuestions.map((q) => Chip(
-                              label: Text(q, maxLines: 1, overflow: TextOverflow.ellipsis),
-                              deleteIcon: Icon(Icons.close, size: 18),
-                              onDeleted: () => setState(() => _customQuestions.remove(q)),
-                              backgroundColor: dark ? Colors.grey.shade800 : Colors.grey.shade200,
-                              labelStyle: TextStyle(color: dark ? Colors.white : Colors.black87),
-                            )),
-                            ActionChip(
-                              label: Text('+ Add Question'),
-                              onPressed: () => _showAddQuestionDialog(dark),
-                              backgroundColor: Color(colorPrimary).withOpacity(0.1),
-                              labelStyle: TextStyle(color: Color(colorPrimary)),
-                            ),
-                          ],
-                        ),
-                      ] else ...[
-                        Text(
-                          'Enable custom questions in Booking Services to add questions here.'.tr(),
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
-
-              // Blocked dates (only if booking enabled)
-              if (_bookingEnabled) ...[
-                _buildSectionHeader('Block Unavailable Dates'.tr()),
-                _buildBlockedDatesEditor(isDarkMode(context)),
-              ],
+              _buildCollapsibleSection(
+                title: 'Services'.tr(),
+                isExpanded: _servicesExpanded,
+                onExpansionChanged: (expanded) {
+                  setState(() => _servicesExpanded = expanded);
+                },
+                children: [
+                  _buildServiceMenuEditor(isDarkMode(context)),
+                ],
+              ),
+              const SizedBox(height: 8),
 
               // Logo upload
-              _buildSectionHeader('Logo (Optional)'.tr()),
-              _buildLogoUpload(),
-              const SizedBox(height: 12),
+              _buildCollapsibleSection(
+                title: 'Logo (Optional)'.tr(),
+                isExpanded: _logoExpanded,
+                onExpansionChanged: (expanded) {
+                  setState(() => _logoExpanded = expanded);
+                },
+                children: [
+                  _buildLogoUpload(),
+                ],
+              ),
+              const SizedBox(height: 8),
 
-              _buildSectionHeader('Photos'.tr()),
-              BlocBuilder<AddListingBloc, AddListingState>(
-                buildWhen: (old, current) => old != current && current is ListingImagesUpdatedState,
-                builder: (context, state) {
-                  if (state is ListingImagesUpdatedState) _newImages = state.images;
-                  final normalizedTier = currentUser.subscriptionTier.toLowerCase();
-                  final canUsePhotoEnhancement = currentUser.isAdmin ||
-                      const ['professional', 'pro', 'premium', 'business'].contains(normalizedTier);
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildPhotoGrid(isDarkMode(context)),
-                      const SizedBox(height: 12),
-                      if (canUsePhotoEnhancement) ...[
-                        EnhanceButtonWidget(
-                          onPressed: () => _showPhotoEnhancementModal(context),
-                          enabled: isEdit,
-                          label: 'Enhance Photos'.tr(),
-                          width: double.infinity,
-                        ),
-                        if (!isEdit)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(
-                              'Save listing to enable enhancements'.tr(),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDarkMode(context) ? Colors.grey.shade400 : Colors.grey.shade600,
+              // Photos section
+              _buildCollapsibleSection(
+                title: 'Photos'.tr(),
+                isExpanded: _photosExpanded,
+                onExpansionChanged: (expanded) {
+                  setState(() => _photosExpanded = expanded);
+                },
+                children: [
+                  BlocBuilder<AddListingBloc, AddListingState>(
+                    buildWhen: (old, current) => old != current && current is ListingImagesUpdatedState,
+                    builder: (context, state) {
+                      if (state is ListingImagesUpdatedState) _newImages = state.images;
+                      final normalizedTier = currentUser.subscriptionTier.toLowerCase();
+                      final canUsePhotoEnhancement = currentUser.isAdmin ||
+                          const ['professional', 'pro', 'premium', 'business'].contains(normalizedTier);
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildPhotoGrid(isDarkMode(context)),
+                          const SizedBox(height: 12),
+                          if (canUsePhotoEnhancement) ...[
+                            EnhanceButtonWidget(
+                              onPressed: () => _showPhotoEnhancementModal(context),
+                              enabled: isEdit,
+                              label: 'Enhance Photos'.tr(),
+                              width: double.infinity,
+                            ),
+                            if (!isEdit)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  'Save listing to enable enhancements'.tr(),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDarkMode(context) ? Colors.grey.shade400 : Colors.grey.shade600,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        if (isEdit && currentUser.userID.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 12),
-                            child: FutureBuilder<UserEnhancementQuota?>(
-                              future: context.read<PhotoEnhancementCubit>().fetchUserQuota(currentUser.userID),
-                              builder: (context, snapshot) {
-                                if (snapshot.hasData && snapshot.data != null) {
-                                  return UsageCounterWidget(
-                                    quota: snapshot.data!,
-                                    compact: true,
-                                  );
-                                }
-                                return const SizedBox.shrink();
-                              },
-                            ),
-                          ),
-                      ],
-                    ],
-                  );
-                },
+                            if (isEdit && currentUser.userID.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: FutureBuilder<UserEnhancementQuota?>(
+                                  future: context.read<PhotoEnhancementCubit>().fetchUserQuota(currentUser.userID),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.hasData && snapshot.data != null) {
+                                      return UsageCounterWidget(
+                                        quota: snapshot.data!,
+                                        compact: true,
+                                      );
+                                    }
+                                    return const SizedBox.shrink();
+                                  },
+                                ),
+                              ),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  // Location Photos (Optional)
+                  LocationPhotosEditor(
+                    exteriorImageUrl: _exteriorImageUrl,
+                    interiorImageUrl: _interiorImageUrl,
+                    locationInstructions: _locationInstructions,
+                    onPhotosChanged: (exteriorUrl, interiorUrl, instructions) {
+                      setState(() {
+                        _exteriorImageUrl = exteriorUrl;
+                        _interiorImageUrl = interiorUrl;
+                        _locationInstructions = instructions;
+                      });
+                    },
+                    uploadImages: (images) => listingApiManager.uploadListingImages(images: images),
+                    isDark: isDarkMode(context),
+                    primaryColor: Color(colorPrimary),
+                  ),
+                ],
               ),
+              const SizedBox(height: 8),
 
-              const SizedBox(height: 16),
-              // Location Photos (Optional)
-              LocationPhotosEditor(
-                exteriorImageUrl: _exteriorImageUrl,
-                interiorImageUrl: _interiorImageUrl,
-                locationInstructions: _locationInstructions,
-                onPhotosChanged: (exteriorUrl, interiorUrl, instructions) {
-                  setState(() {
-                    _exteriorImageUrl = exteriorUrl;
-                    _interiorImageUrl = interiorUrl;
-                    _locationInstructions = instructions;
-                  });
+              // Videos section
+              _buildCollapsibleSection(
+                title: 'Videos (max 3)'.tr(),
+                isExpanded: _videosExpanded,
+                onExpansionChanged: (expanded) {
+                  setState(() => _videosExpanded = expanded);
                 },
-                uploadImages: (images) => listingApiManager.uploadListingImages(images: images),
-                isDark: isDarkMode(context),
-                primaryColor: Color(colorPrimary),
+                children: [
+                  BlocBuilder<AddListingBloc, AddListingState>(
+                    buildWhen: (old, current) => old != current && current is ListingVideosUpdatedState,
+                    builder: (context, state) {
+                      if (state is ListingVideosUpdatedState) _newVideos = state.videos;
+                      return _buildVideoGrid(isDarkMode(context));
+                    },
+                  ),
+                ],
               ),
-
-              const SizedBox(height: 16),
-              _buildSectionHeader('Videos (max 3)'.tr()),
-              BlocBuilder<AddListingBloc, AddListingState>(
-                buildWhen: (old, current) => old != current && current is ListingVideosUpdatedState,
-                builder: (context, state) {
-                  if (state is ListingVideosUpdatedState) _newVideos = state.videos;
-                  return _buildVideoGrid(isDarkMode(context));
-                },
-              ),
-
               const SizedBox(height: 40),
             ],
           ),
