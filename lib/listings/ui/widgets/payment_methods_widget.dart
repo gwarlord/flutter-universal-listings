@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 /// Widget to display public payment details for a listing
 /// Only shows if displayMode is public_listing
-class PaymentMethodsWidget extends StatelessWidget {
+class PaymentMethodsWidget extends StatefulWidget {
   final PaymentDetailsPublic paymentDetails;
 
   const PaymentMethodsWidget({
@@ -15,8 +15,15 @@ class PaymentMethodsWidget extends StatelessWidget {
   });
 
   @override
+  State<PaymentMethodsWidget> createState() => _PaymentMethodsWidgetState();
+}
+
+class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
+  bool _isExpanded = false;
+
+  @override
   Widget build(BuildContext context) {
-    if (!paymentDetails.hasAnyPaymentMethod) {
+    if (!widget.paymentDetails.hasAnyPaymentMethod) {
       return const SizedBox.shrink();
     }
 
@@ -32,73 +39,92 @@ class PaymentMethodsWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: borderColor),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.payment, color: Colors.blue[700]),
-                const SizedBox(width: 8),
-                const Text(
-                  'Payment Methods',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.payment, color: Colors.blue[700]),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Payment Methods',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  Icon(
+                    _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
+          ),
+          if (_isExpanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Divider(height: 1),
+                  const SizedBox(height: 16),
+                  
+                  // Bank Transfer
+                  if (widget.paymentDetails.bankTransfer != null && widget.paymentDetails.bankTransfer!.enabled) ...[
+                    _buildSectionHeader('Bank Transfer', Icons.account_balance),
+                    const SizedBox(height: 8),
+                    _buildBankTransferDetails(context, widget.paymentDetails.bankTransfer!),
+                    const SizedBox(height: 16),
+                  ],
 
-            // Bank Transfer
-            if (paymentDetails.bankTransfer != null && paymentDetails.bankTransfer!.enabled) ...[
-              _buildSectionHeader('Bank Transfer', Icons.account_balance),
-              const SizedBox(height: 8),
-              _buildBankTransferDetails(context, paymentDetails.bankTransfer!),
-              const SizedBox(height: 16),
-            ],
+                  // Payment Apps
+                  if (widget.paymentDetails.paymentApps.isNotEmpty) ...[
+                    _buildSectionHeader('Payment Apps', Icons.apps),
+                    const SizedBox(height: 8),
+                    ...widget.paymentDetails.paymentApps.where((app) => app.enabled).map((app) {
+                      return _buildPaymentAppTile(context, app);
+                    }),
+                  ],
 
-            // Payment Apps
-            if (paymentDetails.paymentApps.isNotEmpty) ...[
-              _buildSectionHeader('Payment Apps', Icons.apps),
-              const SizedBox(height: 8),
-              ...paymentDetails.paymentApps.where((app) => app.enabled).map((app) {
-                return _buildPaymentAppTile(context, app);
-              }),
-            ],
-
-            // Notes
-            if (paymentDetails.notes.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.withOpacity(0.2)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        paymentDetails.notes,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.blue[700],
-                        ),
+                  // Notes
+                  if (widget.paymentDetails.notes.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              widget.paymentDetails.notes,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.blue[700],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
+                ],
               ),
-            ],
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
