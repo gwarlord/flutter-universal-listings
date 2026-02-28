@@ -371,10 +371,12 @@ class _ListingFreshnessDashboardState
   Widget _buildListingCard(ListingModel listing, Color sectionColor) {
     final isSelected = _selectedListings.contains(listing.id);
     final activityScore = _activityScores[listing.id];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       elevation: isSelected ? 4 : 1,
+      color: isDark ? Colors.grey[850] : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
         side: isSelected
@@ -398,9 +400,10 @@ class _ListingFreshnessDashboardState
                   Expanded(
                     child: Text(
                       listing.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
