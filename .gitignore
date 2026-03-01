@@ -33,3 +33,14 @@ Thumbs.db
 .env.production
 **/google-services.json
 **/GoogleService-Info.plist
+# Archives
+*.zip
+
+# Credentials
+caribtap-firebase-adminsdk-*.json
+**/*adminsdk*.json
+
+# Logs
+firebase-debug*.log
+firebase-debug - Copy.log
+functions/firebase-debug*.log
