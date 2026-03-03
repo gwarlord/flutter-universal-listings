@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart' as easy_local;
 import 'package:firebase_auth/firebase_auth.dart' as auth;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -100,7 +101,7 @@ class _SignUpState extends State<SignUpScreen> {
       create: (context) => SignUpBloc(),
       child: Builder(
         builder: (context) {
-          if (Platform.isAndroid) {
+          if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
             context.read<SignUpBloc>().add(RetrieveLostDataEvent());
           }
           return MultiBlocListener(

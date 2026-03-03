@@ -733,6 +733,22 @@ service cloud.firestore {
       }
     }
 
+    // Events collection (CaribTap events feed)
+    match /events/{eventId} {
+      // Public read so events can appear in home feed for all users
+      allow read: if true;
+
+      // Authenticated users can create their own events only
+      allow create: if isSignedIn() &&
+        request.resource.data.createdBy == request.auth.uid;
+
+      // Only event owner or admin can modify/delete
+      allow update, delete: if isSignedIn() && (
+        request.auth.uid == resource.data.createdBy ||
+        isAdmin()
+      );
+    }
+
     // ========================================================================
     // TABLE MODE (PREMIUM FEATURE)
     // ========================================================================

@@ -1,10 +1,9 @@
-import 'dart:io';
-
 import 'package:cached_network_image/cached_network_image.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
@@ -12,6 +11,9 @@ import 'package:flutter/services.dart';
 
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:location/location.dart' as loc;
+
+bool get _isIOSPlatform =>
+  !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
 
 String? validateName(String? value) {
@@ -102,7 +104,7 @@ void hideProgress() {
 showAlertDialog(BuildContext context, String title, String content) async {
   final isDark = Theme.of(context).brightness == Brightness.dark;
   
-  if (Platform.isIOS) {
+  if (_isIOSPlatform) {
     await showCupertinoDialog(
       context: context,
       builder: (BuildContext context) => CupertinoAlertDialog(
@@ -183,12 +185,39 @@ String formatTimestamp(int seconds, {bool lastSeen = false}) {
   return '${lastSeen ? 'on '.tr() : ''}$date';
 }
 
-Widget displayImage(String picUrl, {bool hideErrorWidget = false}) {
+Widget displayImage(
+  String picUrl, {
+  bool hideErrorWidget = false,
+  int? memCacheWidth,
+  int? memCacheHeight,
+}) {
   if (picUrl.isNotEmpty) {
+    final targetMemCacheWidth = memCacheWidth ?? (_isIOSPlatform ? 1280 : 1920);
+    if (kIsWeb) {
+      return Image.network(
+        picUrl,
+        fit: BoxFit.cover,
+        cacheWidth: targetMemCacheWidth,
+        cacheHeight: memCacheHeight,
+        webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+        errorBuilder: (context, error, stackTrace) => hideErrorWidget
+            ? Container()
+            : _getFlatPlaceholderOrErrorImage(false),
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) {
+            return child;
+          }
+          return _getFlatPlaceholderOrErrorImage(true);
+        },
+      );
+    }
     return CachedNetworkImage(
         imageBuilder: (context, imageProvider) =>
             _getFlatImageProvider(imageProvider),
         imageUrl: picUrl,
+        memCacheWidth: targetMemCacheWidth,
+        memCacheHeight: memCacheHeight,
+        maxWidthDiskCache: targetMemCacheWidth,
         placeholder: (context, url) => _getFlatPlaceholderOrErrorImage(true),
         errorWidget: (context, url, error) => hideErrorWidget
             ? Container()
@@ -221,12 +250,32 @@ Widget _getFlatImageProvider(ImageProvider provider) {
 
 Widget displayCircleImage(String picUrl, double size, hasBorder) {
   if (picUrl.isNotEmpty) {
+    final targetMemCache = (size * (_isIOSPlatform ? 2.5 : 3)).round();
+    if (kIsWeb) {
+      return ClipOval(
+        child: Image.network(
+          picUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          cacheWidth: targetMemCache,
+          cacheHeight: targetMemCache,
+          webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+          errorBuilder: (context, error, stackTrace) =>
+              _getPlaceholderOrErrorImage(size, hasBorder),
+        ),
+      );
+    }
     return CachedNetworkImage(
         height: size,
         width: size,
         imageBuilder: (context, imageProvider) =>
             _getCircularImageProvider(imageProvider, size, false),
         imageUrl: picUrl,
+        memCacheWidth: targetMemCache,
+        memCacheHeight: targetMemCache,
+        maxWidthDiskCache: targetMemCache,
+        maxHeightDiskCache: targetMemCache,
         placeholder: (context, url) =>
             _getPlaceholderOrErrorImage(size, hasBorder),
         errorWidget: (context, url, error) =>

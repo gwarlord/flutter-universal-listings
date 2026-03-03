@@ -98,14 +98,28 @@ class _LocationScopeFloatingButtonState extends State<LocationScopeFloatingButto
           ? Colors.white
           : (isDark ? Colors.white : Theme.of(context).colorScheme.onSurface);
 
+        final size = MediaQuery.of(context).size;
+        final safePosition = Offset(
+          _position.dx.clamp(8.0, (size.width - 88).clamp(8.0, size.width)),
+          _position.dy.clamp(16.0, (size.height - 120).clamp(16.0, size.height)),
+        );
+
+        if (safePosition != _position) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            setState(() {
+              _position = safePosition;
+            });
+          });
+        }
+
         return Positioned(
-          left: _position.dx,
-          top: _position.dy,
+          left: safePosition.dx,
+          top: safePosition.dy,
           child: Tooltip(
             message: 'Tap to toggle • Long press for options',
             child: GestureDetector(
               onPanUpdate: (details) {
-                final size = MediaQuery.of(context).size;
                 setState(() {
                   _position = Offset(
                     (_position.dx + details.delta.dx).clamp(0.0, size.width - 80),

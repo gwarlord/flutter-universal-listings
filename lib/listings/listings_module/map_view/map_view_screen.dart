@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -8,6 +9,7 @@ import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MapViewScreen extends StatefulWidget {
   final List<ListingModel> listings;
@@ -92,6 +94,9 @@ class _MapViewScreenState extends State<MapViewScreen> {
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator.adaptive());
+                }
+                if (kIsWeb) {
+                  return _buildWebMapFallback(context);
                 }
                 return GoogleMap(
                   myLocationEnabled: true,
@@ -317,6 +322,60 @@ class _MapViewScreenState extends State<MapViewScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildWebMapFallback(BuildContext context) {
+    final isDark = isDarkMode(context);
+    final first = widget.listings.isNotEmpty ? widget.listings.first : null;
+
+    return Container(
+      color: isDark ? const Color(0xFF121212) : Colors.grey.shade100,
+      alignment: Alignment.center,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.grey.shade900 : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.map_outlined, size: 42),
+            const SizedBox(height: 10),
+            Text(
+              'Interactive map unavailable on web'.tr(),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Open the location in Google Maps instead.'.tr(),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: first == null
+                  ? null
+                  : () => _openListingInGoogleMaps(first.latitude, first.longitude),
+              icon: const Icon(Icons.open_in_new),
+              label: Text('Open in Google Maps'.tr()),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openListingInGoogleMaps(double latitude, double longitude) async {
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude',
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   @override

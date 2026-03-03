@@ -26,7 +26,7 @@ class LoginWithPhoneNumberEvent extends AuthenticationEvent {
   auth.PhoneAuthCredential credential;
   String phoneNumber;
   String? firstName, lastName;
-  File? image;
+  dynamic image;
 
   LoginWithPhoneNumberEvent({
     required this.credential,
@@ -40,7 +40,7 @@ class LoginWithPhoneNumberEvent extends AuthenticationEvent {
 class SignupWithEmailAndPasswordEvent extends AuthenticationEvent {
   String emailAddress;
   String password;
-  File? image;
+  dynamic image;
   String firstName;
   String lastName;
   String countryCode;

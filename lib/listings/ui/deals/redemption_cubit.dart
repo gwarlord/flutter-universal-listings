@@ -54,7 +54,7 @@ class RedemptionCubit extends Cubit<RedemptionState> {
       // After success, re-check the status to update UI permanently
       await checkRedemptionStatus(dealId);
     } else {
-      emit(const RedemptionFailure('Could not redeem offer. Please check your connection.'));
+      emit(const RedemptionFailure('Could not claim offer. Please check your connection.'));
       // Revert to NotRedeemed to allow another attempt
       emit(NotRedeemed());
     }

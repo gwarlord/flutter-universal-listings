@@ -299,6 +299,16 @@ class _HomeFilterPanelState extends State<HomeFilterPanel> {
                     isDark: isDark,
                     primaryColor: primaryColor,
                   ),
+                  const SizedBox(height: 8),
+
+                  _buildSwitchTile(
+                    title: 'Events'.tr(),
+                    subtitle: 'Show events in discovery feed'.tr(),
+                    value: _filters.includeEvents,
+                    onChanged: (val) => _updateFilter(_filters.copyWith(includeEvents: val)),
+                    isDark: isDark,
+                    primaryColor: primaryColor,
+                  ),
                   const SizedBox(height: 16),
 
                   // Fulfillment options

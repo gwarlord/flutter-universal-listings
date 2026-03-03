@@ -8,8 +8,10 @@ import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:flutter_native_image_v2/flutter_native_image_v2.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'package:caribtap/constants.dart';
@@ -29,6 +31,19 @@ class AuthFirebaseUtils extends AuthenticationRepository {
   FirebaseFunctions functions = FirebaseFunctions.instance;
   Reference storage = FirebaseStorage.instance.ref();
 
+  bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  bool get _isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  Future<String> _resolvePushToken() async {
+    if (_isIOS) {
+      return await firebaseMessaging.getAPNSToken() ?? '';
+    }
+    if (_isAndroid) {
+      return await firebaseMessaging.getToken() ?? '';
+    }
+    return '';
+  }
+
   @override
   Future<ListingsUser?> getAuthUser() async {
     auth.User? firebaseUser = auth.FirebaseAuth.instance.currentUser;
@@ -36,11 +51,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       ListingsUser? user = await _getCurrentUser(firebaseUser.uid);
       if (user != null) {
         user.active = true;
-         if (Platform.isIOS) {
-        user.pushToken = await firebaseMessaging.getAPNSToken() ?? '';
-      } else if (Platform.isAndroid) {
-        user.pushToken = await firebaseMessaging.getToken() ?? '';
-      }
+        user.pushToken = await _resolvePushToken();
         await _updateCurrentUser(user);
         return user;
       } else {
@@ -85,11 +96,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       if (documentSnapshot.exists) {
         user = ListingsUser.fromJson(documentSnapshot.data() ?? {});
         user.active = true;
-         if (Platform.isIOS) {
-        user.pushToken = await firebaseMessaging.getAPNSToken() ?? '';
-      } else if (Platform.isAndroid) {
-        user.pushToken = await firebaseMessaging.getToken() ?? '';
-      }
+        user.pushToken = await _resolvePushToken();
         await _updateCurrentUser(user);
         
         // Start entitlement listener for this user
@@ -174,7 +181,18 @@ class AuthFirebaseUtils extends AuthenticationRepository {
   @override
   loginWithGoogle() async {
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final webClientId = (dotenv.env['GOOGLE_WEB_CLIENT_ID'] ?? '').trim();
+      debugPrint(
+          '🔐 [GoogleSignIn] Starting login. isWeb=$kIsWeb, hasWebClientId=${webClientId.isNotEmpty}');
+      final GoogleSignIn googleSignIn =
+          kIsWeb && webClientId.isNotEmpty
+              ? GoogleSignIn(clientId: webClientId)
+              : GoogleSignIn();
+
+      if (kIsWeb && webClientId.isEmpty) {
+        debugPrint('⚠️ GOOGLE_WEB_CLIENT_ID is missing; web Google sign-in may fail.');
+      }
+
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
       if (googleUser == null) {
@@ -190,6 +208,21 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       return await _handleGoogleLogin(credential, googleUser);
     } catch (e, s) {
       debugPrint('loginWithGoogle error: $e $s');
+      final errorText = e.toString();
+      if (kIsWeb && e.toString().contains('ClientID not set')) {
+        return 'Google Web Client ID is not configured. Please contact support.'.tr();
+      }
+      if (kIsWeb &&
+          (errorText.contains('people.googleapis.com') ||
+              errorText.contains('SERVICE_DISABLED'))) {
+        return 'Google login is blocked: People API is disabled in Google Cloud for this project.'.tr();
+      }
+      if (kIsWeb &&
+          (errorText.contains('SignInWithIdp are blocked') ||
+              errorText.contains('API_KEY_SERVICE_BLOCKED') ||
+              errorText.contains('identitytoolkit'))) {
+        return 'Google login is blocked: your Web API key is restricted from Firebase Auth (Identity Toolkit SignInWithIdp).'.tr();
+      }
       return 'Google login failed, Please try again.'.tr();
     }
   }
@@ -278,11 +311,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
     ListingsUser? user = await _getCurrentUser(userCredential.user?.uid ?? '');
     if (user != null) {
       user.active = true;
-       if (Platform.isIOS) {
-        user.pushToken = await firebaseMessaging.getAPNSToken() ?? '';
-      } else if (Platform.isAndroid) {
-        user.pushToken = await firebaseMessaging.getToken() ?? '';
-      }
+      user.pushToken = await _resolvePushToken();
       await _updateCurrentUser(user);
       return user;
     } else {
@@ -298,9 +327,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           lastName: (lastName?.trim().isNotEmpty ?? false)
               ? lastName!.trim()
               : 'User',
-             pushToken: (Platform.isIOS)
-              ? await firebaseMessaging.getAPNSToken() ?? ''
-              : await firebaseMessaging.getToken() ?? '',
+            pushToken: await _resolvePushToken(),
           phoneNumber: phoneNumber,
           active: true,
           lastOnlineTimestamp: Timestamp.now(),
@@ -369,9 +396,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
             countryCode: countryCode,
             gender: gender,
             ageRange: ageRange,
-             pushToken: (Platform.isIOS)
-              ? await firebaseMessaging.getAPNSToken() ?? ''
-              : await firebaseMessaging.getToken() ?? '',
+          pushToken: await _resolvePushToken(),
           profilePictureURL: profilePicUrl);
       
       debugPrint('💾 Saving user to Firestore...');
@@ -602,11 +627,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       user.lastName = lastName;
       user.email = userData['email'];
       user.active = true;
-       if (Platform.isIOS) {
-        user.pushToken = await firebaseMessaging.getAPNSToken() ?? '';
-      } else if (Platform.isAndroid) {
-        user.pushToken = await firebaseMessaging.getToken() ?? '';
-      }
+      user.pushToken = await _resolvePushToken();
       dynamic result = await _updateCurrentUser(user);
       return result;
     } else {
@@ -618,9 +639,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           lastOnlineTimestamp: Timestamp.now(),
           lastName: lastName,
           active: true,
-             pushToken: (Platform.isIOS)
-              ? await firebaseMessaging.getAPNSToken() ?? ''
-              : await firebaseMessaging.getToken() ?? '',
+            pushToken: await _resolvePushToken(),
           phoneNumber: '',
           settings: UserSettings());
       String? errorMessage = await _createNewUser(user);
@@ -641,11 +660,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
     ListingsUser? user = await _getCurrentUser(authResult.user?.uid ?? '');
     if (user != null) {
       user.active = true;
-       if (Platform.isIOS) {
-        user.pushToken = await firebaseMessaging.getAPNSToken() ?? '';
-      } else if (Platform.isAndroid) {
-        user.pushToken = await firebaseMessaging.getToken() ?? '';
-      }
+      user.pushToken = await _resolvePushToken();
       dynamic result = await _updateCurrentUser(user);
       return result;
     } else {
@@ -657,9 +672,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           lastOnlineTimestamp: Timestamp.now(),
           lastName: appleIdCredential.fullName?.familyName ?? '',
           active: true,
-             pushToken: (Platform.isIOS)
-              ? await firebaseMessaging.getAPNSToken() ?? ''
-              : await firebaseMessaging.getToken() ?? '',
+            pushToken: await _resolvePushToken(),
           phoneNumber: '',
           settings: UserSettings());
       String? errorMessage = await _createNewUser(user);
@@ -680,11 +693,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
     ListingsUser? user = await _getCurrentUser(authResult.user?.uid ?? '');
     if (user != null) {
       user.active = true;
-       if (Platform.isIOS) {
-        user.pushToken = await firebaseMessaging.getAPNSToken() ?? '';
-      } else if (Platform.isAndroid) {
-        user.pushToken = await firebaseMessaging.getToken() ?? '';
-      }
+      user.pushToken = await _resolvePushToken();
       dynamic result = await _updateCurrentUser(user);
       return result;
     } else {
@@ -696,9 +705,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           lastOnlineTimestamp: Timestamp.now(),
           lastName: googleUser.displayName?.split(' ').skip(1).join(' ') ?? '',
           active: true,
-             pushToken: (Platform.isIOS)
-              ? await firebaseMessaging.getAPNSToken() ?? ''
-              : await firebaseMessaging.getToken() ?? '',
+            pushToken: await _resolvePushToken(),
           phoneNumber: '',
           settings: UserSettings());
       String? errorMessage = await _createNewUser(user);

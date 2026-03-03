@@ -1788,6 +1788,9 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
               future: _mapFuture,
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator.adaptive());
+                if (kIsWeb) {
+                  return _buildWebMapFallback(isDark, locationLabel);
+                }
                 return GoogleMap(
                   myLocationEnabled: true,
                   gestureRecognizers: {}..add(Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer())),
@@ -1838,6 +1841,51 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildWebMapFallback(bool isDark, String locationLabel) {
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: isDark ? Colors.grey.shade900 : Colors.grey.shade100,
+        border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.map_outlined, size: 34, color: Color(cfg.colorPrimary)),
+            const SizedBox(height: 8),
+            Text(
+              'Map preview unavailable on web'.tr(),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => _openInGoogleMaps(locationLabel),
+              icon: const Icon(Icons.open_in_new),
+              label: Text('Open in Google Maps'.tr()),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openInGoogleMaps(String locationLabel) async {
+    final query = locationLabel.trim().isNotEmpty
+        ? locationLabel
+        : '${listing.latitude},${listing.longitude}';
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}',
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   Widget _buildDetailsList(bool isDark, Color primaryColor) {

@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +16,7 @@ import 'package:caribtap/listings/listings_module/home/home_screen.dart';
 import 'package:caribtap/listings/listings_module/map_view/map_view_screen.dart';
 import 'package:caribtap/listings/listings_module/search/search_screen.dart';
 import 'package:caribtap/listings/listings_module/my_listings/my_listings_screen.dart';
+import 'package:caribtap/listings/listings_module/events/create_event_screen.dart';
 import 'package:caribtap/listings/listings_module/booking_services/booking_services_screen.dart';
 import 'package:caribtap/listings/listings_module/booking/my_bookings_screen.dart';
 import 'package:caribtap/listings/listings_module/booking/booking_management_screen.dart';
@@ -318,70 +318,6 @@ class _ContainerState extends State<ContainerScreen> {
             builder: (context, state) {
               final isDark = isDarkMode(context);
               return Scaffold(
-                bottomNavigationBar: Platform.isIOS
-                    ? BottomNavigationBar(
-                        currentIndex: _selectedTapIndex,
-                        onTap: (index) {
-                          switch (index) {
-                            case 0:
-                              context.read<ContainerBloc>().add(TabSelectedEvent(
-                                appBarTitle: 'Home'.tr(),
-                                currentTabIndex: 0,
-                                drawerSelection: DrawerSelection.home,
-                                currentWidget: HomeWrapperWidget(
-                                  currentUser: currentUser,
-                                  homeKey: homeKey,
-                                ),
-                              ));
-                              break;
-                            case 1:
-                              context.read<ContainerBloc>().add(TabSelectedEvent(
-                                appBarTitle: 'Categories'.tr(),
-                                currentTabIndex: 1,
-                                drawerSelection: DrawerSelection.categories,
-                                currentWidget: CategoriesWrapperWidget(
-                                  currentUser: currentUser,
-                                ),
-                              ));
-                              break;
-                            case 2:
-                              context.read<ContainerBloc>().add(TabSelectedEvent(
-                                appBarTitle: 'Conversations'.tr(),
-                                currentTabIndex: 2,
-                                drawerSelection: DrawerSelection.conversations,
-                                currentWidget: ConversationsWrapperWidget(
-                                  user: currentUser,
-                                ),
-                              ));
-                              break;
-                            case 3:
-                              context.read<ContainerBloc>().add(TabSelectedEvent(
-                                appBarTitle: 'Search'.tr(),
-                                currentTabIndex: 3,
-                                drawerSelection: DrawerSelection.search,
-                                currentWidget: SearchWrapperWidget(
-                                    currentUser: currentUser),
-                              ));
-                              break;
-                          }
-                        },
-                        unselectedItemColor: Colors.grey,
-                        selectedItemColor: Color(cfg.colorPrimary),
-                        items: [
-                          BottomNavigationBarItem(
-                              icon: const Icon(Icons.home), label: 'Home'.tr()),
-                          BottomNavigationBarItem(
-                              icon: const Icon(Icons.category),
-                              label: 'Categories'.tr()),
-                          BottomNavigationBarItem(
-                              icon: const Icon(Icons.message),
-                              label: 'Chats'.tr()),
-                          BottomNavigationBarItem(
-                              icon: const Icon(Icons.search),
-                              label: 'Search'.tr()),
-                        ],
-                      )
-                    : null,
                 drawer: _buildModernDrawer(context, currentUser, isDark),
                 appBar: AppBar(
                   leadingWidth: 96,
@@ -414,16 +350,17 @@ class _ContainerState extends State<ContainerScreen> {
                           onTap: () => push(context, ProfileScreen(currentUser: currentUser)),
                           child: Padding(
                             padding: const EdgeInsets.only(left: 8, right: 4),
-                            child: CircleAvatar(
-                              radius: 18,
-                              backgroundImage: currentUser.profilePictureURL.isNotEmpty
-                                  ? NetworkImage(currentUser.profilePictureURL)
-                                  : null,
-                              backgroundColor: Colors.grey[300],
-                              child: currentUser.profilePictureURL.isEmpty
-                                  ? Icon(Icons.person, color: Colors.grey[700])
-                                  : null,
-                            ),
+                            child: currentUser.profilePictureURL.isNotEmpty
+                                ? displayCircleImage(
+                                    currentUser.profilePictureURL,
+                                    36,
+                                    false,
+                                  )
+                                : CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: Colors.grey[300],
+                                    child: Icon(Icons.person, color: Colors.grey[700]),
+                                  ),
                           ),
                         ),
                       ],
@@ -497,7 +434,22 @@ class _ContainerState extends State<ContainerScreen> {
                   ),
                   centerTitle: true,
                 ),
-                body: _currentWidget,
+                body: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final maxBodyWidth =
+                        constraints.maxWidth >= 1280 ? 1240.0 : double.infinity;
+                    if (maxBodyWidth == double.infinity) {
+                      return _currentWidget;
+                    }
+                    return Align(
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(
+                        width: maxBodyWidth,
+                        child: _currentWidget,
+                      ),
+                    );
+                  },
+                ),
               );
             },
           );
@@ -510,8 +462,11 @@ class _ContainerState extends State<ContainerScreen> {
     final primaryColorValue = Color(cfg.colorPrimary);
     final selectedBgColor = primaryColorValue.withOpacity(0.1);
 
+    final drawerWidth =
+        (MediaQuery.of(context).size.width * 0.85).clamp(280.0, 380.0).toDouble();
+
     return Drawer(
-      width: MediaQuery.of(context).size.width * 0.85,
+      width: drawerWidth,
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
       child: Column(
         children: [
@@ -718,6 +673,23 @@ class _ContainerState extends State<ContainerScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       push(context, MyListingsWrapperWidget(currentUser: currentUser));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'Post Event'.tr(),
+                    icon: Icons.event_rounded,
+                    trailing: (currentUser.isAdmin || currentUser.hasBookingServices)
+                        ? _tierBadge('PRO', Colors.blue)
+                        : _lockIcon(),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      if (currentUser.isAdmin || currentUser.hasBookingServices) {
+                        await push(context, CreateEventScreen(currentUser: currentUser));
+                      } else {
+                        _showUpgradeDialog(context, 'Post Event', 'Professional');
+                      }
                     },
                     isDark: isDark,
                     primaryColor: primaryColorValue,

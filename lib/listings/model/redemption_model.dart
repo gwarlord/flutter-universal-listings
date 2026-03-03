@@ -7,10 +7,11 @@ class Redemption {
   Redemption({required this.dealId, required this.redeemedAt});
 
   factory Redemption.fromFirestore(DocumentSnapshot doc) {
-    Map data = doc.data() as Map<String, dynamic>;
+    final data = doc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
+    final timestamp = (data['redeemedAt'] ?? data['lastClaimedAt']) as Timestamp?;
     return Redemption(
       dealId: doc.id,
-      redeemedAt: data['redeemedAt'] as Timestamp,
+      redeemedAt: timestamp ?? Timestamp.now(),
     );
   }
 }

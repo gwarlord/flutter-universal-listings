@@ -225,15 +225,19 @@ class ListingsFirebaseUtils extends ListingsRepository {
   @override
   Future<List<CategoriesModel>> getCategories() async {
     try {
-      final filteredSnap = await firestore
+      final snap = await firestore
           .collection(cfg.categoriesCollection)
-          .where('isActive', isEqualTo: true)
-          .orderBy('sortOrder')
           .get();
 
-      final categories = filteredSnap.docs
+      final categories = snap.docs
           .map((d) => CategoriesModel.fromJson(d.data(), id: d.id))
-          .toList();
+          .where((c) => c.isActive)
+          .toList()
+        ..sort((a, b) {
+          final sortCompare = a.sortOrder.compareTo(b.sortOrder);
+          if (sortCompare != 0) return sortCompare;
+          return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+        });
 
       debugPrint('Parsed categories length: ${categories.length}');
       return categories;

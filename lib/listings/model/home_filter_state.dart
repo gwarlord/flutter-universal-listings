@@ -20,6 +20,7 @@ class HomeFilterState {
   final bool hasRentals;
   final bool hasBooking;
   final bool hasDeals;
+  final bool includeEvents;
   
   // Fulfillment filters
   final bool supportsDelivery;
@@ -47,6 +48,7 @@ class HomeFilterState {
     this.hasRentals = false,
     this.hasBooking = false,
     this.hasDeals = false,
+    this.includeEvents = true,
     this.supportsDelivery = false,
     this.supportsPickup = false,
     this.supportsDineIn = false,
@@ -65,6 +67,7 @@ class HomeFilterState {
         hasRentals ||
         hasBooking ||
         hasDeals ||
+        !includeEvents ||
         supportsDelivery ||
         supportsPickup ||
         supportsDineIn ||
@@ -82,6 +85,7 @@ class HomeFilterState {
     if (hasRentals) count++;
     if (hasBooking) count++;
     if (hasDeals) count++;
+    if (!includeEvents) count++;
     if (supportsDelivery) count++;
     if (supportsPickup) count++;
     if (supportsDineIn) count++;
@@ -98,6 +102,7 @@ class HomeFilterState {
     bool? hasRentals,
     bool? hasBooking,
     bool? hasDeals,
+    bool? includeEvents,
     bool? supportsDelivery,
     bool? supportsPickup,
     bool? supportsDineIn,
@@ -119,6 +124,7 @@ class HomeFilterState {
       hasRentals: hasRentals ?? this.hasRentals,
       hasBooking: hasBooking ?? this.hasBooking,
       hasDeals: hasDeals ?? this.hasDeals,
+      includeEvents: includeEvents ?? this.includeEvents,
       supportsDelivery: supportsDelivery ?? this.supportsDelivery,
       supportsPickup: supportsPickup ?? this.supportsPickup,
       supportsDineIn: supportsDineIn ?? this.supportsDineIn,
@@ -145,6 +151,7 @@ class HomeFilterState {
       'hasRentals': hasRentals,
       'hasBooking': hasBooking,
       'hasDeals': hasDeals,
+      'includeEvents': includeEvents,
       'supportsDelivery': supportsDelivery,
       'supportsPickup': supportsPickup,
       'supportsDineIn': supportsDineIn,
@@ -180,6 +187,7 @@ class HomeFilterState {
       hasRentals: json['hasRentals'] ?? false,
       hasBooking: json['hasBooking'] ?? false,
       hasDeals: json['hasDeals'] ?? false,
+      includeEvents: json['includeEvents'] ?? true,
       supportsDelivery: json['supportsDelivery'] ?? false,
       supportsPickup: json['supportsPickup'] ?? false,
       supportsDineIn: json['supportsDineIn'] ?? false,

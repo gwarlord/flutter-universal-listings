@@ -17,13 +17,13 @@ class CategoriesListState extends HomeState {
 }
 
 class ListingsListState extends HomeState {
-  List<ListingModel?> listingsWithAds;
+  List<FeedItem?> listingsWithAds;
 
   ListingsListState({required this.listingsWithAds});
 }
 
 class FiltersAppliedState extends HomeState {
-  List<ListingModel?> listingsWithAds;
+  List<FeedItem?> listingsWithAds;
   HomeFilterState filters;
 
   FiltersAppliedState({required this.listingsWithAds, required this.filters});

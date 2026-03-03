@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:uuid/uuid.dart';
@@ -8,6 +9,9 @@ import 'package:visibility_detector/visibility_detector.dart';
 
 class AdsUtils {
   static Widget adsContainer() {
+    if (kIsWeb) {
+      return const SizedBox.shrink();
+    }
     return const SizedBox(
       //You Can Set Container Height
       height: 350,
@@ -24,16 +28,33 @@ class NativeAdWidget extends StatefulWidget {
 }
 
 class NativeAdState extends State<NativeAdWidget> {
-  late NativeAd _nativeAd;
+  NativeAd? _nativeAd;
   final Completer<NativeAd> nativeAdCompleter = Completer<NativeAd>();
 
   late final Key key;
   bool visible = false;
 
+  bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
   @override
   void initState() {
     super.initState();
     key = Key(const Uuid().v4());
+
+    if (kIsWeb) {
+      nativeAdCompleter.completeError(
+        Exception('Native ads are not supported on web.'),
+      );
+      return;
+    }
+
+    if (_isIOS && kDebugMode) {
+      nativeAdCompleter.completeError(
+        Exception('Native ads are disabled on iOS debug to reduce memory pressure.'),
+      );
+      return;
+    }
+
     MobileAds.instance.updateRequestConfiguration(RequestConfiguration(
         testDeviceIds: ['A667B3D01D8435D19CD3D433B706F7D0']));
     _nativeAd = NativeAd(
@@ -55,13 +76,21 @@ class NativeAdState extends State<NativeAdWidget> {
         onAdClosed: (Ad ad) => debugPrint('$NativeAd onAdClosed.'),
       ),
     );
-    Future<void>.delayed(const Duration(seconds: 1), () => _nativeAd.load());
+    Future<void>.delayed(const Duration(seconds: 1), () {
+      try {
+        _nativeAd?.load();
+      } catch (e) {
+        if (!nativeAdCompleter.isCompleted) {
+          nativeAdCompleter.completeError(e);
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     super.dispose();
-    _nativeAd.dispose();
+    _nativeAd?.dispose();
   }
 
   @override
@@ -91,7 +120,7 @@ class NativeAdState extends State<NativeAdWidget> {
                 break;
               case ConnectionState.done:
                 if (snapshot.hasData) {
-                  child = AdWidget(ad: _nativeAd);
+                  child = AdWidget(ad: _nativeAd!);
                 } else {
                   child = Center(child: Text('Error loading $NativeAd'.tr()));
                 }

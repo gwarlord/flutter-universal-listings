@@ -11,7 +11,6 @@ import 'package:video_player/video_player.dart';
 import 'package:intl/intl.dart';
 import 'share_ad_widget.dart';
 import 'ad_upload_screen.dart';
-import 'deal_detail_screen.dart';
 import 'package:caribtap/listings/utils/caribbean_countries.dart';
 
 // Helper function to convert country code to flag emoji
@@ -35,12 +34,14 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
   late PageController _pageController;
   Timer? _autoScrollTimer;
   bool _isUserScrolling = false;
+  int _currentIndex = 0;
   List<DealAdModel> _currentAds = []; // Added to store the ads
   StreamSubscription<List<DealAdModel>>? _adsSubscription; // Added subscription
 
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
     
     // Subscribe to the stream to get ads and start auto-scroll
@@ -48,37 +49,47 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
       if (mounted) {
         setState(() {
           _currentAds = ads;
-          _startAutoScroll(); // Start auto-scroll once ads are available
+          if (_currentAds.isNotEmpty && _currentIndex >= _currentAds.length) {
+            _currentIndex = 0;
+          }
         });
+        _startAutoScroll(); // Start auto-scroll once ads are available
       }
     });
   }
 
   void _startAutoScroll() {
-    _autoScrollTimer?.cancel(); // Cancel any existing timer
-    _autoScrollTimer = Timer.periodic(const Duration(seconds: 7), (timer) {
-      if (_isUserScrolling || _currentAds.isEmpty) return; // Don't auto-scroll if user is interacting or no ads
+    _scheduleCurrentAdAdvance();
+  }
 
-      if (_pageController.hasClients) {
-        final currentPage = _pageController.page ?? 0;
-        final totalPages = _currentAds.length; // Use the stored ads
+  void _scheduleCurrentAdAdvance() {
+    _autoScrollTimer?.cancel();
 
-        if (totalPages == 0) return; // No ads to scroll
+    if (_isUserScrolling || _currentAds.isEmpty || !_pageController.hasClients) {
+      return;
+    }
 
-        int nextPage = (currentPage.toInt() + 1) % totalPages; // Explicit toInt for safety
+    final currentAd = _currentAds[_currentIndex.clamp(0, _currentAds.length - 1)];
+    if (currentAd.mediaType == 'video') {
+      return;
+    }
 
-        // Add a short delay before scrolling
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (_pageController.hasClients && mounted) {
-            _pageController.animateToPage(
-              nextPage,
-              duration: const Duration(milliseconds: 1000),
-              curve: Curves.easeOut,
-            );
-          }
-        });
-      }
+    _autoScrollTimer = Timer(const Duration(seconds: 3), () {
+      _goToNextPage();
     });
+  }
+
+  void _goToNextPage() {
+    if (_isUserScrolling || _currentAds.isEmpty || !_pageController.hasClients || !mounted) {
+      return;
+    }
+
+    final nextPage = (_currentIndex + 1) % _currentAds.length;
+    _pageController.animateToPage(
+      nextPage,
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOut,
+    );
   }
 
   void _stopAutoScroll() {
@@ -106,27 +117,18 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
       ),
       body: NotificationListener<ScrollNotification>(
         onNotification: (ScrollNotification notification) {
-          if (notification is UserScrollNotification) {
-            if (notification.metrics.axisDirection == AxisDirection.down ||
-                notification.metrics.axisDirection == AxisDirection.up) {
-              // User started scrolling vertically
-              if (notification.depth == 0) { // Only listen to the main scrollable
-                _isUserScrolling = true;
-                _stopAutoScroll();
-              }
-            }
-            // Corrected: Only check extentAfter for reaching the end
-            if (notification.metrics.extentAfter == 0 || notification.metrics.extentBefore == 0) { 
-              // User stopped scrolling (or reached end/beginning), resume auto-scroll after a delay
-              if (_isUserScrolling && notification.depth == 0) {
-                _isUserScrolling = false;
-                Future.delayed(const Duration(seconds: 3), () {
-                  if (mounted && !_isUserScrolling) {
-                    _startAutoScroll();
-                  }
-                });
-              }
-            }
+          if (notification.depth != 0) {
+            return false;
+          }
+
+          if (notification is ScrollStartNotification && notification.dragDetails != null) {
+            _isUserScrolling = true;
+            _stopAutoScroll();
+          }
+
+          if (notification is ScrollEndNotification) {
+            _isUserScrolling = false;
+            _startAutoScroll();
           }
           return false;
         },
@@ -148,10 +150,20 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
               scrollDirection: Axis.vertical,
               itemCount: _currentAds.length, // Use _currentAds.length
               controller: _pageController,
+              onPageChanged: (index) {
+                _currentIndex = index;
+                _startAutoScroll();
+              },
               itemBuilder: (context, index) {
                 return DealFeedItem(
                   ad: _currentAds[index], // Use _currentAds[index]
                   currentUser: widget.currentUser,
+                  isActive: index == _currentIndex,
+                  onVideoCompleted: () {
+                    if (index == _currentIndex && !_isUserScrolling) {
+                      _goToNextPage();
+                    }
+                  },
                 );
               },
             );
@@ -165,7 +177,16 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
 class DealFeedItem extends StatefulWidget {
   final DealAdModel ad;
   final ListingsUser? currentUser;
-  const DealFeedItem({Key? key, required this.ad, this.currentUser}) : super(key: key);
+  final bool isActive;
+  final VoidCallback? onVideoCompleted;
+
+  const DealFeedItem({
+    Key? key,
+    required this.ad,
+    this.currentUser,
+    this.isActive = false,
+    this.onVideoCompleted,
+  }) : super(key: key);
 
   @override
   State<DealFeedItem> createState() => _DealFeedItemState();
@@ -176,14 +197,11 @@ class _DealFeedItemState extends State<DealFeedItem> {
   bool _isInitialized = false;
   bool _isMuted = true;
   bool _isExpanded = false;
-  late DealAdService _dealAdService;
-  bool _isClaimed = false;
-  bool _isClaimLoading = false;
+  bool _hasReportedVideoCompletion = false;
 
   @override
   void initState() {
     super.initState();
-    _dealAdService = DealAdService();
     
     if (widget.ad.mediaType == 'video') {
       _videoController = VideoPlayerController.networkUrl(
@@ -193,72 +211,53 @@ class _DealFeedItemState extends State<DealFeedItem> {
         ..initialize().then((_) {
           if (mounted) {
             setState(() => _isInitialized = true);
-            _videoController!.setLooping(true);
+            _videoController!.addListener(_onVideoStateChanged);
+            _videoController!.setLooping(false);
             _videoController!.setVolume(0);
-            _videoController!.play();
+            if (widget.isActive) {
+              _hasReportedVideoCompletion = false;
+              _videoController!.seekTo(Duration.zero);
+              _videoController!.play();
+            }
           }
         });
     }
 
-    // Check if user is signed in and load claimed status
-    if (widget.currentUser != null) {
-      _checkClaimedStatus();
-    }
   }
 
-  Future<void> _checkClaimedStatus() async {
-    if (!mounted) return;
-    try {
-      final isClaimed = await _dealAdService.hasUserClaimedDeal(
-        widget.ad.id,
-        widget.currentUser!.userID,
-      );
-      if (mounted) {
-        setState(() => _isClaimed = isClaimed);
+  @override
+  void didUpdateWidget(covariant DealFeedItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (_videoController != null && _isInitialized) {
+      if (!oldWidget.isActive && widget.isActive) {
+        _hasReportedVideoCompletion = false;
+        _videoController!.seekTo(Duration.zero);
+        _videoController!.play();
+      } else if (oldWidget.isActive && !widget.isActive) {
+        _videoController!.pause();
       }
-    } catch (e) {
-      print('Error checking claimed status: $e');
     }
   }
 
-  Future<void> _claimDeal() async {
-    if (widget.currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please sign in to claim deals')),
-      );
+  void _onVideoStateChanged() {
+    if (!mounted || !widget.isActive || _videoController == null || !_videoController!.value.isInitialized) {
       return;
     }
 
-    setState(() => _isClaimLoading = true);
-    try {
-      final success = await _dealAdService.claimDeal(
-        widget.ad.id,
-        widget.currentUser!.userID,
-      );
+    final value = _videoController!.value;
+    if (value.duration == Duration.zero) return;
 
-      if (mounted) {
-        setState(() => _isClaimLoading = false);
-        if (success) {
-          setState(() => _isClaimed = true);
-          push(context, DealDetailScreen(deal: widget.ad, currentUser: widget.currentUser!));
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Redemption limit reached or already claimed')),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isClaimLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error claiming deal: $e')),
-        );
-      }
+    final hasReachedEnd = value.position >= (value.duration - const Duration(milliseconds: 150));
+    if (hasReachedEnd && !_hasReportedVideoCompletion) {
+      _hasReportedVideoCompletion = true;
+      widget.onVideoCompleted?.call();
     }
   }
 
   @override
   void dispose() {
+    _videoController?.removeListener(_onVideoStateChanged);
     _videoController?.dispose();
     super.dispose();
   }
@@ -306,13 +305,14 @@ class _DealFeedItemState extends State<DealFeedItem> {
   Widget build(BuildContext context) {
     final ad = widget.ad;
     final size = MediaQuery.of(context).size;
+    final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+    final cacheWidth = (size.width * devicePixelRatio).round();
+    final cacheHeight = (size.height * devicePixelRatio).round();
+    final blurredCacheWidth = (cacheWidth / 2).round();
+    final blurredCacheHeight = (cacheHeight / 2).round();
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final topPadding = MediaQuery.of(context).padding.top;
     
-    // Check if current user is the owner or an admin
-    final bool isOwner = widget.currentUser != null && 
-        (widget.currentUser!.userID == ad.listerId || widget.currentUser!.isAdmin);
-
     return SizedBox(
       width: size.width,
       height: size.height,
@@ -336,7 +336,13 @@ class _DealFeedItemState extends State<DealFeedItem> {
                     : Container(color: Colors.black))
                 : ImageFiltered(
                     imageFilter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                    child: Image.network(ad.mediaUrl, fit: BoxFit.cover),
+                    child: Image.network(
+                      ad.mediaUrl,
+                      fit: BoxFit.cover,
+                      cacheWidth: blurredCacheWidth,
+                      cacheHeight: blurredCacheHeight,
+                      filterQuality: FilterQuality.low,
+                    ),
                   ),
           ),
 
@@ -350,7 +356,12 @@ class _DealFeedItemState extends State<DealFeedItem> {
                           child: VideoPlayer(_videoController!),
                         )
                       : const CircularProgressIndicator(color: Colors.white))
-                  : Image.network(ad.mediaUrl, fit: BoxFit.contain),
+                  : Image.network(
+                      ad.mediaUrl,
+                      fit: BoxFit.contain,
+                      cacheWidth: cacheWidth,
+                      cacheHeight: cacheHeight,
+                    ),
             ),
           ),
 
@@ -408,27 +419,6 @@ class _DealFeedItemState extends State<DealFeedItem> {
                   ),
                   const SizedBox(height: 12),
                 ],
-                // Claim button for non-owners
-                if (!isOwner && widget.currentUser != null && !_isClaimed && !ad.isExpired && !ad.isSoldOut)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Color(colorPrimary).withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: IconButton(
-                      icon: _isClaimLoading
-                          ? const SizedBox(
-                        width: 28,
-                        height: 28,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
-                        ),
-                      )
-                          : const Icon(Icons.check_circle, color: Colors.white, size: 28),
-                      onPressed: _isClaimLoading ? null : _claimDeal,
-                    ),
-                  ),
               ],
             ),
           ),

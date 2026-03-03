@@ -32,3 +32,6 @@ Podfile.lock
 !default.mode2v3
 !default.pbxuser
 !default.perspectivev3
+
+Flutter/LocalSecrets.xcconfig
+Flutter/LocalSecrets.xcconfig.example

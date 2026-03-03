@@ -78,11 +78,10 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
               debugPrint('🔍 onDetect called! (count: $_detectionCount)');
               _onDetect(capture);
             },
-            errorBuilder: (context, error, child) {
+            errorBuilder: (context, error) {
               debugPrint('❌ Scanner error: ${error.errorCode} - ${error.errorDetails?.message}');
               return ScannedFrameWidget(
                 error: error,
-                child: child,
               );
             },
           ),
@@ -181,50 +180,41 @@ class ScannedFrameWidget extends StatelessWidget {
   const ScannedFrameWidget({
     Key? key,
     required this.error,
-    required this.child,
   }) : super(key: key);
 
   final MobileScannerException error;
-  final Widget? child;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        if (child != null) child!,
-        Positioned(
-          bottom: 100,
-          left: 24,
-          right: 24,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.red.shade400,
-              borderRadius: BorderRadius.circular(8),
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.red.shade400,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error, color: Colors.white),
+            const SizedBox(height: 8),
+            Text(
+              error.errorCode.toString(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.error, color: Colors.white),
-                const SizedBox(height: 8),
-                Text(
-                  error.errorCode.toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  error.errorDetails?.message ?? 'Unknown error',
-                  style: const TextStyle(color: Colors.white),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+            const SizedBox(height: 8),
+            Text(
+              error.errorDetails?.message ?? 'Unknown error',
+              style: const TextStyle(color: Colors.white),
+              textAlign: TextAlign.center,
             ),
-          ),
-        )
-      ],
+          ],
+        ),
+      ),
     );
   }
 }

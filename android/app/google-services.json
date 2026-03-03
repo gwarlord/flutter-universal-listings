@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "17296052844-35mnk8niscfijgko7tu8e12lip0377am.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.caribtap.instaflutter.android",
+            "certificate_hash": "2edc5d5e857233914f8335c5d4ee9e09fc8f61f9"
+          }
+        },
+        {
           "client_id": "17296052844-8oe92ople2meneus9fcqto6e4uer22eu.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -27,43 +35,6 @@
           "android_info": {
             "package_name": "com.caribtap.instaflutter.android",
             "certificate_hash": "dd4578d45097ba2ceb74d73b89fa5f16a56fe6ba"
-          }
-        },
-        {
-          "client_id": "17296052844-2f0s8q50mn9uasqo2n0861qo444so0th.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyDwO__qZEr5hqIpd3V1IjJtjFWMVsMM2Zo"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "17296052844-2f0s8q50mn9uasqo2n0861qo444so0th.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:17296052844:android:e2ade16d87ea92fc31fe49",
-        "android_client_info": {
-          "package_name": "com.instaflutter.instaflutter.android"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "17296052844-tms7370hkgarngc9peq06h78kcg80gpm.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.instaflutter.instaflutter.android",
-            "certificate_hash": "0c42c18fa7156cffbc6b854817b6a8d02bc49ce7"
           }
         },
         {

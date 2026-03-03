@@ -1,9 +1,27 @@
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:caribtap/core/model/user.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/listings/model/suspension_info.dart';
+import 'package:flutter/foundation.dart';
+
+String _listingsPlatformLabel() {
+  if (kIsWeb) return 'web';
+
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.iOS:
+      return 'ios';
+    case TargetPlatform.android:
+      return 'android';
+    case TargetPlatform.macOS:
+      return 'macos';
+    case TargetPlatform.windows:
+      return 'windows';
+    case TargetPlatform.linux:
+      return 'linux';
+    case TargetPlatform.fuchsia:
+      return 'fuchsia';
+  }
+}
 
 class ListingsUser extends User {
   bool isAdmin;
@@ -68,7 +86,7 @@ class ListingsUser extends User {
           lastOnlineTimestamp: lastOnlineTimestamp is int
               ? lastOnlineTimestamp
               : Timestamp.now().seconds,
-          appIdentifier: '$appName ${Platform.operatingSystem}',
+          appIdentifier: '$appName ${_listingsPlatformLabel()}',
         );
 
   factory ListingsUser.fromJson(Map<String, dynamic> parsedJson) {

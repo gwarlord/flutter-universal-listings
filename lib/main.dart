@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,12 +9,90 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart' as painting;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:app_links/app_links.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:caribtap/listings/main.dart' as listings_app; // Added alias
 import 'package:caribtap/listings/services/deep_link_service.dart';
 import 'package:caribtap/listings/services/deal_notification_service.dart';
+
+const String _startupStageKey = 'startup_stage';
+const String _startupStageAtKey = 'startup_stage_at';
+const String _startupErrorKey = 'startup_error';
+bool _startupPersistenceReady = false;
+bool _loggedWebImageNoiseSuppression = false;
+
+bool _isIgnorableWebStorageImageError(Object error) {
+  if (!kIsWeb) return false;
+  final text = error.toString();
+  return text.contains('HTTP request failed, statusCode: 0') &&
+      text.contains('firebasestorage.googleapis.com');
+}
+
+const FirebaseOptions _webFirebaseOptions = FirebaseOptions(
+  apiKey: 'AIzaSyD_qHAIpnPymA4X_h0BtJYqxAwk1UG_mTg',
+  authDomain: 'caribtap.firebaseapp.com',
+  projectId: 'caribtap',
+  storageBucket: 'caribtap.firebasestorage.app',
+  messagingSenderId: '17296052844',
+  appId: '1:17296052844:web:e4f14e33763ac26931fe49',
+  measurementId: 'G-GCEVP9HB0B',
+);
+
+Future<void> _initializeFirebaseApp() async {
+  if (Firebase.apps.isNotEmpty) {
+    return;
+  }
+
+  if (kIsWeb) {
+    await Firebase.initializeApp(options: _webFirebaseOptions);
+    return;
+  }
+
+  await Firebase.initializeApp();
+}
+
+Future<void> _setStartupStage(String stage) async {
+  if (!_startupPersistenceReady) return;
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_startupStageKey, stage);
+    await prefs.setString(_startupStageAtKey, DateTime.now().toIso8601String());
+  } catch (e) {
+    print('⚠️ Failed to persist startup stage: $e');
+  }
+}
+
+Future<void> _setStartupError(String source, Object error, [StackTrace? stack]) async {
+  if (!_startupPersistenceReady) return;
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final stackText = stack?.toString() ?? '';
+    final payload = '$source | $error${stackText.isNotEmpty ? '\n$stackText' : ''}';
+    await prefs.setString(_startupErrorKey, payload);
+  } catch (e) {
+    print('⚠️ Failed to persist startup error: $e');
+  }
+}
+
+Future<void> _printPreviousStartupBreadcrumb() async {
+  if (!_startupPersistenceReady) return;
+
+  final prefs = await SharedPreferences.getInstance();
+  final stage = prefs.getString(_startupStageKey);
+  final at = prefs.getString(_startupStageAtKey);
+  final lastError = prefs.getString(_startupErrorKey);
+
+  if (stage != null) {
+    print('🧭 Previous startup stage: $stage${at != null ? ' at $at' : ''}');
+  }
+
+  if (lastError != null && lastError.isNotEmpty) {
+    print('🧨 Previous startup error:\n$lastError');
+  }
+}
 
 // Global navigator key for navigation without context
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -232,7 +312,7 @@ Future<void> _updateBadge(RemoteMessage message) async {
 // Handle background messages
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  await _initializeFirebaseApp();
   await _updateBadge(message);
   print('🔔 [BACKGROUND] Handling background message: ${message.messageId}');
 }
@@ -320,58 +400,117 @@ void _handleNotificationClick(RemoteMessage message) {
   }
 }
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  await dotenv.load(fileName: ".env");
-  await EasyLocalization.ensureInitialized();
-  await Firebase.initializeApp();
-  
-  // Initialize Firebase App Check with proper providers
-  try {
-    await FirebaseAppCheck.instance.activate(
-      androidProvider: kDebugMode 
-          ? AndroidProvider.debug 
-          : AndroidProvider.playIntegrity,
-      appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
-      webProvider: kDebugMode ? ReCaptchaV3Provider('6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI') : ReCaptchaV3Provider('6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'),
-    );
-    print('✅ Firebase App Check activated successfully');
-    
-    // Enable token auto-refresh for better token availability
-    await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
-    print('✅ App Check token auto-refresh enabled');
+Future<String?> _getFcmTokenSafely() async {
+  final messaging = FirebaseMessaging.instance;
 
-    FirebaseAppCheck.instance.onTokenChange.listen((token) {
-      print('🔐 AppCheck Token: $token');
-    });
-  } catch (e) {
-    // App Check failure should not block app startup
-    print('⚠️ Firebase App Check activation error: $e');
-    print('💡 In debug mode, if App Check fails:');
-    print('   - Make sure you are on a real device or properly configured emulator');
-    print('   - For Android emulator: The app may work despite the error');
-    print('   - For iOS simulator: SafetyNet attestation is not available');
-    print('   - The app will continue with reduced security');
+  if (defaultTargetPlatform == TargetPlatform.iOS) {
+    String? apnsToken = await messaging.getAPNSToken();
+    int attempts = 0;
+
+    while (apnsToken == null && attempts < 10) {
+      await Future.delayed(const Duration(seconds: 1));
+      apnsToken = await messaging.getAPNSToken();
+      attempts++;
+    }
+
+    if (apnsToken == null) {
+      print('⚠️ [FCM] APNS token not available yet. Skipping initial FCM token fetch.');
+      return null;
+    }
   }
 
-  // Initialize deal notification service
+  try {
+    return await messaging.getToken();
+  } catch (e) {
+    print('⚠️ [FCM] Failed to fetch FCM token at startup: $e');
+    return null;
+  }
+}
+
+Future<void> _persistPushTokenIfPossible(String? token) async {
+  if (token == null || token.isEmpty) return;
+
+  final currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser == null) {
+    print('ℹ️ [FCM] Token available, but no signed-in user to persist it for yet.');
+    return;
+  }
+
+  try {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .set({'pushToken': token}, SetOptions(merge: true));
+    print('✅ [FCM] pushToken saved for user: ${currentUser.uid}');
+  } catch (e) {
+    print('⚠️ [FCM] Failed to persist pushToken: $e');
+  }
+}
+
+void _installGlobalCrashLogging() {
+  FlutterError.onError = (FlutterErrorDetails details) {
+    if (_isIgnorableWebStorageImageError(details.exception)) {
+      if (!_loggedWebImageNoiseSuppression) {
+        _loggedWebImageNoiseSuppression = true;
+        print('ℹ️ Suppressing repetitive web image fetch errors from Firebase Storage (statusCode: 0).');
+      }
+      return;
+    }
+
+    FlutterError.presentError(details);
+    print('💥 [FlutterError] ${details.exceptionAsString()}');
+    if (details.stack != null) {
+      print(details.stack);
+    }
+    unawaited(_setStartupError(
+      'FlutterError',
+      details.exception,
+      details.stack,
+    ));
+  };
+
+  PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+    if (_isIgnorableWebStorageImageError(error)) {
+      if (!_loggedWebImageNoiseSuppression) {
+        _loggedWebImageNoiseSuppression = true;
+        print('ℹ️ Suppressing repetitive web image fetch errors from Firebase Storage (statusCode: 0).');
+      }
+      return true;
+    }
+
+    print('💥 [PlatformDispatcher] $error');
+    print(stack);
+    unawaited(_setStartupError('PlatformDispatcher', error, stack));
+    return false;
+  };
+}
+
+Future<void> _initializePostLaunchServices() async {
+  await _setStartupStage('post_launch_init_start');
+
+  final isIosDebug =
+      defaultTargetPlatform == TargetPlatform.iOS && kDebugMode;
+  if (isIosDebug) {
+    print('ℹ️ iOS debug lightweight startup enabled: skipping heavy post-launch services.');
+    await _setStartupStage('post_launch_init_skipped_ios_debug');
+    return;
+  }
+
+  await _setStartupStage('app_check_already_initialized');
+
   try {
     await DealNotificationService.initializeNotifications();
     print('✅ Deal notification service initialized');
+    await _setStartupStage('deal_notifications_initialized');
   } catch (e) {
     print('⚠️ Deal notification service initialization error: $e');
+    await _setStartupError('DealNotificationService.initializeNotifications', e);
   }
 
-  // Handle deep links for Firebase email verification, listings, and pro docs
   final appLinks = AppLinks();
-  
-  // Listen for incoming links while app is running
   appLinks.uriLinkStream.listen((uri) {
     print('🔗 Deep link received: $uri');
     final url = uri.toString();
-    
-    // Check if it's a listing or pro doc deep link
     if (DeepLinkService.isProDocDeepLink(url)) {
       _handleProDocDeepLink(url);
     } else if (DeepLinkService.isListingManageDeepLink(url)) {
@@ -379,21 +518,17 @@ void main() async {
     } else if (DeepLinkService.isListingDeepLink(url)) {
       _handleListingDeepLink(url);
     } else {
-      // Handle other deep links (e.g., email verification)
       _handleFirebaseEmailVerificationLink(url);
     }
   }, onError: (err) {
     print('❌ Deep link error: $err');
   });
 
-  // Handle initial link when app is launched from a terminated state
   try {
     final initialUri = await appLinks.getInitialAppLink();
     if (initialUri != null) {
       print('🔗 Initial deep link: $initialUri');
       final url = initialUri.toString();
-      
-      // Check if it's a listing or pro doc deep link
       if (DeepLinkService.isProDocDeepLink(url)) {
         await _handleProDocDeepLink(url);
       } else if (DeepLinkService.isListingManageDeepLink(url)) {
@@ -401,7 +536,6 @@ void main() async {
       } else if (DeepLinkService.isListingDeepLink(url)) {
         await _handleListingDeepLink(url);
       } else {
-        // Handle other deep links (e.g., email verification)
         await _handleFirebaseEmailVerificationLink(url);
       }
     }
@@ -409,17 +543,14 @@ void main() async {
     print('❌ Error getting initial link: $err');
   }
 
-  // Initialize local notifications
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
-  
   const DarwinInitializationSettings initializationSettingsIOS =
       DarwinInitializationSettings(
     requestAlertPermission: true,
     requestBadgePermission: true,
     requestSoundPermission: true,
   );
-
   const InitializationSettings initializationSettings = InitializationSettings(
     android: initializationSettingsAndroid,
     iOS: initializationSettingsIOS,
@@ -429,56 +560,151 @@ void main() async {
     initializationSettings,
     onDidReceiveNotificationResponse: (NotificationResponse response) {
       print('🔔 Notification tapped: ${response.payload}');
-      // Custom payload handling if needed
     },
   );
 
-  // Create Android notification channels
   final androidImplementation = flutterLocalNotificationsPlugin
       .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
   await androidImplementation?.createNotificationChannel(chatChannel);
   await androidImplementation?.createNotificationChannel(ordersChannel);
   await androidImplementation?.createNotificationChannel(rentalBookingsChannel);
   await androidImplementation?.createNotificationChannel(bookingRemindersChannel);
+  await _setStartupStage('local_notifications_ready');
 
-
-  // Set up FCM
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  
-  // Handle notification clicks while app is in background or terminated
   FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationClick);
 
-  // Check if app was launched from a notification (terminated state)
-  RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
   if (initialMessage != null) {
     _handleNotificationClick(initialMessage);
   }
-  
-  // Handle foreground messages
+
   FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
     print('🔔 [FOREGROUND] Got a message whilst in the foreground!');
     await _updateBadge(message);
-    // If it's a notification message, don't show local notification manually
-    // because Firebase shows it automatically if correctly configured.
-    // However, for data-only or specific behavior:
     await _showLocalNotification(message);
   });
-  
-  // Request permissions
+
   await FirebaseMessaging.instance.requestPermission(
     alert: true,
     badge: true,
     sound: true,
   );
 
-  String? fcmToken = await FirebaseMessaging.instance.getToken();
+  FirebaseMessaging.instance.onTokenRefresh.listen((token) {
+    print('🔄 [FCM] Refreshed token: $token');
+    _persistPushTokenIfPossible(token);
+  }, onError: (error) {
+    print('⚠️ [FCM] Token refresh listener error: $error');
+  });
+
+  final fcmToken = await _getFcmTokenSafely();
   print('🔔 [FCM] Token: $fcmToken');
+  await _persistPushTokenIfPossible(fcmToken);
+  await _setStartupStage('fcm_ready');
 
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
       overlays: [SystemUiOverlay.bottom, SystemUiOverlay.top]);
-  
-  EasyLocalization.logger.enableBuildModes = [];
-  await MobileAds.instance.initialize();
 
-  runApp(listings_app.runListings()); // Called with alias
+  EasyLocalization.logger.enableBuildModes = [];
+  if (!kIsWeb) {
+    await MobileAds.instance.initialize();
+    await _setStartupStage('mobile_ads_initialized');
+  } else {
+    await _setStartupStage('mobile_ads_skipped_web');
+  }
+  await _setStartupStage('post_launch_init_done');
+}
+
+Future<void> _initializeAppCheckEarly() async {
+  if (!kIsWeb) {
+    try {
+      await FirebaseAppCheck.instance.activate(
+        androidProvider: kDebugMode
+            ? AndroidProvider.debug
+            : AndroidProvider.playIntegrity,
+        appleProvider: kDebugMode
+            ? AppleProvider.debug
+            : AppleProvider.deviceCheck,
+      );
+      await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
+      final token = await FirebaseAppCheck.instance.getToken(true);
+      print('✅ Firebase App Check activated early');
+      if (kDebugMode) {
+        print('🔐 AppCheck token fetched early (debug): $token');
+      } else {
+        print('🔐 AppCheck token fetched early');
+      }
+      FirebaseAppCheck.instance.onTokenChange.listen((token) {
+        print('🔐 AppCheck Token changed: $token');
+      });
+      await _setStartupStage('app_check_initialized');
+    } catch (e) {
+      print('⚠️ Firebase App Check early activation error: $e');
+      await _setStartupError('FirebaseAppCheck.activate.early', e);
+    }
+    return;
+  }
+
+  final webRecaptchaSiteKey =
+      (dotenv.env['WEB_RECAPTCHA_SITE_KEY'] ?? '').trim();
+  if (webRecaptchaSiteKey.isNotEmpty) {
+    try {
+      await FirebaseAppCheck.instance.activate(
+        webProvider: ReCaptchaV3Provider(webRecaptchaSiteKey),
+      );
+      await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
+      print('✅ Firebase App Check activated early (web)');
+      await _setStartupStage('app_check_initialized_web');
+    } catch (e) {
+      print('⚠️ Firebase App Check early activation error (web): $e');
+      await _setStartupError('FirebaseAppCheck.activate.web.early', e);
+    }
+  } else {
+    print('ℹ️ WEB_RECAPTCHA_SITE_KEY not set. Skipping App Check on web.');
+    await _setStartupStage('app_check_skipped_web');
+  }
+}
+
+void main() async {
+  _installGlobalCrashLogging();
+
+  await (runZonedGuarded<Future<void>>(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    _startupPersistenceReady = true;
+    await _initializeFirebaseApp();
+
+    await _setStartupStage('main_entered');
+    await _setStartupStage('binding_ready');
+    await _printPreviousStartupBreadcrumb();
+
+    final isIOS = defaultTargetPlatform == TargetPlatform.iOS;
+    painting.imageCache.maximumSize = isIOS ? (kDebugMode ? 50 : 80) : 200;
+    painting.imageCache.maximumSizeBytes = isIOS
+      ? (kDebugMode ? 20 << 20 : 60 << 20)
+        : (kDebugMode ? 60 << 20 : 100 << 20);
+  
+  try {
+    await dotenv.load(fileName: ".env");
+    await _setStartupStage('dotenv_loaded');
+  } catch (e) {
+    print('⚠️ Failed to load .env at startup: $e');
+    await _setStartupError('dotenv.load', e);
+  }
+  await _initializeAppCheckEarly();
+  await EasyLocalization.ensureInitialized();
+  await _setStartupStage('localization_ready');
+  await _setStartupStage('firebase_initialized');
+
+    runApp(listings_app.runListings()); // Called with alias
+    await _setStartupStage('run_app_called');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_setStartupStage('first_frame_rendered'));
+    });
+    unawaited(_initializePostLaunchServices());
+  }, (Object error, StackTrace stack) {
+    print('💥 [runZonedGuarded] Uncaught async startup error: $error');
+    print(stack);
+    unawaited(_setStartupError('runZonedGuarded', error, stack));
+  }) ?? Future<void>.value());
 }

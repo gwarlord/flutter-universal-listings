@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:easy_localization/easy_localization.dart' as easy;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -41,7 +42,9 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
           PhoneNumberInputBloc(authenticationRepository: authApiManager),
       child: Builder(
         builder: (context) {
-          if (Platform.isAndroid && !widget.isLogin) {
+          if (!kIsWeb &&
+              defaultTargetPlatform == TargetPlatform.android &&
+              !widget.isLogin) {
             context.read<PhoneNumberInputBloc>().add(RetrieveLostDataEvent());
           }
           return MultiBlocListener(

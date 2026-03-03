@@ -25,13 +25,21 @@ class StoreService {
         .collection('listings')
         .doc(listingId)
         .collection('catalog_items')
-        .orderBy('sortOrder')
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
+      final items = snapshot.docs
           .map((doc) => CatalogItem.fromJson(doc.data()))
-          .toList();
+          .toList()
+        ..sort((a, b) {
+          final sortCompare = a.sortOrder.compareTo(b.sortOrder);
+          if (sortCompare != 0) return sortCompare;
+
+          final aCreatedAt = a.createdAt?.millisecondsSinceEpoch ?? 0;
+          final bCreatedAt = b.createdAt?.millisecondsSinceEpoch ?? 0;
+          return bCreatedAt.compareTo(aCreatedAt);
+        });
+
+      return items;
     });
   }
 

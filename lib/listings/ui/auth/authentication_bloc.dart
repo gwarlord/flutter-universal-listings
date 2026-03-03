@@ -1,8 +1,7 @@
-import 'dart:io';
-
 import 'package:bloc/bloc.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
+import 'package:flutter/foundation.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/ui/auth/api/authentication_repository.dart';
@@ -24,7 +23,7 @@ class AuthenticationBloc
     on<CheckFirstRunEvent>((event, emit) async {
       prefs = await SharedPreferences.getInstance();
       finishedOnBoarding = prefs.getBool(finishedOnBoardingConst) ?? false;
-      if(Platform.isIOS){
+      if (!kIsWeb) {
         await authenticationRepository.setupPushNotification();
       }
       if (!finishedOnBoarding) {

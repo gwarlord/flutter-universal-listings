@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/listings/model/deal_ad_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/services/deal_ad_service.dart';
-import 'package:caribtap/listings/services/redemption_service.dart';
 import 'package:caribtap/listings/ui/deals/deal_analytics_screen.dart';
-import 'package:caribtap/listings/ui/deals/redemption_cubit.dart';
 import 'package:video_player/video_player.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DealDetailScreen extends StatefulWidget {
   final DealAdModel deal;
@@ -60,14 +56,9 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => RedemptionCubit(RedemptionService())
-        ..checkRedemptionStatus(widget.deal.id),
-      child: Scaffold(
-        appBar: _buildAppBar(context),
-        body: _buildBody(context),
-        bottomNavigationBar: _buildBottomButton(widget.deal),
-      ),
+    return Scaffold(
+      appBar: _buildAppBar(context),
+      body: _buildBody(context),
     );
   }
 
@@ -102,215 +93,40 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
     final isSoldOut = widget.deal.isSoldOut;
     final timeRemaining = widget.deal.getTimeRemainingString();
 
-    return BlocListener<RedemptionCubit, RedemptionState>(
-      listener: (context, state) {
-        if (state is RedemptionSuccess) {
-          if(Navigator.of(context).canPop()) {
-            Navigator.of(context).pop(); // Close loading dialog
-          }
-          _showRedemptionPanel(context, widget.deal);
-        } else if (state is RedemptionFailure) {
-           if(Navigator.of(context).canPop()) {
-            Navigator.of(context).pop(); // Close loading dialog
-          }
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.error)),
-          );
-        } else if (state is RedemptionInProgress) {
-          showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (BuildContext context) {
-                return const Dialog(child: Padding(
-                  padding: EdgeInsets.all(20.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(width: 20),
-                      Text("Redeeming..."),
-                    ],
-                  ),
-                ));
-              });
-        }
-      },
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Media
-            _buildMediaWidget(),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Status badges
-                  _buildStatusBadges(isExpired, isSoldOut),
-                  const SizedBox(height: 12),
-                  // Title
-                  Text(
-                    widget.deal.caption,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Time remaining
-                  if (!isExpired)
-                    _buildTimeRemaining(timeRemaining, primaryColor),
-                  const SizedBox(height: 16),
-                  _buildAvailability(),
-                   const SizedBox(height: 16),
-                  // Additional info
-                  _buildInfoContainer(isDark)
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildBottomButton(DealAdModel deal) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: BlocBuilder<RedemptionCubit, RedemptionState>(
-        builder: (context, state) {
-          // Priority 1: Deal is expired
-          if (deal.isExpired) {
-            return _buildDisabledButton("Deal Expired");
-          }
-          if (deal.isSoldOut) {
-            return _buildDisabledButton("Sold Out");
-          }
-
-          // Priority 2: User has already redeemed
-          if (state is AlreadyRedeemed) {
-             final dateString = DateFormat('MMM d, yyyy').format((state.redemption.redeemedAt as Timestamp).toDate());
-            return Column(
-              mainAxisSize: MainAxisSize.min,
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Media
+          _buildMediaWidget(),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildDisabledButton("Already Redeemed"),
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text("Redeemed on $dateString"),
-                ),
-              ],
-            );
-          }
-          
-          if (state is RedemptionStatusLoading || state is RedemptionInitial) {
-             return _buildDisabledButton("Checking Status...");
-          }
-    
-          // Priority 3: Deal is redeemable
-          return ElevatedButton(
-            onPressed: () => _onRedeemTapped(context, deal),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 48),
-              backgroundColor: Color(colorPrimary),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text(
-                  "Redeem Offer",
-                  style: TextStyle(
+                // Status badges
+                _buildStatusBadges(isExpired, isSoldOut),
+                const SizedBox(height: 12),
+                // Title
+                Text(
+                  widget.deal.caption,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
                   ),
                 ),
-          );
-        },
-      ),
-    );
-  }
-  
-  Widget _buildDisabledButton(String text) {
-    return ElevatedButton(
-      onPressed: null,
-      style: ElevatedButton.styleFrom(
-        minimumSize: const Size(double.infinity, 48),
-        backgroundColor: Colors.grey,
-        foregroundColor: Colors.white,
-      ),
-      child: Text(text),
-    );
-  }
-
-  void _onRedeemTapped(BuildContext context, DealAdModel deal) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text("Redeem Offer?"),
-        content: const Text("Show your device to the merchant to redeem this offer."),
-        actions: [
-          TextButton(
-            child: const Text("Cancel"),
-            onPressed: () => Navigator.of(dialogContext).pop(),
-          ),
-          TextButton(
-            child: const Text("Redeem Now"),
-            onPressed: () {
-              Navigator.of(dialogContext).pop(); // Close confirm dialog
-              context.read<RedemptionCubit>().redeemDeal(deal.id);
-            },
+                const SizedBox(height: 16),
+                // Time remaining
+                if (!isExpired)
+                  _buildTimeRemaining(timeRemaining, primaryColor),
+                const SizedBox(height: 16),
+                _buildAvailability(),
+                const SizedBox(height: 16),
+                // Additional info
+                _buildInfoContainer(isDark)
+              ],
+            ),
           ),
         ],
-      ),
-    );
-  }
-  
-  void _showRedemptionPanel(BuildContext context, DealAdModel deal) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 60),
-            const SizedBox(height: 16),
-            const Text("Redeemed!", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            Text(deal.caption, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 24),
-            const Text("Show this screen to the merchant for validation."),
-            const SizedBox(height: 24),
-            if (deal.redemptionType == 'PROMO_CODE' && deal.promoCode != null)
-              Container(
-                 padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          deal.promoCode ?? 'N/A',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        const Icon(Icons.copy),
-                      ],
-                    ),
-              ),
-             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(), 
-              child: const Text('Close'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48)
-              ),
-            )
-          ],
-        ),
       ),
     );
   }

@@ -14,10 +14,13 @@ import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/listings/listings_module/add_listing/add_listing_screen.dart';
 import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
 import 'package:caribtap/listings/listings_module/category_listings/category_listings_screen.dart';
+import 'package:caribtap/listings/listings_module/events/create_event_screen.dart';
 import 'package:caribtap/listings/listings_module/home/home_bloc.dart';
+import 'package:caribtap/listings/listings_module/home/widgets/event_home_card.dart';
 import 'package:caribtap/listings/listings_module/home/widgets/home_filter_panel.dart';
 import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
 import 'package:caribtap/listings/model/categories_model.dart';
+import 'package:caribtap/listings/model/feed_item.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/home_filter_state.dart';
@@ -228,7 +231,7 @@ class HomeScreen extends StatefulWidget {
 
 class HomeScreenState extends State<HomeScreen> {
   List<ListingModel> listings = [];
-  List<ListingModel?> listingsWithAds = [];
+  List<FeedItem?> listingsWithAds = [];
   List<CategoriesModel> _categories = [];
   List<ListingModel> _featuredListings = [];
   List<DealAdModel> _dealAds = [];
@@ -385,17 +388,24 @@ class HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  List<ListingModel> _getFilteredListings({LocationScope? locationScope}) {
-    return listings.where((listing) {
+  List<FeedItem> _getFilteredFeedItems({LocationScope? locationScope}) {
+    return listingsWithAds
+        .where((item) => item != null)
+        .cast<FeedItem>()
+        .where((item) {
+      final countryCode = item.type == FeedItemType.listing
+          ? item.listing!.countryCode
+          : item.event!.countryCode;
+
       // Filter by location scope (Caribbean mode shows all Caribbean countries, Local mode shows selected country only)
       if (locationScope != null) {
         final effectiveCountry = locationScope.getEffectiveCountry();
         if (locationScope.mode == LocationScopeMode.local && effectiveCountry != null) {
-          if (listing.countryCode != effectiveCountry) {
+          if (countryCode != effectiveCountry) {
             return false;
           }
         } else if (locationScope.mode == LocationScopeMode.caribbean) {
-          if (!CaribbeanCountries.isAllowedCode(listing.countryCode)) {
+          if (!CaribbeanCountries.isAllowedCode(countryCode)) {
             return false;
           }
         }
@@ -403,16 +413,20 @@ class HomeScreenState extends State<HomeScreen> {
 
       // Filter by search query
       final matchesSearch = _searchQuery.isEmpty ||
-          listing.title.toLowerCase().contains(_searchQuery) ||
-          listing.description.toLowerCase().contains(_searchQuery) ||
-          listing.place.toLowerCase().contains(_searchQuery) ||
-          listing.services.any((service) => 
-            service.name.toLowerCase().contains(_searchQuery) ||
-            service.duration.toLowerCase().contains(_searchQuery));
+          (item.type == FeedItemType.listing
+              ? item.listing!.title.toLowerCase().contains(_searchQuery) ||
+                  item.listing!.description.toLowerCase().contains(_searchQuery) ||
+                  item.listing!.place.toLowerCase().contains(_searchQuery) ||
+                  item.listing!.services.any((service) =>
+                      service.name.toLowerCase().contains(_searchQuery) ||
+                      service.duration.toLowerCase().contains(_searchQuery))
+              : item.event!.title.toLowerCase().contains(_searchQuery) ||
+                  item.event!.description.toLowerCase().contains(_searchQuery) ||
+                  item.event!.venueName.toLowerCase().contains(_searchQuery));
 
       // Filter by country (if countries are selected, listing must be in that list)
       final matchesCountry = _selectedCountryCodes.isEmpty ||
-          _selectedCountryCodes.contains(listing.countryCode);
+          _selectedCountryCodes.contains(countryCode);
 
       return matchesSearch && matchesCountry;
     }).toList();
@@ -490,9 +504,9 @@ class HomeScreenState extends State<HomeScreen> {
     }).toList();
   }
 
-  List<ListingModel?> _getFilteredListingsWithAds({LocationScope? locationScope}) {
-    final filtered = _getFilteredListings(locationScope: locationScope);
-    final result = <ListingModel?>[];
+  List<FeedItem?> _getFilteredListingsWithAds({LocationScope? locationScope}) {
+    final filtered = _getFilteredFeedItems(locationScope: locationScope);
+    final result = <FeedItem?>[];
     
     for (int i = 0; i < filtered.length; i++) {
       if ((result.length + 1) % 5 == 0) {
@@ -591,6 +605,18 @@ class HomeScreenState extends State<HomeScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _openCreateEventScreen() async {
+    final bool? created = await push(
+      context,
+      CreateEventScreen(currentUser: currentUser),
+    );
+
+    if (created == true && mounted) {
+      context.read<HomeBloc>().add(GetListingsEvent());
+      showSnackBar(context, 'Event posted successfully.'.tr());
+    }
   }
 
   String _sortOptionLabel(HomeSortOption option) {
@@ -702,15 +728,19 @@ class HomeScreenState extends State<HomeScreen> {
               loadingListings = false;
 
               listingsWithAds = state.listingsWithAds;
-              final tempList = [...listingsWithAds]..removeWhere((e) => e == null);
-              listings = [...tempList.cast<ListingModel>()];
+              listings = listingsWithAds
+                  .where((e) => e?.type == FeedItemType.listing)
+                  .map((e) => e!.listing!)
+                  .toList();
             } else if (state is FiltersAppliedState) {
               context.read<LoadingCubit>().hideLoading();
               loadingListings = false;
 
               listingsWithAds = state.listingsWithAds;
-              final tempList = [...listingsWithAds]..removeWhere((e) => e == null);
-              listings = [...tempList.cast<ListingModel>()];
+              listings = listingsWithAds
+                  .where((e) => e?.type == FeedItemType.listing)
+                  .map((e) => e!.listing!)
+                  .toList();
               
               setState(() {
                 _currentFilters = state.filters;
@@ -729,9 +759,14 @@ class HomeScreenState extends State<HomeScreen> {
               if (idx != -1) {
                 listings[idx].isFav = state.listing.isFav;
               }
-              final idx2 = listingsWithAds.indexWhere((e) => e?.id == state.listing.id);
+              final idx2 = listingsWithAds.indexWhere(
+                (e) => e?.type == FeedItemType.listing && e?.listing?.id == state.listing.id,
+              );
               if (idx2 != -1) {
-                listingsWithAds[idx2]?.isFav = state.listing.isFav;
+                final existing = listingsWithAds[idx2];
+                if (existing != null && existing.listing != null) {
+                  existing.listing!.isFav = state.listing.isFav;
+                }
               }
             } else if (state is LoadingState) {
               _showAll = false;
@@ -744,8 +779,25 @@ class HomeScreenState extends State<HomeScreen> {
               return const Center(child: CircularProgressIndicator.adaptive());
             }
 
+            final screenWidth = MediaQuery.of(context).size.width;
+            final horizontalPadding = screenWidth >= 1200 ? 24.0 : 16.0;
+            final dealsSectionHeight = screenWidth >= 1200 ? 180.0 : 150.0;
+            final categoriesSectionHeight = screenWidth >= 1200 ? 132.0 : 120.0;
+            final featuredSectionHeight = screenWidth >= 1200 ? 300.0 : 260.0;
+
+            final int listingsCrossAxisCount;
+            if (screenWidth >= 1400) {
+              listingsCrossAxisCount = 5;
+            } else if (screenWidth >= 1120) {
+              listingsCrossAxisCount = 4;
+            } else if (screenWidth >= 820) {
+              listingsCrossAxisCount = 3;
+            } else {
+              listingsCrossAxisCount = 2;
+            }
+
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
@@ -780,7 +832,7 @@ class HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             SizedBox(
-                              height: 150,
+                              height: dealsSectionHeight,
                               child: ListView.builder(
                                 controller: _dealsScrollController,
                                 scrollDirection: Axis.horizontal,
@@ -836,7 +888,7 @@ class HomeScreenState extends State<HomeScreen> {
                             )
                           else
                             SizedBox(
-                              height: 120,
+                              height: categoriesSectionHeight,
                               child: ListView.builder(
                                 controller: _categoryScrollController,
                                 scrollDirection: Axis.horizontal,
@@ -1168,7 +1220,7 @@ class HomeScreenState extends State<HomeScreen> {
                           children: [
                             _buildSectionHeader(title: 'Featured Listings'.tr(), isDark: dark),
                             Container(
-                              height: 260,
+                              height: featuredSectionHeight,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(16),
                                 color: Color(cfg.colorPrimary).withOpacity(dark ? 0.05 : 0.03),
@@ -1226,19 +1278,32 @@ class HomeScreenState extends State<HomeScreen> {
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
                               final item = filteredListingsWithAds[index];
-                              return item == null
-                                  ? AdsUtils.adsContainer()
-                                  : ListingHomeCardWidget(currentUser: currentUser, listing: item);
+                              if (item == null) {
+                                return AdsUtils.adsContainer();
+                              }
+
+                              switch (item.type) {
+                                case FeedItemType.listing:
+                                  return ListingHomeCardWidget(
+                                    currentUser: currentUser,
+                                    listing: item.listing!,
+                                  );
+                                case FeedItemType.event:
+                                  return EventHomeCard(
+                                    event: item.event!,
+                                    userLocation: _currentFilters.userLocation,
+                                  );
+                              }
                             },
                             childCount: filteredListingsWithAds.length > 4
                                 ? (_showAll ? filteredListingsWithAds.length : 4)
                                 : filteredListingsWithAds.length,
                           ),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: listingsCrossAxisCount,
                             mainAxisSpacing: 16,
                             crossAxisSpacing: 16,
-                            childAspectRatio: 0.64, // Increased height
+                            childAspectRatio: screenWidth >= 1120 ? 0.7 : 0.64,
                           ),
                         );
                       },
@@ -1293,10 +1358,14 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildFeaturedCard(ListingModel listing, bool dark) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = screenWidth >= 1200 ? 240.0 : 200.0;
+    final imageHeight = screenWidth >= 1200 ? 150.0 : 130.0;
+
     return GestureDetector(
       onTap: () => push(context, ListingDetailsWrappingWidget(listing: listing, currentUser: currentUser)),
       child: Container(
-        width: 200,
+        width: cardWidth,
         margin: const EdgeInsets.only(right: 16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
@@ -1319,11 +1388,17 @@ class HomeScreenState extends State<HomeScreen> {
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                   child: Image.network(
                     listing.photo,
-                    height: 130,
-                    width: 200,
+                    height: imageHeight,
+                    width: cardWidth,
                     fit: BoxFit.cover,
+                    cacheWidth: (cardWidth * 3).round(),
+                    cacheHeight: (imageHeight * 3).round(),
+                    webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+                    filterQuality: FilterQuality.low,
                     errorBuilder: (ctx, err, st) => Container(
-                      height: 130, width: 200, color: Colors.grey.shade300,
+                      height: imageHeight,
+                      width: cardWidth,
+                      color: Colors.grey.shade300,
                       child: const Icon(Icons.image_not_supported),
                     ),
                   ),
@@ -1464,11 +1539,13 @@ class _DealAdCarouselItemState extends State<DealAdCarouselItem> {
   Widget build(BuildContext context) {
     final ad = widget.ad;
     final thumbUrl = (ad.mediaType == 'image' ? ad.mediaUrl : ad.thumbnailUrl) ?? '';
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = screenWidth >= 1200 ? 220.0 : 180.0;
 
     return GestureDetector(
       onTap: () => push(context, DealsFeedScreen(initialIndex: widget.index, currentUser: widget.currentUser)),
       child: Container(
-        width: 180,
+        width: cardWidth,
         margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
@@ -1490,7 +1567,13 @@ class _DealAdCarouselItemState extends State<DealAdCarouselItem> {
               if (ad.mediaType == 'image')
                 displayImage(ad.mediaUrl)
               else if (thumbUrl.isNotEmpty)
-                Image.network(thumbUrl, fit: BoxFit.cover)
+                Image.network(
+                  thumbUrl,
+                  fit: BoxFit.cover,
+                  cacheWidth: 540,
+                  webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+                  filterQuality: FilterQuality.low,
+                )
               else if (_generatedThumbnail != null)
                 Image.memory(_generatedThumbnail!, fit: BoxFit.cover)
               else
@@ -1564,6 +1647,10 @@ class CategoryHomeCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool dark = isDarkMode(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final iconSize = screenWidth >= 1200 ? 82.0 : 70.0;
+    final labelWidth = screenWidth >= 1200 ? 92.0 : 80.0;
+
     return Padding(
       padding: const EdgeInsets.only(right: 12),
       child: GestureDetector(
@@ -1579,8 +1666,8 @@ class CategoryHomeCardWidget extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 70,
-              height: 70,
+              width: iconSize,
+              height: iconSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: dark ? Colors.grey[900] : Colors.white,
@@ -1594,7 +1681,7 @@ class CategoryHomeCardWidget extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             SizedBox(
-              width: 80,
+              width: labelWidth,
               child: Text(
                 category.title,
                 textAlign: TextAlign.center,

@@ -44,3 +44,6 @@ caribtap-firebase-adminsdk-*.json
 firebase-debug*.log
 firebase-debug - Copy.log
 functions/firebase-debug*.log
+
+# Local debug/auth logs
+web_auth_debug.log

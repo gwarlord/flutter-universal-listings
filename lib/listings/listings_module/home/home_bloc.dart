@@ -1,8 +1,11 @@
 import 'package:bloc/bloc.dart';
 import 'package:caribtap/listings/model/categories_model.dart';
+import 'package:caribtap/listings/model/event_model.dart';
+import 'package:caribtap/listings/model/feed_item.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/home_filter_state.dart';
+import 'package:caribtap/listings/listings_module/api/firebase/events_firebase.dart';
 import 'package:caribtap/listings/listings_module/api/listings_repository.dart';
 import 'package:caribtap/listings/ui/profile/api/profile_repository.dart';
 import 'package:caribtap/listings/utils/listing_filter_helpers.dart';
@@ -15,15 +18,19 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   final ListingsUser currentUser;
   final ListingsRepository listingsRepository;
   final ProfileRepository profileRepository;
+  final EventsFirebaseUtils eventsRepository;
   List<ListingModel> listings = [];
-  List<ListingModel?> listingsWithAds = [];
+  List<FeedItem> feedItems = [];
+  List<FeedItem?> listingsWithAds = [];
   HomeFilterState currentFilters = const HomeFilterState();
 
   HomeBloc({
     required this.currentUser,
     required this.listingsRepository,
     required this.profileRepository,
-  }) : super(HomeInitial()) {
+    EventsFirebaseUtils? eventsRepository,
+  })  : eventsRepository = eventsRepository ?? EventsFirebaseUtils(),
+        super(HomeInitial()) {
     on<GetCategoriesEvent>((event, emit) async {
       emit(LoadingCategoriesState());
       List<CategoriesModel> categories =
@@ -33,23 +40,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     on<GetListingsEvent>((event, emit) async {
       emit(LoadingListingsState());
-      listings = await listingsRepository.getListings(
-          favListingsIDs: currentUser.likedListingsIDs);
-      calculateAdLocation();
+      await _loadUnifiedFeed(filters: currentFilters, includeFiltering: false);
       emit(ListingsListState(listingsWithAds: listingsWithAds));
     });
 
     on<ApplyFiltersEvent>((event, emit) async {
       currentFilters = event.filters;
       emit(LoadingListingsState());
-      
-      // Get all listings first
-      final allListings = await listingsRepository.getListings(
-          favListingsIDs: currentUser.likedListingsIDs);
-      
-      // Apply filters
-      listings = _applyFiltersToListings(allListings, event.filters);
-      calculateAdLocation();
+
+      await _loadUnifiedFeed(filters: event.filters, includeFiltering: true);
       emit(FiltersAppliedState(
         listingsWithAds: listingsWithAds,
         filters: currentFilters,
@@ -59,18 +58,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<ClearFiltersEvent>((event, emit) async {
       currentFilters = const HomeFilterState();
       emit(LoadingListingsState());
-      listings = await listingsRepository.getListings(
-          favListingsIDs: currentUser.likedListingsIDs);
-      calculateAdLocation();
+      await _loadUnifiedFeed(filters: currentFilters, includeFiltering: false);
       emit(ListingsListState(listingsWithAds: listingsWithAds));
     });
 
     on<GetListingsWithFiltersEvent>((event, emit) async {
       emit(LoadingListingsState());
-      final allListings = await listingsRepository.getListings(
-          favListingsIDs: currentUser.likedListingsIDs);
-      listings = _applyFiltersToListings(allListings, event.filters);
-      calculateAdLocation();
+      await _loadUnifiedFeed(filters: event.filters, includeFiltering: true);
       emit(FiltersAppliedState(
         listingsWithAds: listingsWithAds,
         filters: event.filters,
@@ -80,7 +74,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<ToggleShowAllEvent>((event, emit) => emit(ToggleShowAllState()));
     on<ListingDeletedByUserEvent>((event, emit) {
       listings.remove(event.listing);
-      calculateAdLocation();
+      feedItems.removeWhere(
+        (item) => item.type == FeedItemType.listing && item.listing?.id == event.listing.id,
+      );
+      _calculateAdLocationFromFeed();
       emit(ListingsListState(listingsWithAds: listingsWithAds));
     });
     on<ListingFavUpdated>((event, emit) async {
@@ -101,10 +98,232 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<ListingDeleteByAdminEvent>((event, emit) async {
       await listingsRepository.deleteListing(listingModel: event.listing);
       listings.remove(event.listing);
-      calculateAdLocation();
+      feedItems.removeWhere(
+        (item) => item.type == FeedItemType.listing && item.listing?.id == event.listing.id,
+      );
+      _calculateAdLocationFromFeed();
       emit(ListingsListState(listingsWithAds: listingsWithAds));
     });
     on<LoadingEvent>((event, emit) => emit(LoadingState()));
+  }
+
+  Future<void> _loadUnifiedFeed({
+    required HomeFilterState filters,
+    required bool includeFiltering,
+  }) async {
+    final futures = await Future.wait<dynamic>([
+      listingsRepository.getListings(
+        favListingsIDs: currentUser.likedListingsIDs,
+      ),
+      _getFilteredEvents(filters),
+    ]);
+
+    final allListings = futures[0] as List<ListingModel>;
+    final events = futures[1] as List<EventModel>;
+
+    final sortedListings = includeFiltering
+        ? _applyFiltersToListings(allListings, filters)
+        : _sortListings(allListings, filters);
+    listings = sortedListings;
+
+    feedItems = _mergeAndSortFeed(
+      listings: sortedListings,
+      events: events,
+      filters: filters,
+    );
+
+    _calculateAdLocationFromFeed();
+  }
+
+  Future<List<EventModel>> _getFilteredEvents(HomeFilterState filters) async {
+    if (!filters.includeEvents) {
+      return <EventModel>[];
+    }
+
+    try {
+      final allEvents = await eventsRepository.getEvents();
+      final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final filtered = allEvents.where((event) {
+        if (event.status.toLowerCase() != 'active') {
+          return false;
+        }
+        if (event.endAtSeconds < nowSeconds) {
+          return false;
+        }
+        if (filters.selectedCountries.isNotEmpty &&
+            !filters.selectedCountries.contains(event.countryCode)) {
+          return false;
+        }
+        if (filters.maxDistance != null && filters.userLocation != null) {
+          final distance = ListingFilterHelpers.calculateDistance(
+            filters.userLocation!.latitude,
+            filters.userLocation!.longitude,
+            event.latitude,
+            event.longitude,
+          );
+          if (distance > filters.maxDistance!) {
+            return false;
+          }
+        }
+        return true;
+      }).toList();
+
+      filtered.sort((a, b) => b.startAtSeconds.compareTo(a.startAtSeconds));
+      return filtered;
+    } catch (_) {
+      return <EventModel>[];
+    }
+  }
+
+  List<FeedItem> _mergeAndSortFeed({
+    required List<ListingModel> listings,
+    required List<EventModel> events,
+    required HomeFilterState filters,
+  }) {
+    final sortedListings = _sortListings([...listings], filters);
+    final sortedEvents = _sortEvents([...events], filters);
+
+    final listingRank = <String, int>{};
+    for (int i = 0; i < sortedListings.length; i++) {
+      listingRank[sortedListings[i].id] = i;
+    }
+
+    final merged = <FeedItem>[
+      ...sortedListings.map(FeedItem.listing),
+      ...sortedEvents.map(FeedItem.event),
+    ];
+
+    merged.sort((a, b) => _compareFeedItems(a, b, filters, listingRank));
+    return merged;
+  }
+
+  List<EventModel> _sortEvents(List<EventModel> events, HomeFilterState filters) {
+    switch (filters.sortOption) {
+      case HomeSortOption.aToZ:
+        events.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+        return events;
+      case HomeSortOption.nearest:
+        if (filters.userLocation == null) {
+          return events;
+        }
+        events.sort((a, b) {
+          final distanceA = ListingFilterHelpers.calculateDistance(
+            filters.userLocation!.latitude,
+            filters.userLocation!.longitude,
+            a.latitude,
+            a.longitude,
+          );
+          final distanceB = ListingFilterHelpers.calculateDistance(
+            filters.userLocation!.latitude,
+            filters.userLocation!.longitude,
+            b.latitude,
+            b.longitude,
+          );
+          return distanceA.compareTo(distanceB);
+        });
+        return events;
+      case HomeSortOption.newest:
+      case HomeSortOption.mostVouched:
+      case HomeSortOption.vouchCount:
+      case HomeSortOption.recommended:
+        events.sort((a, b) => b.startAtSeconds.compareTo(a.startAtSeconds));
+        return events;
+    }
+  }
+
+  int _compareFeedItems(
+    FeedItem a,
+    FeedItem b,
+    HomeFilterState filters,
+    Map<String, int> listingRank,
+  ) {
+    if (a.type == FeedItemType.listing && b.type == FeedItemType.listing) {
+      final rankA = listingRank[a.listing!.id] ?? 0;
+      final rankB = listingRank[b.listing!.id] ?? 0;
+      return rankA.compareTo(rankB);
+    }
+
+    if (a.type == FeedItemType.event && b.type == FeedItemType.event) {
+      return _compareEvents(a.event!, b.event!, filters);
+    }
+
+    switch (filters.sortOption) {
+      case HomeSortOption.aToZ:
+        final titleA = a.type == FeedItemType.listing
+            ? a.listing!.title.toLowerCase()
+            : a.event!.title.toLowerCase();
+        final titleB = b.type == FeedItemType.listing
+            ? b.listing!.title.toLowerCase()
+            : b.event!.title.toLowerCase();
+        return titleA.compareTo(titleB);
+      case HomeSortOption.nearest:
+        final distanceA = _feedDistance(a, filters);
+        final distanceB = _feedDistance(b, filters);
+        return distanceA.compareTo(distanceB);
+      case HomeSortOption.newest:
+      case HomeSortOption.mostVouched:
+      case HomeSortOption.vouchCount:
+      case HomeSortOption.recommended:
+        return _feedRecencySeconds(b).compareTo(_feedRecencySeconds(a));
+    }
+  }
+
+  int _compareEvents(EventModel a, EventModel b, HomeFilterState filters) {
+    switch (filters.sortOption) {
+      case HomeSortOption.aToZ:
+        return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+      case HomeSortOption.nearest:
+        if (filters.userLocation == null) {
+          return 0;
+        }
+        final distanceA = ListingFilterHelpers.calculateDistance(
+          filters.userLocation!.latitude,
+          filters.userLocation!.longitude,
+          a.latitude,
+          a.longitude,
+        );
+        final distanceB = ListingFilterHelpers.calculateDistance(
+          filters.userLocation!.latitude,
+          filters.userLocation!.longitude,
+          b.latitude,
+          b.longitude,
+        );
+        return distanceA.compareTo(distanceB);
+      case HomeSortOption.newest:
+      case HomeSortOption.mostVouched:
+      case HomeSortOption.vouchCount:
+      case HomeSortOption.recommended:
+        return b.startAtSeconds.compareTo(a.startAtSeconds);
+    }
+  }
+
+  double _feedDistance(FeedItem item, HomeFilterState filters) {
+    if (filters.userLocation == null) {
+      return double.infinity;
+    }
+
+    if (item.type == FeedItemType.listing) {
+      return ListingFilterHelpers.calculateDistance(
+        filters.userLocation!.latitude,
+        filters.userLocation!.longitude,
+        item.listing!.latitude,
+        item.listing!.longitude,
+      );
+    }
+
+    return ListingFilterHelpers.calculateDistance(
+      filters.userLocation!.latitude,
+      filters.userLocation!.longitude,
+      item.event!.latitude,
+      item.event!.longitude,
+    );
+  }
+
+  int _feedRecencySeconds(FeedItem item) {
+    if (item.type == FeedItemType.listing) {
+      return _recencySeconds(item.listing!);
+    }
+    return item.event!.startAtSeconds;
   }
 
   /// Apply filter criteria to a list of listings
@@ -369,14 +588,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         openBoost;
   }
 
-  calculateAdLocation() {
+  void _calculateAdLocationFromFeed() {
     listingsWithAds.clear();
-    for (int i = 0; i < listings.length; i++) {
+    for (int i = 0; i < feedItems.length; i++) {
       if ((listingsWithAds.length + 1) % 5 == 0) {
         listingsWithAds.add(null);
-        listingsWithAds.add(listings[i]);
+        listingsWithAds.add(feedItems[i]);
       } else {
-        listingsWithAds.add(listings[i]);
+        listingsWithAds.add(feedItems[i]);
       }
     }
   }

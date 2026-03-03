@@ -1,7 +1,24 @@
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+
+String _currentPlatformLabel() {
+  if (kIsWeb) return 'web';
+
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.iOS:
+      return 'ios';
+    case TargetPlatform.android:
+      return 'android';
+    case TargetPlatform.macOS:
+      return 'macos';
+    case TargetPlatform.windows:
+      return 'windows';
+    case TargetPlatform.linux:
+      return 'linux';
+    case TargetPlatform.fuchsia:
+      return 'fuchsia';
+  }
+}
 
 class User with ChangeNotifier {
   String email;
@@ -44,8 +61,7 @@ class User with ChangeNotifier {
             ? lastOnlineTimestamp
             : Timestamp.now().seconds,
         settings = settings ?? UserSettings(),
-        appIdentifier =
-            appIdentifier ?? 'Instaflutter ${Platform.operatingSystem}';
+        appIdentifier = appIdentifier ?? 'Instaflutter ${_currentPlatformLabel()}';
 
   String fullName() {
     return '$firstName $lastName';
