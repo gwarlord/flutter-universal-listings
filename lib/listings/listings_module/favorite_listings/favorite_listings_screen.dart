@@ -2,10 +2,12 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/model/event_model.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
+import 'package:caribtap/listings/listings_module/events/event_details_screen.dart';
 import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
 import 'package:caribtap/listings/listings_module/favorite_listings/favorite_listings_bloc.dart';
 import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
@@ -19,13 +21,16 @@ class FavoriteListingsWrapperWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authUser = context.read<AuthenticationBloc>().user;
+    final effectiveUser = authUser ?? currentUser;
+
     return BlocProvider(
       create: (context) => FavoriteListingsBloc(
         profileRepository: profileApiManager,
-        currentUser: currentUser,
+        currentUser: effectiveUser,
         listingsRepository: listingApiManager,
       ),
-      child: FavoriteListingScreen(currentUser: currentUser),
+      child: FavoriteListingScreen(currentUser: effectiveUser),
     );
   }
 }
@@ -41,6 +46,7 @@ class FavoriteListingScreen extends StatefulWidget {
 
 class _FavoriteListingScreenState extends State<FavoriteListingScreen> {
   List<ListingModel> favorites = [];
+  List<EventModel> favoriteEvents = [];
   late ListingsUser currentUser;
   bool isLoading = true;
 
@@ -69,12 +75,24 @@ class _FavoriteListingScreenState extends State<FavoriteListingScreen> {
             if (state is FavoriteListingsReadyState) {
               isLoading = false;
               favorites = state.favorites;
+              favoriteEvents = state.favoriteEvents;
             } else if (state is ListingFavToggleState) {
               currentUser = state.updatedUser;
               context.read<AuthenticationBloc>().user = state.updatedUser;
-              favorites
-                  .firstWhere((element) => element.id == state.listing.id)
-                  .isFav = state.listing.isFav;
+              if (!state.listing.isFav) {
+                favorites.removeWhere((element) => element.id == state.listing.id);
+              } else {
+                favorites
+                    .firstWhere((element) => element.id == state.listing.id)
+                    .isFav = state.listing.isFav;
+              }
+            } else if (state is EventFavToggleState) {
+              currentUser = state.updatedUser;
+              context.read<AuthenticationBloc>().user = state.updatedUser;
+              if (!state.event.isFav) {
+                favoriteEvents
+                    .removeWhere((element) => element.id == state.event.id);
+              }
             } else if (state is LoadingState) {
               isLoading = true;
             }
@@ -85,7 +103,8 @@ class _FavoriteListingScreenState extends State<FavoriteListingScreen> {
             }
             // Filter out listings created by the current user
             final filteredFavorites = favorites.where((listing) => listing.authorID != currentUser.userID).toList();
-            if (filteredFavorites.isEmpty) {
+            final filteredFavoriteEvents = favoriteEvents;
+            if (filteredFavorites.isEmpty && filteredFavoriteEvents.isEmpty) {
               return Stack(
                 children: [
                   ListView(),
@@ -100,20 +119,155 @@ class _FavoriteListingScreenState extends State<FavoriteListingScreen> {
                 ],
               );
             } else {
-              return GridView.builder(
+              return ListView(
                 padding: const EdgeInsets.all(16),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 24,
-                    crossAxisSpacing: 16),
-                itemCount: filteredFavorites.length,
-                itemBuilder: (context, index) => FavoriteListingCard(
-                  listing: filteredFavorites[index],
-                  currentUser: currentUser,
-                ),
+                children: [
+                  if (filteredFavorites.isNotEmpty) ...[
+                    Text(
+                      'Listings'.tr(),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 24,
+                          crossAxisSpacing: 16),
+                      itemCount: filteredFavorites.length,
+                      itemBuilder: (context, index) => FavoriteListingCard(
+                        listing: filteredFavorites[index],
+                        currentUser: currentUser,
+                      ),
+                    ),
+                  ],
+                  if (filteredFavoriteEvents.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    Text(
+                      'Events'.tr(),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ...filteredFavoriteEvents.map(
+                      (event) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: FavoriteEventCard(
+                          event: event,
+                          currentUser: currentUser,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               );
             }
           },
+        ),
+      ),
+    );
+  }
+}
+
+class FavoriteEventCard extends StatelessWidget {
+  final EventModel event;
+  final ListingsUser currentUser;
+
+  const FavoriteEventCard({
+    super.key,
+    required this.event,
+    required this.currentUser,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool dark = isDarkMode(context);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () async {
+        await push(context, EventDetailsScreen(event: event));
+        if (!context.mounted) return;
+
+        final updatedUser = context.read<AuthenticationBloc>().user;
+        if (updatedUser != null &&
+            !updatedUser.likedEventsIDs.contains(event.id) &&
+            event.isFav) {
+          context.read<FavoriteListingsBloc>().add(EventFavUpdated(event: event));
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: dark ? Colors.grey.shade900 : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: dark ? Colors.white10 : Colors.black12,
+          ),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: event.posterImageUrl.trim().isEmpty
+                  ? Container(
+                      width: 72,
+                      height: 72,
+                      color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+                      child: Icon(
+                        Icons.event,
+                        color: Color(colorPrimary),
+                      ),
+                    )
+                  : Image.network(
+                      event.posterImageUrl,
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.cover,
+                    ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    event.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: dark ? Colors.white : Colors.grey[900],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    event.venueName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: dark ? Colors.grey[400] : Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: 'Remove From Favorites'.tr(),
+              icon: Icon(Icons.favorite, color: Color(colorPrimary)),
+              onPressed: () => context
+                  .read<FavoriteListingsBloc>()
+                  .add(EventFavUpdated(event: event)),
+            ),
+          ],
         ),
       ),
     );
@@ -151,7 +305,7 @@ class _FavoriteListingCardState extends State<FavoriteListingCard> {
           if (!mounted) return;
           context
               .read<FavoriteListingsBloc>()
-              .add(ListingFavUpdated(listing: widget.listing));
+            .add(ListingDeletedByUserEvent(listing: widget.listing));
         }
       },
       child: Column(

@@ -26,6 +26,13 @@ class ListingDeleteByAdminEvent extends HomeEvent {
   ListingDeleteByAdminEvent({required this.listing});
 }
 
+class EventDeleteEvent extends HomeEvent {
+  final EventModel event;
+  final bool isAdmin;
+
+  EventDeleteEvent({required this.event, this.isAdmin = false});
+}
+
 class LoadingEvent extends HomeEvent {}
 
 // Filter events

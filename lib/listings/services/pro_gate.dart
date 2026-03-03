@@ -47,13 +47,13 @@ class ProGate {
     EntitlementSubscription? entitlement, {
     required bool isAdmin,
   }) {
-    return tierAtLeast(entitlement, 1, isAdmin: isAdmin);
+    return tierAtLeast(entitlement, 3, isAdmin: isAdmin);
   }
 
   static bool canUseInvoices(
     EntitlementSubscription? entitlement, {
     required bool isAdmin,
   }) {
-    return tierAtLeast(entitlement, 2, isAdmin: isAdmin);
+    return tierAtLeast(entitlement, 3, isAdmin: isAdmin);
   }
 }

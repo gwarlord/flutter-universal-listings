@@ -16,4 +16,10 @@ class ListingDeletedByUserEvent extends FavoriteListingsEvent {
   ListingDeletedByUserEvent({required this.listing});
 }
 
+class EventFavUpdated extends FavoriteListingsEvent {
+  EventModel event;
+
+  EventFavUpdated({required this.event});
+}
+
 class LoadingEvent extends FavoriteListingsEvent {}

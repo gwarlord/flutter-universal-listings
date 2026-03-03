@@ -196,7 +196,7 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
 
   Widget _buildInvoicesTab(bool canUseInvoices) {
     if (!canUseInvoices) {
-      return _buildLocked('Upgrade to Professional Plus for invoices'.tr());
+      return _buildLocked('Upgrade to Premium to use Invoices'.tr());
     }
 
     return BlocProvider(

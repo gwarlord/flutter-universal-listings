@@ -104,6 +104,17 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       _calculateAdLocationFromFeed();
       emit(ListingsListState(listingsWithAds: listingsWithAds));
     });
+
+    on<EventDeleteEvent>((event, emit) async {
+      // Use this.eventsRepository because the constructor parameter shadows the field
+      await this.eventsRepository.deleteEvent(event.event.id);
+      feedItems.removeWhere(
+        (item) => item.type == FeedItemType.event && item.event?.id == event.event.id,
+      );
+      _calculateAdLocationFromFeed();
+      emit(ListingsListState(listingsWithAds: listingsWithAds));
+    });
+
     on<LoadingEvent>((event, emit) => emit(LoadingState()));
   }
 

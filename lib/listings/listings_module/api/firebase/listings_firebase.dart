@@ -689,40 +689,49 @@ class ListingsFirebaseUtils extends ListingsRepository {
         },
       );
       debugPrint('*** DEBUG: getPlaceDetails HTTP URI: $uri');
-      final res = await http.get(uri);
+      final headers = <String, String>{};
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        headers['X-Android-Package'] = 'com.caribtap.instaflutter.android';
+        headers['X-Android-Cert'] =
+            '2edc5d5e857233914f8335c5d4ee9e09fc8f61f9';
+      }
+
+      final res = await http.get(uri, headers: headers);
       debugPrint('*** DEBUG: getPlaceDetails HTTP status: ${res.statusCode} body: ${res.body}');
       final decoded = jsonDecode(res.body);
       if (decoded is Map<String, dynamic>) {
         final status = (decoded['status'] ?? '').toString();
         debugPrint('*** DEBUG: getPlaceDetails HTTP decoded status: $status');
-        if (status != 'OK') return null;
+        if (status != 'OK') {
+          debugPrint('*** DEBUG: getPlaceDetails HTTP not OK; falling back to plugin lookup');
+        } else {
+          final result = decoded['result'];
+          if (result is! Map<String, dynamic>) return null;
 
-        final result = decoded['result'];
-        if (result is! Map<String, dynamic>) return null;
+          final formattedAddress = (result['formatted_address'] ?? '').toString();
+          final name = (result['name'] ?? formattedAddress).toString();
+          final pid = (result['place_id'] ?? placeId).toString();
 
-        final formattedAddress = (result['formatted_address'] ?? '').toString();
-        final name = (result['name'] ?? formattedAddress).toString();
-        final pid = (result['place_id'] ?? placeId).toString();
+          final geometry = result['geometry'];
+          final location =
+          (geometry is Map<String, dynamic>) ? geometry['location'] : null;
+          final lat = (location is Map<String, dynamic>) ? location['lat'] : null;
+          final lng = (location is Map<String, dynamic>) ? location['lng'] : null;
 
-        final geometry = result['geometry'];
-        final location =
-        (geometry is Map<String, dynamic>) ? geometry['location'] : null;
-        final lat = (location is Map<String, dynamic>) ? location['lat'] : null;
-        final lng = (location is Map<String, dynamic>) ? location['lng'] : null;
+          final latD = (lat is num) ? lat.toDouble() : null;
+          final lngD = (lng is num) ? lng.toDouble() : null;
 
-        final latD = (lat is num) ? lat.toDouble() : null;
-        final lngD = (lng is num) ? lng.toDouble() : null;
+          if (latD == null || lngD == null) return null;
 
-        if (latD == null || lngD == null) return null;
-
-        return PlaceDetails(
-          placeId: pid,
-          name: name,
-          formattedAddress: formattedAddress.isEmpty
-              ? (prediction.description ?? 'Unknown location')
-              : formattedAddress,
-          geometry: Geometry(location: Location(lat: latD, lng: lngD)),
-        );
+          return PlaceDetails(
+            placeId: pid,
+            name: name,
+            formattedAddress: formattedAddress.isEmpty
+                ? (prediction.description ?? 'Unknown location')
+                : formattedAddress,
+            geometry: Geometry(location: Location(lat: latD, lng: lngD)),
+          );
+        }
       }
     } catch (e, st) {
       debugPrint('getPlaceDetails(): RAW HTTP decode/build failed: $e');

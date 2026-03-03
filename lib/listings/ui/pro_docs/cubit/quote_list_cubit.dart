@@ -27,7 +27,7 @@ class QuoteListCubit extends Cubit<QuoteListState> {
   void start() {
     final tier = _tierGateService.resolveTierFromUser(_currentUser);
     if (!_tierGateService.canUseQuotes(tier)) {
-      emit(const QuoteListLocked(message: 'Upgrade to Professional to use Quotes'));
+      emit(const QuoteListLocked(message: 'Upgrade to Premium to use Quotes & Invoices'));
       return;
     }
 

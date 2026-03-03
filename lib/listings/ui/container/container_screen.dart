@@ -686,7 +686,16 @@ class _ContainerState extends State<ContainerScreen> {
                     onTap: () async {
                       Navigator.pop(context);
                       if (currentUser.isAdmin || currentUser.hasBookingServices) {
-                        await push(context, CreateEventScreen(currentUser: currentUser));
+                        final bool? created = await push(
+                          context,
+                          CreateEventScreen(currentUser: currentUser),
+                        );
+                        if (created == true) {
+                          homeKey.currentState?.refreshFeed();
+                          if (mounted) {
+                            showSnackBar(context, 'Event posted successfully.'.tr());
+                          }
+                        }
                       } else {
                         _showUpgradeDialog(context, 'Post Event', 'Professional');
                       }
@@ -792,14 +801,14 @@ class _ContainerState extends State<ContainerScreen> {
                   _drawerTile(
                     title: 'Quotes & Invoices'.tr(),
                     icon: Icons.receipt_long_rounded,
-                    trailing: isPaidUser(currentUser) ? _tierBadge('PRO', Colors.blue) : _lockIcon(),
+                    trailing: isPremiumUser(currentUser) ? _tierBadge('PREMIUM', Colors.purple) : _lockIcon(),
                     onTap: () {
-                      if (isPaidUser(currentUser)) {
+                      if (isPremiumUser(currentUser)) {
                         Navigator.pop(context);
                         push(context, QuoteListScreen(currentUser: currentUser));
                       } else {
                         Navigator.pop(context);
-                        _showUpgradeDialog(context, 'Quotes & Invoices', 'Professional');
+                        _showUpgradeDialog(context, 'Quotes & Invoices', 'Premium');
                       }
                     },
                     isDark: isDark,

@@ -15,6 +15,7 @@ import 'package:caribtap/listings/listings_module/add_listing/add_listing_screen
 import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
 import 'package:caribtap/listings/listings_module/category_listings/category_listings_screen.dart';
 import 'package:caribtap/listings/listings_module/events/create_event_screen.dart';
+import 'package:caribtap/listings/listings_module/events/event_details_screen.dart';
 import 'package:caribtap/listings/listings_module/home/home_bloc.dart';
 import 'package:caribtap/listings/listings_module/home/widgets/event_home_card.dart';
 import 'package:caribtap/listings/listings_module/home/widgets/home_filter_panel.dart';
@@ -35,6 +36,7 @@ import '../../ui/deals/deals_feed_screen.dart';
 import 'package:caribtap/listings/location/location_scope_cubit.dart';
 import 'package:caribtap/listings/location/location_scope_model.dart';
 import 'package:caribtap/listings/location/ui/location_scope_floating_button.dart';
+import 'package:caribtap/listings/model/event_model.dart';
 
 // Country filter selection dialog widget
 class _HomeCountrySelectionDialog extends StatefulWidget {
@@ -275,6 +277,11 @@ class HomeScreenState extends State<HomeScreen> {
     _startFeaturedCycling();
   }
 
+  void refreshFeed() {
+    if (!mounted) return;
+    context.read<HomeBloc>().add(GetListingsEvent());
+  }
+
   void _startCategoryCycling() {
     _categoryCycleTimer?.cancel();
     _categoryCycleTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
@@ -393,6 +400,9 @@ class HomeScreenState extends State<HomeScreen> {
         .where((item) => item != null)
         .cast<FeedItem>()
         .where((item) {
+      final isOwnEvent = item.type == FeedItemType.event &&
+          (item.event?.createdBy == currentUser.userID);
+
       final countryCode = item.type == FeedItemType.listing
           ? item.listing!.countryCode
           : item.event!.countryCode;
@@ -401,11 +411,11 @@ class HomeScreenState extends State<HomeScreen> {
       if (locationScope != null) {
         final effectiveCountry = locationScope.getEffectiveCountry();
         if (locationScope.mode == LocationScopeMode.local && effectiveCountry != null) {
-          if (countryCode != effectiveCountry) {
+          if (!isOwnEvent && countryCode != effectiveCountry) {
             return false;
           }
         } else if (locationScope.mode == LocationScopeMode.caribbean) {
-          if (!CaribbeanCountries.isAllowedCode(countryCode)) {
+          if (!isOwnEvent && !CaribbeanCountries.isAllowedCode(countryCode)) {
             return false;
           }
         }
@@ -428,7 +438,7 @@ class HomeScreenState extends State<HomeScreen> {
       final matchesCountry = _selectedCountryCodes.isEmpty ||
           _selectedCountryCodes.contains(countryCode);
 
-      return matchesSearch && matchesCountry;
+      return matchesSearch && (matchesCountry || isOwnEvent);
     }).toList();
   }
 
@@ -1292,6 +1302,15 @@ class HomeScreenState extends State<HomeScreen> {
                                   return EventHomeCard(
                                     event: item.event!,
                                     userLocation: _currentFilters.userLocation,
+                                    onTap: () async {
+                                      await push(
+                                        context,
+                                        EventDetailsScreen(event: item.event!),
+                                      );
+                                    },
+                                    onLongPress: (item.event!.createdBy == currentUser.userID || currentUser.isAdmin)
+                                      ? () => _showEventOptions(item.event!, context)
+                                      : null,
                                   );
                               }
                             },
@@ -1484,6 +1503,81 @@ class HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  void _showEventOptions(EventModel event, BuildContext blocContext) =>
+      showCupertinoModalPopup(
+        context: context,
+        builder: (context) => CupertinoActionSheet(
+          message: Text(
+            event.title,
+            style: const TextStyle(fontSize: 20.0),
+          ),
+          actions: [
+            if (event.createdBy == currentUser.userID || currentUser.isAdmin)
+            CupertinoActionSheetAction(
+              onPressed: () async {
+                Navigator.pop(context);
+                final bool? edited = await push(
+                  context,
+                  CreateEventScreen(
+                    currentUser: currentUser,
+                    eventToEdit: event,
+                  ),
+                );
+                if (edited == true && mounted) {
+                  blocContext.read<HomeBloc>().add(GetListingsEvent());
+                }
+              },
+              child: Text('Edit Event'.tr()),
+            ),
+            if (event.createdBy == currentUser.userID || currentUser.isAdmin)
+            CupertinoActionSheetAction(
+              isDestructiveAction: true,
+              onPressed: () async {
+                Navigator.pop(context);
+                final String title = 'Delete Event?'.tr();
+                final String content = 'Are you sure you want to remove this event?'.tr();
+
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text(title),
+                    content: Text(content),
+                    actions: [
+                      TextButton(
+                        child: Text('No'.tr()),
+                        onPressed: () => Navigator.pop(context, false),
+                      ),
+                      TextButton(
+                        child: Text('Yes'.tr(), style: const TextStyle(color: Colors.red)),
+                        onPressed: () => Navigator.pop(context, true),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true) {
+                  blocContext.read<LoadingCubit>().showLoading(
+                    context,
+                    'Deleting...'.tr(),
+                    false,
+                    Color(cfg.colorPrimary),
+                  );
+                  blocContext.read<HomeBloc>().add(
+                    EventDeleteEvent(event: event, isAdmin: currentUser.isAdmin),
+                  );
+                  blocContext.read<LoadingCubit>().hideLoading();
+                }
+              },
+              child: Text('Delete Event'.tr()),
+            ),
+          ],
+          cancelButton: CupertinoActionSheetAction(
+            child: Text('Cancel'.tr()),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+      );
 
 }
 

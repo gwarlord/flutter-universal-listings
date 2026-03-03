@@ -43,6 +43,7 @@ class ListingsUser extends User {
   bool strictLocalOnly;
 
   List<String> likedListingsIDs;
+  List<String> likedEventsIDs;
 
   ListingsUser({
     String email = '',
@@ -66,6 +67,7 @@ class ListingsUser extends User {
     this.ageRange = 'Prefer not to say',
     this.listingFreshnessExempt = false,
     this.likedListingsIDs = const [],
+    this.likedEventsIDs = const [],
     bool? isSubscriptionActive,
     // Location Scope parameters
     this.homeCountry,
@@ -123,6 +125,8 @@ class ListingsUser extends User {
       listingFreshnessExempt: parsedJson['listingFreshnessExempt'] ?? false,
       likedListingsIDs:
           List<String>.from(parsedJson['likedListingsIDs'] ?? const []),
+        likedEventsIDs:
+          List<String>.from(parsedJson['likedEventsIDs'] ?? const []),
       isSubscriptionActive: parsedJson['isSubscriptionActive'],
       // Location Scope fields
       homeCountry: parsedJson['homeCountry'] as String?,
@@ -164,6 +168,7 @@ class ListingsUser extends User {
       'ageRange': ageRange,
       'listingFreshnessExempt': listingFreshnessExempt,
       'likedListingsIDs': likedListingsIDs,
+      'likedEventsIDs': likedEventsIDs,
       'isSubscriptionActive': isSubscriptionActive,
     };
   }

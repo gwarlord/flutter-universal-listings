@@ -45,6 +45,38 @@ class EventsFirebaseUtils {
     }
   }
 
+  Future<List<EventModel>> getFavoriteEvents({required List<String> eventIds}) async {
+    if (eventIds.isEmpty) {
+      return <EventModel>[];
+    }
+
+    try {
+      final futures = eventIds.map((eventId) => _eventsCollection.doc(eventId).get());
+      final snapshots = await Future.wait(futures);
+      final events = <EventModel>[];
+
+      for (final doc in snapshots) {
+        if (!doc.exists) continue;
+
+        final data = doc.data();
+        if (data == null) continue;
+
+        final model = EventModel.fromJson(data);
+        if (model.status.toLowerCase() != 'active') continue;
+
+        model.id = doc.id;
+        model.isFav = true;
+        events.add(model);
+      }
+
+      return events;
+    } catch (e, st) {
+      debugPrint('EventsFirebaseUtils.getFavoriteEvents error: $e');
+      debugPrint('$st');
+      return <EventModel>[];
+    }
+  }
+
   Future<void> createEvent(EventModel event) async {
     try {
       final data = event.toJson()..remove('id');

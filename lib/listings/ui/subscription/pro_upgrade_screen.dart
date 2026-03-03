@@ -239,8 +239,6 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
   List<String> _planBenefits(int tier) {
     final professionalBenefits = [
       'AI photo enhancement'.tr(),
-      'Professional quotes'.tr(),
-      'Invoices & receipts'.tr(),
       'Watermarking tools'.tr(),
       'Priority support'.tr(),
     ];
@@ -248,6 +246,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
     if (tier == 3) {
       return [
         'Everything in Professional'.tr(),
+        'Quotes & invoices tools'.tr(),
         'Full suite with premium business features.'.tr(),
       ];
     }
@@ -343,8 +342,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
   Widget _buildBenefits(ThemeData theme, int tier) {
     final List<String> benefits = [
       'AI photo enhancement'.tr(),
-      'Professional quotes'.tr(),
-      'Invoices & receipts'.tr(),
+      'Quotes & invoices tools'.tr(),
       'Watermarking tools'.tr(),
       'Priority support'.tr(),
     ];

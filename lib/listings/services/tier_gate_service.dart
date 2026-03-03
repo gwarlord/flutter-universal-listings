@@ -44,11 +44,11 @@ class TierGateService {
   }
 
   bool canUseQuotes(ProTier tier) {
-    return tier == ProTier.tier1 || tier == ProTier.tier2 || tier == ProTier.tier3;
+    return tier == ProTier.tier3;
   }
 
   bool canUseInvoices(ProTier tier) {
-    return tier == ProTier.tier2 || tier == ProTier.tier3;
+    return tier == ProTier.tier3;
   }
 
   bool canUseBranding(ProTier tier) {
