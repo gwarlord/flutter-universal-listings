@@ -7,6 +7,8 @@ import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart' as painting;
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:caribtap/core/ui/chat/chat/chat_screen.dart';
 import 'package:caribtap/core/ui/chat/player_widget.dart';
@@ -21,6 +23,7 @@ import 'package:caribtap/listings/ui/auth/api/auth_api_manager.dart';
 import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:caribtap/listings/ui/auth/launcher/launcher_screen.dart';
 import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
+import 'package:caribtap/constants.dart';
 import 'package:caribtap/main.dart' as entry;
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // Added import
 import 'package:caribtap/listings/ui/auth/api/firebase/auth_firebase.dart';
@@ -43,7 +46,7 @@ runListings() {
   reviewCollection = 'reviews';
   filtersCollection = 'filters';
 
-  googleMapsApiKey = dotenv.env['GOOGLE_API_KEY'] ?? ''; // Updated to use dotenv
+  googleMapsApiKey = placesApiKey;
 
   return EasyLocalization(
     supportedLocales: const [
@@ -95,7 +98,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
-  late StreamSubscription tokenStream;
+  StreamSubscription<String>? tokenStream;
   bool _initialized = false;
   bool _error = false;
 
@@ -169,6 +172,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     return BlocBuilder<ThemeCubit, ThemeState>(
       builder: (context, themeState) {
+        final isIos = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
         return MaterialApp(
             navigatorKey: entry.navigatorKey, // Use global entry key
             localizationsDelegates: [
@@ -195,8 +199,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           ),
           appBarTheme: AppBarTheme(
             centerTitle: true,
-            color: Platform.isIOS ? Colors.transparent : Color(colorPrimary),
-            elevation: Platform.isIOS ? 0 : null,
+            color: isIos ? Colors.transparent : Color(colorPrimary),
+            elevation: isIos ? 0 : null,
             iconTheme: const IconThemeData(color: Colors.white),
             titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20.0, fontWeight: FontWeight.w500),
             systemOverlayStyle: SystemUiOverlayStyle.light,
@@ -230,7 +234,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    tokenStream.cancel();
+    tokenStream?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -240,22 +244,36 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     if (auth.FirebaseAuth.instance.currentUser != null &&
         BlocProvider.of<AuthenticationBloc>(context).user != null) {
       if (state == AppLifecycleState.paused) {
-        tokenStream.pause();
+        tokenStream?.pause();
         BlocProvider.of<AuthenticationBloc>(context).user!.active = false;
         profileApiManager.updateCurrentUser(BlocProvider.of<AuthenticationBloc>(context).user!);
       } else if (state == AppLifecycleState.resumed) {
-        tokenStream.resume();
+        tokenStream?.resume();
         BlocProvider.of<AuthenticationBloc>(context).user!.active = true;
         profileApiManager.updateCurrentUser(BlocProvider.of<AuthenticationBloc>(context).user!);
       }
     }
   }
+
+  @override
+  void didHaveMemoryPressure() {
+    painting.imageCache.clear();
+    painting.imageCache.clearLiveImages();
+    print('⚠️ iOS memory pressure detected: cleared Flutter image cache.');
+    super.didHaveMemoryPressure();
+  }
 }
 
 void _handleNotification(Map<String, dynamic> data, GlobalKey<NavigatorState> navigatorKey, BuildContext context) async {
   try {
+    final navContext = navigatorKey.currentContext;
+    if (navContext == null) {
+      print('⚠️ Notification received before navigator context is ready; skipping immediate handling.');
+      return;
+    }
+
     // Get current user from Bloc
-    final user = BlocProvider.of<AuthenticationBloc>(navigatorKey.currentContext!).user;
+    final user = BlocProvider.of<AuthenticationBloc>(navContext).user;
     if (user == null) return;
 
     // Handle table_session notifications
@@ -269,7 +287,7 @@ void _handleNotification(Map<String, dynamic> data, GlobalKey<NavigatorState> na
       print('🔔 Table session notification: sessionId=$sessionId, listingId=$listingId, scope=$scope');
 
       showDialog(
-        context: navigatorKey.currentContext!,
+        context: navContext,
         builder: (context) => AlertDialog(
           title: Text(data['title'] ?? 'Table Notification'),
           content: Text(data['body'] ?? ''),

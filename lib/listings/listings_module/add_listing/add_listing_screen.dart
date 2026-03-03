@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:caribtap/listings/utils/caribbean_countries.dart';
 import 'package:caribtap/listings/utils/country_search_dialog.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -38,6 +40,7 @@ import 'package:caribtap/screens/rentals/rental_catalog_manager_screen.dart';
 import 'package:caribtap/listings/ui/photo_enhancement/photo_enhancement.dart';
 import 'package:caribtap/listings/listings_module/booking_services/booking_services_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 class AddListingWrappingWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -1438,6 +1441,46 @@ class _AddListingScreenState extends State<AddListingScreen> {
     }
   }
 
+  Future<void> _debugProbePlacesAutocomplete() async {
+    final key = placesApiKey;
+    if (key.trim().isEmpty) return;
+
+    try {
+      final uri = Uri.https(
+        'maps.googleapis.com',
+        '/maps/api/place/autocomplete/json',
+        <String, String>{
+          'input': 'ang',
+          'key': key,
+          'language': 'en',
+        },
+      );
+
+      final headers = <String, String>{};
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        headers['X-Android-Package'] = 'com.caribtap.instaflutter.android';
+        headers['X-Android-Cert'] =
+            '2edc5d5e857233914f8335c5d4ee9e09fc8f61f9';
+      }
+
+      final res = await http.get(uri, headers: headers);
+      final decoded = jsonDecode(res.body);
+      final status = decoded is Map<String, dynamic>
+          ? (decoded['status'] ?? '').toString()
+          : '<unknown>';
+      final errorMessage = decoded is Map<String, dynamic>
+          ? (decoded['error_message'] ?? '').toString()
+          : '';
+
+      debugPrint(
+        '[PlacesProbe:AddListing] source=$placesApiKeySource key=${maskApiKey(key)} '
+        'http=${res.statusCode} status=$status error=$errorMessage',
+      );
+    } catch (e) {
+      debugPrint('[PlacesProbe:AddListing] failed: $e');
+    }
+  }
+
   Future<void> _showAIDescriptionDialog(BuildContext context, bool dark) async {
     final title = _titleController.text.trim();
     final category = _categoryValue?.title ?? '';
@@ -1720,9 +1763,22 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   const SizedBox(height: 16),
                   InkWell(
                     onTap: () async {
+                      final key = placesApiKey;
+                      debugPrint(
+                        '[Places] Add Listing using $placesApiKeySource: ${maskApiKey(key)}',
+                      );
+                      if (key.trim().isEmpty) {
+                        if (!mounted) return;
+                        showSnackBar(
+                          context,
+                          'Google Places API key is missing. Please check .env configuration.'.tr(),
+                        );
+                        return;
+                      }
+
                       final prediction = await PlacesAutocomplete.show(
                         context: context,
-                        apiKey: googleApiKey,
+                        apiKey: key,
                         mode: Mode.fullscreen,
                         language: 'en',
                       );
