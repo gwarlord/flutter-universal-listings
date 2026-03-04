@@ -43,4 +43,32 @@ class CartItem {
       variantLabel: variantLabel ?? this.variantLabel,
     );
   }
+
+  factory CartItem.fromJson(Map<String, dynamic> json) {
+    return CartItem(
+      itemId: (json['itemId'] ?? '').toString(),
+      name: (json['name'] ?? '').toString(),
+      qty: (json['qty'] ?? 1) as int,
+      unitPrice: (json['unitPrice'] ?? 0).toDouble(),
+      currencyCode: (json['currencyCode'] ?? 'USD').toString(),
+      photoUrl: json['photoUrl']?.toString(),
+      variant: json['variant'] is Map<String, dynamic>
+          ? json['variant'] as Map<String, dynamic>
+          : null,
+      variantLabel: json['variantLabel']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'itemId': itemId,
+      'name': name,
+      'qty': qty,
+      'unitPrice': unitPrice,
+      'currencyCode': currencyCode,
+      'photoUrl': photoUrl,
+      'variant': variant,
+      'variantLabel': variantLabel,
+    };
+  }
 }

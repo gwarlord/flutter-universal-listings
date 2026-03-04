@@ -25,25 +25,181 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
   RentalBooking get booking => widget.booking;
 
   Future<Map<String, dynamic>> _fetchItemData() async {
-    // Try rental_units first
-    final unit = await _rentalService.getRentalUnit(booking.listingId, booking.rentalUnitId);
-    if (unit != null) {
+    debugPrint('🔍 DEBUG: _fetchItemData START for booking ${booking.id}');
+    debugPrint('🔍 DEBUG: rentalUnitId: ${booking.rentalUnitId}, listingId: ${booking.listingId}');
+
+    if (booking.rentalUnitId.isNotEmpty && booking.rentalUnitId != 'multiple') {
+      // 1. Try raw rental_catalog first
+      debugPrint('🔍 DEBUG: Attempting fetch from rental_catalog...');
+      final rentalCatalogDoc = await FirebaseFirestore.instance
+          .collection('listings')
+          .doc(booking.listingId)
+          .collection('rental_catalog')
+          .doc(booking.rentalUnitId)
+          .get();
+      if (rentalCatalogDoc.exists) {
+        final rentalCatalogData = rentalCatalogDoc.data();
+        debugPrint('🔍 DEBUG: Found in rental_catalog: ${rentalCatalogData?.keys}');
+        final rentalName = (rentalCatalogData?['name'] as String?)?.trim() ?? '';
+        final rentalPhotos = _extractPhotos(rentalCatalogData);
+        debugPrint('🔍 DEBUG: rental_catalog name: $rentalName, photos: ${rentalPhotos.length}');
+        if (rentalName.isNotEmpty || rentalPhotos.isNotEmpty) {
+          return {
+            'name': rentalName.isNotEmpty ? rentalName : 'Rental Item',
+            'photos': rentalPhotos,
+          };
+        }
+      }
+
+      // 2. Try legacy rental_units next
+      debugPrint('🔍 DEBUG: Attempting fetch from rental_units...');
+      final rentalUnitDoc = await FirebaseFirestore.instance
+          .collection('listings')
+          .doc(booking.listingId)
+          .collection('rental_units')
+          .doc(booking.rentalUnitId)
+          .get();
+      if (rentalUnitDoc.exists) {
+        final rentalUnitData = rentalUnitDoc.data();
+        debugPrint('🔍 DEBUG: Found in rental_units: ${rentalUnitData?.keys}');
+        final unitName = (rentalUnitData?['unitName'] as String?)?.trim() ?? '';
+        final unitPhotos = _extractPhotos(rentalUnitData);
+        debugPrint('🔍 DEBUG: rental_units name: $unitName, photos: ${unitPhotos.length}');
+        if (unitName.isNotEmpty || unitPhotos.isNotEmpty) {
+          return {
+            'name': unitName.isNotEmpty ? unitName : 'Rental Item',
+            'photos': unitPhotos,
+          };
+        }
+      }
+
+      // 3. Service fallbacks
+      debugPrint('🔍 DEBUG: Attempting fetch via RentalService...');
+      final unit = await _rentalService.getRentalUnit(booking.listingId, booking.rentalUnitId);
+      if (unit != null) {
+        debugPrint('🔍 DEBUG: Found via RentalService: ${unit.unitName}, photos: ${unit.photoUrls.length}');
+        return {
+          'name': unit.unitName,
+          'photos': unit.photoUrls,
+        };
+      }
+
+      debugPrint('🔍 DEBUG: Attempting fetch via RentalCatalogService...');
+      final catalogItem = await _catalogService.getRentalItem(booking.listingId, booking.rentalUnitId);
+      if (catalogItem != null) {
+        debugPrint('🔍 DEBUG: Found via RentalCatalogService: ${catalogItem.name}, photos: ${catalogItem.photos.length}');
+        return {
+          'name': catalogItem.name,
+          'photos': catalogItem.photos,
+        };
+      }
+    }
+
+    // 4. Fall back to booking snapshot data (if present)
+    debugPrint('🔍 DEBUG: Attempting fetch from rental_bookings snapshot...');
+    final bookingDoc = await FirebaseFirestore.instance
+        .collection('rental_bookings')
+        .doc(booking.id)
+        .get();
+    final bookingData = bookingDoc.data();
+    debugPrint('🔍 DEBUG: Booking snapshot data keys: ${bookingData?.keys}');
+
+    final bookingPhotos = _extractPhotos(bookingData);
+    if (bookingPhotos.isNotEmpty) {
+      final bookingName =
+          (bookingData?['unitName'] as String?)?.trim() ??
+          (bookingData?['rentalItemName'] as String?)?.trim() ??
+          (bookingData?['itemName'] as String?)?.trim() ??
+          '';
+      debugPrint('🔍 DEBUG: Found in booking snapshot: $bookingName, photos: ${bookingPhotos.length}');
       return {
-        'name': unit.unitName,
-        'photos': unit.photoUrls,
+        'name': bookingName.isNotEmpty ? bookingName : 'Rental Item',
+        'photos': bookingPhotos,
       };
     }
 
-    // Fall back to rental_catalog
-    final catalogItem = await _catalogService.getRentalItem(booking.listingId, booking.rentalUnitId);
-    if (catalogItem != null) {
+    final cartItems = bookingData?['cartItems'];
+    if (cartItems is List && cartItems.isNotEmpty) {
+      debugPrint('🔍 DEBUG: Found ${cartItems.length} cartItems in booking snapshot');
+      final first = cartItems.first;
+      if (first is Map) {
+        final firstMap = Map<String, dynamic>.from(first);
+        final unitName = (firstMap['unitName'] as String?)?.trim() ?? '';
+        final cartPhotos = _extractPhotos(firstMap);
+        debugPrint('🔍 DEBUG: Found in cartItem[0]: $unitName, photos: ${cartPhotos.length}');
+        if (unitName.isNotEmpty || cartPhotos.isNotEmpty) {
+          return {
+            'name': unitName,
+            'photos': cartPhotos,
+          };
+        }
+      }
+    }
+
+    // 5. Final fallback: listing-level title/photo
+    debugPrint('🔍 DEBUG: Final fallback: listing document...');
+    final listingDoc = await FirebaseFirestore.instance
+        .collection('listings')
+        .doc(booking.listingId)
+        .get();
+    final listingData = listingDoc.data();
+    debugPrint('🔍 DEBUG: Listing data keys: ${listingData?.keys}');
+    final listingName = (listingData?['title'] as String?)?.trim() ?? '';
+    final listingPhotos = _extractPhotos(listingData);
+    debugPrint('🔍 DEBUG: Listing fallback: $listingName, photos: ${listingPhotos.length}');
+
+    if (listingName.isNotEmpty || listingPhotos.isNotEmpty) {
       return {
-        'name': catalogItem.name,
-        'photos': catalogItem.photos,
+        'name': listingName.isNotEmpty ? listingName : 'Rental Item',
+        'photos': listingPhotos,
       };
     }
 
-    return {};
+    debugPrint('🔍 DEBUG: _fetchItemData FAILED - returning default');
+    return {'name': 'Rental Item', 'photos': const <String>[]};
+  }
+
+  List<String> _extractPhotos(Map<String, dynamic>? data) {
+    if (data == null) return const <String>[];
+
+    final photoUrls = data['photoUrls'];
+    if (photoUrls is List) {
+      final parsed = photoUrls
+          .whereType<String>()
+          .map((url) => url.trim())
+          .where((url) => url.isNotEmpty)
+          .toList();
+      if (parsed.isNotEmpty) {
+        return parsed;
+      }
+    }
+
+    final photos = data['photos'];
+    if (photos is List) {
+      final parsed = photos
+          .whereType<String>()
+          .map((url) => url.trim())
+          .where((url) => url.isNotEmpty)
+          .toList();
+      if (parsed.isNotEmpty) {
+        return parsed;
+      }
+    }
+
+    final photoUrl = (data['photoUrl'] as String?)?.trim() ??
+        (data['photoURL'] as String?)?.trim() ??
+        (data['listingPhoto'] as String?)?.trim() ??
+        (data['thumbnailUrl'] as String?)?.trim() ??
+        (data['imageUrl'] as String?)?.trim() ??
+        (data['photo'] as String?)?.trim() ??
+        (data['image'] as String?)?.trim() ??
+        '';
+
+    if (photoUrl.isNotEmpty) {
+      return [photoUrl];
+    }
+
+    return const <String>[];
   }
 
   Future<_CustomerPreview> _fetchCustomerPreview() async {
@@ -77,9 +233,12 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
             : (fullName.isNotEmpty
                 ? fullName
                 : (email.isNotEmpty ? email : 'Customer')));
-    final contact = email.isNotEmpty ? email : (phone.isNotEmpty ? phone : null);
-
-    return _CustomerPreview(name: resolvedName, contact: contact, profilePictureURL: profilePictureURL);
+    return _CustomerPreview(
+      name: resolvedName,
+      phone: phone.isNotEmpty ? phone : null,
+      email: email.isNotEmpty ? email : null,
+      profilePictureURL: profilePictureURL,
+    );
   }
 
   @override
@@ -107,6 +266,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
               }
 
               if (snapshot.hasError) {
+                debugPrint('🔍 DEBUG: FutureBuilder ERROR: ${snapshot.error}');
                 return Container(
                   height: 200,
                   decoration: BoxDecoration(
@@ -163,6 +323,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
               }
 
               if (photos == null || photos.isEmpty) {
+                debugPrint('🔍 DEBUG: FutureBuilder UI - name: $name, but NO PHOTOS FOUND');
                 return Container(
                   height: 200,
                   decoration: BoxDecoration(
@@ -186,6 +347,8 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
                 );
               }
 
+              debugPrint('🔍 DEBUG: FutureBuilder UI - Success! name: $name, first photo: ${photos.first}');
+
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -197,6 +360,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
                       width: double.infinity,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
+                        debugPrint('🔍 DEBUG: Image.network ERROR for ${photos.first}: $error');
                         return Container(
                           height: 200,
                           decoration: BoxDecoration(
@@ -294,9 +458,19 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (preview.contact != null && preview.contact!.isNotEmpty)
+                            if (preview.phone != null && preview.phone!.isNotEmpty)
                               Text(
-                                preview.contact!,
+                                preview.phone!,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: onSurfaceMuted),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            if (preview.email != null && preview.email!.isNotEmpty)
+                              Text(
+                                preview.email!,
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -333,7 +507,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
               _buildInfoRow(
                 context,
                 'Duration',
-                '${booking.quantity} ${booking.pricingUnit.toString().split('.').last}(s)',
+                '${booking.quantity} ${_durationUnitLabel(booking.pricingUnit.toString().split('.').last)}(s)',
               ),
             ],
           ),
@@ -594,16 +768,33 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
     );
     return '$date at $time';
   }
+
+  String _durationUnitLabel(String unit) {
+    switch (unit.toLowerCase()) {
+      case 'hourly':
+        return 'hour';
+      case 'daily':
+        return 'day';
+      case 'weekly':
+        return 'week';
+      case 'monthly':
+        return 'month';
+      default:
+        return unit;
+    }
+  }
 }
 
 class _CustomerPreview {
   final String name;
-  final String? contact;
+  final String? phone;
+  final String? email;
   final String profilePictureURL;
 
   const _CustomerPreview({
     required this.name,
-    this.contact,
+    this.phone,
+    this.email,
     this.profilePictureURL = '',
   });
 }

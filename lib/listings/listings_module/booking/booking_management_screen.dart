@@ -719,7 +719,7 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
         return Colors.grey;
       default:
         return Colors.blue;
-    }
+      }
   }
 
   void _approveBooking(dynamic booking) {
@@ -729,6 +729,7 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
             listingId: booking.listingId,
             bookingId: booking.id,
             status: 'confirmed',
+            listersUserId: widget.currentUser.userID,
           ),
         );
   }
@@ -779,6 +780,7 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
                       listingId: booking.listingId,
                       bookingId: booking.id,
                       status: 'rejected',
+                      listersUserId: widget.currentUser.userID,
                     ),
                   );
             },

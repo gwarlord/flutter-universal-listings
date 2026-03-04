@@ -404,10 +404,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   }
 
   void _cancelBooking(dynamic booking) {
+    final bookingBloc = context.read<BookingBloc>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: isDark ? const Color(0xFF22242A) : null,
         title: Text(
           'Cancel booking request?'.tr(),
@@ -423,7 +424,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text(
               'No'.tr(),
               style: TextStyle(
@@ -433,8 +434,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
-              context.read<BookingBloc>().add(
+              Navigator.pop(dialogContext);
+              bookingBloc.add(
                 CancelBookingEvent(
                   listingId: booking.listingId,
                   bookingId: booking.id,
@@ -442,11 +443,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               );
               // Wait a short moment for cancellation to process, then refresh bookings
               await Future.delayed(const Duration(milliseconds: 500));
-              if (mounted) {
-                context.read<BookingBloc>().add(
-                  GetMyBookingsEvent(userId: widget.currentUser.userID),
-                );
-              }
+              bookingBloc.add(
+                GetMyBookingsEvent(userId: widget.currentUser.userID),
+              );
             },
             child: Text(
               'Yes, cancel'.tr(),
@@ -467,7 +466,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     final listersPhone = (booking.customerPhone ?? '').toString();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: isDark ? const Color(0xFF22242A) : null,
         title: Text(
           'Contact host'.tr(),
@@ -578,7 +577,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text(
               'Close'.tr(),
               style: TextStyle(

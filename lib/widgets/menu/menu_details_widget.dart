@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:caribtap/models/menu_models.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
-import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/core/ui/theme/app_theme.dart';
 
 /// Displays full digital menu with sections and items
 class MenuDetailsWidget extends StatefulWidget {
@@ -40,7 +40,8 @@ class _MenuDetailsWidgetState extends State<MenuDetailsWidget>
 
   @override
   Widget build(BuildContext context) {
-    final dark = isDarkMode(context);
+    final theme = Theme.of(context);
+    final appColors = context.appThemeColors;
 
     if (widget.sections.isEmpty) {
       return Center(
@@ -48,7 +49,7 @@ class _MenuDetailsWidgetState extends State<MenuDetailsWidget>
           padding: const EdgeInsets.all(32),
           child: Text(
             'No menu items available',
-            style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
+            style: TextStyle(color: appColors.mutedText),
           ),
         ),
       );
@@ -60,7 +61,7 @@ class _MenuDetailsWidgetState extends State<MenuDetailsWidget>
         TabBar(
           controller: _tabController,
           isScrollable: true,
-          unselectedLabelColor: dark ? Colors.white : null,
+          unselectedLabelColor: theme.colorScheme.onSurface,
           tabs: widget.sections
               .map((section) => Tab(text: section.title))
               .toList(),
@@ -81,13 +82,13 @@ class _MenuDetailsWidgetState extends State<MenuDetailsWidget>
   }
 
   Widget _buildSectionContent(BuildContext context, MenuSection section) {
-    final dark = isDarkMode(context);
+    final appColors = context.appThemeColors;
 
     if (section.items.isEmpty) {
       return Center(
         child: Text(
           'No items in this section',
-          style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
+          style: TextStyle(color: appColors.mutedText),
         ),
       );
     }
@@ -102,15 +103,16 @@ class _MenuDetailsWidgetState extends State<MenuDetailsWidget>
   }
 
   Widget _buildItemCard(BuildContext context, MenuItem item) {
-    final dark = isDarkMode(context);
+    final theme = Theme.of(context);
+    final appColors = context.appThemeColors;
     final currencySymbol = _getCurrencySymbol(item.currencyCode);
 
     return Container(
       decoration: BoxDecoration(
-        color: dark ? Colors.grey.shade900 : Colors.white,
+        color: appColors.cardBackground,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+          color: appColors.cardBorder,
         ),
       ),
       padding: const EdgeInsets.all(12),
@@ -131,7 +133,7 @@ class _MenuDetailsWidgetState extends State<MenuDetailsWidget>
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
-                        color: dark ? Colors.white : Colors.black,
+                        color: theme.colorScheme.onSurface,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -143,8 +145,7 @@ class _MenuDetailsWidgetState extends State<MenuDetailsWidget>
                           item.description!,
                           style: TextStyle(
                             fontSize: 13,
-                            color:
-                                dark ? Colors.grey.shade400 : Colors.grey.shade700,
+                            color: appColors.mutedText,
                           ),
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
@@ -245,7 +246,7 @@ class _MenuDetailsWidgetState extends State<MenuDetailsWidget>
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade600,
+                    color: appColors.mutedText,
                   ),
                 ),
               ),

@@ -17,6 +17,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:caribtap/core/model/channel_data_model.dart';
 import 'package:caribtap/core/ui/loading/loading_cubit.dart';
+import 'package:caribtap/core/ui/theme/app_theme.dart';
 import 'package:caribtap/core/ui/theme/theme_cubit.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/listings/ui/auth/api/auth_api_manager.dart';
@@ -173,6 +174,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     return BlocBuilder<ThemeCubit, ThemeState>(
       builder: (context, themeState) {
         final isIos = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+        final appPrimary = Color(colorPrimary);
+        final appAccent = Color(colorAccent);
         return MaterialApp(
             navigatorKey: entry.navigatorKey, // Use global entry key
             localizationsDelegates: [
@@ -184,46 +187,36 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             themeMode: themeState.themeMode,
         builder: EasyLoading.init(),
         title: appName.tr(),
-        theme: ThemeData(
-          snackBarTheme: const SnackBarThemeData(contentTextStyle: TextStyle(color: Colors.white)),
-          sliderTheme: SliderThemeData(trackShape: CustomTrackShape(), thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5)),
-          brightness: Brightness.light,
-          textSelectionTheme: TextSelectionThemeData(cursorColor: Color(colorPrimaryDark)),
-          primaryColor: Color(colorPrimary),
-          colorScheme: ColorScheme.fromSwatch().copyWith(
-              primary: Color(colorPrimary),
-              secondary: Color(colorAccent),
-              surface: Colors.white,
-              onSurface: Colors.black,
-              brightness: Brightness.light
+        theme: AppTheme.light(
+          primary: appPrimary,
+          accent: appAccent,
+          isIos: isIos,
+        ).copyWith(
+          sliderTheme: SliderThemeData(
+            trackShape: CustomTrackShape(),
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
           ),
-          appBarTheme: AppBarTheme(
-            centerTitle: true,
-            color: isIos ? Colors.transparent : Color(colorPrimary),
-            elevation: isIos ? 0 : null,
-            iconTheme: const IconThemeData(color: Colors.white),
-            titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20.0, fontWeight: FontWeight.w500),
-            systemOverlayStyle: SystemUiOverlayStyle.light,
+          textSelectionTheme: TextSelectionThemeData(
+            cursorColor: Color(colorPrimaryDark),
           ),
+          appBarTheme: AppTheme.light(
+            primary: appPrimary,
+            accent: appAccent,
+            isIos: isIos,
+          ).appBarTheme.copyWith(
+                systemOverlayStyle: SystemUiOverlayStyle.light,
+              ),
         ),
-        darkTheme: ThemeData(
-          primaryColor: Color(colorPrimary),
-          brightness: Brightness.dark,
-          scaffoldBackgroundColor: const Color(0xFF121212),
-          colorScheme: ColorScheme.fromSwatch().copyWith(
-            primary: Color(colorPrimary),
-            secondary: Color(colorAccent),
-            surface: const Color(0xFF1E1E1E),
-            onSurface: Colors.white,
-            brightness: Brightness.dark,
-          ),
-          appBarTheme: AppBarTheme( // Removed color property
-            centerTitle: true,
-            color: Color(colorPrimary), // This line is removed
-            titleTextStyle: TextStyle(color: Colors.white, fontSize: 20.0, fontWeight: FontWeight.w500),
-            systemOverlayStyle: SystemUiOverlayStyle.light,
-            iconTheme: IconThemeData(color: Colors.white), // Added for consistency
-          ),
+        darkTheme: AppTheme.dark(
+          primary: appPrimary,
+          accent: appAccent,
+        ).copyWith(
+          appBarTheme: AppTheme.dark(
+            primary: appPrimary,
+            accent: appAccent,
+          ).appBarTheme.copyWith(
+                systemOverlayStyle: SystemUiOverlayStyle.light,
+              ),
         ),
         debugShowCheckedModeBanner: false,
             color: Color(colorPrimary),

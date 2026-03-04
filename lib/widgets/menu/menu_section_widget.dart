@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/models/menu_models.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
-import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/core/ui/theme/app_theme.dart';
 import 'menu_preview_widget.dart';
 import 'menu_details_widget.dart';
 import '../../screens/menu/menu_photos_viewer_screen.dart';
@@ -60,7 +60,7 @@ class _MenuSectionWidgetState extends State<MenuSectionWidget>
       return const SizedBox.shrink();
     }
 
-    final dark = isDarkMode(context);
+    final theme = Theme.of(context);
     final hasUploads = widget.listing.menuUploads.isNotEmpty;
     final hasSections = widget.listing.menuSections.isNotEmpty;
 
@@ -83,7 +83,7 @@ class _MenuSectionWidgetState extends State<MenuSectionWidget>
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: dark ? Colors.white : Colors.black,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ],
@@ -183,12 +183,13 @@ class _MenuSectionWidgetState extends State<MenuSectionWidget>
   }
 
   void _showFullMenuDialog(BuildContext context, List<MenuSection> sections) {
-    final dark = isDarkMode(context);
+    final theme = Theme.of(context);
+    final appColors = context.appThemeColors;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
+      backgroundColor: appColors.cardBackground,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -211,7 +212,7 @@ class _MenuSectionWidgetState extends State<MenuSectionWidget>
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: dark ? Colors.white : Colors.black,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                   IconButton(

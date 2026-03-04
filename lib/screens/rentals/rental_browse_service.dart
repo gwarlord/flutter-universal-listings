@@ -160,7 +160,8 @@ class RentalBrowseService {
   }
 
   /// Create a rental booking from cart items
-  Future<String?> createRentalBooking({
+  /// Each item in the cart will now result in an INDIVIDUAL booking record
+  Future<List<String>> createRentalBooking({
     required String listingId,
     required String customerId,
     required String listerId,
@@ -170,55 +171,62 @@ class RentalBrowseService {
     required String? customerNotes,
   }) async {
     try {
-      // For MVP, create one booking per rental item
-      // In production, could group by date range for efficiency
+      if (cartItems.isEmpty) return [];
       
-      if (cartItems.isEmpty) return null;
+      final List<String> bookingIds = [];
       
-      final bookingId = _firestore.collection('rental_bookings').doc().id;
-      final firstItem = cartItems.first;
-      final durationDays = firstItem.endDate.difference(firstItem.startDate).inDays + 1;
-      
-      final booking = RentalBooking(
-        id: bookingId,
-        listingId: listingId,
-        rentalUnitId: cartItems.length == 1 ? cartItems.first.rentalUnitId : 'multiple',
-        customerId: customerId,
-        listerId: listerId,
-        startTime: firstItem.startDate,
-        endTime: firstItem.endDate,
-        pricingUnit: RentalPricingUnit.daily,
-        unitPrice: firstItem.pricePerDay,
-        quantity: durationDays,
-        subtotal: firstItem.totalPrice,
-        depositAmount: depositAmount ?? 0.0,
-        totalAmount: totalAmount,
-        status: RentalBookingStatus.pending,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+      // Calculate per-item deposit if applicable
+      final perItemDeposit = depositAmount != null ? (depositAmount / cartItems.length) : 0.0;
 
-      await _firestore
-          .collection('rental_bookings')
-          .doc(bookingId)
-          .set({
-            ...booking.toJson(),
-            'cartItems': cartItems.map((item) => {
-              'rentalUnitId': item.rentalUnitId,
-              'unitName': item.unitName,
-              'startDate': item.startDate.millisecondsSinceEpoch,
-              'endDate': item.endDate.millisecondsSinceEpoch,
-              'pricePerDay': item.pricePerDay,
-              'totalPrice': item.totalPrice,
-            }).toList(),
-            'depositAmount': depositAmount,
-            'customerNotes': customerNotes,
-          });
+      for (var item in cartItems) {
+        final bookingId = _firestore.collection('rental_bookings').doc().id;
+        final durationDays = item.endDate.difference(item.startDate).inDays + 1;
 
-      return bookingId;
+        final booking = RentalBooking(
+          id: bookingId,
+          listingId: listingId,
+          rentalUnitId: item.rentalUnitId,
+          customerId: customerId,
+          listerId: listerId,
+          startTime: item.startDate,
+          endTime: item.endDate,
+          pricingUnit: RentalPricingUnit.daily,
+          unitPrice: item.pricePerDay,
+          quantity: durationDays,
+          subtotal: item.totalPrice,
+          depositAmount: perItemDeposit,
+          totalAmount: item.totalPrice + perItemDeposit,
+          status: RentalBookingStatus.pending,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        await _firestore
+            .collection('rental_bookings')
+            .doc(bookingId)
+            .set({
+              ...booking.toJson(),
+              // Save snapshot of item details including photo
+              'cartItems': [{
+                'rentalUnitId': item.rentalUnitId,
+                'unitName': item.unitName,
+                'startDate': item.startDate.millisecondsSinceEpoch,
+                'endDate': item.endDate.millisecondsSinceEpoch,
+                'pricePerDay': item.pricePerDay,
+                'totalPrice': item.totalPrice,
+                'photoUrl': item.photoUrl,
+              }],
+              'depositAmount': perItemDeposit,
+              'customerNotes': customerNotes,
+            });
+
+        bookingIds.add(bookingId);
+      }
+
+      return bookingIds;
     } catch (e) {
       debugPrint('Error creating rental booking: $e');
-      return null;
+      return [];
     }
   }
 

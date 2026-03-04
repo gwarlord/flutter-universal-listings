@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:caribtap/constants.dart';
 import 'package:caribtap/core/ui/loading/loading_cubit.dart';
 import 'package:caribtap/core/utils/helper.dart';
@@ -79,7 +80,7 @@ class _LoginScreen extends State<LoginScreen> {
               } else if (state.authState == AuthState.unauthenticated) {
                 showSnackBar(
                   context,
-                  state.message ?? 'Couldn''t login, Please try again.'.tr(),
+                  state.message ?? 'Couldn\'t login, Please try again.'.tr(),
                 );
               }
             },
@@ -331,43 +332,33 @@ class _LoginScreen extends State<LoginScreen> {
                               if (!snapshot.hasData || (snapshot.data != true)) {
                                 return const SizedBox.shrink();
                               }
-                              return ElevatedButton.icon(
-                                label: const Text(
-                                  'Sign in with Apple',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                                ).tr(),
-                                icon: const Icon(Icons.apple, color: Colors.white),
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  backgroundColor: Colors.black,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14.0),
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12.0),
+                                child: ElevatedButton.icon(
+                                  label: const Text(
+                                    'Sign in with Apple',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                                  ).tr(),
+                                  icon: const Icon(Icons.apple, color: Colors.white),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    backgroundColor: Colors.black,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14.0),
+                                    ),
                                   ),
+                                  onPressed: () =>
+                                      context.read<AuthenticationBloc>().add(LoginWithAppleEvent()),
                                 ),
-                                onPressed: () =>
-                                    context.read<AuthenticationBloc>().add(LoginWithAppleEvent()),
                               );
                             },
                           ),
-                          const SizedBox(height: 12),
-                          OutlinedButton.icon(
-                            label: const Text(
-                              'Sign in with Google',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
-                            ).tr(),
-                            icon: const FaIcon(
-                              FontAwesomeIcons.google,
-                              color: Color(0xFF4285F4),
-                              size: 18,
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              backgroundColor: Colors.white,
-                              side: BorderSide(
-                                color: isDarkMode(context) ? Colors.white24 : Colors.grey.shade300,
-                              ),
+                          // Modern Google Sign In Button
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              backgroundColor: const Color(0xFF4285F4),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14.0),
                               ),
@@ -381,6 +372,38 @@ class _LoginScreen extends State<LoginScreen> {
                                   );
                               context.read<AuthenticationBloc>().add(LoginWithGoogleEvent());
                             },
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  margin: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12.0),
+                                  ),
+                                  child: Center(
+                                    child: SvgPicture.network(
+                                      'https://www.vectorlogo.zone/logos/google/google-icon.svg',
+                                      height: 24,
+                                      width: 24,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    'Sign in with Google'.tr(),
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 44), // Spacer to balance the logo
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 24),
                           Center(
@@ -388,7 +411,7 @@ class _LoginScreen extends State<LoginScreen> {
                               onPressed: () => pushReplacement(context, const SignUpScreen()),
                               child: RichText(
                                 text: TextSpan(
-                                  text: 'Don''t have an account? '.tr(),
+                                  text: 'Don\'t have an account? '.tr(),
                                   style: TextStyle(
                                     color: isDarkMode(context) ? Colors.grey.shade300 : Colors.grey.shade700,
                                     fontSize: 15,

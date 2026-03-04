@@ -67,13 +67,18 @@ class AuthenticationBloc
       }
     });
     on<LoginWithAppleEvent>((event, emit) async {
-      dynamic result = await authenticationRepository.loginWithApple();
-      if (result != null && result is ListingsUser) {
-        user = result;
-        emit(AuthenticationState.authenticated(user!));
-      } else if (result != null && result is String) {
-        emit(AuthenticationState.unauthenticated(message: result));
-      } else {
+      try {
+        dynamic result = await authenticationRepository.loginWithApple();
+        if (result != null && result is ListingsUser) {
+          user = result;
+          emit(AuthenticationState.authenticated(user!));
+        } else if (result != null && result is String) {
+          emit(AuthenticationState.unauthenticated(message: result));
+        } else {
+          emit(AuthenticationState.unauthenticated(
+              message: 'Apple login failed, Please try again.'.tr()));
+        }
+      } catch (e) {
         emit(AuthenticationState.unauthenticated(
             message: 'Apple login failed, Please try again.'.tr()));
       }
@@ -122,7 +127,8 @@ class AuthenticationBloc
               gender: event.gender,
               ageRange: event.ageRange,
               firstName: event.firstName,
-              lastName: event.lastName);
+              lastName: event.lastName,
+              languageCode: event.languageCode);
       if (result != null && result is ListingsUser) {
         user = result;
         emit(AuthenticationState.authenticated(user!));

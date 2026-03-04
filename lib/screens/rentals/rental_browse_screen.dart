@@ -8,6 +8,7 @@ import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/rental_config.dart';
 import 'package:caribtap/screens/rentals/rental_item_models.dart';
 import 'package:caribtap/screens/rentals/rental_browse_service.dart';
+import 'package:caribtap/screens/rentals/rental_cart_storage.dart';
 import 'package:caribtap/screens/rentals/rental_checkout_screen.dart';
 
 /// Customer-facing rental browsing screen - Browse and select rental items
@@ -34,6 +35,26 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
   
   String _searchQuery = '';
   String _selectedCategory = 'all';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPersistedCart();
+  }
+
+  Future<void> _loadPersistedCart() async {
+    final savedCart = await RentalCartStorage.getCart(widget.listing.id);
+    if (!mounted) return;
+    setState(() {
+      _cart
+        ..clear()
+        ..addAll(savedCart);
+    });
+  }
+
+  Future<void> _persistCart() async {
+    await RentalCartStorage.saveCart(widget.listing.id, _cart);
+  }
 
   @override
   void dispose() {
@@ -335,17 +356,72 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
         onAddToCart: (cartItem) {
           setState(() {
             _cart.add(cartItem);
-            Navigator.pop(context);
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Added to cart'.tr())),
-          );
+          Navigator.pop(context);
+          _persistCart();
+          _showAddedToCartSnackBar();
         },
       ),
     );
   }
 
+  void _showAddedToCartSnackBar() {
+    if (!mounted) return;
+
+    final dark = isDarkMode(context);
+    final primaryColor = Color(cfg.colorPrimary);
+    final messenger = ScaffoldMessenger.of(context);
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          elevation: 8,
+          duration: const Duration(seconds: 2),
+          backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+              color: dark ? Colors.grey.shade700 : Colors.grey.shade300,
+            ),
+          ),
+          content: Row(
+            children: [
+              Icon(
+                Icons.check_circle,
+                color: primaryColor,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Added to cart'.tr(),
+                  style: TextStyle(
+                    color: dark ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          action: SnackBarAction(
+            label: 'View Cart'.tr(),
+            textColor: primaryColor,
+            onPressed: () {
+              if (!mounted || _cart.isEmpty) return;
+              _viewCart();
+            },
+          ),
+        ),
+      );
+  }
+
   void _viewCart() {
+    if (!mounted) return;
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -355,13 +431,18 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
           cartItems: _cart,
           currentUser: widget.currentUser,
           onCheckoutComplete: () {
+            if (!mounted) return;
             setState(() => _cart.clear());
+            RentalCartStorage.clearCart(widget.listing.id);
             Navigator.pop(context);
             Navigator.pop(context);
           },
         ),
       ),
-    );
+    ).then((_) {
+      if (!mounted) return;
+      _loadPersistedCart();
+    });
   }
 }
 

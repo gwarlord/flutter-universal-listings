@@ -8,6 +8,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter/services.dart';
+import 'package:caribtap/core/ui/theme/app_theme.dart';
 
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:location/location.dart' as loc;
@@ -102,7 +103,8 @@ void hideProgress() {
 
 //helper method to show alert dialog
 showAlertDialog(BuildContext context, String title, String content) async {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final theme = Theme.of(context);
+  final appColors = context.appThemeColors;
   
   if (_isIOSPlatform) {
     await showCupertinoDialog(
@@ -121,19 +123,19 @@ showAlertDialog(BuildContext context, String title, String content) async {
     await showDialog(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+        backgroundColor: appColors.cardBackground,
         title: Text(
           title,
-          style: TextStyle(color: isDark ? Colors.white : Colors.black),
+          style: TextStyle(color: theme.colorScheme.onSurface),
         ),
         content: Text(
           content,
-          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+          style: TextStyle(color: theme.colorScheme.onSurface),
         ),
         actions: [
           TextButton(
               style: TextButton.styleFrom(
-                foregroundColor: isDark ? Colors.white : Colors.black,
+                foregroundColor: theme.colorScheme.onSurface,
               ),
               child: const Text('OK').tr(),
               onPressed: () => Navigator.pop(context))

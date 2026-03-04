@@ -29,9 +29,13 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
   final EntitlementService _entitlementService = EntitlementService();
   final Map<String, String> _currencyCodeCache = {};
   final Map<String, _CustomerPreview> _customerPreviewCache = {};
+  final TextEditingController _customerSearchController = TextEditingController();
+  final TextEditingController _listerSearchController = TextEditingController();
   late TabController _tabController;
   late VoidCallback _entitlementListener;
   String _selectedStatus = 'all';
+  String _customerSearchQuery = '';
+  String _listerSearchQuery = '';
   bool _showHistory = false; // Toggle between active orders and all orders
   bool _showListerTab = false;
 
@@ -66,6 +70,8 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
   @override
   void dispose() {
     _entitlementService.entitlementNotifier.removeListener(_entitlementListener);
+    _customerSearchController.dispose();
+    _listerSearchController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -123,11 +129,10 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
 
   Widget _buildCustomerTab() {
     final theme = Theme.of(context);
-    final surfaceVariant = theme.colorScheme.surfaceVariant;
-    final outline = theme.colorScheme.outline;
     final onSurface = theme.colorScheme.onSurface;
     final onSurfaceMuted = onSurface.withOpacity(0.7);
     final onSurfaceFaint = onSurface.withOpacity(0.5);
+    final outline = theme.colorScheme.outline;
 
     return Column(
       children: [
@@ -171,6 +176,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
             ],
           ),
         ),
+        _buildCustomerSearchBar(),
         // Rentals list
         Expanded(
           child: StreamBuilder<List<RentalBooking>>(
@@ -219,11 +225,39 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                 );
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: filteredBookings.length,
-                itemBuilder: (context, index) {
-                  return _buildCustomerBookingCard(context, filteredBookings[index]);
+              if (_customerSearchQuery.trim().isEmpty) {
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: filteredBookings.length,
+                  itemBuilder: (context, index) {
+                    return _buildCustomerBookingCard(context, filteredBookings[index]);
+                  },
+                );
+              }
+
+              return FutureBuilder<List<RentalBooking>>(
+                future: _filterBookingsForSearch(filteredBookings, _customerSearchQuery),
+                builder: (context, searchSnapshot) {
+                  if (searchSnapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final searched = searchSnapshot.data ?? const <RentalBooking>[];
+                  if (searched.isEmpty) {
+                    return _buildEmptyState(
+                      Icons.search_off,
+                      'No matching rentals'.tr(),
+                      'Try order #, customer name/email, or product'.tr(),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: searched.length,
+                    itemBuilder: (context, index) {
+                      return _buildCustomerBookingCard(context, searched[index]);
+                    },
+                  );
                 },
               );
             },
@@ -233,10 +267,56 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     );
   }
 
+  Widget _buildCustomerSearchBar() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final hintColor = isDark ? Colors.white54 : Colors.black45;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: TextField(
+        controller: _customerSearchController,
+        onChanged: (value) {
+          setState(() {
+            _customerSearchQuery = value;
+          });
+        },
+        decoration: InputDecoration(
+          hintText: 'Search by order #, name, email, product'.tr(),
+          hintStyle: TextStyle(color: hintColor),
+          prefixIcon: Icon(Icons.search, color: hintColor),
+          suffixIcon: _customerSearchQuery.trim().isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close),
+                  color: hintColor,
+                  tooltip: 'Clear'.tr(),
+                  onPressed: () {
+                    setState(() {
+                      _customerSearchController.clear();
+                      _customerSearchQuery = '';
+                    });
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: isDark ? Colors.grey.shade800 : theme.colorScheme.surfaceVariant,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+        ),
+        style: TextStyle(color: theme.colorScheme.onSurface),
+        textInputAction: TextInputAction.search,
+      ),
+    );
+  }
+
   Widget _buildListerTab() {
     return Column(
       children: [
         _buildStatusFilter(),
+        _buildListerSearchBar(),
         Expanded(
           child: StreamBuilder<List<RentalBooking>>(
             stream: _rentalService.getListerBookings(widget.currentUser.userID),
@@ -250,6 +330,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
               }
 
               var bookings = snapshot.data ?? [];
+              final hasSearch = _listerSearchQuery.trim().isNotEmpty;
 
               if (_selectedStatus != 'all') {
                 bookings = bookings
@@ -265,11 +346,39 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                 );
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: bookings.length,
-                itemBuilder: (context, index) {
-                  return _buildListerBookingCard(context, bookings[index]);
+              if (!hasSearch) {
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: bookings.length,
+                  itemBuilder: (context, index) {
+                    return _buildListerBookingCard(context, bookings[index]);
+                  },
+                );
+              }
+
+              return FutureBuilder<List<RentalBooking>>(
+                future: _filterBookingsForSearch(bookings, _listerSearchQuery),
+                builder: (context, searchSnapshot) {
+                  if (searchSnapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final filtered = searchSnapshot.data ?? const <RentalBooking>[];
+                  if (filtered.isEmpty) {
+                    return _buildEmptyState(
+                      Icons.search_off,
+                      'No matching bookings'.tr(),
+                      'Try order #, customer name/email, or product'.tr(),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      return _buildListerBookingCard(context, filtered[index]);
+                    },
+                  );
                 },
               );
             },
@@ -277,6 +386,98 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
         ),
       ],
     );
+  }
+
+  Widget _buildListerSearchBar() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final hintColor = isDark ? Colors.white54 : Colors.black45;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: TextField(
+        controller: _listerSearchController,
+        onChanged: (value) {
+          setState(() {
+            _listerSearchQuery = value;
+          });
+        },
+        decoration: InputDecoration(
+          hintText: 'Search by order #, name, email, product'.tr(),
+          hintStyle: TextStyle(color: hintColor),
+          prefixIcon: Icon(Icons.search, color: hintColor),
+          suffixIcon: _listerSearchQuery.trim().isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close),
+                  color: hintColor,
+                  tooltip: 'Clear'.tr(),
+                  onPressed: () {
+                    setState(() {
+                      _listerSearchController.clear();
+                      _listerSearchQuery = '';
+                    });
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: isDark ? Colors.grey.shade800 : theme.colorScheme.surfaceVariant,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+        ),
+        style: TextStyle(color: theme.colorScheme.onSurface),
+        textInputAction: TextInputAction.search,
+      ),
+    );
+  }
+
+  Future<List<RentalBooking>> _filterBookingsForSearch(
+    List<RentalBooking> bookings,
+    String rawQuery,
+  ) async {
+    final normalizedQuery = _normalizeSearchText(rawQuery);
+
+    if (normalizedQuery.isEmpty) return bookings;
+
+    final matches = await Future.wait(
+      bookings.map((booking) async {
+        final customerPreview = await _fetchCustomerPreview(booking.customerId);
+        final itemPreview = await _fetchRentalItemPreview(booking);
+
+        final bookingIdLower = booking.id.toLowerCase();
+        final shortIdLower = booking.id.length >= 8
+            ? booking.id.substring(0, 8).toLowerCase()
+            : bookingIdLower;
+        final nameLower = customerPreview.name.toLowerCase();
+        final contactLower = (customerPreview.contact ?? '').toLowerCase();
+        final productLower = itemPreview.title.toLowerCase();
+
+        final normalizedBookingId = _normalizeSearchText(bookingIdLower);
+        final normalizedShortId = _normalizeSearchText(shortIdLower);
+        final normalizedName = _normalizeSearchText(nameLower);
+        final normalizedContact = _normalizeSearchText(contactLower);
+        final normalizedProduct = _normalizeSearchText(productLower);
+
+        final matched = normalizedBookingId.contains(normalizedQuery) ||
+          normalizedShortId.contains(normalizedQuery) ||
+          normalizedName.contains(normalizedQuery) ||
+          normalizedContact.contains(normalizedQuery) ||
+          normalizedProduct.contains(normalizedQuery);
+
+        return matched ? booking : null;
+      }),
+    );
+
+    return matches.whereType<RentalBooking>().toList();
+  }
+
+  String _normalizeSearchText(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll('#', '')
+        .replaceAll(RegExp(r'[^a-z0-9]'), '');
   }
 
   Widget _buildStatusFilter() {
@@ -833,9 +1034,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
         reason: reason,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Status updated'.tr())),
-        );
+        _showSuccessDialog('Status updated'.tr());
       }
     } catch (e) {
       if (mounted) {
@@ -844,6 +1043,74 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
         );
       }
     }
+  }
+
+  void _showSuccessDialog(String message) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final onSurface = theme.colorScheme.onSurface;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_circle,
+                  color: Colors.green,
+                  size: 48,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Success!'.tr(),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: onSurface,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: onSurface.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text('OK'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   _StatusStyle _statusStyle(RentalBookingStatus status) {

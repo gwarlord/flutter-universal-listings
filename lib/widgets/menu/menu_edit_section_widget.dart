@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/services/menu_service.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
-import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/core/ui/theme/app_theme.dart';
 import 'package:caribtap/screens/menu/menu_builder_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
@@ -57,7 +56,8 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
   }
 
   Widget _buildMenuSection(BuildContext context) {
-    final dark = isDarkMode(context);
+    final theme = Theme.of(context);
+    final appColors = context.appThemeColors;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,7 +69,7 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
           title: Text(
             'Show Menu on Listing',
             style: TextStyle(
-              color: dark ? Colors.white : Colors.black,
+              color: theme.colorScheme.onSurface,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -78,14 +78,14 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
                 ? 'Menu is visible to customers'
                 : 'Menu is hidden from customers',
             style: TextStyle(
-              color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+              color: appColors.mutedText,
               fontSize: 12,
             ),
           ),
           activeColor: Color(cfg.colorPrimary),
           activeTrackColor: Color(cfg.colorPrimary).withOpacity(0.5),
-          inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
-          inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
+          inactiveThumbColor: appColors.mutedText,
+          inactiveTrackColor: appColors.cardBorder,
         ),
         const SizedBox(height: 16),
 
@@ -119,13 +119,13 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: dark ? Colors.grey.shade800 : Colors.grey.shade100,
+                color: appColors.subtleBackground,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 'Menu hidden from customers',
                 style: TextStyle(
-                  color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  color: appColors.mutedText,
                   fontSize: 13,
                 ),
               ),
@@ -144,7 +144,8 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
     required int count,
     required int maxCount,
   }) {
-    final dark = isDarkMode(context);
+    final theme = Theme.of(context);
+    final appColors = context.appThemeColors;
     final isFull = count >= maxCount;
 
     return GestureDetector(
@@ -152,7 +153,7 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+          color: appColors.cardBackground,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isFull
@@ -177,7 +178,7 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
                     title,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: dark ? Colors.white : Colors.black,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -185,9 +186,7 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
                     description,
                     style: TextStyle(
                       fontSize: 12,
-                      color: dark
-                          ? Colors.grey.shade400
-                          : Colors.grey.shade700,
+                      color: appColors.mutedText,
                     ),
                   ),
                 ],
@@ -221,8 +220,6 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final dark = isDarkMode(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -302,7 +299,7 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Uploaded ${filesToUpload.length} photo(s)'),
-            backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
       }

@@ -181,7 +181,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   // Expansion state tracking for collapsible sections
   bool _basicInfoExpanded = true;
   bool _detailsHoursExpanded = false;
-  bool _contactSocialExpanded = true;
+  bool _contactSocialExpanded = false;
   bool _businessDetailsExpanded = false;
   bool _menuExpanded = false;
   bool _storeExpanded = false;
@@ -1660,7 +1660,11 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   const SizedBox(height: 16),
                   GestureDetector(
                     onTap: () async {
-                      final selected = await showCountrySearchDialog(context, _countryCode);
+                      final selected = await showCountrySearchDialog(
+                        context,
+                        _countryCode,
+                        caribbeanOnly: true,
+                      );
                       if (selected != null) setState(() => _countryCode = selected);
                     },
                     child: AbsorbPointer(

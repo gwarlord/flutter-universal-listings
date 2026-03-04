@@ -94,7 +94,8 @@ class AuthLocalData extends AuthenticationRepository {
       String gender = 'Prefer not to say',
       String ageRange = 'Prefer not to say',
       String firstName = 'Anonymous',
-      String lastName = 'User'}) {
+      String lastName = 'User',
+      String languageCode = 'en'}) {
     // TODO: implement signUpWithEmailAndPassword
     throw UnimplementedError();
   }

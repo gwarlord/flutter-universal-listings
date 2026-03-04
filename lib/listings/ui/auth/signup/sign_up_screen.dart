@@ -1,17 +1,19 @@
 import 'dart:io';
 
-import 'package:easy_localization/easy_localization.dart' as easy_local;
+import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:caribtap/listings/ui/auth/phone_auth/number_input/phone_number_input_screen.dart';
-import 'package:caribtap/listings/ui/auth/signUp/sign_up_bloc.dart';
+import 'package:caribtap/listings/ui/auth/signup/sign_up_bloc.dart';
 import 'package:caribtap/listings/ui/container/container_screen.dart';
 import 'package:caribtap/core/ui/loading/loading_cubit.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -19,6 +21,7 @@ import 'package:caribtap/constants.dart';
 import 'package:caribtap/listings/utils/world_countries.dart';
 import 'package:caribtap/listings/utils/country_search_dialog.dart';
 import 'package:caribtap/listings/ui/auth/verify_email/verify_email_screen.dart';
+import 'package:the_apple_sign_in/the_apple_sign_in.dart' as apple;
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -36,10 +39,20 @@ class _SignUpState extends State<SignUpScreen> {
   String? _countryCode;
   String _gender = 'Prefer not to say';
   String _ageRange = 'Prefer not to say';
+  String _selectedLanguageCode = 'en';
   AutovalidateMode _validate = AutovalidateMode.disabled;
   bool acceptEULA = true;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+
+  final Map<String, String> _languageNames = {
+    'en': 'English',
+    'es': 'Spanish',
+    'fr': 'French',
+    'nl': 'Dutch',
+    'ht': 'Haitian Creole',
+  };
+
   final List<String> _genderOptions = const [
     'Prefer not to say',
     'Female',
@@ -56,14 +69,17 @@ class _SignUpState extends State<SignUpScreen> {
     '55-64',
     '65+',
   ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _selectedLanguageCode = EasyLocalization.of(context)!.locale.languageCode;
+  }
+
   String? validateCountry(String? code) {
     if (code == null || code.trim().isEmpty) {
-      return 'Country is required';
+      return 'Country is required'.tr();
     }
-    // Optionally, validate against allowed codes
-    // if (!CaribbeanCountries.isAllowedCode(code)) {
-    //   return 'Please select a valid Caribbean country';
-    // }
     return null;
   }
 
@@ -159,6 +175,7 @@ class _SignUpState extends State<SignUpScreen> {
                         countryCode: _countryCode ?? '',
                         gender: _gender,
                         ageRange: _ageRange,
+                        languageCode: _selectedLanguageCode,
                         lastName: lastName ?? 'User',
                         firstName: firstName ?? 'Anonymous'));
                   } else if (state is SignUpFailureState) {
@@ -268,6 +285,28 @@ class _SignUpState extends State<SignUpScreen> {
                                 padding: const EdgeInsets.all(16.0),
                                 child: Column(
                                   children: [
+                                    DropdownButtonFormField<String>(
+                                      value: _selectedLanguageCode,
+                                      decoration: _inputDecoration(
+                                        context,
+                                        'App Language'.tr(),
+                                        icon: Icons.language,
+                                      ),
+                                      items: _languageNames.entries
+                                          .map((e) => DropdownMenuItem<String>(
+                                                value: e.key,
+                                                child: Text(e.value.tr()),
+                                              ))
+                                          .toList(),
+                                      onChanged: (value) {
+                                        if (value == null) return;
+                                        setState(() {
+                                          _selectedLanguageCode = value;
+                                          context.setLocale(Locale(value));
+                                        });
+                                      },
+                                    ),
+                                    const SizedBox(height: 14),
                                     TextFormField(
                                       textInputAction: TextInputAction.next,
                                       textCapitalization:
@@ -318,7 +357,7 @@ class _SignUpState extends State<SignUpScreen> {
                                             text: WorldCountries.all.firstWhere(
                                               (c) => c.code == _countryCode,
                                               orElse: () => Country(code: '', name: ''),
-                                            ).name,
+                                            ).name.tr(),
                                           ),
                                           validator: (_) => validateCountry(_countryCode),
                                           decoration: _inputDecoration(
@@ -341,7 +380,7 @@ class _SignUpState extends State<SignUpScreen> {
                                       items: _genderOptions
                                           .map((g) => DropdownMenuItem<String>(
                                                 value: g,
-                                                child: Text(g),
+                                                child: Text(g.tr()),
                                               ))
                                           .toList(),
                                       onChanged: (value) {
@@ -360,7 +399,7 @@ class _SignUpState extends State<SignUpScreen> {
                                       items: _ageRangeOptions
                                           .map((a) => DropdownMenuItem<String>(
                                                 value: a,
-                                                child: Text(a),
+                                                child: Text(a.tr()),
                                               ))
                                           .toList(),
                                       onChanged: (value) {
@@ -535,7 +574,46 @@ class _SignUpState extends State<SignUpScreen> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            ElevatedButton.icon(
+                            FutureBuilder<bool>(
+                              future: apple.TheAppleSignIn.isAvailable(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState == ConnectionState.waiting) {
+                                  return const SizedBox.shrink();
+                                }
+                                if (!snapshot.hasData || (snapshot.data != true)) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12.0),
+                                  child: ElevatedButton.icon(
+                                    label: const Text(
+                                      'Sign up with Apple',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                                    ).tr(),
+                                    icon: const Icon(Icons.apple, color: Colors.white),
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      backgroundColor: Colors.black,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14.0),
+                                      ),
+                                    ),
+                                    onPressed: () =>
+                                        context.read<AuthenticationBloc>().add(LoginWithAppleEvent()),
+                                  ),
+                                );
+                              },
+                            ),
+                            // Modern Google Sign Up Button
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                backgroundColor: const Color(0xFF4285F4),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14.0),
+                                ),
+                              ),
                               onPressed: () {
                                 context.read<LoadingCubit>().showLoading(
                                       context,
@@ -547,16 +625,37 @@ class _SignUpState extends State<SignUpScreen> {
                                     .read<AuthenticationBloc>()
                                     .add(LoginWithGoogleEvent());
                               },
-                              icon: const Icon(Icons.g_mobiledata, size: 28),
-                              label: const Text('Sign up with Google').tr(),
-                              style: ElevatedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
-                                backgroundColor: const Color(0xFF4285F4),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14.0),
-                                ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 44,
+                                    height: 44,
+                                    margin: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12.0),
+                                    ),
+                                    child: Center(
+                                      child: SvgPicture.network(
+                                        'https://www.vectorlogo.zone/logos/google/google-icon.svg',
+                                        height: 24,
+                                        width: 24,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      'Sign up with Google'.tr(),
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 44), // Spacer to balance the logo
+                                ],
                               ),
                             ),
                             const SizedBox(height: 20),

@@ -53,6 +53,38 @@ class RentalCartItem {
       details: details ?? this.details,
     );
   }
+
+  factory RentalCartItem.fromJson(Map<String, dynamic> json) {
+    return RentalCartItem(
+      rentalUnitId: (json['rentalUnitId'] ?? '').toString(),
+      unitName: (json['unitName'] ?? '').toString(),
+      rentalType: (json['rentalType'] ?? 'general').toString(),
+      startDate: DateTime.tryParse((json['startDate'] ?? '').toString()) ?? DateTime.now(),
+      endDate: DateTime.tryParse((json['endDate'] ?? '').toString()) ?? DateTime.now(),
+      pricePerDay: (json['pricePerDay'] ?? 0).toDouble(),
+      totalPrice: (json['totalPrice'] ?? 0).toDouble(),
+      currencyCode: (json['currencyCode'] ?? 'USD').toString(),
+      photoUrl: json['photoUrl']?.toString(),
+      details: json['details'] is Map<String, dynamic>
+          ? json['details'] as Map<String, dynamic>
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'rentalUnitId': rentalUnitId,
+      'unitName': unitName,
+      'rentalType': rentalType,
+      'startDate': startDate.toIso8601String(),
+      'endDate': endDate.toIso8601String(),
+      'pricePerDay': pricePerDay,
+      'totalPrice': totalPrice,
+      'currencyCode': currencyCode,
+      'photoUrl': photoUrl,
+      'details': details,
+    };
+  }
 }
 
 /// Browse-friendly rental item model

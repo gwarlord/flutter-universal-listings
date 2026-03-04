@@ -156,25 +156,44 @@ class AuthFirebaseUtils extends AuthenticationRepository {
 
   @override
   loginWithApple() async {
-    final appleCredential = await apple.TheAppleSignIn.performRequests([
-      const apple.AppleIdRequest(
-          requestedScopes: [apple.Scope.email, apple.Scope.fullName])
-    ]);
-    if (appleCredential.error != null) {
-      return 'Couldn\'t login with apple.'.tr();
-    }
+    try {
+      final appleCredential = await apple.TheAppleSignIn.performRequests([
+        const apple.AppleIdRequest(
+            requestedScopes: [apple.Scope.email, apple.Scope.fullName])
+      ]);
 
-    if (appleCredential.status == apple.AuthorizationStatus.authorized) {
-      final auth.AuthCredential credential =
-          auth.OAuthProvider('apple.com').credential(
-        accessToken: String.fromCharCodes(
-            appleCredential.credential?.authorizationCode ?? []),
-        idToken: String.fromCharCodes(
-            appleCredential.credential?.identityToken ?? []),
-      );
-      return await _handleAppleLogin(credential, appleCredential.credential!);
-    } else {
+      if (appleCredential.error != null) {
+        return 'Couldn\'t login with apple.'.tr();
+      }
+
+      if (appleCredential.status == apple.AuthorizationStatus.authorized) {
+        final auth.AuthCredential credential =
+            auth.OAuthProvider('apple.com').credential(
+          accessToken: String.fromCharCodes(
+              appleCredential.credential?.authorizationCode ?? []),
+          idToken: String.fromCharCodes(
+              appleCredential.credential?.identityToken ?? []),
+        );
+        return await _handleAppleLogin(credential, appleCredential.credential!);
+      }
+
+      if (appleCredential.status == apple.AuthorizationStatus.cancelled) {
+        return 'Apple sign in cancelled.'.tr();
+      }
+
       return 'Couldn\'t login with apple.'.tr();
+    } on auth.FirebaseAuthException catch (e, s) {
+      debugPrint('loginWithApple FirebaseAuthException: ${e.code} ${e.message} $s');
+      if (e.code == 'operation-not-allowed') {
+        return 'Apple Sign-In is not enabled in Firebase Authentication for this app.'.tr();
+      }
+      if (e.code == 'invalid-credential') {
+        return 'Apple Sign-In credentials are invalid. Please try again.'.tr();
+      }
+      return 'Apple login failed, Please try again.'.tr();
+    } catch (e, s) {
+      debugPrint('loginWithApple error: $e $s');
+      return 'Apple login failed, Please try again.'.tr();
     }
   }
 
@@ -353,7 +372,8 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       String gender = 'Prefer not to say',
       String ageRange = 'Prefer not to say',
       String firstName = 'Anonymous',
-      String lastName = 'User'}) async {
+      String lastName = 'User',
+      String languageCode = 'en'}) async {
     try {
       debugPrint('🔐 Starting signup for: $emailAddress');
       auth.UserCredential result = await auth.FirebaseAuth.instance
@@ -388,7 +408,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       ListingsUser user = ListingsUser(
           active: true,
           lastOnlineTimestamp: Timestamp.now(),
-          settings: UserSettings(),
+          settings: UserSettings(languageCode: languageCode),
           email: emailAddress,
           firstName: firstName,
           userID: result.user?.uid ?? '',

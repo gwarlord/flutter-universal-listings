@@ -8,6 +8,8 @@ import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/rental_config.dart';
 import 'package:caribtap/screens/rentals/rental_item_models.dart';
 import 'package:caribtap/screens/rentals/rental_browse_service.dart';
+import 'package:caribtap/screens/rentals/rental_cart_storage.dart';
+import 'package:intl/intl.dart';
 
 /// Rental checkout screen - Review cart and complete booking
 class RentalCheckoutScreen extends StatefulWidget {
@@ -350,10 +352,11 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
             // Remove button
             IconButton(
               icon: const Icon(Icons.close),
-              onPressed: () {
+              onPressed: () async {
                 setState(() {
                   widget.cartItems.remove(item);
                 });
+                await RentalCartStorage.saveCart(widget.listing.id, widget.cartItems);
               },
             ),
           ],
@@ -426,7 +429,7 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      final bookingId = await _rentalService.createRentalBooking(
+      final bookingIds = await _rentalService.createRentalBooking(
         listingId: widget.listing.id,
         customerId: widget.currentUser!.userID,
         listerId: widget.listing.authorID,
@@ -436,11 +439,11 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
         customerNotes: _notesController.text.isEmpty ? null : _notesController.text,
       );
 
-      if (bookingId != null) {
+      if (bookingIds.isNotEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Booking request submitted successfully!'.tr()),
+              content: Text('Booking requests submitted successfully!'.tr()),
               backgroundColor: Colors.green,
             ),
           );

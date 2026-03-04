@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'caribbean_countries.dart';
 import 'world_countries.dart';
@@ -73,7 +74,7 @@ class _CountrySearchDialogState extends State<_CountrySearchDialog> {
     final iconColor = theme.iconTheme.color;
     return AlertDialog(
       backgroundColor: backgroundColor,
-      title: Text('Select Country', style: TextStyle(color: textColor)),
+      title: Text('Select Country'.tr(), style: TextStyle(color: textColor)),
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
@@ -83,7 +84,7 @@ class _CountrySearchDialogState extends State<_CountrySearchDialog> {
               controller: _searchController,
               style: TextStyle(color: textColor),
               decoration: InputDecoration(
-                hintText: 'Search country...',
+                hintText: 'Search country...'.tr(),
                 hintStyle: TextStyle(color: textColor?.withOpacity(0.7)),
                 prefixIcon: Icon(Icons.search, color: iconColor),
                 isDense: true,
@@ -104,7 +105,7 @@ class _CountrySearchDialogState extends State<_CountrySearchDialog> {
                       .map((c) => _CountryItem(code: c.code, name: c.name))
                       .toList();
                   _filtered = sourceList
-                    .where((c) => c.name
+                    .where((c) => c.name.tr()
                       .toLowerCase()
                       .contains(value.toLowerCase()))
                     .toList();
@@ -118,7 +119,7 @@ class _CountrySearchDialogState extends State<_CountrySearchDialog> {
                 child: _filtered.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.symmetric(vertical: 20),
-                        child: Text('No countries found', style: TextStyle(color: textColor)),
+                        child: Text('No countries found'.tr(), style: TextStyle(color: textColor)),
                       )
                     : ListView.builder(
                         shrinkWrap: true,
@@ -126,7 +127,7 @@ class _CountrySearchDialogState extends State<_CountrySearchDialog> {
                         itemBuilder: (context, i) {
                           final c = _filtered[i];
                           return ListTile(
-                            title: Text(c.name, style: TextStyle(color: textColor)),
+                            title: Text(c.name.tr(), style: TextStyle(color: textColor)),
                             selected: c.code == widget.selectedCode,
                             selectedTileColor: isDark ? theme.colorScheme.primary.withOpacity(0.15) : Colors.grey[200],
                             onTap: () => Navigator.of(context).pop(c.code),
@@ -141,7 +142,7 @@ class _CountrySearchDialogState extends State<_CountrySearchDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text('Cancel', style: TextStyle(color: theme.colorScheme.primary)),
+          child: Text('Cancel'.tr(), style: TextStyle(color: theme.colorScheme.primary)),
         ),
       ],
     );

@@ -336,16 +336,6 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
         orders = orders.where(_shouldShowOrder).toList();
 
         final rawQuery = _orderSearchQuery.trim();
-        if (rawQuery.isNotEmpty) {
-          final normalizedQuery = rawQuery.replaceAll('#', '').replaceAll(' ', '');
-          final queryLower = normalizedQuery.toLowerCase();
-          final queryUpper = normalizedQuery.toUpperCase();
-          orders = orders.where((order) {
-            final id = order.id;
-            final shortId = id.length >= 8 ? id.substring(0, 8).toUpperCase() : id.toUpperCase();
-            return id.toLowerCase().contains(queryLower) || shortId.contains(queryUpper);
-          }).toList();
-        }
 
         // Filter for Active Orders tab - show Pending, Confirmed, and additional statuses based on type
         if (statusFilter == _activeOrdersMarker) {
@@ -366,120 +356,22 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
               o.status == OrderStatus.confirmed
             ).toList();
           }
-          
-          final pending = orders.where((o) => o.status == OrderStatus.requested).toList();
-          final confirmed = orders.where((o) => o.status == OrderStatus.confirmed).toList();
-          final preparing = _isShowingFoodOrders ? orders.where((o) => o.status == OrderStatus.preparing).toList() : [];
-          final ready = _isShowingFoodOrders ? orders.where((o) => o.status == OrderStatus.ready).toList() : [];
-          final served = _isShowingFoodOrders ? orders.where((o) => o.status == OrderStatus.served).toList() : [];
 
-          if (pending.isEmpty && confirmed.isEmpty && preparing.isEmpty && ready.isEmpty && served.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.receipt_long_outlined,
-                    size: 64,
-                    color: dark ? Colors.grey.shade700 : Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No active orders'.tr(),
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: dark ? Colors.white70 : Colors.black54,
-                    ),
-                  ),
-                ],
-              ),
+          if (rawQuery.isNotEmpty) {
+            return FutureBuilder<List<OrderRequest>>(
+              future: _filterOrdersForSearch(orders, rawQuery),
+              builder: (context, searchSnapshot) {
+                if (searchSnapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final searchedOrders = searchSnapshot.data ?? const <OrderRequest>[];
+                return _buildActiveOrdersList(searchedOrders, dark);
+              },
             );
           }
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // Pending Orders section
-              if (pending.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12, left: 4),
-                  child: Text(
-                    'Pending'.tr(),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.orange.shade600,
-                    ),
-                  ),
-                ),
-                ...pending.map((order) => _buildOrderCard(order, dark)),
-              ],
-              // Confirmed Orders section
-              if (confirmed.isNotEmpty) ...[
-                if (pending.isNotEmpty) const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12, left: 4),
-                  child: Text(
-                    'Confirmed'.tr(),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.blue.shade600,
-                    ),
-                  ),
-                ),
-                ...confirmed.map((order) => _buildOrderCard(order, dark)),
-              ],
-              // Preparing Orders section
-              if (preparing.isNotEmpty) ...[
-                if (pending.isNotEmpty || confirmed.isNotEmpty) const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12, left: 4),
-                  child: Text(
-                    'Preparing'.tr(),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.purple.shade600,
-                    ),
-                  ),
-                ),
-                ...preparing.map((order) => _buildOrderCard(order, dark)),
-              ],
-              // Ready Orders section
-              if (ready.isNotEmpty) ...[
-                if (pending.isNotEmpty || confirmed.isNotEmpty || preparing.isNotEmpty) const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12, left: 4),
-                  child: Text(
-                    'Ready'.tr(),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.teal.shade600,
-                    ),
-                  ),
-                ),
-                ...ready.map((order) => _buildOrderCard(order, dark)),
-              ],
-              // Served Orders section
-              if (served.isNotEmpty) ...[
-                if (pending.isNotEmpty || confirmed.isNotEmpty || preparing.isNotEmpty || ready.isNotEmpty) const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12, left: 4),
-                  child: Text(
-                    'Served'.tr(),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.indigo.shade600,
-                    ),
-                  ),
-                ),
-                ...served.map((order) => _buildOrderCard(order, dark)),
-              ],
-            ],
-          );
+          return _buildActiveOrdersList(orders, dark);
         }
 
         // Filter orders for specific status tabs (client-side verification)
@@ -488,6 +380,49 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
             statusFilter != _allOrdersMarker &&
             statusFilter is OrderStatus) {
           orders = orders.where((o) => o.status == statusFilter).toList();
+        }
+
+        if (rawQuery.isNotEmpty) {
+          return FutureBuilder<List<OrderRequest>>(
+            future: _filterOrdersForSearch(orders, rawQuery),
+            builder: (context, searchSnapshot) {
+              if (searchSnapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final searchedOrders = searchSnapshot.data ?? const <OrderRequest>[];
+              if (searchedOrders.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.receipt_long_outlined,
+                        size: 64,
+                        color: dark ? Colors.grey.shade700 : Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No orders found'.tr(),
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: dark ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: searchedOrders.length,
+                itemBuilder: (context, index) {
+                  return _buildOrderCard(searchedOrders[index], dark);
+                },
+              );
+            },
+          );
         }
 
         if (orders.isEmpty) {
@@ -522,6 +457,163 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
         );
       },
     );
+  }
+
+  Widget _buildActiveOrdersList(List<OrderRequest> orders, bool dark) {
+    final pending = orders.where((o) => o.status == OrderStatus.requested).toList();
+    final confirmed = orders.where((o) => o.status == OrderStatus.confirmed).toList();
+    final preparing = _isShowingFoodOrders ? orders.where((o) => o.status == OrderStatus.preparing).toList() : [];
+    final ready = _isShowingFoodOrders ? orders.where((o) => o.status == OrderStatus.ready).toList() : [];
+    final served = _isShowingFoodOrders ? orders.where((o) => o.status == OrderStatus.served).toList() : [];
+
+    if (pending.isEmpty && confirmed.isEmpty && preparing.isEmpty && ready.isEmpty && served.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.receipt_long_outlined,
+              size: 64,
+              color: dark ? Colors.grey.shade700 : Colors.grey.shade400,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No active orders'.tr(),
+              style: TextStyle(
+                fontSize: 18,
+                color: dark ? Colors.white70 : Colors.black54,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (pending.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12, left: 4),
+            child: Text(
+              'Pending'.tr(),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.orange.shade600,
+              ),
+            ),
+          ),
+          ...pending.map((order) => _buildOrderCard(order, dark)),
+        ],
+        if (confirmed.isNotEmpty) ...[
+          if (pending.isNotEmpty) const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12, left: 4),
+            child: Text(
+              'Confirmed'.tr(),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.blue.shade600,
+              ),
+            ),
+          ),
+          ...confirmed.map((order) => _buildOrderCard(order, dark)),
+        ],
+        if (preparing.isNotEmpty) ...[
+          if (pending.isNotEmpty || confirmed.isNotEmpty) const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12, left: 4),
+            child: Text(
+              'Preparing'.tr(),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.purple.shade600,
+              ),
+            ),
+          ),
+          ...preparing.map((order) => _buildOrderCard(order, dark)),
+        ],
+        if (ready.isNotEmpty) ...[
+          if (pending.isNotEmpty || confirmed.isNotEmpty || preparing.isNotEmpty)
+            const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12, left: 4),
+            child: Text(
+              'Ready'.tr(),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.teal.shade600,
+              ),
+            ),
+          ),
+          ...ready.map((order) => _buildOrderCard(order, dark)),
+        ],
+        if (served.isNotEmpty) ...[
+          if (pending.isNotEmpty || confirmed.isNotEmpty || preparing.isNotEmpty || ready.isNotEmpty)
+            const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12, left: 4),
+            child: Text(
+              'Served'.tr(),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.indigo.shade600,
+              ),
+            ),
+          ),
+          ...served.map((order) => _buildOrderCard(order, dark)),
+        ],
+      ],
+    );
+  }
+
+  Future<List<OrderRequest>> _filterOrdersForSearch(
+    List<OrderRequest> orders,
+    String rawQuery,
+  ) async {
+    final normalizedQuery = _normalizeSearchText(rawQuery);
+    if (normalizedQuery.isEmpty) return orders;
+
+    final matches = await Future.wait(
+      orders.map((order) async {
+        final customer = await _getCustomer(order.customerId);
+        final listing = await _getListingCached(order.listingId);
+
+        final orderId = _normalizeSearchText(order.id);
+        final shortId = _normalizeSearchText(
+          order.id.length >= 8 ? order.id.substring(0, 8) : order.id,
+        );
+        final customerName = _normalizeSearchText(customer?.fullName() ?? '');
+        final customerEmail = _normalizeSearchText(customer?.email ?? '');
+        final productNames = _normalizeSearchText(
+          order.items.map((item) => item.name).join(' '),
+        );
+        final listingTitle = _normalizeSearchText(listing?.title ?? '');
+
+        final matched = orderId.contains(normalizedQuery) ||
+            shortId.contains(normalizedQuery) ||
+            customerName.contains(normalizedQuery) ||
+            customerEmail.contains(normalizedQuery) ||
+            productNames.contains(normalizedQuery) ||
+            listingTitle.contains(normalizedQuery);
+
+        return matched ? order : null;
+      }),
+    );
+
+    return matches.whereType<OrderRequest>().toList();
+  }
+
+  String _normalizeSearchText(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll('#', '')
+        .replaceAll(RegExp(r'[^a-z0-9]'), '');
   }
 
   Widget _buildOrderCard(OrderRequest order, bool dark) {

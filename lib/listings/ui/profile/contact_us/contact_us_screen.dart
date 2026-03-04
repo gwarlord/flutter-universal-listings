@@ -18,10 +18,8 @@ class ContactUsScreen extends StatefulWidget {
 }
 
 class _ContactUsScreenState extends State<ContactUsScreen> {
-  static const String contactPhoneNumber = '+1-868-290-8585';
   static const String contactEmail = 'support@caribtap.com';
   static const String supportChatEmail = 'support@caribtap.com';
-  static const String contactAddress = 'CaribTap Support Team\nChase Village, Trinidad and Tobago';
   static const String contactWebsite = 'https://www.caribtap.com';
 
   @override
@@ -132,54 +130,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                     icon: Icons.language_outlined,
                     onTap: () => _launchAction(contactWebsite),
                   ),
-                  const Divider(height: 1, indent: 50),
-                  _buildContactTile(
-                    context,
-                    title: 'Call Us'.tr(),
-                    subtitle: contactPhoneNumber,
-                    icon: Icons.phone_outlined,
-                    onTap: () => _launchAction('tel:$contactPhoneNumber'),
-                  ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            Text('OUR OFFICE'.tr(), style: titleStyle),
-            const SizedBox(height: 12),
-            Card(
-              color: cardColor,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(
-                  color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.location_on_outlined, color: isDark ? Colors.white70 : Colors.black54),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        contactAddress,
-                        style: TextStyle(
-                          fontSize: 14,
-                          height: 1.5,
-                          color: isDark ? Colors.grey[300] : Colors.grey[700],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
             const SizedBox(height: 40),

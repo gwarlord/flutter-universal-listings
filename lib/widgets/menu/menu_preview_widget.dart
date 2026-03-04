@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:caribtap/models/menu_models.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
-import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/core/ui/theme/app_theme.dart';
 
 /// Shows a preview of the first 3 items across all sections
 class MenuPreviewWidget extends StatelessWidget {
@@ -20,7 +19,7 @@ class MenuPreviewWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = isDarkMode(context);
+    final theme = Theme.of(context);
     final previewItems = _getPreviewItems();
 
     if (previewItems.isEmpty) {
@@ -37,7 +36,7 @@ class MenuPreviewWidget extends StatelessWidget {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: dark ? Colors.white : Colors.black,
+              color: theme.colorScheme.onSurface,
             ),
           ),
         ),
@@ -64,15 +63,16 @@ class MenuPreviewWidget extends StatelessWidget {
   }
 
   Widget _buildItemCard(BuildContext context, MenuItem item) {
-    final dark = isDarkMode(context);
+    final theme = Theme.of(context);
+    final appColors = context.appThemeColors;
     final currencySymbol = _getCurrencySymbol(item.currencyCode);
 
     return Container(
       decoration: BoxDecoration(
-        color: dark ? Colors.grey.shade900 : Colors.white,
+        color: appColors.cardBackground,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+          color: appColors.cardBorder,
         ),
       ),
       padding: const EdgeInsets.all(12),
@@ -109,7 +109,7 @@ class MenuPreviewWidget extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
-                          color: dark ? Colors.white : Colors.black,
+                          color: theme.colorScheme.onSurface,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -133,7 +133,7 @@ class MenuPreviewWidget extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
-                        color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+                        color: appColors.mutedText,
                       ),
                     ),
                   ),

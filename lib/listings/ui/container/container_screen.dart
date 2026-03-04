@@ -704,7 +704,7 @@ class _ContainerState extends State<ContainerScreen> {
                     primaryColor: primaryColorValue,
                   ),
                   _drawerTile(
-                    title: 'My Brands'.tr(),
+                    title: 'My Brands/Branches'.tr(),
                     icon: Icons.storefront_rounded,
                     onTap: () {
                       Navigator.pop(context);
@@ -906,24 +906,6 @@ class _ContainerState extends State<ContainerScreen> {
                     _buildUpgradePlanCard(isDark, primaryColorValue, context, currentUser),
                 ],
               ),
-            ),
-          ),
-
-          // Logout at the bottom
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: _drawerTile(
-              title: 'Log Out'.tr(),
-              icon: Icons.logout_rounded,
-              iconColor: Colors.redAccent,
-              textColor: Colors.redAccent,
-              onTap: () {
-                Navigator.pop(context);
-                context.read<AuthenticationBloc>().add(LogoutEvent(currentUser));
-              },
-              isDark: isDark,
-              primaryColor: primaryColorValue,
             ),
           ),
           SafeArea(

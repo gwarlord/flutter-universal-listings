@@ -46,6 +46,7 @@ class SignupWithEmailAndPasswordEvent extends AuthenticationEvent {
   String countryCode;
   String gender;
   String ageRange;
+  String languageCode;
 
   SignupWithEmailAndPasswordEvent(
       {required this.emailAddress,
@@ -55,7 +56,8 @@ class SignupWithEmailAndPasswordEvent extends AuthenticationEvent {
       this.gender = 'Prefer not to say',
       this.ageRange = 'Prefer not to say',
       this.firstName = 'Anonymous',
-      this.lastName = 'User'});
+      this.lastName = 'User',
+      this.languageCode = 'en'});
 }
 
 class LogoutEvent extends AuthenticationEvent {

@@ -50,7 +50,8 @@ abstract class AuthenticationRepository {
       String gender = 'Prefer not to say',
       String ageRange = 'Prefer not to say',
       String firstName = 'Anonymous',
-      String lastName = 'User'});
+      String lastName = 'User',
+      String languageCode = 'en'});
 
   /// Logs the [user] of the system
   logout(ListingsUser user);

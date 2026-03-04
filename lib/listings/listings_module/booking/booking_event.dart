@@ -26,11 +26,13 @@ class UpdateBookingStatusEvent extends BookingEvent {
   final String listingId;
   final String bookingId;
   final String status;
-  
+  final String? listersUserId;
+
   UpdateBookingStatusEvent({
     required this.listingId,
     required this.bookingId,
     required this.status,
+    this.listersUserId,
   });
 }
 

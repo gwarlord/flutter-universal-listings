@@ -11,6 +11,7 @@ import 'package:caribtap/listings/model/order_request.dart';
 import 'package:caribtap/listings/services/store_service.dart';
 import 'package:caribtap/screens/store/cart_models.dart';
 import 'package:caribtap/screens/store/order_chat_helper.dart';
+import 'package:caribtap/screens/store/store_cart_storage.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/listings/api/firebase/table_mode_firebase.dart';
 import 'package:caribtap/listings/model/table_mode_models.dart';
@@ -463,7 +464,7 @@ class _CartScreenState extends State<CartScreen> {
             Row(
               children: [
                 IconButton(
-                  onPressed: () {
+                  onPressed: () async {
                     setState(() {
                       if (item.qty > 1) {
                         item.qty--;
@@ -472,6 +473,7 @@ class _CartScreenState extends State<CartScreen> {
                       }
                       widget.onCartUpdated?.call();
                     });
+                    await StoreCartStorage.saveCart(widget.listing.id, widget.cartItems);
                   },
                   icon: Icon(
                     item.qty > 1 ? Icons.remove_circle_outline : Icons.delete_outline,
@@ -487,11 +489,12 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                 ),
                 IconButton(
-                  onPressed: () {
+                  onPressed: () async {
                     setState(() {
                       item.qty++;
                       widget.onCartUpdated?.call();
                     });
+                    await StoreCartStorage.saveCart(widget.listing.id, widget.cartItems);
                   },
                   icon: Icon(
                     Icons.add_circle_outline,
@@ -985,6 +988,7 @@ class _CartScreenState extends State<CartScreen> {
       // Clear cart and refresh
       widget.cartItems.clear();
       widget.onCartUpdated?.call();
+      await StoreCartStorage.clearCart(widget.listing.id);
 
       // Close cart and return to listing detail
       Navigator.of(context).pop(); // Close cart

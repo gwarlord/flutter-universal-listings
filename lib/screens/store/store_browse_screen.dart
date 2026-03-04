@@ -9,6 +9,7 @@ import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/services/store_service.dart';
 import 'package:caribtap/screens/store/cart_models.dart';
 import 'package:caribtap/screens/store/cart_screen.dart';
+import 'package:caribtap/screens/store/store_cart_storage.dart';
 
 /// Customer-facing store browsing screen
 class StoreBrowseScreen extends StatefulWidget {
@@ -33,6 +34,26 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
   String _selectedCategory = 'All';
   String _searchQuery = '';
   String _sortBy = 'new'; // 'new', 'price_low', 'price_high'
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPersistedCart();
+  }
+
+  Future<void> _loadPersistedCart() async {
+    final savedCart = await StoreCartStorage.getCart(widget.listing.id);
+    if (!mounted) return;
+    setState(() {
+      _cart
+        ..clear()
+        ..addAll(savedCart);
+    });
+  }
+
+  Future<void> _persistCart() async {
+    await StoreCartStorage.saveCart(widget.listing.id, _cart);
+  }
 
   @override
   void dispose() {
@@ -338,6 +359,7 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
               _cart.add(cartItem);
             }
           });
+          _persistCart();
           showSnackBar(context, 'Added to cart'.tr());
         },
       ),
@@ -352,10 +374,13 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
           listing: widget.listing,
           currentUser: widget.currentUser,
           cartItems: _cart,
-          onCartUpdated: () => setState(() {}),
+          onCartUpdated: () {
+            setState(() {});
+            _persistCart();
+          },
         ),
       ),
-    );
+    ).then((_) => _loadPersistedCart());
   }
 }
 

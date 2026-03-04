@@ -103,18 +103,10 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
       print('✅ BLoC: Booking status updated successfully');
       
       // Fetch updated booking (to obtain lister id), then refresh received bookings list
-      final bookings = await bookingRepository.getListingBookings(
-        listingId: event.listingId,
-      );
-      print('📋 BLoC: Found ${bookings.length} total bookings for listing');
-      
-      final booking = bookings.firstWhere((b) => b.id == event.bookingId);
-      print('📌 BLoC: Found target booking, listersUserId: ${booking.listersUserId}');
-
+      // Note: This logic assumes the lister is the one calling UpdateBookingStatusEvent
       final receivedBookings = await bookingRepository.getReceivedBookings(
-        listersUserId: booking.listersUserId,
+        listersUserId: event.listersUserId ?? '',
       );
-      print('📊 BLoC: Fetched ${receivedBookings.length} received bookings');
 
       emit(ReceivedBookingsLoadedState(bookings: receivedBookings));
     } catch (e) {
@@ -133,17 +125,9 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
         listingId: event.listingId,
         bookingId: event.bookingId,
       );
-      // Fetch updated booking (to obtain lister id), then refresh received bookings list
-      final bookings = await bookingRepository.getListingBookings(
-        listingId: event.listingId,
-      );
-      final booking = bookings.firstWhere((b) => b.id == event.bookingId);
 
-      final receivedBookings = await bookingRepository.getReceivedBookings(
-        listersUserId: booking.listersUserId,
-      );
-
-      emit(ReceivedBookingsLoadedState(bookings: receivedBookings));
+      // We don't refresh the list here because MyBookingsScreen manually calls GetMyBookingsEvent
+      // and a customer might not have permission to read the listing's full booking collection.
     } catch (e) {
       emit(BookingErrorState(errorMessage: e.toString()));
     }

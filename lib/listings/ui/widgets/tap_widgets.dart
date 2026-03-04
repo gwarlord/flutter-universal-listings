@@ -277,8 +277,8 @@ class _TapVouchButtonState extends State<TapVouchButton> with TickerProviderStat
     // Brighter, more saturated version when vouched
     final tappedOverlay = LinearGradient(
       colors: [
-        const Color(0xFF2FE3D8),
-        const Color(0xFF3BA5FF),
+        const Color(0xFF7C3AED),
+        const Color(0xFFEC4899),
       ],
       begin: Alignment.centerLeft,
       end: Alignment.centerRight,
@@ -288,7 +288,7 @@ class _TapVouchButtonState extends State<TapVouchButton> with TickerProviderStat
     final badgeText = (widget.badgeText ?? '').trim();
     final labelText = widget.isTapped ? 'Vouched'.tr() : tapButtonText.tr();
     final microText = widget.isTapped ? 'You vouched'.tr() : 'Vouch for credibility'.tr();
-    final countText = '${widget.tapCount} ${'community taps'.tr()}';
+    final countText = '${widget.tapCount} ${'Community Taps'.tr()}';
 
     return RepaintBoundary(
       child: Semantics(
