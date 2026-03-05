@@ -195,20 +195,23 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
         const SizedBox(height: 8),
 
         // Stats and Progress Row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxWidth < 360;
+
+            final statsText = Text(
               'Words: $wordCount  •  Characters: $charCount/${widget.maxCharacters}',
               style: TextStyle(
                 fontSize: 12,
                 color: isNearLimit ? Colors.orange : Colors.grey,
                 fontWeight: isNearLimit ? FontWeight.w600 : FontWeight.normal,
               ),
-            ),
-            // Character progress indicator
-            SizedBox(
-              width: 120,
+              maxLines: isCompact ? 2 : 1,
+              overflow: TextOverflow.ellipsis,
+            );
+
+            final progressBar = SizedBox(
+              width: isCompact ? double.infinity : 110,
               child: Tooltip(
                 message: '${(charCount / widget.maxCharacters * 100).toStringAsFixed(0)}% used',
                 child: ClipRRect(
@@ -223,8 +226,27 @@ class _DescriptionEditorState extends State<DescriptionEditor> {
                   ),
                 ),
               ),
-            ),
-          ],
+            );
+
+            if (isCompact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  statsText,
+                  const SizedBox(height: 6),
+                  progressBar,
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: statsText),
+                const SizedBox(width: 10),
+                progressBar,
+              ],
+            );
+          },
         ),
 
         const SizedBox(height: 12),

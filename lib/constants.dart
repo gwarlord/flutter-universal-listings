@@ -33,10 +33,19 @@ String get googleApiKey => _firstNonEmpty([
 
 String get googleAndroidApiKey => dotenv.env['GOOGLE_ANDROID_API_KEY'] ?? '';
 
+String get googleIosApiKey => _firstNonEmpty([
+	dotenv.env['GOOGLE_IOS_API_KEY'],
+	dotenv.env['GOOGLE_MAPS_API_KEY'],
+]);
+
 String get googlePlacesApiKey => dotenv.env['GOOGLE_PLACES_API_KEY'] ?? '';
 
 String get placesApiKey {
 	if (googlePlacesApiKey.trim().isNotEmpty) return googlePlacesApiKey.trim();
+	if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS &&
+		googleIosApiKey.trim().isNotEmpty) {
+		return googleIosApiKey.trim();
+	}
 	if (kIsWeb) return googleApiKey;
 	if (defaultTargetPlatform == TargetPlatform.android &&
 		googleAndroidApiKey.trim().isNotEmpty) {
@@ -47,6 +56,10 @@ String get placesApiKey {
 
 String get placesApiKeySource {
 	if (googlePlacesApiKey.trim().isNotEmpty) return 'GOOGLE_PLACES_API_KEY';
+	if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS &&
+		googleIosApiKey.trim().isNotEmpty) {
+		return 'GOOGLE_IOS_API_KEY/GOOGLE_MAPS_API_KEY';
+	}
 	if (kIsWeb) return 'GOOGLE_API_KEY/GOOGLE_MAPS_API_KEY';
 	if (defaultTargetPlatform == TargetPlatform.android &&
 		googleAndroidApiKey.trim().isNotEmpty) {

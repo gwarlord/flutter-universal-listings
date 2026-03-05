@@ -1001,6 +1001,9 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   }
 
   Widget _buildHeaderCircleMenu(bool isDark, Color adaptiveTextColor) {
+    final menuTextColor = Theme.of(context).colorScheme.onSurface;
+    final menuBackgroundColor = Theme.of(context).colorScheme.surface;
+
     return Container(
       margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
       decoration: BoxDecoration(
@@ -1008,6 +1011,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
         shape: BoxShape.circle,
       ),
       child: PopupMenuButton(
+        color: menuBackgroundColor,
         icon: Icon(Icons.more_horiz, color: isDark ? Colors.white : Colors.black, size: 20),
         itemBuilder: (BuildContext context) {
           return [
@@ -1021,7 +1025,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     'Edit Listing'.tr(),
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.black,
+                      color: menuTextColor,
                       fontFamily: 'Roboto',
                       fontWeight: FontWeight.w500,
                     ),
@@ -1049,7 +1053,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     'Request Featured'.tr(),
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.black,
+                      color: menuTextColor,
                       fontFamily: 'Roboto',
                       fontWeight: FontWeight.w500,
                     ),
@@ -1070,7 +1074,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     'Manage Collaborators'.tr(),
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.black,
+                      color: menuTextColor,
                       fontFamily: 'Roboto',
                       fontWeight: FontWeight.w500,
                     ),
@@ -1108,7 +1112,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     'Team Chat'.tr(),
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.black,
+                      color: menuTextColor,
                       fontFamily: 'Roboto',
                       fontWeight: FontWeight.w500,
                     ),
@@ -1129,7 +1133,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     'Manage Reviews'.tr(),
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.black,
+                      color: menuTextColor,
                       fontFamily: 'Roboto',
                       fontWeight: FontWeight.w500,
                     ),
@@ -1159,7 +1163,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     'Add Review'.tr(),
                     style: TextStyle(
                       fontSize: 16,
-                      color: isDark ? Colors.black : Colors.black,
+                      color: menuTextColor,
                       fontFamily: 'Roboto',
                       fontWeight: FontWeight.w500,
                     ),
@@ -1190,7 +1194,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     'Report Inappropriate'.tr(),
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.black,
+                      color: menuTextColor,
                       fontFamily: 'Roboto',
                       fontWeight: FontWeight.w500,
                     ),
@@ -1211,7 +1215,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     'Delete Listing'.tr(),
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.black,
+                      color: menuTextColor,
                       fontFamily: 'Roboto',
                       fontWeight: FontWeight.w500,
                     ),
@@ -1634,7 +1638,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${items.length} items • From \$${minPrice.toStringAsFixed(2)}'.tr(),
+                              '${items.length} items • From \$${minPrice.toStringAsFixed(2)}',
                               style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
                             ),
                           ],

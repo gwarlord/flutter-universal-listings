@@ -34,6 +34,7 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
   late PageController _pageController;
   Timer? _autoScrollTimer;
   bool _isUserScrolling = false;
+  bool _isMutedPreference = true;
   int _currentIndex = 0;
   List<DealAdModel> _currentAds = []; // Added to store the ads
   StreamSubscription<List<DealAdModel>>? _adsSubscription; // Added subscription
@@ -159,6 +160,13 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
                   ad: _currentAds[index], // Use _currentAds[index]
                   currentUser: widget.currentUser,
                   isActive: index == _currentIndex,
+                  isMuted: _isMutedPreference,
+                  onMuteChanged: (isMuted) {
+                    if (_isMutedPreference == isMuted) return;
+                    setState(() {
+                      _isMutedPreference = isMuted;
+                    });
+                  },
                   onVideoCompleted: () {
                     if (index == _currentIndex && !_isUserScrolling) {
                       _goToNextPage();
@@ -178,6 +186,8 @@ class DealFeedItem extends StatefulWidget {
   final DealAdModel ad;
   final ListingsUser? currentUser;
   final bool isActive;
+  final bool isMuted;
+  final ValueChanged<bool>? onMuteChanged;
   final VoidCallback? onVideoCompleted;
 
   const DealFeedItem({
@@ -185,6 +195,8 @@ class DealFeedItem extends StatefulWidget {
     required this.ad,
     this.currentUser,
     this.isActive = false,
+    this.isMuted = true,
+    this.onMuteChanged,
     this.onVideoCompleted,
   }) : super(key: key);
 
@@ -195,13 +207,14 @@ class DealFeedItem extends StatefulWidget {
 class _DealFeedItemState extends State<DealFeedItem> {
   VideoPlayerController? _videoController;
   bool _isInitialized = false;
-  bool _isMuted = true;
+  late bool _isMuted;
   bool _isExpanded = false;
   bool _hasReportedVideoCompletion = false;
 
   @override
   void initState() {
     super.initState();
+    _isMuted = widget.isMuted;
     
     if (widget.ad.mediaType == 'video') {
       _videoController = VideoPlayerController.networkUrl(
@@ -213,7 +226,7 @@ class _DealFeedItemState extends State<DealFeedItem> {
             setState(() => _isInitialized = true);
             _videoController!.addListener(_onVideoStateChanged);
             _videoController!.setLooping(false);
-            _videoController!.setVolume(0);
+            _videoController!.setVolume(_isMuted ? 0 : 1);
             if (widget.isActive) {
               _hasReportedVideoCompletion = false;
               _videoController!.seekTo(Duration.zero);
@@ -228,6 +241,13 @@ class _DealFeedItemState extends State<DealFeedItem> {
   @override
   void didUpdateWidget(covariant DealFeedItem oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.isMuted != widget.isMuted) {
+      _isMuted = widget.isMuted;
+      if (_videoController != null && _isInitialized) {
+        _videoController!.setVolume(_isMuted ? 0 : 1);
+      }
+    }
 
     if (_videoController != null && _isInitialized) {
       if (!oldWidget.isActive && widget.isActive) {
@@ -400,6 +420,7 @@ class _DealFeedItemState extends State<DealFeedItem> {
                         _isMuted = !_isMuted;
                         _videoController?.setVolume(_isMuted ? 0 : 1);
                       });
+                      widget.onMuteChanged?.call(_isMuted);
                     },
                   ),
                   const SizedBox(height: 12),
