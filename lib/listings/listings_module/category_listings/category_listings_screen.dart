@@ -12,6 +12,7 @@ import 'package:caribtap/listings/listings_module/listing_details/listing_detail
 import 'package:caribtap/listings/listings_module/map_view/map_view_screen.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/feed_item.dart';
 
 class CategoryListingsWrapperWidget extends StatelessWidget {
   final String categoryID;
@@ -110,7 +111,7 @@ class _CategoryListingsScreenState extends State<CategoryListingsScreen> {
               push(
                 context,
                 MapViewScreen(
-                  listings: _list,
+                  items: _list.map((l) => FeedItem.listing(l)).toList(),
                   fromHome: false,
                   currentUser: currentUser,
                 ),

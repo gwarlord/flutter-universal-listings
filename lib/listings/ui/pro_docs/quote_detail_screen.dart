@@ -58,7 +58,7 @@ class _QuoteDetailScreenState extends State<QuoteDetailScreen> {
           if (state is QuoteDetailError) {
             return Scaffold(
               appBar: AppBar(title: Text('Quote'.tr())),
-              body: Center(child: Text(state.message)),
+              body: Center(child: Text(state.message.tr())),
             );
           }
 
@@ -374,7 +374,7 @@ class _QuoteDetailScreenState extends State<QuoteDetailScreen> {
     final token = quote.shareToken;
     if (token == null || token.isEmpty) return;
     final link = ShareLinkService().buildPublicDocLink(type: 'quote', token: token);
-    await Share.share('Quote link: $link');
+    await Share.share('${'Quote link'.tr()}: $link');
   }
 
   Future<void> _shareQuotePdf(QuoteModel quote) async {
@@ -402,18 +402,18 @@ class _QuoteDetailScreenState extends State<QuoteDetailScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('PDF downloaded to: $path')),
+        SnackBar(content: Text('${'PDF downloaded to'.tr()}: $path')),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to download PDF: $e')),
+        SnackBar(content: Text('${'Failed to download PDF'.tr()}: $e')),
       );
     }
   }
 
   String _displayName(ListingsUser user) {
     final name = '${user.firstName} ${user.lastName}'.trim();
-    return name.isNotEmpty ? name : 'CaribTap Business';
+    return name.isNotEmpty ? name : 'CaribTap Business'.tr();
   }
 }

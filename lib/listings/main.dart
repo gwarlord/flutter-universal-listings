@@ -19,6 +19,7 @@ import 'package:caribtap/core/model/channel_data_model.dart';
 import 'package:caribtap/core/ui/loading/loading_cubit.dart';
 import 'package:caribtap/core/ui/theme/app_theme.dart';
 import 'package:caribtap/core/ui/theme/theme_cubit.dart';
+import 'package:caribtap/core/localization/ht_fallback_localizations.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/listings/ui/auth/api/auth_api_manager.dart';
 import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
@@ -181,6 +182,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             localizationsDelegates: [
               ...context.localizationDelegates,
               FlutterQuillLocalizations.delegate,
+              const HtMaterialLocalizationsDelegate(),
+              const HtCupertinoLocalizationsDelegate(),
+              const HtFlutterQuillLocalizationsDelegate(),
             ],
             supportedLocales: context.supportedLocales,
             locale: context.locale,

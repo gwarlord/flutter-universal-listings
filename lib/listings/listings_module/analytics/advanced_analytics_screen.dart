@@ -8,7 +8,8 @@ import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/listing_review_model.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:caribtap/listings/model/tap_model.dart';
+import 'package:caribtap/listings/listings_module/analytics/analytics_screen.dart';
+import 'package:caribtap/listings/listings_module/booking/booking_management_screen.dart';
 
 enum DateRangeOption { last7Days, last30Days, last90Days, allTime }
 
@@ -39,17 +40,13 @@ class AdvancedAnalyticsScreen extends StatefulWidget {
 class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
   late FirebaseFirestore _firestore;
   bool _isLoading = true;
-  
+
   List<ListingModel> _userListings = [];
   ListingModel? _selectedListing;
   DateRangeOption _selectedDateRange = DateRangeOption.last30Days;
-  
-  Map<String, dynamic> _advancedMetrics = {};
 
-  final List<FlSpot> _viewSparklineData = const [
-    FlSpot(0, 30), FlSpot(1, 52), FlSpot(2, 41), FlSpot(3, 68),
-    FlSpot(4, 55), FlSpot(5, 70), FlSpot(6, 62),
-  ];
+  Map<String, dynamic> _advancedMetrics = {};
+  List<FlSpot> _viewSparklineData = const [];
 
   @override
   void initState() {
@@ -71,13 +68,13 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
         model.id = doc.id;
         return model;
       }).toList();
-      
+
       if (mounted) {
         setState(() => _userListings = listings);
         await _fetchAnalyticsData();
       }
     } catch (e, s) {
-      print('❌ Error loading user listings: $e\n$s');
+      debugPrint('❌ Error loading user listings: $e\n$s');
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -89,51 +86,88 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
     try {
       final now = DateTime.now();
       DateTime startTime;
+      int periodDays;
       switch (_selectedDateRange) {
         case DateRangeOption.last7Days:
           startTime = now.subtract(const Duration(days: 7));
+          periodDays = 7;
           break;
         case DateRangeOption.last30Days:
           startTime = now.subtract(const Duration(days: 30));
+          periodDays = 30;
           break;
         case DateRangeOption.last90Days:
           startTime = now.subtract(const Duration(days: 90));
+          periodDays = 90;
           break;
         case DateRangeOption.allTime:
           startTime = DateTime(2000);
+          periodDays = 365;
           break;
       }
       final previousStartTime = startTime.subtract(now.difference(startTime));
-      
-      final listingIds = _selectedListing != null ? [_selectedListing!.id] : _userListings.map((l) => l.id).toList();
+
+      final listingIds = _selectedListing != null
+          ? [_selectedListing!.id]
+          : _userListings
+              .map((l) => l.id)
+              .where((id) => id.isNotEmpty)
+              .toList();
 
       if (listingIds.isEmpty) {
-        _calculateAdvancedMetrics(listings: [], reviews: [], totalFavorites: 0, 
-                                  chatsLast: 0, chatsPrevious: 0,
-                                  bookingsLast: 0, bookingsPrevious: 0,
-                                  favoritesLast: 0, favoritesPrevious: 0,
-                                  tapsLast: 0, tapsPrevious: 0);
+        _calculateAdvancedMetrics(
+          listings: [],
+          reviews: [],
+          totalFavorites: 0,
+          chatsLast: 0,
+          chatsPrevious: 0,
+          bookingsLast: 0,
+          bookingsPrevious: 0,
+          favoritesLast: 0,
+          favoritesPrevious: 0,
+          tapsLast: 0,
+          tapsPrevious: 0,
+          viewsLast: 0,
+          viewsPrevious: 0,
+          sparklineData: _buildFlatSparkline(),
+        );
         return;
       }
-      
-      final bookingsLast = await _fetchCountInDateRange('bookings', 'listingId', listingIds, 'createdAt', startTime, now);
-      final bookingsPrevious = await _fetchCountInDateRange('bookings', 'listingId', listingIds, 'createdAt', previousStartTime, startTime);
 
-      final chatsLast = await _fetchCountInDateRange('${socialFeedsCollection}/${widget.currentUser.userID}/chat_feed_live', 'listingId', listingIds, 'createdAt', startTime, now);
-      final chatsPrevious = await _fetchCountInDateRange('${socialFeedsCollection}/${widget.currentUser.userID}/chat_feed_live', 'listingId', listingIds, 'createdAt', previousStartTime, startTime);
-      
-      final favoritesLast = await _fetchFavoritesCountInDateRange(listingIds, startTime, now);
-      final favoritesPrevious = await _fetchFavoritesCountInDateRange(listingIds, previousStartTime, startTime);
+      final bookingsLast = await _fetchReceivedBookingsCountInDateRange(
+          listingIds, startTime, now);
+      final bookingsPrevious = await _fetchReceivedBookingsCountInDateRange(
+          listingIds, previousStartTime, startTime);
+
+      final chatsLast =
+          await _fetchChatsCountInDateRange(listingIds, startTime, now);
+      final chatsPrevious = await _fetchChatsCountInDateRange(
+          listingIds, previousStartTime, startTime);
+
+      final activityLast =
+          await _fetchActivityCountsInDateRange(listingIds, startTime, now);
+      final activityPrevious = await _fetchActivityCountsInDateRange(
+          listingIds, previousStartTime, startTime);
+      final favoritesLast = activityLast.saves;
+      final favoritesPrevious = activityPrevious.saves;
       final totalFavorites = await _fetchTotalFavorites(listingIds);
 
-      final tapsLast = await _fetchTapsCountInDateRange(listingIds, startTime, now);
-      final tapsPrevious = await _fetchTapsCountInDateRange(listingIds, previousStartTime, startTime);
+      final tapsLast =
+          await _fetchTapsCountInDateRange(listingIds, startTime, now);
+      final tapsPrevious = await _fetchTapsCountInDateRange(
+          listingIds, previousStartTime, startTime);
 
-      final reviewsSnap = await _firestore.collection(cfg.reviewCollection).where('listingID', whereIn: listingIds).get();
-      final allReviews = reviewsSnap.docs.map((doc) => ListingReviewModel.fromJson(doc.data())).toList();
-      
+      final allReviews = await _fetchReviewsForListings(listingIds);
+      final sparklineData = _buildViewsSparkline(
+        viewTimestamps: activityLast.viewTimestamps,
+        start: startTime,
+        end: now,
+        periodDays: periodDays,
+      );
+
       _calculateAdvancedMetrics(
-        listings: _selectedListing != null ? [_selectedListing!] : _userListings,
+        listings:
+            _selectedListing != null ? [_selectedListing!] : _userListings,
         reviews: allReviews,
         totalFavorites: totalFavorites,
         chatsLast: chatsLast,
@@ -144,86 +178,243 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
         favoritesPrevious: favoritesPrevious,
         tapsLast: tapsLast,
         tapsPrevious: tapsPrevious,
+        viewsLast: activityLast.views,
+        viewsPrevious: activityPrevious.views,
+        sparklineData: sparklineData,
       );
-      
     } catch (e, s) {
-      print('❌ Error loading advanced analytics: $e\n$s');
+      debugPrint('❌ Error loading advanced analytics: $e\n$s');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<int> _fetchCountInDateRange(String collection, String field, List<String> values, String dateField, DateTime start, DateTime end) async {
-    if (values.isEmpty) return 0;
+  List<List<T>> _chunked<T>(List<T> items, int chunkSize) {
+    if (items.isEmpty) return const [];
+    final chunks = <List<T>>[];
+    for (int i = 0; i < items.length; i += chunkSize) {
+      final end = (i + chunkSize < items.length) ? i + chunkSize : items.length;
+      chunks.add(items.sublist(i, end));
+    }
+    return chunks;
+  }
+
+  DateTime? _parseDate(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is int) {
+      if (value > 1000000000000) {
+        return DateTime.fromMillisecondsSinceEpoch(value);
+      }
+      if (value > 1000000000) {
+        return DateTime.fromMillisecondsSinceEpoch(value);
+      }
+      return DateTime.fromMillisecondsSinceEpoch(value * 1000);
+    }
+    if (value is String) return DateTime.tryParse(value);
+    return null;
+  }
+
+  bool _isInRange(DateTime? date, DateTime start, DateTime end) {
+    if (date == null) return false;
+    return !date.isBefore(start) && date.isBefore(end);
+  }
+
+  Future<int> _fetchReceivedBookingsCountInDateRange(
+      List<String> listingIds, DateTime start, DateTime end) async {
+    if (listingIds.isEmpty) return 0;
     try {
-      Query query = _firestore.collection(collection)
-        .where(field, whereIn: values)
-        .where(dateField, isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-        .where(dateField, isLessThan: Timestamp.fromDate(end));
-      
-      final snapshot = await query.get();
-      return snapshot.docs.length;
+      final snapshot = await _firestore
+          .collection('users')
+          .doc(widget.currentUser.userID)
+          .collection('receivedBookings')
+          .get();
+
+      int count = 0;
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final listingId = (data['listingId'] ?? '').toString();
+        if (!listingIds.contains(listingId)) continue;
+        final createdAt = _parseDate(data['createdAt']);
+        if (_isInRange(createdAt, start, end)) {
+          count++;
+        }
+      }
+      return count;
     } catch (e) {
-      print('⚠️ Query failed for $collection: $e');
+      debugPrint('⚠️ Failed to fetch bookings count: $e');
       return 0;
     }
   }
 
-  Future<int> _fetchTapsCountInDateRange(List<String> listingIds, DateTime start, DateTime end) async {
+  Future<int> _fetchChatsCountInDateRange(
+      List<String> listingIds, DateTime start, DateTime end) async {
+    if (listingIds.isEmpty) return 0;
+    int count = 0;
+    Future<void> processCollection(String collectionId) async {
+      final snapshot = await _firestore
+          .collection(socialFeedsCollection)
+          .doc(widget.currentUser.userID)
+          .collection(collectionId)
+          .get();
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final listingId = (data['listingId'] ?? '').toString();
+        if (!listingIds.contains(listingId)) continue;
+        final createdAt =
+            _parseDate(data['createdAt'] ?? data['lastMessageDate']);
+        if (_isInRange(createdAt, start, end)) {
+          count++;
+        }
+      }
+    }
+
+    try {
+      await processCollection(chatFeedLiveCollection);
+      await processCollection('chat_feed');
+    } catch (e) {
+      debugPrint('⚠️ Failed to fetch chats count: $e');
+    }
+    return count;
+  }
+
+  Future<List<ListingReviewModel>> _fetchReviewsForListings(
+      List<String> listingIds) async {
+    if (listingIds.isEmpty) return const [];
+    final reviews = <ListingReviewModel>[];
+    for (final chunk in _chunked(listingIds, 10)) {
+      final reviewsSnap = await _firestore
+          .collection(cfg.reviewCollection)
+          .where('listingID', whereIn: chunk)
+          .get();
+      reviews.addAll(reviewsSnap.docs
+          .map((doc) => ListingReviewModel.fromJson(doc.data())));
+    }
+    return reviews;
+  }
+
+  Future<int> _fetchTapsCountInDateRange(
+      List<String> listingIds, DateTime start, DateTime end) async {
     if (listingIds.isEmpty) return 0;
     int totalTaps = 0;
-    for (String id in listingIds) {
+    final startSeconds = start.millisecondsSinceEpoch ~/ 1000;
+    final endSeconds = end.millisecondsSinceEpoch ~/ 1000;
+    for (final id in listingIds) {
       final snapshot = await _firestore
           .collection(cfg.listingsCollection)
           .doc(id)
           .collection('taps')
-          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-          .where('createdAt', isLessThan: Timestamp.fromDate(end))
+          .where('createdAt', isGreaterThanOrEqualTo: startSeconds)
+          .where('createdAt', isLessThan: endSeconds)
           .get();
       totalTaps += snapshot.docs.length;
     }
     return totalTaps;
   }
-  
-  Future<int> _fetchFavoritesCountInDateRange(List<String> listingIds, DateTime start, DateTime end) async {
-    // This logic remains client-side as filtering nested arrays in Firestore is not directly supported.
-    if (listingIds.isEmpty) return 0;
-    int count = 0;
-    final usersSnap = await _firestore.collection('users').where('likedListings', isNotEqualTo: []).get();
-    for (var userDoc in usersSnap.docs) {
-      final likedListings = userDoc.data()['likedListings'] as List<dynamic>? ?? [];
-      for (var item in likedListings) {
-        if (item is Map<String, dynamic> && listingIds.contains(item['listingId'])) {
-          final favoritedAt = _parseTimestamp(item['favoritedAt']);
-          if (favoritedAt != null && favoritedAt.isAfter(start) && favoritedAt.isBefore(end)) {
-            count++;
-          }
-        }
-      }
-    }
-    return count;
-  }
 
   Future<int> _fetchTotalFavorites(List<String> listingIds) async {
     if (listingIds.isEmpty) return 0;
     int count = 0;
-    // Note: This query is inefficient and may become slow.
-    // A better approach would be to denormalize a `favoritedBy` list on the listing itself.
-    final usersSnap = await _firestore.collection('users').where('likedListingsIDs', arrayContainsAny: listingIds).get();
-     for (var userDoc in usersSnap.docs) {
-        final likedListings = List<String>.from(userDoc.data()['likedListingsIDs'] ?? []);
+    final seenUsers = <String>{};
+    for (final chunk in _chunked(listingIds, 10)) {
+      final usersSnap = await _firestore
+          .collection('users')
+          .where('likedListingsIDs', arrayContainsAny: chunk)
+          .get();
+      for (final userDoc in usersSnap.docs) {
+        if (seenUsers.contains(userDoc.id)) continue;
+        seenUsers.add(userDoc.id);
+        final likedListings =
+            List<String>.from(userDoc.data()['likedListingsIDs'] ?? []);
         count += likedListings.where((id) => listingIds.contains(id)).length;
       }
+    }
     return count;
   }
 
-  DateTime? _parseTimestamp(dynamic timestamp) {
-    if (timestamp is Timestamp) {
-      return timestamp.toDate();
-    } else if (timestamp is String) {
-      return DateTime.tryParse(timestamp);
+  Future<_ActivityRangeData> _fetchActivityCountsInDateRange(
+      List<String> listingIds, DateTime start, DateTime end) async {
+    int views = 0;
+    int saves = 0;
+    int messages = 0;
+    int bookings = 0;
+    final viewTimestamps = <DateTime>[];
+
+    for (final listingId in listingIds) {
+      final activitiesSnap = await _firestore
+          .collection(cfg.listingsCollection)
+          .doc(listingId)
+          .collection('activities')
+          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('timestamp', isLessThan: Timestamp.fromDate(end))
+          .get();
+
+      for (final doc in activitiesSnap.docs) {
+        final type = (doc.data()['type'] ?? '').toString();
+        final timestamp = _parseDate(doc.data()['timestamp']);
+        switch (type) {
+          case 'view':
+            views++;
+            if (timestamp != null) viewTimestamps.add(timestamp);
+            break;
+          case 'save':
+            saves++;
+            break;
+          case 'message':
+            messages++;
+            break;
+          case 'booking':
+            bookings++;
+            break;
+        }
+      }
     }
-    return null;
+    return _ActivityRangeData(
+      views: views,
+      saves: saves,
+      messages: messages,
+      bookings: bookings,
+      viewTimestamps: viewTimestamps,
+    );
+  }
+
+  List<FlSpot> _buildViewsSparkline({
+    required List<DateTime> viewTimestamps,
+    required DateTime start,
+    required DateTime end,
+    required int periodDays,
+  }) {
+    final bucketCount = periodDays <= 7 ? 7 : (periodDays <= 30 ? 10 : 12);
+    final counts = List<int>.filled(bucketCount, 0);
+    final totalMs = end.millisecondsSinceEpoch - start.millisecondsSinceEpoch;
+    if (totalMs <= 0) return _buildFlatSparkline();
+
+    for (final ts in viewTimestamps) {
+      final offset = ts.millisecondsSinceEpoch - start.millisecondsSinceEpoch;
+      if (offset < 0 || offset >= totalMs) continue;
+      final ratio = offset / totalMs;
+      final index = (ratio * bucketCount).floor().clamp(0, bucketCount - 1);
+      counts[index] += 1;
+    }
+
+    final spots = <FlSpot>[];
+    for (int i = 0; i < bucketCount; i++) {
+      spots.add(FlSpot(i.toDouble(), counts[i].toDouble()));
+    }
+    return spots.any((s) => s.y > 0) ? spots : _buildFlatSparkline();
+  }
+
+  List<FlSpot> _buildFlatSparkline() {
+    return const [
+      FlSpot(0, 0),
+      FlSpot(1, 0),
+      FlSpot(2, 0),
+      FlSpot(3, 0),
+      FlSpot(4, 0),
+      FlSpot(5, 0),
+      FlSpot(6, 0),
+    ];
   }
 
   void _calculateAdvancedMetrics({
@@ -238,20 +429,30 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
     required int favoritesPrevious,
     required int tapsLast,
     required int tapsPrevious,
+    required int viewsLast,
+    required int viewsPrevious,
+    required List<FlSpot> sparklineData,
   }) {
-    int totalViews = listings.fold(0, (sum, l) => sum + l.viewCount);
-    double avgRating = reviews.isEmpty ? 0 : reviews.map((r) => r.starCount).reduce((a, b) => a + b) / reviews.length;
-    
-    double _calculateTrend(int current, int previous) {
+    int totalViews = listings.fold(0, (acc, l) => acc + l.viewCount);
+    double avgRating = reviews.isEmpty
+        ? 0
+        : reviews.map((r) => r.starCount).reduce((a, b) => a + b) /
+            reviews.length;
+
+    double calculateTrend(int current, int previous) {
       if (previous > 0) return (current - previous) / previous;
       return current > 0 ? 1.0 : 0.0;
     }
 
-    // Logic for Growth Opportunities
-    final lowQualityListings = listings.where((l) => l.photos.length < 3 || l.description.length < 100).toList();
-    final bookingsNeeded = (TapBadge.communityVouched.threshold - (bookingsLast + bookingsPrevious)).clamp(0, 10);
+    final lowQualityListings = listings
+        .where((l) => l.photos.length < 3 || l.description.trim().length < 100)
+        .toList();
+    const targetBookingsForTopLister = 10;
+    final bookingsNeeded = (targetBookingsForTopLister - bookingsLast)
+        .clamp(0, targetBookingsForTopLister);
 
     setState(() {
+      _viewSparklineData = sparklineData;
       _advancedMetrics = {
         'totalViews': totalViews,
         'totalFavorites': totalFavorites,
@@ -261,11 +462,11 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
         'avgRating': avgRating,
         'totalListings': listings.length,
         'totalBookings': bookingsLast,
-        'bookingsTrend': _calculateTrend(bookingsLast, bookingsPrevious),
-        'chatsTrend': _calculateTrend(chatsLast, chatsPrevious),
-        'favoritesTrend': _calculateTrend(favoritesLast, favoritesPrevious),
-        'tapsTrend': _calculateTrend(tapsLast, tapsPrevious),
-        'viewsTrend': 0.15, // Mock data
+        'bookingsTrend': calculateTrend(bookingsLast, bookingsPrevious),
+        'chatsTrend': calculateTrend(chatsLast, chatsPrevious),
+        'favoritesTrend': calculateTrend(favoritesLast, favoritesPrevious),
+        'tapsTrend': calculateTrend(tapsLast, tapsPrevious),
+        'viewsTrend': calculateTrend(viewsLast, viewsPrevious),
         'lowQualityListings': lowQualityListings,
         'bookingsForBadge': bookingsNeeded,
       };
@@ -275,13 +476,15 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isDark = isDarkMode(context);
-    final Color scaffoldBackgroundColor = isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5);
+    final Color scaffoldBackgroundColor =
+        isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5);
     final Color primaryTextColor = isDark ? Colors.white : Colors.black;
 
     return Scaffold(
       backgroundColor: scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text('Advanced Analytics'.tr(), style: TextStyle(color: primaryTextColor)),
+        title: Text('Advanced Analytics'.tr(),
+            style: TextStyle(color: primaryTextColor)),
         elevation: 0,
         backgroundColor: scaffoldBackgroundColor,
         iconTheme: IconThemeData(color: primaryTextColor),
@@ -306,6 +509,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
                     const SizedBox(height: 24),
                     _buildSectionHeader('Growth Opportunities'.tr()),
                     _buildInsights(),
+                    const SizedBox(height: 24),
+                    _buildSectionHeader('Quick Actions'.tr()),
+                    _buildQuickActions(),
                   ],
                 ),
               ),
@@ -325,10 +531,10 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
             decoration: BoxDecoration(
-              color: dropdownColor,
-              borderRadius: BorderRadius.circular(8),
-              border: isDark ? null : Border.all(color: Colors.grey.shade300)
-            ),
+                color: dropdownColor,
+                borderRadius: BorderRadius.circular(8),
+                border:
+                    isDark ? null : Border.all(color: Colors.grey.shade300)),
             child: DropdownButton<ListingModel?>(
               value: _selectedListing,
               isExpanded: true,
@@ -339,10 +545,12 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
                   value: null,
                   child: Text("All Listings".tr()),
                 ),
-                ..._userListings.map((listing) => DropdownMenuItem<ListingModel?>(
-                  value: listing,
-                  child: Text(listing.title, overflow: TextOverflow.ellipsis),
-                )),
+                ..._userListings
+                    .map((listing) => DropdownMenuItem<ListingModel?>(
+                          value: listing,
+                          child: Text(listing.title,
+                              overflow: TextOverflow.ellipsis),
+                        )),
               ],
               onChanged: (value) {
                 setState(() => _selectedListing = value);
@@ -359,25 +567,33 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
               setState(() => _selectedDateRange = result);
               _fetchAnalyticsData();
             },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<DateRangeOption>>[
-              ...DateRangeOption.values.map((option) => PopupMenuItem<DateRangeOption>(
-                value: option,
-                child: Text(option.label),
-              ))
+            itemBuilder: (BuildContext context) =>
+                <PopupMenuEntry<DateRangeOption>>[
+              ...DateRangeOption.values
+                  .map((option) => PopupMenuItem<DateRangeOption>(
+                        value: option,
+                        child: Text(option.label),
+                      ))
             ],
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
               decoration: BoxDecoration(
-                color: chipColor,
-                borderRadius: BorderRadius.circular(8),
-                border: isDark ? null : Border.all(color: Colors.grey.shade300)
-              ),
+                  color: chipColor,
+                  borderRadius: BorderRadius.circular(8),
+                  border:
+                      isDark ? null : Border.all(color: Colors.grey.shade300)),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(Icons.calendar_today, size: 16, color: isDark ? Colors.white70 : Colors.black54),
+                  Icon(Icons.calendar_today,
+                      size: 16,
+                      color: isDark ? Colors.white70 : Colors.black54),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(_selectedDateRange.label, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
+                  Expanded(
+                      child: Text(_selectedDateRange.label,
+                          style: const TextStyle(fontSize: 12),
+                          overflow: TextOverflow.ellipsis)),
                   const Icon(Icons.arrow_drop_down, size: 20),
                 ],
               ),
@@ -394,14 +610,42 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
       child: Text(
         title,
         style: TextStyle(
-          fontSize: 20, 
+          fontSize: 20,
           fontWeight: FontWeight.bold,
           color: isDarkMode(context) ? Colors.white : Colors.black,
         ),
       ),
     );
   }
-  
+
+  Widget _buildQuickActions() {
+    return Column(
+      children: [
+        _buildInsightCard(
+          Icons.calendar_month_outlined,
+          Colors.blue,
+          'Open Booking Requests'.tr(),
+          'Review and manage booking activity from this analytics context.'
+              .tr(),
+          onTap: () => push(
+            context,
+            BookingManagementWrapperWidget(currentUser: widget.currentUser),
+          ),
+        ),
+        _buildInsightCard(
+          Icons.bar_chart_rounded,
+          Colors.purple,
+          'Open Standard Analytics'.tr(),
+          'Compare with the basic overview screen for quick totals.'.tr(),
+          onTap: () => push(
+            context,
+            AnalyticsScreen(currentUser: widget.currentUser),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPerformanceSnapshot() {
     final int totalViews = _advancedMetrics['totalViews'] ?? 0;
     final double viewsTrend = _advancedMetrics['viewsTrend'] ?? 0.0;
@@ -409,7 +653,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
     final double bookingsTrend = _advancedMetrics['bookingsTrend'] ?? 0.0;
     final bool isDark = isDarkMode(context);
     final Color cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final Color subtleTextColor = isDark ? Colors.grey[400]! : Colors.grey[600]!;
+    final Color subtleTextColor =
+        isDark ? Colors.grey[400]! : Colors.grey[600]!;
 
     return Card(
       color: cardColor,
@@ -456,15 +701,14 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStatItem('Bookings'.tr(), totalBookings.toString(), bookingsTrend),
+                _buildStatItem(
+                    'Bookings'.tr(), totalBookings.toString(), bookingsTrend),
                 _buildStatItem(
                     'Avg. Rating'.tr(),
                     '${_advancedMetrics['avgRating']?.toStringAsFixed(1) ?? 'N/A'} ★',
                     null),
-                _buildStatItem(
-                    'Listings'.tr(),
-                    _advancedMetrics['totalListings']?.toString() ?? '0',
-                    null),
+                _buildStatItem('Listings'.tr(),
+                    _advancedMetrics['totalListings']?.toString() ?? '0', null),
               ],
             ),
           ],
@@ -513,11 +757,12 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
     );
   }
 
-  Widget _buildMetricCard(String title, String value, IconData icon,
-      Color color, double? trend) {
+  Widget _buildMetricCard(
+      String title, String value, IconData icon, Color color, double? trend) {
     final bool isDark = isDarkMode(context);
     final Color cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final Color subtleTextColor = isDark ? Colors.grey[400]! : Colors.grey[600]!;
+    final Color subtleTextColor =
+        isDark ? Colors.grey[400]! : Colors.grey[600]!;
 
     return Card(
       color: cardColor,
@@ -541,7 +786,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 22, 
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: isDark ? Colors.white : Colors.black,
                   ),
@@ -564,9 +809,10 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
       ),
     );
   }
-  
+
   Widget _buildInsights() {
-    final lowQualityListings = _advancedMetrics['lowQualityListings'] as List<ListingModel>? ?? [];
+    final lowQualityListings =
+        _advancedMetrics['lowQualityListings'] as List<ListingModel>? ?? [];
     final bookingsNeeded = _advancedMetrics['bookingsForBadge'] as int? ?? 0;
 
     return Column(
@@ -576,23 +822,32 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
             Icons.lightbulb_outline,
             Colors.amber,
             'Improve Listing Quality'.tr(),
-            'You have ${lowQualityListings.length} listings that could be improved with more photos or a longer description.'.tr(),
+            'you_have_listings_to_improve'
+                .tr(args: [lowQualityListings.length.toString()]),
           ),
         if (bookingsNeeded > 0)
           _buildInsightCard(
             Icons.military_tech_outlined,
             Colors.green,
             'Become a Top Lister'.tr(),
-            'You are $bookingsNeeded bookings away from earning the "Community Vouched" badge!'.tr(),
+            'you_are_bookings_away_for_badge'
+                .tr(args: [bookingsNeeded.toString()]),
           ),
       ],
     );
   }
 
-  Widget _buildInsightCard(IconData icon, Color color, String title, String subtitle) {
+  Widget _buildInsightCard(
+    IconData icon,
+    Color color,
+    String title,
+    String subtitle, {
+    VoidCallback? onTap,
+  }) {
     final bool isDark = isDarkMode(context);
     final Color cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final Color subtleTextColor = isDark ? Colors.grey[400]! : Colors.grey[600]!;
+    final Color subtleTextColor =
+        isDark ? Colors.grey[400]! : Colors.grey[600]!;
 
     return Card(
       color: cardColor,
@@ -601,15 +856,17 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
+        onTap: onTap,
         leading: CircleAvatar(
           backgroundColor: color.withOpacity(0.15),
           child: Icon(icon, color: color),
         ),
-        title: Text(title, style: TextStyle(
-          fontWeight: FontWeight.bold, 
-          color: isDark ? Colors.white : Colors.black
-        )),
-        subtitle: Text(subtitle, style: TextStyle(fontSize: 13, color: subtleTextColor)),
+        title: Text(title,
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black)),
+        subtitle: Text(subtitle,
+            style: TextStyle(fontSize: 13, color: subtleTextColor)),
         trailing: const Icon(Icons.arrow_forward, size: 18),
       ),
     );
@@ -617,14 +874,15 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
 
   Widget _buildStatItem(String label, String value, double? trend) {
     final bool isDark = isDarkMode(context);
-    final Color subtleTextColor = isDark ? Colors.grey[400]! : Colors.grey[600]!;
+    final Color subtleTextColor =
+        isDark ? Colors.grey[400]! : Colors.grey[600]!;
 
     return Column(
       children: [
         Text(
           value,
           style: TextStyle(
-            fontSize: 20, 
+            fontSize: 20,
             fontWeight: FontWeight.bold,
             color: isDark ? Colors.white : Colors.black,
           ),
@@ -687,4 +945,20 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
       ],
     );
   }
+}
+
+class _ActivityRangeData {
+  final int views;
+  final int saves;
+  final int messages;
+  final int bookings;
+  final List<DateTime> viewTimestamps;
+
+  const _ActivityRangeData({
+    required this.views,
+    required this.saves,
+    required this.messages,
+    required this.bookings,
+    required this.viewTimestamps,
+  });
 }

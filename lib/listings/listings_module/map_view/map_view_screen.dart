@@ -7,18 +7,21 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
+import 'package:caribtap/listings/model/event_model.dart';
+import 'package:caribtap/listings/model/feed_item.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
+import 'package:caribtap/listings/listings_module/events/event_details_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MapViewScreen extends StatefulWidget {
-  final List<ListingModel> listings;
+  final List<FeedItem> items;
   final bool fromHome;
   final ListingsUser currentUser;
 
   const MapViewScreen(
       {super.key,
-      required this.listings,
+      required this.items,
       required this.fromHome,
       required this.currentUser});
 
@@ -42,48 +45,43 @@ class _MapViewScreenState extends State<MapViewScreen> {
 
   // For search and favorites
   final TextEditingController _searchController = TextEditingController();
-  List<ListingModel> _filteredFavorites = [];
-  int? _selectedFavoriteIndex;
-  Offset _searchBlockOffset = const Offset(0, 0);
-  bool _isDragging = false;
-  bool _showFavoritesOnly = true;
+  List<FeedItem> _filteredItems = [];
+  int? _selectedItemIndex;
+  bool _showFavoritesOnly = false;
   bool _showSearchBlock = true;
+
+  String _getItemTitle(FeedItem item) =>
+      item.type == FeedItemType.listing ? item.listing!.title : item.event!.title;
+  String _getItemPhoto(FeedItem item) =>
+      item.type == FeedItemType.listing ? item.listing!.photo : item.event!.posterImageUrl;
+  double _getItemLat(FeedItem item) =>
+      item.type == FeedItemType.listing ? item.listing!.latitude : item.event!.latitude;
+  double _getItemLng(FeedItem item) =>
+      item.type == FeedItemType.listing ? item.listing!.longitude : item.event!.longitude;
+  bool _getItemIsFav(FeedItem item) =>
+      item.type == FeedItemType.listing ? item.listing!.isFav : item.event!.isFav;
 
   @override
   Widget build(BuildContext context) {
-    // Listings to show: all or only favorites
-    final favorites = widget.listings.where((l) => l.isFav).toList();
-    final listingsToShow = _showFavoritesOnly ? favorites : widget.listings;
-    _filteredFavorites = _searchController.text.isEmpty
-      ? listingsToShow
-      : listingsToShow
-        .where((l) => l.title.toLowerCase().contains(_searchController.text.toLowerCase()))
+    // Items to show: all or only favorites
+    final itemsToShow = _showFavoritesOnly
+        ? widget.items.where((item) => _getItemIsFav(item)).toList()
+        : widget.items;
+
+    _filteredItems = _searchController.text.isEmpty
+      ? itemsToShow
+      : itemsToShow
+        .where((item) => _getItemTitle(item).toLowerCase().contains(_searchController.text.toLowerCase()))
         .toList();
 
-    final mediaQuery = MediaQuery.of(context);
-    final screenWidth = mediaQuery.size.width;
-    final screenHeight = mediaQuery.size.height;
-    final bottomPadding = mediaQuery.padding.bottom;
-    final blockWidth = screenWidth - 32; // left+right margin
-    final blockHeight = 120; // estimated block height
-
-    void clampBlockPosition() {
-      double dx = _searchBlockOffset.dx;
-      double dy = _searchBlockOffset.dy;
-      // Clamp horizontally
-      dx = dx.clamp(-16.0, screenWidth - blockWidth - 16.0);
-      // Clamp vertically (bottom: above nav bar, top: not off screen)
-      dy = dy.clamp(-(screenHeight - blockHeight - bottomPadding - 24.0), 0.0);
-      _searchBlockOffset = Offset(dx, dy);
-    }
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor?.withOpacity(0.5),
         title: Text(widget.fromHome
             ? 'Map View'.tr()
-            : widget.listings.isNotEmpty
-                ? widget.listings.first.categoryTitle
+            : widget.items.isNotEmpty && widget.items.first.type == FeedItemType.listing
+                ? widget.items.first.listing!.categoryTitle
                 : 'Map View'.tr()),
         elevation: 0,
       ),
@@ -103,28 +101,37 @@ class _MapViewScreenState extends State<MapViewScreen> {
                   myLocationButtonEnabled: false,
                   zoomControlsEnabled: false,
                   markers: List.generate(
-                      _filteredFavorites.length,
+                      _filteredItems.length,
                       (index) => Marker(
                           markerId: MarkerId('marker_$index'),
-                          position: LatLng(_filteredFavorites[index].latitude, _filteredFavorites[index].longitude),
+                          position: LatLng(_getItemLat(_filteredItems[index]), _getItemLng(_filteredItems[index])),
                           infoWindow: InfoWindow(
                               onTap: () {
-                                push(
-                                    context,
-                                    ListingDetailsWrappingWidget(
-                                      listing: _filteredFavorites[index],
-                                      currentUser: currentUser,
-                                    ));
+                                final item = _filteredItems[index];
+                                if (item.type == FeedItemType.listing) {
+                                  push(
+                                      context,
+                                      ListingDetailsWrappingWidget(
+                                        listing: item.listing!,
+                                        currentUser: currentUser,
+                                      ));
+                                } else {
+                                  push(
+                                      context,
+                                      EventDetailsScreen(
+                                        event: item.event!,
+                                      ));
+                                }
                               },
-                              title: _filteredFavorites[index].title),
-                          icon: _selectedFavoriteIndex == index
+                              title: _getItemTitle(_filteredItems[index])),
+                          icon: _selectedItemIndex == index
                               ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure)
                               : BitmapDescriptor.defaultMarker)).toSet(),
                   mapType: MapType.normal,
                   initialCameraPosition: CameraPosition(
                     target: locationData == null
-                        ? widget.listings.isNotEmpty
-                            ? LatLng(widget.listings.first.latitude, widget.listings.first.longitude)
+                        ? widget.items.isNotEmpty
+                            ? LatLng(_getItemLat(widget.items.first), _getItemLng(widget.items.first))
                             : const LatLng(0, 0)
                         : LatLng(locationData!.latitude, locationData!.longitude),
                     zoom: 14.4746,
@@ -132,7 +139,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
                   onMapCreated: _onMapCreated,
                 );
               }),
-          // Custom zoom buttons (higher up)
+          // Custom zoom buttons
           Positioned(
             right: 16,
             top: 120,
@@ -160,7 +167,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
               ],
             ),
           ),
-          // Snap to location button (left)
+          // Snap to location button
           Positioned(
             left: 16,
             bottom: 120,
@@ -194,7 +201,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
           ),
-          // Search block (not draggable, always visible above bottom)
+          // Search block
           if (_showSearchBlock)
             Positioned(
               left: 16,
@@ -249,34 +256,39 @@ class _MapViewScreenState extends State<MapViewScreen> {
                           ),
                         ],
                       ),
-                      if (_filteredFavorites.isNotEmpty)
+                      if (_filteredItems.isNotEmpty)
                         SizedBox(
                           height: 54,
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
-                            itemCount: _filteredFavorites.length,
+                            itemCount: _filteredItems.length,
                             separatorBuilder: (_, __) => const SizedBox(width: 8),
                             itemBuilder: (context, i) {
-                              final fav = _filteredFavorites[i];
+                              final item = _filteredItems[i];
+                              final title = _getItemTitle(item);
+                              final photo = _getItemPhoto(item);
+                              final lat = _getItemLat(item);
+                              final lng = _getItemLng(item);
+
                               return GestureDetector(
                                 onTap: () {
                                   setState(() {
-                                    _selectedFavoriteIndex = widget.listings.indexOf(fav);
+                                    _selectedItemIndex = i;
                                   });
                                   if (_mapController != null) {
                                     _mapController!.animateCamera(CameraUpdate.newLatLng(
-                                        LatLng(fav.latitude, fav.longitude)));
+                                        LatLng(lat, lng)));
                                   }
                                 },
                                 child: Container(
                                   width: 106,
                                   decoration: BoxDecoration(
-                                    color: _selectedFavoriteIndex == widget.listings.indexOf(fav)
+                                    color: _selectedItemIndex == i
                                         ? Theme.of(context).colorScheme.primary.withOpacity(0.12)
                                         : Theme.of(context).cardColor,
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: _selectedFavoriteIndex == widget.listings.indexOf(fav)
+                                      color: _selectedItemIndex == i
                                           ? Theme.of(context).colorScheme.primary
                                           : Colors.grey.shade300,
                                       width: 1.2,
@@ -286,10 +298,10 @@ class _MapViewScreenState extends State<MapViewScreen> {
                                   child: Row(
                                     children: [
                                       CircleAvatar(
-                                        backgroundImage: fav.photo.isNotEmpty
-                                            ? NetworkImage(fav.photo)
+                                        backgroundImage: photo.isNotEmpty
+                                            ? NetworkImage(photo)
                                             : null,
-                                        child: fav.photo.isEmpty
+                                        child: photo.isEmpty
                                             ? const Icon(Icons.place, size: 16)
                                             : null,
                                         radius: 16,
@@ -297,7 +309,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
                                       const SizedBox(width: 6),
                                       Expanded(
                                         child: Text(
-                                          fav.title,
+                                          title,
                                           style: TextStyle(
                                             fontWeight: FontWeight.w600,
                                             fontSize: 13,
@@ -326,7 +338,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
 
   Widget _buildWebMapFallback(BuildContext context) {
     final isDark = isDarkMode(context);
-    final first = widget.listings.isNotEmpty ? widget.listings.first : null;
+    final first = widget.items.isNotEmpty ? widget.items.first : null;
 
     return Container(
       color: isDark ? const Color(0xFF121212) : Colors.grey.shade100,
@@ -359,7 +371,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
             OutlinedButton.icon(
               onPressed: first == null
                   ? null
-                  : () => _openListingInGoogleMaps(first.latitude, first.longitude),
+                  : () => _openItemInGoogleMaps(_getItemLat(first), _getItemLng(first)),
               icon: const Icon(Icons.open_in_new),
               label: Text('Open in Google Maps'.tr()),
             ),
@@ -369,7 +381,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
     );
   }
 
-  Future<void> _openListingInGoogleMaps(double latitude, double longitude) async {
+  Future<void> _openItemInGoogleMaps(double latitude, double longitude) async {
     final uri = Uri.parse(
       'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude',
     );

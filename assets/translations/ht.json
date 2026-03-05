@@ -45,6 +45,23 @@
   "Search": "Chèche",
   "Filter": "Filtre",
   "Sort": "Klase",
+  "Location Scope": "Ranje kote",
+  "Choose what content you want to see": "Chwazi ki kontni ou vle wè",
+  "Mode": "Mòd",
+  "Local": "Lokal",
+  "Caribbean": "Karayib",
+  "Nearby": "Toupre",
+  "Show content from a specific country": "Montre kontni ki soti nan yon peyi espesifik",
+  "Show content from all Caribbean countries": "Montre kontni ki soti nan tout peyi Karayib yo",
+  "Show content based on your GPS location": "Montre kontni selon kote GPS ou ye",
+  "Strict Local Only": "Sèlman lokal strik",
+  "Tap to localise": "Peze pou lokalize",
+  "Tap for Caribbean": "Peze pou Karayib",
+  "Tap to change": "Peze pou chanje",
+  "Tap to toggle • Long press for options": "Peze pou chanje • Kenbe peze pou opsyon",
+  "Hold for more": "Kenbe pou plis",
+  "Search with AI": "Chèche ak IA",
+  "Unable to open AI Search right now": "Pa ka ouvri rechèch IA kounye a",
   "Details": "Detay",
   "Instagram": "Instagram",
   "Facebook": "Facebook",
@@ -56,6 +73,28 @@
   "Wheelchair Accessible": "Aksesib pou chèz woulant",
   "Business Type": "Kalite Biznis",
   "Restaurant": "Restoran",
+  "Restaurants": "Restoran yo",
+  "Real Estate": "Imobilye",
+  "Auto": "Otomobil",
+  "Automotive": "Otomobil",
+  "Beauty & Spa": "Bote ak spa",
+  "Electronics": "Elektwonik",
+  "Events": "Evènman",
+  "Health & Fitness": "Sante ak fòm",
+  "Home Services": "Sèvis lakay",
+  "Entertainment": "Divètisman",
+  "Professional Services": "Sèvis pwofesyonèl",
+  "Professional Service": "Sèvis pwofesyonèl",
+  "Education": "Edikasyon",
+  "Travel & Tourism": "Vwayaj ak touris",
+  "Pets": "Bèt kay",
+  "Sports": "Espò",
+  "Food & Drink": "Manje ak bwason",
+  "Health & Beauty": "Sante ak bote",
+  "Accommodation": "Lojman",
+  "Home & Garden": "Kay ak jaden",
+  "Nightlife": "Lavi lannwit",
+  "Shopping": "Acha",
   "Cash,Card": "Lajan Kach,Kad",
   "Parking": "Pakin",
   "Available": "Disponib",
@@ -69,11 +108,76 @@
   "Explore": "Eksplore",
   "Listings": "Lis",
   "My Listings": "Lis mwen yo",
+  "Listing Freshness": "Frèchè lis yo",
+  "Manage your active listings": "Jere lis aktif ou yo",
+  "Select multiple": "Chwazi plizyè",
+  "Reload scores": "Rechaje nòt yo",
+  "Urgent Attention": "Atansyon ijan",
+  "These listings will hide soon. Take action now!": "Lis sa yo pral kache byento. Aji kounye a!",
+  "Needs Refresh Soon": "Bezwen rafrechi byento",
+  "Plan to refresh these listings soon.": "Planifye pou rafrechi lis sa yo byento.",
+  "Active & Fresh": "Aktif ak fre",
+  "These listings are in good standing.": "Lis sa yo nan bon eta.",
+  "Never Expire": "Pa janm ekspire",
+  "These listings are exempt from automatic hiding.": "Lis sa yo egzante de kachèt otomatik.",
+  "Hidden Listings": "Lis kache",
+  "Refresh to make these visible again.": "Rafrechi pou fè yo vizib ankò.",
+  "Refresh All Urgent ({})": "Rafrechi tout ijan yo ({})",
+  "Overview": "Apèsi",
+  "Urgent": "Ijan",
+  "Warning": "Avètisman",
+  "Fresh": "Fre",
+  "Hidden": "Kache",
+  "Exempt (Never Expire)": "Egzanpte (Pa janm ekspire)",
+  "Refresh All": "Rafrechi tout",
+  "Deselect All": "Dezaktive tout",
+  "Auto-Refresh Eligible": "Kalifye pou oto-rafrechisman",
+  "Refresh Now": "Rafrechi kounye a",
+  "Make Visible": "Fè vizib",
   "My Brands/Branches": "Mak/Filyal mwen yo",
+  "Manage Locations": "Jere kote yo",
+  "Locations": "Kote yo",
+  "Delete Brand": "Efase mak",
+  "Delete Brand?": "Efase mak la?",
+  "No locations linked": "Pa gen kote ki lye",
+  "No locations found": "Pa jwenn okenn kote",
+  "Verified Brand": "Mak verifye",
+  "Your brand will be deleted.": "Mak ou a ap efase.",
+  "Your listings will be kept": "Anons ou yo ap rete",
+  "Deleting brand...": "Ap efase mak...",
+  "Brand deleted successfully!": "Mak efase avèk siksè!",
   "Orders": "Kòmand",
   "Rentals": "Lwaye",
+  "Post Event": "Pibliye evènman",
+  "Create Event": "Kreye evènman",
+  "Edit Event": "Modifye evènman",
+  "Event posted successfully.": "Evènman an pibliye avèk siksè.",
+  "Event Title Hint": "eg.: Nwit Kanaval",
+  "Committee Hint": "eg.: Ekip maketing",
+  "Event Description Hint": "Pataje detay evènman an",
+  "Venue Name Hint": "eg.: Queen's Park Savannah",
+  "Ticket Link Hint": "https://...",
+  "Facebook Page Hint": "eg.: facebook.com/evènmanou",
+  "Instagram Username Hint": "eg.: @evènmanou",
+  "Ticket Name Hint": "eg.: VIP",
+  "Ticket Price Hint": "eg.: 25.00",
+  "Ticket Description Hint": "Detay tikè opsyonèl",
+  "Member Name Hint": "eg.: Jan Dupont",
+  "Contact Number Hint": "eg.: +1 868...",
+  "Manage Rentals": "Jere lwaye",
   "Bookings": "Rezèvasyon",
   "Booking Requests": "Demann Rezèvasyon",
+  "Host": "Òganizatè",
+  "Start Date": "Dat kòmansman",
+  "End Date": "Dat fen",
+  "Duration": "Dire",
+  "night": "nwit",
+  "nights": "nwit",
+  "No pending bookings": "Pa gen rezèvasyon an atant",
+  "No confirmed bookings": "Pa gen rezèvasyon konfime",
+  "No rejected bookings": "Pa gen rezèvasyon rejte",
+  "No cancelled bookings": "Pa gen rezèvasyon anile",
+  "Dates with bookings": "Dat ki gen rezèvasyon",
   "Activate Booking": "Aktive Rezèvasyon",
   "Conversations": "Konvèsasyon",
   "Chats": "Diskisyon",
@@ -82,6 +186,10 @@
   "Settings": "Paramèt",
   "Favorites": "Favori",
   "Notifications": "Notifikasyon",
+  "Assigned Listings": "Lis yo asiyen",
+  "No Assigned Listings": "Pa gen lis yo asiyen",
+  "You have not been added as a collaborator to any listings": "Yo poko ajoute ou kòm kolaboratè sou okenn lis",
+  "x_more": "+{} plis",
   
   "Analytics": "Analitik",
   "Advanced Analytics": "Analitik Avanse",
@@ -89,8 +197,48 @@
   "Activate Chat": "Aktive Chat",
   "Manage Subscription": "Jere Abònman",
   "Log Out": "Dekonekte",
+    "Analytics": "Analitik",
+    "Advanced Analytics": "Analitik Avanse",
+    "Professional Feature": "Fonksyon pwofesyonèl",
+    "Total Views": "Total vizyalizasyon",
+    "Total Favorites": "Total favori",
+    "Avg Rating": "Nòt mwayèn",
+    "Listing Performance": "Pèfòmans lis yo",
+    "No listings yet": "Poko gen lis",
+    "No ratings": "Pa gen nòt",
+    "stars_reviews": "{} zetwal ({} revizyon)",
+    "Last 7 days": "7 dènye jou yo",
+    "Last 30 days": "30 dènye jou yo",
+    "Last 90 days": "90 dènye jou yo",
+    "All Time": "Depi tout tan",
+    "Performance Snapshot": "Rezime pèfòmans",
+    "Engagement Deep Dive": "Analiz pwofon sou angajman",
+    "Growth Opportunities": "Opòtinite kwasans",
+    "Bookings": "Rezèvasyon",
+    "Avg. Rating": "Nòt mwayèn",
+    "Chat Initiations": "Inisyasyon chat",
+    "Taps / Vouch": "Taps / Apwobasyon",
+    "vs previous period": "konpare ak peryòd anvan",
+    "Improve Listing Quality": "Amelyore kalite lis la",
+    "Become a Top Lister": "Vin yon lisè an tèt",
+    "you_have_listings_to_improve": "Ou gen {} lis ki ka amelyore ak plis foto oswa yon deskripsyon ki pi long.",
+    "you_are_bookings_away_for_badge": "Ou bezwen {} rezèvasyon ankò pou jwenn badj \"Kominote a Verifye\" a!",
   
   "Deals & Promotions": "Bon Afè yo ak Pwomasyon",
+    "Post your deals, promotions, and ads here!": "Pibliye bon afè, pwomosyon ak anons ou yo isit la!",
+    "Upload New Ad": "Telechaje nouvo anons",
+    "View All Deals": "Gade tout bon afè yo",
+    "Ad Posting Quota": "Kota pou pibliye anons",
+    "Tier": "Nivo",
+    "Free": "Gratis",
+    "Professional": "Pwofesyonèl",
+    "Premium": "Premium",
+    "Posts this month": "Piblikasyon mwa sa a",
+    "Resets on": "Li rekòmanse sou",
+    "Upgrade to Post Ads": "Mete ajou pou pibliye anons",
+    "You're on the Free plan": "Ou sou plan Gratis la",
+    "Professional plan: 10 ads/month\nPremium plan: 20 ads/month": "Plan Professional: 10 anons/mwa\nPlan Premium: 20 anons/mwa",
+    "Also requires at least one active listing.": "Li mande tou omwen yon lis aktif.",
   "Categories": "Kategori",
   "Find what you need": "Jwenn sa w bezwen",
   "Search listings...": "Chèche lis yo...",
@@ -107,6 +255,8 @@
   "View Full Menu": "Gade Tout Meni",
   "Browse Rentals": "Gade Lwaye yo",
   "Explore rental items": "Eksplore atik lwaye yo",
+  "Food": "Manje",
+  "General": "Jeneral",
   "Services": "Sèvis",
   "Show all": "Montre tout",
   "Show less": "Montre mwens",
@@ -169,6 +319,7 @@
   "Sign Up": "Enskri",
   "Sign Out": "Dekonekte",
   "Logout": "Dekonekte",
+  "It's ok, your listings are safe": "Pa enkyete, lis ou yo an sekirite",
   "Register": "Enskri",
   "Create Account": "Kreye kont",
   "Email": "Imèl",
@@ -202,14 +353,55 @@
 
   "Add Listing": "Ajoute lis",
   "Edit Listing": "Modifye lis",
+  "Request Featured": "Mande pou mete an avan",
+  "Manage Collaborators": "Jere kolaboratè yo",
+  "Team Chat": "Chat ekip la",
+  "Manage Reviews": "Jere revizyon yo",
   "Delete Listing": "Efase lis",
   "Delete Listing?": "Efase lis?",
   "Are you sure you want to remove this listing?": "Èske w sèten w vle retire lis sa a?",
   "Listing Details": "Detay lis",
+  "Details & Hours": "Detay ak orè",
+  "Contact Information": "Enfòmasyon kontak",
+  "Social Media": "Rezo sosyal",
+  "Business Details": "Detay biznis",
+  "Menu (Food & Beverage)": "Meni (Manje ak bwason)",
+  "Store / Ecommerce (Optional)": "Magazen / E-commerce (Opsyonèl)",
+  "Logo (Optional)": "Logo (Opsyonèl)",
+  "Enable Store/Ecommerce": "Aktive magazen/e-commerce",
+  "Store Mode": "Mòd magazen",
+  "External URL Only": "URL ekstèn sèlman",
+  "Internal Catalog": "Katalòg entèn",
+  "Both (URL + Catalog)": "Tou de (URL + Katalòg)",
+  "Lead Time (Hours)": "Tan preparasyon (èdtan)",
+  "Minimum hours needed to prepare orders": "Kantite èdtan minimòm ki nesesè pou prepare kòmand yo",
+  "Internal Catalog requires Premium subscription": "Katalòg entèn mande abònman Premium",
+  "Please save the listing first, then you can manage catalog items": "Tanpri sove lis la anvan, apre sa ou ka jere atik nan katalòg la",
+  "Manage Catalog Items": "Jere atik katalòg",
+  "Save Listing First": "Sove lis la anvan",
+  "Accept Proof of Payment": "Aksepte prèv peman",
+  "Require customers to provide proof of payment (photo/receipt) for orders": "Mande kliyan yo bay prèv peman (foto/resi) pou kòmand yo",
+  "Enable Rentals": "Aktive lokasyon",
+  "Allow customers to rent items from this listing": "Pèmèt kliyan lwe atik nan lis sa a",
+  "Manage Rental Catalog": "Jere katalòg lokasyon",
   "Listing not found or has been removed.": "Lis pa jwenn oswa li retire.",
   "Failed to open listing. Please try again.": "Pa kapab ouvè lis la. Tanpri eseye ankò.",
   "Failed to open listing management. Please try again.": "Pa kapab ouvè jesyon lis la. Tanpri eseye ankò.",
+  "Booking Services": "Sèvis Rezèvasyon",
+  "Require Booking": "Egzije Rezèvasyon",
+  "Show a \"Book Now\" button on your listing": "Montre yon bouton \"Rezève Kounye a\" sou lis ou a",
+  "Allow Quantity Selection": "Pèmèt Seleksyon Kantite",
+  "Customers can select quantity when booking services": "Kliyan yo ka chwazi kantite lè yo rezève sèvis yo",
+  "Use Time Blocks": "Itilize Blòk Tan",
+  "Enable hourly time slot bookings instead of full day bookings": "Aktive rezèvasyon pa èdtan olye de rezèvasyon tout jounen",
+  "Custom Booking Questions": "Kesyon Rezèvasyon Pèsonalize",
+  "Ask customers to answer questions when they book": "Mande kliyan yo reponn kesyon lè yo ap rezève",
+  "Allow Multiple Bookings Per Day": "Pèmèt Plizyè Rezèvasyon Pa Jou",
+  "Multiple customers can book different time slots on the same day": "Plizyè kliyan ka rezève diferan blòk tan nan menm jou a",
   "No listings found": "Pa gen lis",
+  "Listing updated successfully": "Lis la mete ajou avèk siksè",
+  "Error loading listings": "Erè pandan chajman lis yo",
+  "Error updating listing": "Erè pandan mizajou lis la",
   "Deleting...": "Ap efase...",
   "Add To Favorites": "Ajoute nan favori",
   "Remove From Favorites": "Retire nan favori",
@@ -226,16 +418,81 @@
   
   "Store": "Magazen",
   "Mini Store": "Ti Magazen",
+  "Browse Full Store": "Gade tout magazen an",
   "Cart": "Panyen",
   "Checkout": "Peye",
   "Add to Cart": "Ajoute nan panyen",
   "Added to cart": "Ajoute nan panyen",
   "View Cart": "Gade panyen",
+  "Cart is empty": "Panyen an vid",
+  "Fulfillment Method": "Metòd livrezon",
+  "Delivery Address *": "Adrès livrezon *",
+  "Shipping Address *": "Adrès ekspedisyon *",
+  "Shipping Instructions (Optional)": "Enstriksyon ekspedisyon (Opsyonèl)",
+  "Street address, city, state, postal code": "Adrès lari, vil, eta, kòd postal",
+  "Additional seating info (optional)": "Enfòmasyon siplemantè sou plasman (opsyonèl)",
+  "e.g., Special requests, dietary notes": "egzanp: Demann espesyal, nòt alimantè",
+  "Preferred Date/Time (Optional)": "Dat/Lè prefere (Opsyonèl)",
+  "Not specified": "Pa espesifye",
+  "Notes (Optional)": "Nòt (Opsyonèl)",
+  "Send Order Request": "Voye demann kòmand",
+  "Please sign in to place an order": "Tanpri konekte pou fè yon kòmand",
+  "Please enter delivery address": "Tanpri antre adrès livrezon",
+  "Please enter shipping address": "Tanpri antre adrès ekspedisyon",
+  "Order request sent successfully!": "Demann kòmand voye avèk siksè!",
+  "Scan Table QR Code": "Eskane kòd QR tab la",
+  "Table Scanned: {}": "Tab eskane: {}",
+  "Table {} has been scanned. You can also add additional seating info below.": "Tab {} te eskane. Ou ka ajoute plis enfòmasyon sou plasman anba a.",
+  "Creating table session...": "Ap kreye sesyon tab...",
+  "Table scanned successfully: {}": "Tab eskane avèk siksè: {}",
+  "Failed to create table session. Please try again.": "Pa t ka kreye sesyon tab la. Tanpri eseye ankò.",
+  "Invalid QR code format - missing table data": "Fòma kòd QR pa valab - done tab la manke",
+  "Invalid QR code - Not a table QR code": "Kòd QR pa valab - se pa kòd QR tab",
+  "Error parsing QR code: {}": "Erè pandan analiz kòd QR la: {}",
+  "This QR code is for a different store": "Kòd QR sa a se pou yon lòt magazen",
+  "Pin Delivery Location": "Mete pin sou kote livrezon an",
+  "Location Pinned": "Kote a pinnen",
+  "Tap to pin your delivery location on map": "Tape pou mete pin kote livrezon ou sou kat la",
+  "Location permission is required for delivery": "Otorizasyon kote obligatwa pou livrezon",
+  "Delivery Location": "Kote livrezon",
+  "Use Current Location": "Sèvi ak kote aktyèl la",
+  "Or enter coordinates manually:": "Oswa antre kowòdone yo manyèlman:",
+  "Latitude": "Latitid",
+  "Longitude": "Longitid",
+  "Invalid latitude or longitude": "Latitid oswa longitid pa valab",
+  "Failed to get location: {}": "Pa t ka jwenn kote a: {}",
+  "Error parsing location: {}": "Erè pandan analiz kote a: {}",
+  "e.g., Leave at front door, signature required": "egzanp: Kite devan pòt la, siyati obligatwa",
   "Empty Cart": "Panyen vid",
   "No items in cart": "Pa gen atik nan panyen",
   "Store Settings": "Paramèt magazen",
   "Save Settings": "Anrejistre paramèt",
   "Store settings updated": "Paramèt magazen mete ajou",
+  "CaribTap Subscriptions": "Abònman CaribTap",
+  "Store not available": "Magazen pa disponib",
+  "Unable to open Google Play subscriptions": "Pa kapab louvri abònman Google Play",
+  "Unable to load plans": "Pa kapab chaje plan yo",
+  "Choose a plan": "Chwazi yon plan",
+  "Pick Professional or Premium to unlock business tools.": "Chwazi Professional oswa Premium pou debloke zouti biznis yo.",
+  "AI photo enhancement": "Amelyorasyon foto ak IA",
+  "Watermarking tools": "Zouti filigran",
+  "Priority support": "Sipò priyoritè",
+  "Everything in Professional": "Tout sa ki nan Professional",
+  "Quotes & invoices tools": "Zouti devis ak fakti",
+  "Full suite with premium business features.": "Pake konplè ak fonksyon biznis premium.",
+  "Current plan": "Plan aktyèl",
+  "Current plan: {}": "Plan aktyèl: {}",
+  "You are currently on {}.": "Ou kounye a sou {}.",
+  "Subscribe": "Abòne",
+  "No expiration": "Pa gen ekspirasyon",
+  "Status: {}": "Estati: {}",
+  "Expires: {}": "Ekspire: {}",
+  "Auto-renew: {}": "Renouvèlman oto: {}",
+  "On": "Limen",
+  "Off": "Etenn",
+  "Manage subscription in Google Play": "Jere abònman nan Google Play",
+  "Benefits": "Avantaj",
+  "Restore": "Retabli",
   "Fulfillment Methods": "Metòd livrezon",
   "Select how customers can receive their orders": "Chwazi kòman kliyan yo ka resevwa kòmand yo",
   "At least one fulfillment method must be enabled": "Omwen youn metòd livrezon dwe aktive",
@@ -267,6 +524,7 @@
   "New Order": "Nouvo kòmand",
   "Customer": "Kliyan",
   "Items": "Atik",
+  "Table": "Tab",
   "Subtotal": "Soutotal",
   "Shipping Fee": "Frè livrezon",
   "Delivery Fee": "Frè livrezon",
@@ -279,6 +537,34 @@
   "Notes": "Nòt",
   "Seller Note": "Nòt vandè",
   "Payment": "Peman",
+  "Payment Methods": "Metòd peman",
+  "Bank Transfer": "Transfè bank",
+  "Payment Apps": "Aplikasyon peman",
+  "Bank": "Bank",
+  "Account Name": "Non kont",
+  "Account Number": "Nimewo kont",
+  "Branch": "Branch",
+  "SWIFT/BIC": "SWIFT/BIC",
+  "IBAN": "IBAN",
+  "Copied to clipboard": "Kopye nan clipboard la",
+  "Book Appointment": "Rezève randevou",
+  "Booking sent": "Rezèvasyon voye",
+  "Select Services": "Chwazi sèvis yo",
+  "Select dates": "Chwazi dat yo",
+  "Please select check-in and check-out dates.": "Tanpri chwazi dat antre ak dat sòti.",
+  "Select time block": "Chwazi blòk lè",
+  "Please select a time slot for your booking.": "Tanpri chwazi yon plas lè pou rezèvasyon ou.",
+  "Select time slot": "Chwazi plas lè",
+  "No time slots available for this date": "Pa gen plas lè disponib pou dat sa a",
+  "Number of guests": "Kantite envite",
+  "Custom questions": "Kesyon pèsonalize",
+  "Type your answer": "Ekri repons ou",
+  "Notes for the lister": "Nòt pou moun ki mete anons la",
+  "Any special requests...": "Nenpòt demann espesyal...",
+  "Qty": "Kant.",
+  "Nights": "Nwit",
+  "Total Amount:": "Kantite total:",
+  "Your booking request has been sent to the lister. You will be notified once they respond.": "Demann rezèvasyon ou a voye bay moun ki mete anons la. N ap fè w konnen lè li reponn.",
   "Proof of Payment": "Prèv peman",
   "Upload Proof of Payment": "Telechaje prèv peman",
   "This order requires proof of payment. Please upload a receipt or screenshot.": "Kòmand sa a mande prèv peman. Tanpri telechaje yon resi oswa yon ekran.",
@@ -312,14 +598,19 @@
   
   "Requested": "Mande",
   "Pending": "An atant",
+  "Active": "Aktif",
+  "Closed": "Fèmen",
   "Confirmed": "Konfime",
   "Preparing": "Ap prepare",
   "Ready": "Pare",
   "Served": "Sèvi",
   "Fulfilled": "Konplete",
   "Completed": "Fini",
+  "Disputed": "An diskisyon",
   "Declined": "Refize",
   "Cancelled": "Anile",
+  "Start": "Kòmansman",
+  "End": "Fen",
   
   "Table Service": "Sèvis tab",
   "Table Mode": "Mòd tab",
@@ -327,6 +618,20 @@
   "Create tables, share QR codes, and manage sessions": "Kreye tab, pataje kòd QR, epi jere sesyon",
   "Manage dine-in tables and QR codes for this listing": "Jere tab ak kòd QR pou lis sa a",
   "Summon Waiter": "Rele sèvè",
+  "Assign Waiter": "Bay sèvè",
+  "Change Waiter": "Chanje sèvè",
+  "Acknowledge": "Konfime",
+  "Customer Requests": "Demann kliyan",
+  "No pending sessions": "Pa gen sesyon an atant",
+  "No active sessions": "Pa gen sesyon aktif",
+  "No closed sessions": "Pa gen sesyon fèmen",
+  "Started": "Kòmanse",
+  "Activated": "Aktive",
+  "Purpose": "Objektif",
+  "Payment": "Peman",
+  "Just now": "Kounye a",
+  "minutes_ago": "sa gen {} min",
+  "hours_ago": "sa gen {} è",
   "Wait $seconds": "Tann $seconds",
   "Request Bill": "Mande fakti",
   "Your $role": "$role ou",
@@ -377,6 +682,33 @@
   
   "My Bookings": "Rezèvasyon mwen",
   "Booking Details": "Detay rezèvasyon",
+  "Booking Information": "Enfòmasyon rezèvasyon",
+  "Pricing": "Pri",
+  "Unit Price": "Pri inite",
+  "Deposit": "Depo",
+  "Mileage Overage": "Depasman kilométraj",
+  "Vehicle Information": "Enfòmasyon machin",
+  "Start Odometer": "Odometè kòmansman",
+  "End Odometer": "Odometè fen",
+  "Distance Driven": "Distans kondwi",
+  "Checkout Evidence": "Prèv remèt",
+  "Checkin Evidence": "Prèv resevwa",
+  "OVERDUE FOR RETURN": "AN RETA POU RETOUNEN",
+  "Evidence details would be displayed here": "Detay prèv yo ta parèt isit la",
+  "Rental item not found": "Atik lwaye pa jwenn",
+  "No photos available": "Pa gen foto disponib",
+  "Failed to load image": "Echèk nan chaje imaj",
+  "Loading customer...": "Ap chaje kliyan...",
+  "Rental Item": "Atik lwaye",
+  "at": "a",
+  "hour": "èdtan",
+  "hours": "èdtan",
+  "day": "jou",
+  "days": "jou",
+  "week": "semèn",
+  "weeks": "semèn",
+  "month": "mwa",
+  "months": "mwa",
   "Make Booking": "Fè rezèvasyon",
   "Date & Time": "Dat ak lè",
   "Party Size": "Gwosè gwoup",
@@ -427,5 +759,170 @@
   "Error saving settings: $e": "Erè nan anrejistreman paramèt: $e",
   "Something went wrong": "Gen yon bagay ki pa mache",
   "Network error": "Erè rezo",
-  "Please try again": "Tanpri eseye ankò"
+  "Please try again": "Tanpri eseye ankò",
+  "Quotes & Invoices": "Estimasyon ak Fakti",
+  "Company": "Konpayi",
+  "Client name": "Non kliyan",
+  "Address": "Adrès",
+  "No items yet": "Poko gen atik",
+  "Discount": "Rabè",
+  "Tax": "Taks",
+  "Optional notes": "Nòt opsyonèl",
+  "Optional terms": "Tèm opsyonèl",
+  "Select date": "Chwazi dat",
+  "Terms": "Tèm",
+  "Valid Until": "Valab jiska",
+  "Totals": "Total yo",
+  "Currency": "Lajan",
+  "Line Items": "Liy atik yo",
+  "Client": "Kliyan",
+  "Listing": "Lis",
+  "Select listing": "Chwazi lis",
+  "Code": "Kòd",
+  "Symbol": "Senbòl",
+  "Amount": "Montan",
+  "Percent": "Pousantaj",
+  "Save Draft": "Sove bouyon",
+  "Add Item": "Ajoute atik",
+  "Description": "Deskripsyon",
+  "Enter valid item details": "Antre detay atik ki valab",
+  "Quotes": "Estimasyon",
+  "Invoices": "Fakti",
+  "Draft": "Bouyon",
+  "Sent": "Voye",
+  "Accepted": "Aksepte",
+  "Expired": "Ekspire",
+  "Paid": "Peye",
+  "Overdue": "Anreta",
+  "No quotes yet": "Poko gen estimasyon",
+  "No invoices yet": "Poko gen fakti",
+  "Upgrade to Premium to use Quotes & Invoices": "Mete ajou nan Premium pou itilize Estimasyon ak Fakti",
+  "Upgrade to Premium to use Invoices": "Mete ajou nan Premium pou itilize Fakti",
+  "Failed to load quotes": "Echèk nan chaje estimasyon yo",
+  "Failed to load invoices": "Echèk nan chaje fakti yo",
+  "Quote not found": "Estimasyon pa jwenn",
+  "Failed to load quote": "Echèk nan chaje estimasyon an",
+  "Failed to save quote": "Echèk nan sove estimasyon an",
+  "Failed to mark accepted": "Echèk nan make kòm aksepte",
+  "Failed to mark declined": "Echèk nan make kòm refize",
+  "Failed to convert to invoice": "Echèk nan konvèti an fakti",
+  "Invoice not found": "Fakti pa jwenn",
+  "Failed to load invoice": "Echèk nan chaje fakti a",
+  "Failed to save invoice": "Echèk nan sove fakti a",
+  "Failed to mark paid": "Echèk nan make kòm peye",
+  "Optional": "Opsyonèl",
+  "quote_limit_reached_message": "Ou rive nan limit {} estimasyon. Mete ajou pou istwa san limit.",
+  "Quote link": "Lyen estimasyon",
+  "Invoice link": "Lyen fakti",
+  "PDF downloaded to": "PDF telechaje nan",
+  "Failed to download PDF": "Echèk nan telechaje PDF la",
+  "CaribTap Business": "Biznis CaribTap"
+  ,"Item description hint": "egz.: sèvis konsepsyon sit entènèt"
+  ,"Quantity hint": "egz.: 1"
+  ,"Unit price hint": "egz.: 120.00"
+  ,"Upload Promotion": "Telechaje pwomosyon"
+  ,"Edit Promotion": "Modifye pwomosyon"
+  ,"Format Guidance": "Gid fòma"
+  ,"Add media": "Ajoute medya"
+  ,"Choose Image from Gallery": "Chwazi imaj nan galri"
+  ,"Choose Video from Gallery": "Chwazi videyo nan galri"
+  ,"Ad Types": "Tip anons"
+  ,"Promotion:": "Pwomosyon:"
+  ,"Advert:": "Anons:"
+  ,"Time-limited offers. Requires a specific start and end date (e.g., 20% off for 1 week).": "Ofri ki limite nan tan. Li mande yon dat kòmansman ak fen espesifik (egzanp: 20% rabè pandan 1 semèn)."
+  ,"General business awareness. Runs indefinitely without a specific offer period.": "Vizibilite jeneral biznis la. Li mache san limit san yon peryòd ofri espesifik."
+  ,"Promo Period": "Peryòd pwomosyon"
+  ,"A promo period ensures customers know exactly when your offer begins and ends. It creates urgency and helps them plan their purchase before the deal expires.": "Yon peryòd pwomosyon fè kliyan yo konnen egzakteman kilè òf ou a kòmanse ak fini. Sa kreye ijans epi ede yo planifye acha yo avan òf la ekspire."
+  ,"About Country Selection": "Konsènan seleksyon peyi"
+  ,"This setting controls which countries can see your ad. When you select specific countries, only users from those locations will be able to view your promotion. If you leave it set to \"All Countries\", your ad will be visible to users everywhere.": "Paramèt sa a kontwole ki peyi ki ka wè anons ou a. Lè ou chwazi peyi espesifik, sèlman itilizatè nan kote sa yo ap ka wè pwomosyon ou. Si ou kite li sou \"Tout Peyi\", anons ou a ap vizib tout kote."
+  ,"Select Categories": "Chwazi kategori"
+  ,"Please select a listing for your deal": "Tanpri chwazi yon lis pou òf ou a"
+  ,"Add Image or Video": "Ajoute imaj oswa videyo"
+  ,"High quality media gets more engagement": "Medya bon kalite jwenn plis angajman"
+  ,"Type": "Tip"
+  ,"Promotion": "Pwomosyon"
+  ,"Advert": "Anons"
+  ,"Select Listing": "Chwazi lis"
+  ,"Choose which listing this deal is for": "Chwazi ki lis òf sa a ye"
+  ,"You need an active listing to post a deal. Please create a listing first.": "Ou bezwen yon lis aktif pou poste yon òf. Tanpri kreye yon lis anvan."
+  ,"Select a listing...": "Chwazi yon lis..."
+  ,"Describe your deal": "Dekri òf ou a"
+  ,"Ex: 20% off all summer items...": "Egz.: 20% rabè sou tout atik ete yo..."
+  ,"Set Promo Period": "Mete peryòd pwomosyon an"
+  ,"Starts": "Kòmanse"
+  ,"Ends": "Fini"
+  ,"Select Date": "Chwazi dat"
+  ,"Targeting Options": "Opsyon sib"
+  ,"Choose who can see your ad": "Chwazi kiyès ki ka wè anons ou a"
+  ,"Countries": "Peyi"
+  ,"Target Categories": "Kategori sib"
+  ,"Select categories": "Chwazi kategori"
+  ,"x_selected": "{} chwazi"
+  ,"Audience Type": "Tip odyans"
+  ,"All Users": "Tout itilizatè"
+  ,"Viewed Similar": "Gade bagay ki sanble"
+  ,"Favorited": "Mete an favori"
+  ,"Near Location": "Toupre kote a"
+  ,"I accept the": "Mwen aksepte"
+  ,"Continue to Review": "Kontinye pou revizyon"
+  ,"users_can_set_max_promo_period": "Itilizatè {} yo ka mete yon peryòd pwomosyon maksimòm {} jou."
+  ,"Choose Your Plan": "Chwazi plan ou"
+  ,"Unlock Premium Features": "Debloke fonksyon premium"
+  ,"Choose the perfect plan for your business": "Chwazi plan pafè a pou biznis ou"
+  ,"Monthly": "Chak mwa"
+  ,"Yearly (Save 17%)": "Chak ane (Ekonomize 17%)"
+  ,"MOST POPULAR": "PI POPILÈ"
+  ,"Free Forever": "Gratis pou tout tan"
+  ,"Current": "Aktif"
+  ,"Current Plan": "Plan aktyèl"
+  ,"Downgrade": "Desann plan"
+  ,"Subscribe Now": "Abòne kounye a"
+  ,"Confirm Downgrade": "Konfime desann plan"
+  ,"Are you sure you want to downgrade to the Free plan? You will lose access to premium features.": "Èske ou sèten ou vle desann nan plan Gratis la? Ou pral pèdi aksè ak fonksyon premium yo."
+  ,"Downgrade feature coming soon!": "Fonksyon desann plan an ap vini byento!"
+  ,"Failed to refresh subscription": "Echèk nan rafrechi abònman an"
+  ,"Create up to 3 listings": "Kreye jiska 3 lis"
+  ,"Basic listing management": "Jesyon lis debaz"
+  ,"Standard search visibility": "Vizibilite rechèch estanda"
+  ,"Community support": "Sipò kominotè"
+  ,"Booking system with email & reminders": "Sistèm rezèvasyon ak imèl ak rapèl"
+  ,"Standard Analytics on listing performance": "Analitik estanda sou pèfòmans lis"
+  ,"AI photo enhancements": "Amelyorasyon foto ak IA"
+  ,"All Professional Services": "Tout sèvis pwofesyonèl"
+  ,"Enable Chat to talk directly with customers": "Aktive chat pou pale dirèkteman ak kliyan"
+  ,"Enable Quotes & Invoices": "Aktive Estimasyon ak Fakti"
+  ,"Unlock Advance Analytics": "Debloke analitik avanse"
+  ,"Deal Analytics": "Analitik òf la"
+  ,"No analytics available": "Pa gen analitik disponib"
+  ,"deal_with_caption": "Òf: {}"
+  ,"Views": "Vizyalizasyon"
+  ,"Saves": "Sove"
+  ,"Claims": "Reklamasyon"
+  ,"Users": "Itilizatè"
+  ,"Redemption Status": "Estati itilizasyon"
+  ,"Total Redeemed": "Total itilize"
+  ,"Limit": "Limit"
+  ,"Remaining": "Rès"
+  ,"Engagement Metrics": "Metrik angajman"
+  ,"View to Claim Rate": "To vizyalizasyon pou reklamasyon"
+  ,"of viewers claimed the deal": "nan moun ki te gade yo te reklame òf la"
+  ,"View to Save Rate": "To vizyalizasyon pou sove"
+  ,"of viewers saved the deal": "nan moun ki te gade yo te sove òf la"
+  ,"Save to Claim Rate": "To sove pou reklamasyon"
+  ,"of savers claimed the deal": "nan moun ki te sove yo te reklame òf la"
+  ,"Avg Claims per User": "Mwayèn reklamasyon pa itilizatè"
+  ,"times each user claimed on average": "fwa chak itilizatè te reklame an mwayèn"
+  ,"Inactive": "Pa aktif"
+  ,"Sold out": "Fini"
+  ,"Accepting claims": "Ap aksepte reklamasyon"
+  ,"on_free_plan": "Ou sou plan Gratis la"
+  ,"pro_premium_plan_limits": "Plan Professional: 10 anons/mwa\nPlan Premium: 20 anons/mwa"
+  ,"Deal Details": "Detay òf la"
+  ,"View Analytics": "Gade analitik"
+  ,"Until {}": "Jiska {}"
+  ,"Availability": "Disponiblite"
+  ,"redeemed_count": "Itilize: {}/{}"
+  ,"remaining_count": "{} ki rete"
+  ,"Promo Code": "Kòd promo"
+  ,"Claim In-App": "Reklame nan app la"
 }

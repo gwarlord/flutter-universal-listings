@@ -47,6 +47,7 @@ import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:caribtap/listings/services/attention_service.dart';
 import 'package:caribtap/listings/ui/attention/attention_cubit.dart';
 import 'package:caribtap/listings/model/attention_state_model.dart';
+import 'package:caribtap/listings/model/feed_item.dart';
 
 enum DrawerSelection { home, conversations, categories, search, orders, rentalOrders, profile }
 
@@ -383,14 +384,23 @@ class _ContainerState extends State<ContainerScreen> {
                         icon: const Icon(
                           Icons.map,
                         ),
-                        onPressed: () => push(
-                          context,
-                          MapViewScreen(
-                            listings: homeKey.currentState?.listings ?? [],
-                            fromHome: true,
-                            currentUser: currentUser,
-                          ),
-                        ),
+                        onPressed: () {
+                          final homeState = homeKey.currentState;
+                          if (homeState != null) {
+                             final items = homeState.listingsWithAds
+                                .where((e) => e != null)
+                                .cast<FeedItem>()
+                                .toList();
+                            push(
+                              context,
+                              MapViewScreen(
+                                items: items,
+                                fromHome: true,
+                                currentUser: currentUser,
+                              ),
+                            );
+                          }
+                        },
                       ),
                     if (_currentWidget is ConversationsWrapperWidget)
                       IconButton(

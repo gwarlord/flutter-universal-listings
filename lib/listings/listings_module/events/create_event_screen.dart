@@ -107,8 +107,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
     return InputDecoration(
       labelText: label,
+      hintText: hint,
       errorText: errorText,
       labelStyle: TextStyle(color: dark ? Colors.white70 : Colors.black87, fontSize: 14),
+      hintStyle: TextStyle(color: dark ? Colors.white38 : Colors.black45, fontSize: 13),
       prefixIcon: Icon(icon, color: dark ? Colors.white70 : primary, size: 20),
       filled: true,
       fillColor: dark ? Colors.grey.shade900 : Colors.grey.shade50,
@@ -353,6 +355,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 15),
                 decoration: InputDecoration(
                   labelText: 'Ticket Name (e.g. VIP)'.tr(),
+                  hintText: 'Ticket Name Hint'.tr(),
                   labelStyle: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 14),
                   filled: true,
                   fillColor: isDark ? Colors.black26 : Colors.grey.shade50,
@@ -373,6 +376,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 15),
                 decoration: InputDecoration(
                   labelText: 'Price'.tr(),
+                  hintText: 'Ticket Price Hint'.tr(),
                   labelStyle: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 14),
                   filled: true,
                   fillColor: isDark ? Colors.black26 : Colors.grey.shade50,
@@ -393,6 +397,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 15),
                 decoration: InputDecoration(
                   labelText: 'Description (Optional)'.tr(),
+                  hintText: 'Ticket Description Hint'.tr(),
                   labelStyle: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 14),
                   filled: true,
                   fillColor: isDark ? Colors.black26 : Colors.grey.shade50,
@@ -470,6 +475,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 15),
                   decoration: InputDecoration(
                     labelText: 'Name'.tr(),
+                    hintText: 'Member Name Hint'.tr(),
                     labelStyle: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 14),
                     filled: true,
                     fillColor: isDark ? Colors.black26 : Colors.grey.shade50,
@@ -490,6 +496,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 15),
                   decoration: InputDecoration(
                     labelText: 'Contact Number'.tr(),
+                    hintText: 'Contact Number Hint'.tr(),
                     labelStyle: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 14),
                     filled: true,
                     fillColor: isDark ? Colors.black26 : Colors.grey.shade50,
@@ -618,6 +625,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               decoration: _inputDecoration(
                 context: context,
                 label: 'Title'.tr(),
+                hint: 'Event Title Hint'.tr(),
                 icon: Icons.title,
                 errorText: _showValidationErrors && _titleMissing ? 'Required'.tr() : null,
               ),
@@ -629,6 +637,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               decoration: _inputDecoration(
                 context: context,
                 label: 'Committee / Organizer (Optional)'.tr(),
+                hint: 'Committee Hint'.tr(),
                 icon: Icons.group_outlined,
               ),
             ),
@@ -640,6 +649,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               decoration: _inputDecoration(
                 context: context,
                 label: 'Description'.tr(),
+                hint: 'Event Description Hint'.tr(),
                 icon: Icons.description,
                 errorText: _showValidationErrors && _descriptionMissing ? 'Required'.tr() : null,
               ),
@@ -651,6 +661,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               decoration: _inputDecoration(
                 context: context,
                 label: 'Venue Name'.tr(),
+                hint: 'Venue Name Hint'.tr(),
                 icon: Icons.storefront,
                 errorText: _showValidationErrors && _venueMissing ? 'Required'.tr() : null,
               ),
@@ -717,19 +728,19 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             TextField(
               controller: _ticketUrlController,
               style: TextStyle(color: dark ? Colors.white : Colors.black87),
-              decoration: _inputDecoration(context: context, label: 'Ticket Link (Optional)'.tr(), icon: Icons.link),
+              decoration: _inputDecoration(context: context, label: 'Ticket Link (Optional)'.tr(), hint: 'Ticket Link Hint'.tr(), icon: Icons.link),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _facebookController,
               style: TextStyle(color: dark ? Colors.white : Colors.black87),
-              decoration: _inputDecoration(context: context, label: 'Facebook Page'.tr(), icon: Icons.facebook),
+              decoration: _inputDecoration(context: context, label: 'Facebook Page'.tr(), hint: 'Facebook Page Hint'.tr(), icon: Icons.facebook),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _instagramController,
               style: TextStyle(color: dark ? Colors.white : Colors.black87),
-              decoration: _inputDecoration(context: context, label: 'Instagram Username'.tr(), icon: Icons.camera_alt),
+              decoration: _inputDecoration(context: context, label: 'Instagram Username'.tr(), hint: 'Instagram Username Hint'.tr(), icon: Icons.camera_alt),
             ),
             const SizedBox(height: 16),
             Row(

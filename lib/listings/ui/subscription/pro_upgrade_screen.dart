@@ -186,7 +186,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
 
   Widget _buildHeader(ThemeData theme, int tier) {
     final headline = tier > 0
-        ? 'Current plan: ${_tierLabel(tier)}'.tr()
+        ? 'Current plan: {}'.tr(args: [_tierLabel(tier).tr()])
         : 'Choose a plan'.tr();
 
     return Column(
@@ -260,7 +260,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
     required int currentTier,
     required List<ProductDetails> products,
   }) {
-    final label = _tierLabel(tier);
+    final label = _tierLabel(tier).tr();
     final isSelected = _selectedTier == tier;
     final isCurrent = currentTier == tier;
     final description = _planDescription(tier);
@@ -376,7 +376,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
           if (tier > 0) ...[
             const SizedBox(height: 8),
             Text(
-              'You are currently on ${_tierLabel(tier)}.'.tr(),
+              'You are currently on {}.'.tr(args: [_tierLabel(tier).tr()]),
               style: theme.textTheme.bodySmall,
             ),
           ],
@@ -404,7 +404,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${_tierLabel(tier)} ${label.isNotEmpty ? '- $label' : ''}',
+                  '${_tierLabel(tier).tr()} ${label.isNotEmpty ? '- ${label.tr()}' : ''}',
                   style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 6),
@@ -449,6 +449,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
     final expiresText = expiresAt != null
         ? DateFormat('yyyy-MM-dd').format(expiresAt)
         : 'No expiration'.tr();
+    final statusText = entitlementStatusToString(entitlement.status);
+    final autoRenewText = entitlement.willRenew == true ? 'On'.tr() : 'Off'.tr();
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -456,17 +458,17 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Status: ${entitlementStatusToString(entitlement.status)}'.tr(),
+            'Status: {}'.tr(args: [statusText]),
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 4),
           Text(
-            'Expires: $expiresText'.tr(),
+            'Expires: {}'.tr(args: [expiresText]),
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 4),
           Text(
-            'Auto-renew: ${entitlement.willRenew == true ? 'On' : 'Off'}'.tr(),
+            'Auto-renew: {}'.tr(args: [autoRenewText]),
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 8),

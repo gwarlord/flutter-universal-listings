@@ -154,7 +154,7 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
             onPressed: _bookingDateKeys.isEmpty ? null : _openBookingDateFilter,
             tooltip: _selectedFilterDate == null
                 ? 'Filter by date'.tr()
-                : DateFormat('MMM dd, yyyy').format(_selectedFilterDate!),
+                : DateFormat('MMM dd, yyyy', context.locale.toString()).format(_selectedFilterDate!),
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -275,7 +275,7 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
                     },
                   ),
                   Text(
-                    DateFormat('MMMM yyyy').format(displayMonth),
+                    DateFormat('MMMM yyyy', context.locale.toString()).format(displayMonth),
                     style: TextStyle(color: dark ? Colors.white : Colors.black87),
                   ),
                   IconButton(
@@ -545,7 +545,7 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          booking.status.toUpperCase(),
+                          _localizedBookingStatus(booking.status),
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -577,7 +577,7 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
             ),
             const SizedBox(height: 4),
             Text(
-              '${DateFormat('MMM dd, yyyy').format(booking.checkInDate)} - ${DateFormat('MMM dd, yyyy').format(booking.checkOutDate)} (${booking.numberOfNights} nights)',
+              '${DateFormat('MMM dd, yyyy', context.locale.toString()).format(booking.checkInDate)} - ${DateFormat('MMM dd, yyyy', context.locale.toString()).format(booking.checkOutDate)} (${booking.numberOfNights} ${booking.numberOfNights == 1 ? 'night'.tr() : 'nights'.tr()})',
               style: TextStyle(
                 fontSize: 11,
                 color: dark ? Colors.white70 : Colors.black87,
@@ -720,6 +720,21 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
       default:
         return Colors.blue;
       }
+  }
+
+  String _localizedBookingStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'Pending'.tr();
+      case 'confirmed':
+        return 'Confirmed'.tr();
+      case 'rejected':
+        return 'Rejected'.tr();
+      case 'cancelled':
+        return 'Cancelled'.tr();
+      default:
+        return status;
+    }
   }
 
   void _approveBooking(dynamic booking) {

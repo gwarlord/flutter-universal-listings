@@ -1502,7 +1502,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                       }
                     },
                     icon: Icon(Icons.storefront),
-                    label: Text('Browse Full Store'),
+                    label: Text('Browse Full Store'.tr()),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       foregroundColor: Colors.white,

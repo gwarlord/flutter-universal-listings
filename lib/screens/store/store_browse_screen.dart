@@ -271,7 +271,7 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
               onPressed: _viewCart,
               backgroundColor: Color(cfg.colorPrimary),
               icon: const Icon(Icons.shopping_cart, color: Colors.white),
-              label: Text('View Cart ($_cartItemCount)'.tr(), style: const TextStyle(color: Colors.white)),
+              label: Text('${'View Cart'.tr()} ($_cartItemCount)', style: const TextStyle(color: Colors.white)),
             )
           : null,
     );

@@ -46,6 +46,29 @@
   "Filter": "Filtrar",
   "Sort": "Ordenar",
   "Details": "Detalles",
+  "Location Scope": "Alcance de ubicación",
+  "Choose what content you want to see": "Elige qué contenido quieres ver",
+  "Mode": "Modo",
+  "Local": "Local",
+  "Caribbean": "Caribe",
+  "Nearby": "Cercano",
+  "Show content from a specific country": "Mostrar contenido de un país específico",
+  "Show content from all Caribbean countries": "Mostrar contenido de todos los países del Caribe",
+  "Show content based on your GPS location": "Mostrar contenido según tu ubicación GPS",
+  "Use Home Country": "Usar país de origen",
+  "Strict Local Only": "Solo local estricto",
+  "Only show content from selected country": "Mostrar solo contenido del país seleccionado",
+  "Show local content first, then other islands": "Mostrar primero contenido local, luego otras islas",
+  "Tap to localise": "Toca para localizar",
+  "Tap for Caribbean": "Toca para Caribe",
+  "Tap to change": "Toca para cambiar",
+  "Tap to toggle • Long press for options": "Toca para alternar • Mantén presionado para opciones",
+  "Hold for more": "Mantén para más",
+  "Location permission granted. Content will be filtered based on your GPS location.": "Permiso de ubicación concedido. El contenido se filtrará según tu ubicación GPS.",
+  "Location permission required. You will be prompted when you save.": "Se requiere permiso de ubicación. Se te pedirá cuando guardes.",
+  "Location permission is required for Nearby mode": "Se requiere permiso de ubicación para el modo Cercano",
+  "Select Country": "Seleccionar país",
+  "Search countries...": "Buscar países...",
   "Instagram": "Instagram",
   "Facebook": "Facebook",
   "TikTok": "TikTok",
@@ -56,6 +79,28 @@
   "Wheelchair Accessible": "Accesible para silla de ruedas",
   "Business Type": "Tipo de Negocio",
   "Restaurant": "Restaurante",
+  "Restaurants": "Restaurantes",
+  "Real Estate": "Bienes raíces",
+  "Auto": "Automóviles",
+  "Automotive": "Automotriz",
+  "Beauty & Spa": "Belleza y spa",
+  "Electronics": "Electrónica",
+  "Events": "Eventos",
+  "Health & Fitness": "Salud y fitness",
+  "Home Services": "Servicios del hogar",
+  "Entertainment": "Entretenimiento",
+  "Professional Services": "Servicios profesionales",
+  "Professional Service": "Servicio profesional",
+  "Education": "Educación",
+  "Travel & Tourism": "Viajes y turismo",
+  "Pets": "Mascotas",
+  "Sports": "Deportes",
+  "Food & Drink": "Comida y bebida",
+  "Health & Beauty": "Salud y belleza",
+  "Accommodation": "Alojamiento",
+  "Home & Garden": "Hogar y jardín",
+  "Nightlife": "Vida nocturna",
+  "Shopping": "Compras",
   "Cash,Card": "Efectivo,Tarjeta",
   "Parking": "Estacionamiento",
   "Available": "Disponible",
@@ -69,11 +114,76 @@
   "Explore": "Explorar",
   "Listings": "Listados",
   "My Listings": "Mis Anuncios",
+  "Listing Freshness": "Frescura de anuncios",
+  "Manage your active listings": "Administra tus anuncios activos",
+  "Select multiple": "Seleccionar varios",
+  "Reload scores": "Recargar puntuaciones",
+  "Urgent Attention": "Atención urgente",
+  "These listings will hide soon. Take action now!": "Estos anuncios se ocultarán pronto. ¡Actúa ahora!",
+  "Needs Refresh Soon": "Necesita actualizarse pronto",
+  "Plan to refresh these listings soon.": "Planifica actualizar estos anuncios pronto.",
+  "Active & Fresh": "Activo y fresco",
+  "These listings are in good standing.": "Estos anuncios están en buen estado.",
+  "Never Expire": "Nunca expiran",
+  "These listings are exempt from automatic hiding.": "Estos anuncios están exentos del ocultamiento automático.",
+  "Hidden Listings": "Anuncios ocultos",
+  "Refresh to make these visible again.": "Actualiza para hacerlos visibles de nuevo.",
+  "Refresh All Urgent ({})": "Actualizar todos los urgentes ({})",
+  "Overview": "Resumen",
+  "Urgent": "Urgente",
+  "Warning": "Advertencia",
+  "Fresh": "Fresco",
+  "Hidden": "Oculto",
+  "Exempt (Never Expire)": "Exento (Nunca expira)",
+  "Refresh All": "Actualizar todo",
+  "Deselect All": "Deseleccionar todo",
+  "Auto-Refresh Eligible": "Apto para actualización automática",
+  "Refresh Now": "Actualizar ahora",
+  "Make Visible": "Hacer visible",
   "My Brands/Branches": "Mis Marcas/Sucursales",
+  "Manage Locations": "Gestionar ubicaciones",
+  "Locations": "Ubicaciones",
+  "Delete Brand": "Eliminar marca",
+  "Delete Brand?": "¿Eliminar marca?",
+  "No locations linked": "No hay ubicaciones vinculadas",
+  "No locations found": "No se encontraron ubicaciones",
+  "Verified Brand": "Marca verificada",
+  "Your brand will be deleted.": "Tu marca será eliminada.",
+  "Your listings will be kept": "Tus anuncios se conservarán",
+  "Deleting brand...": "Eliminando marca...",
+  "Brand deleted successfully!": "¡Marca eliminada con éxito!",
   "Orders": "Pedidos",
   "Rentals": "Alquileres",
+  "Post Event": "Publicar evento",
+  "Create Event": "Crear evento",
+  "Edit Event": "Editar evento",
+  "Event posted successfully.": "Evento publicado con éxito.",
+  "Event Title Hint": "ej.: Noche de Carnaval",
+  "Committee Hint": "ej.: Equipo de marketing",
+  "Event Description Hint": "Comparte los detalles del evento",
+  "Venue Name Hint": "ej.: Queen's Park Savannah",
+  "Ticket Link Hint": "https://...",
+  "Facebook Page Hint": "ej.: facebook.com/tuevento",
+  "Instagram Username Hint": "ej.: @tuevento",
+  "Ticket Name Hint": "ej.: VIP",
+  "Ticket Price Hint": "ej.: 25.00",
+  "Ticket Description Hint": "Detalles opcionales del ticket",
+  "Member Name Hint": "ej.: Juan Pérez",
+  "Contact Number Hint": "ej.: +1 868...",
+  "Manage Rentals": "Gestionar alquileres",
   "Bookings": "Reservas",
   "Booking Requests": "Solicitudes de Reserva",
+  "Host": "Anfitrión",
+  "Start Date": "Fecha de inicio",
+  "End Date": "Fecha de fin",
+  "Duration": "Duración",
+  "night": "noche",
+  "nights": "noches",
+  "No pending bookings": "No hay reservas pendientes",
+  "No confirmed bookings": "No hay reservas confirmadas",
+  "No rejected bookings": "No hay reservas rechazadas",
+  "No cancelled bookings": "No hay reservas canceladas",
+  "Dates with bookings": "Fechas con reservas",
   "Activate Booking": "Activar Reservas",
   "Conversations": "Conversaciones",
   "Chats": "Chats",
@@ -82,6 +192,10 @@
   "Settings": "Configuración",
   "Favorites": "Favoritos",
   "Notifications": "Notificaciones",
+  "Assigned Listings": "Listados asignados",
+  "No Assigned Listings": "No hay listados asignados",
+  "You have not been added as a collaborator to any listings": "No has sido agregado como colaborador a ningún listado",
+  "x_more": "+{} más",
   
   "Analytics": "Analíticas",
   "Advanced Analytics": "Analíticas Avanzadas",
@@ -91,6 +205,20 @@
   "Log Out": "Cerrar Sesión",
   
   "Deals & Promotions": "Ofertas y Promociones",
+  "Post your deals, promotions, and ads here!": "¡Publica aquí tus ofertas, promociones y anuncios!",
+  "Upload New Ad": "Subir nuevo anuncio",
+  "View All Deals": "Ver todas las ofertas",
+  "Ad Posting Quota": "Cuota de publicación de anuncios",
+  "Tier": "Nivel",
+  "Free": "Gratis",
+  "Professional": "Profesional",
+  "Premium": "Premium",
+  "Posts this month": "Publicaciones este mes",
+  "Resets on": "Se reinicia el",
+  "Upgrade to Post Ads": "Actualiza para publicar anuncios",
+  "You're on the Free plan": "Estás en el plan Gratis",
+  "Professional plan: 10 ads/month\nPremium plan: 20 ads/month": "Plan Professional: 10 anuncios/mes\nPlan Premium: 20 anuncios/mes",
+  "Also requires at least one active listing.": "También requiere al menos un listado activo.",
   "Categories": "Categorías",
   "Find what you need": "Encuentra lo que necesitas",
   "Search listings...": "Buscar anuncios...",
@@ -107,6 +235,8 @@
   "View Full Menu": "Ver Menú Completo",
   "Browse Rentals": "Explorar Alquileres",
   "Explore rental items": "Explorar artículos de alquiler",
+  "Food": "Comida",
+  "General": "General",
   "Services": "Servicios",
   "Show all": "Mostrar todo",
   "Show less": "Mostrar menos",
@@ -170,6 +300,7 @@
   "Sign Up": "Registrarse",
   "Sign Out": "Cerrar sesión",
   "Logout": "Cerrar sesión",
+  "It's ok, your listings are safe": "No te preocupes, tus anuncios están seguros",
   "Register": "Registrarse",
   "Create Account": "Crear cuenta",
   "Email": "Correo electrónico",
@@ -206,19 +337,166 @@
 
   "Add Listing": "Agregar listado",
   "Edit Listing": "Editar listado",
+  "Basic Information": "Información básica",
+  "Title": "Título",
+  "Start typing": "Comienza a escribir",
+  "Base Price": "Precio base",
+  "Choose Category": "Elegir categoría",
+  "Select Place": "Seleccionar lugar",
+  "Tap to set opening hours": "Toca para establecer el horario de apertura",
+  "Edit Filters": "Editar filtros",
+  "Verified": "Verificado",
+  "Photos": "Fotos",
+  "Videos (max 3)": "Videos (máx. 3)",
+  "View Picture": "Ver foto",
+  "Remove Picture": "Eliminar foto",
+  "Remove Video": "Eliminar video",
+  "Add picture": "Agregar foto",
+  "Take a picture": "Tomar una foto",
+  "Add video": "Agregar video",
+  "Record video": "Grabar video",
+  "Maximum 3 videos allowed": "Máximo 3 videos permitidos",
+  "Please enter a title first": "Por favor, ingresa un título primero",
+  "Please select a category first": "Por favor, selecciona una categoría primero",
+  "Please fill in all required fields": "Por favor, completa todos los campos obligatorios",
+  "Listing saved.": "Listado guardado.",
+  "Public": "Público",
+  "Publish": "Publicar",
+  "Saving listing...": "Guardando listado...",
+  "Saving as draft...": "Guardando como borrador...",
+  "Publishing listing...": "Publicando listado...",
+  "Enhance Photos": "Mejorar fotos",
+  "Save listing to enable enhancements": "Guarda el listado para habilitar mejoras",
+  "Please save the listing first before enhancing photos": "Guarda primero el listado antes de mejorar fotos",
+  "Enhanced photo saved, but failed to add to carousel": "Foto mejorada guardada, pero no se pudo agregar al carrusel",
+  "Generate with AI": "Generar con IA",
+  "Enhance with AI": "Mejorar con IA",
+  "Google Places API key is missing. Please check .env configuration.": "Falta la clave de API de Google Places. Revisa la configuración de .env.",
+  "Booking options are disabled here to avoid conflicting settings.": "Las opciones de reserva están deshabilitadas aquí para evitar configuraciones en conflicto.",
+  "Bookings are available on Pro plans.": "Las reservas están disponibles en los planes Pro.",
+  "Upgrade your subscription to enable booking for this listing.": "Mejora tu suscripción para habilitar reservas en este listado.",
+  "Turn on \"Booking Services\" from the Activate Booking screen.": "Activa \"Servicios de reservas\" desde la pantalla Activar reservas.",
+  "Open Booking Services": "Abrir servicios de reservas",
+  "Require booking": "Requerir reserva",
+  "Show a \"Book Now\" button on your listing.": "Mostrar un botón \"Reservar ahora\" en tu listado.",
+  "Allow quantity selection": "Permitir selección de cantidad",
+  "Customers can select quantity when booking services.": "Los clientes pueden seleccionar la cantidad al reservar servicios.",
+  "Use time blocks": "Usar bloques de tiempo",
+  "Enable hourly time slot bookings instead of full day bookings.": "Habilita reservas por franjas horarias en lugar de reservas de día completo.",
+  "Allow multiple bookings per day": "Permitir múltiples reservas por día",
+  "Multiple customers can book different time slots on the same day.": "Varios clientes pueden reservar diferentes franjas horarias el mismo día.",
+  "Available Time Blocks": "Bloques de tiempo disponibles",
+  "Define hourly time slots (e.g., 09:00-10:00, 10:00-11:00)": "Define franjas horarias (p. ej., 09:00-10:00, 10:00-11:00)",
+  "+ Add Time Block": "+ Agregar bloque horario",
+  "+ Add Blocked Dates": "+ Agregar fechas bloqueadas",
+  "Select Dates to Block": "Seleccionar fechas para bloquear",
+  "{} date selected": "{} fecha seleccionada",
+  "{} dates selected": "{} fechas seleccionadas",
+  "Add Booking Question": "Agregar pregunta de reserva",
+  "Question": "Pregunta",
+  "Add to Services": "Agregar a servicios",
+  "Add": "Agregar",
+  "Price (optional)": "Precio (opcional)",
+  "Logo": "Logo",
+  "Add logo": "Agregar logo",
+  "Choose from gallery": "Elegir de la galería",
+  "Store URL": "URL de la tienda",
+  "Allow users to visit your online store or shop.": "Permitir a los usuarios visitar tu tienda en línea o comprar.",
+  "PREMIUM": "PREMIUM",
+  "Instagram URL": "URL de Instagram",
+  "Facebook URL": "URL de Facebook",
+  "WhatsApp Phone": "Teléfono de WhatsApp",
+  "TikTok URL": "URL de TikTok",
+  "YouTube URL": "URL de YouTube",
+  "X (Twitter) URL": "URL de X (Twitter)",
+  "Request Featured": "Solicitar destacado",
+  "Manage Collaborators": "Gestionar colaboradores",
+  "Team Chat": "Chat del equipo",
+  "Manage Reviews": "Gestionar reseñas",
   "Delete Listing": "Eliminar listado",
   "Delete Listing?": "¿Eliminar listado?",
+  "Book Appointment": "Reservar cita",
+  "Booking sent": "Reserva enviada",
+  "Your booking request has been sent to the lister. You will be notified once they respond.": "Tu solicitud de reserva ha sido enviada al anunciante. Te notificaremos cuando responda.",
+  "Select Services": "Seleccionar servicios",
+  "Select dates": "Seleccionar fechas",
+  "Please select check-in and check-out dates.": "Por favor, selecciona las fechas de entrada y salida.",
+  "Select time block": "Seleccionar bloque de tiempo",
+  "Please select a time slot for your booking.": "Por favor, selecciona un horario para tu reserva.",
+  "Select time slot": "Seleccionar horario",
+  "No time slots available for this date": "No hay horarios disponibles para esta fecha",
+  "Number of guests": "Número de invitados",
+  "Custom questions": "Preguntas personalizadas",
+  "Type your answer": "Escribe tu respuesta",
+  "Notes for the lister": "Notas para el anunciante",
+  "Any special requests...": "¿Alguna solicitud especial...?",
+  "Total Amount:": "Monto total:",
+  "Start Date": "Fecha de inicio",
+  "End Date": "Fecha de fin",
+  "Nights": "Noches",
   "Are you sure you want to remove this listing?": "¿Estás seguro de que quieres eliminar este listado?",
   "Listing Details": "Detalles del listado",
+  "Details & Hours": "Detalles y horarios",
+  "Contact Information": "Información de contacto",
+  "Social Media": "Redes sociales",
+  "Business Details": "Detalles del negocio",
+  "Not seen on listing, used for quote and invoice generation": "No se ve en el listado, se usa para generar cotizaciones y facturas",
+  "Company Registration #": "N.º de registro de la empresa",
+  "VAT / Tax ID #": "N.º de IVA / ID fiscal",
+  "Menu (Food & Beverage)": "Menú (Comida y bebida)",
+  "Store / Ecommerce (Optional)": "Tienda / Comercio electrónico (Opcional)",
+  "Logo (Optional)": "Logo (Opcional)",
+  "Enable Store/Ecommerce": "Habilitar tienda/comercio electrónico",
+  "Store Mode": "Modo de tienda",
+  "External URL Only": "Solo URL externa",
+  "Internal Catalog": "Catálogo interno",
+  "Both (URL + Catalog)": "Ambos (URL + Catálogo)",
+  "Lead Time (Hours)": "Tiempo de preparación (horas)",
+  "Minimum hours needed to prepare orders": "Horas mínimas necesarias para preparar pedidos",
+  "Internal Catalog requires Premium subscription": "El catálogo interno requiere suscripción Premium",
+  "Please save the listing first, then you can manage catalog items": "Guarda primero el listado y luego podrás gestionar los artículos del catálogo",
+  "Manage Catalog Items": "Gestionar artículos del catálogo",
+  "Save Listing First": "Guardar listado primero",
+  "Accept Proof of Payment": "Aceptar comprobante de pago",
+  "Require customers to provide proof of payment (photo/receipt) for orders": "Requerir que los clientes proporcionen comprobante de pago (foto/recibo) para los pedidos",
+  "Enable Rentals": "Habilitar alquileres",
+  "Allow customers to rent items from this listing": "Permitir que los clientes alquilen artículos de este listado",
+  "Manage Rental Catalog": "Gestionar catálogo de alquileres",
   "Listing not found or has been removed.": "Listado no encontrado o ha sido eliminado.",
   "Failed to open listing. Please try again.": "No se pudo abrir el listado. Por favor, inténtalo de nuevo.",
   "Failed to open listing management. Please try again.": "No se pudo abrir la gestión del listado. Por favor, inténtalo de nuevo.",
+  "Booking Services": "Servicios de reservas",
+  "Require Booking": "Requerir reserva",
+  "Show a \"Book Now\" button on your listing": "Muestra un botón \"Reservar ahora\" en tu anuncio",
+  "Allow Quantity Selection": "Permitir selección de cantidad",
+  "Customers can select quantity when booking services": "Los clientes pueden seleccionar cantidad al reservar servicios",
+  "Use Time Blocks": "Usar bloques de tiempo",
+  "Enable hourly time slot bookings instead of full day bookings": "Habilita reservas por franjas horarias en lugar de reservas de día completo",
+  "Custom Booking Questions": "Preguntas personalizadas de reserva",
+  "Ask customers to answer questions when they book": "Pide a los clientes responder preguntas al reservar",
+  "Allow Multiple Bookings Per Day": "Permitir múltiples reservas por día",
+  "Multiple customers can book different time slots on the same day": "Varios clientes pueden reservar diferentes franjas horarias el mismo día",
   "No listings found": "No se encontraron listados",
+  "Listing updated successfully": "Listado actualizado correctamente",
+  "Error loading listings": "Error al cargar listados",
+  "Error updating listing": "Error al actualizar el listado",
   "Deleting...": "Eliminando...",
   "Add To Favorites": "Agregar a favoritos",
   "Remove From Favorites": "Quitar de favoritos",
   "Contact & Hours": "Contacto y horarios",
   "Location": "Ubicación",
+  "Location Photos (Optional)": "Fotos de ubicación (Opcional)",
+  "Help customers visually find your location and assess your space": "Ayuda a los clientes a encontrar visualmente tu ubicación y evaluar tu espacio",
+  "Exterior": "Exterior",
+  "Show entrance/signage if possible": "Muestra la entrada/señalización si es posible",
+  "Interior": "Interior",
+  "Show customer/service area (avoid faces unless permitted)": "Muestra el área de clientes/servicio (evita rostros salvo que tengas permiso)",
+  "Finding Instructions (Optional)": "Instrucciones para llegar (Opcional)",
+  "e.g., \"Take the staircase to the left to the 3rd floor\"": "p. ej., \"Toma la escalera de la izquierda hasta el 3er piso\"",
+  "Add Photo": "Agregar foto",
+  "No photo": "Sin foto",
+  "Replace": "Reemplazar",
+  "Remove": "Eliminar",
   "Extra info": "Información adicional",
   "Reviews": "Reseñas",
   "Add Review": "Agregar reseña",
@@ -230,16 +508,81 @@
   
   "Store": "Tienda",
   "Mini Store": "Mini Tienda",
+  "Browse Full Store": "Ver tienda completa",
   "Cart": "Carrito",
   "Checkout": "Pagar",
   "Add to Cart": "Agregar al carrito",
   "Added to cart": "Agregado al carrito",
   "View Cart": "Ver carrito",
+  "Cart is empty": "El carrito está vacío",
+  "Fulfillment Method": "Método de entrega",
+  "Delivery Address *": "Dirección de entrega *",
+  "Shipping Address *": "Dirección de envío *",
+  "Shipping Instructions (Optional)": "Instrucciones de envío (Opcional)",
+  "Street address, city, state, postal code": "Dirección, ciudad, estado, código postal",
+  "Additional seating info (optional)": "Información adicional de asientos (opcional)",
+  "e.g., Special requests, dietary notes": "p. ej., Solicitudes especiales, notas dietéticas",
+  "Preferred Date/Time (Optional)": "Fecha/hora preferida (Opcional)",
+  "Not specified": "No especificado",
+  "Notes (Optional)": "Notas (Opcional)",
+  "Send Order Request": "Enviar solicitud de pedido",
+  "Please sign in to place an order": "Inicia sesión para realizar un pedido",
+  "Please enter delivery address": "Por favor ingresa la dirección de entrega",
+  "Please enter shipping address": "Por favor ingresa la dirección de envío",
+  "Order request sent successfully!": "¡Solicitud de pedido enviada con éxito!",
+  "Scan Table QR Code": "Escanear código QR de mesa",
+  "Table Scanned: {}": "Mesa escaneada: {}",
+  "Table {} has been scanned. You can also add additional seating info below.": "La mesa {} ha sido escaneada. También puedes agregar información adicional de asientos abajo.",
+  "Creating table session...": "Creando sesión de mesa...",
+  "Table scanned successfully: {}": "Mesa escaneada con éxito: {}",
+  "Failed to create table session. Please try again.": "No se pudo crear la sesión de mesa. Inténtalo de nuevo.",
+  "Invalid QR code format - missing table data": "Formato de código QR inválido: faltan datos de mesa",
+  "Invalid QR code - Not a table QR code": "Código QR inválido: no es un QR de mesa",
+  "Error parsing QR code: {}": "Error al procesar el código QR: {}",
+  "This QR code is for a different store": "Este código QR es de otra tienda",
+  "Pin Delivery Location": "Fijar ubicación de entrega",
+  "Location Pinned": "Ubicación fijada",
+  "Tap to pin your delivery location on map": "Toca para fijar tu ubicación de entrega en el mapa",
+  "Location permission is required for delivery": "Se requiere permiso de ubicación para la entrega",
+  "Delivery Location": "Ubicación de entrega",
+  "Use Current Location": "Usar ubicación actual",
+  "Or enter coordinates manually:": "O ingresa coordenadas manualmente:",
+  "Latitude": "Latitud",
+  "Longitude": "Longitud",
+  "Invalid latitude or longitude": "Latitud o longitud inválida",
+  "Failed to get location: {}": "No se pudo obtener la ubicación: {}",
+  "Error parsing location: {}": "Error al procesar la ubicación: {}",
+  "e.g., Leave at front door, signature required": "p. ej., Dejar en la puerta principal, firma requerida",
   "Empty Cart": "Carrito vacío",
   "No items in cart": "No hay artículos en el carrito",
   "Store Settings": "Configuración de tienda",
   "Save Settings": "Guardar configuración",
   "Store settings updated": "Configuración de tienda actualizada",
+  "CaribTap Subscriptions": "Suscripciones de CaribTap",
+  "Store not available": "Tienda no disponible",
+  "Unable to open Google Play subscriptions": "No se pudieron abrir las suscripciones de Google Play",
+  "Unable to load plans": "No se pudieron cargar los planes",
+  "Choose a plan": "Elige un plan",
+  "Pick Professional or Premium to unlock business tools.": "Elige Professional o Premium para desbloquear herramientas de negocio.",
+  "AI photo enhancement": "Mejora de fotos con IA",
+  "Watermarking tools": "Herramientas de marca de agua",
+  "Priority support": "Soporte prioritario",
+  "Everything in Professional": "Todo en Professional",
+  "Quotes & invoices tools": "Herramientas de cotizaciones y facturas",
+  "Full suite with premium business features.": "Suite completa con funciones empresariales premium.",
+  "Current plan": "Plan actual",
+  "Current plan: {}": "Plan actual: {}",
+  "You are currently on {}.": "Actualmente estás en {}.",
+  "Subscribe": "Suscribirse",
+  "No expiration": "Sin vencimiento",
+  "Status: {}": "Estado: {}",
+  "Expires: {}": "Vence: {}",
+  "Auto-renew: {}": "Renovación automática: {}",
+  "On": "Activado",
+  "Off": "Desactivado",
+  "Manage subscription in Google Play": "Gestionar suscripción en Google Play",
+  "Benefits": "Beneficios",
+  "Restore": "Restaurar",
   "Fulfillment Methods": "Métodos de entrega",
   "Select how customers can receive their orders": "Selecciona cómo los clientes pueden recibir sus pedidos",
   "At least one fulfillment method must be enabled": "Debe habilitarse al menos un método de entrega",
@@ -262,19 +605,25 @@
   "Menu is visible to customers": "El menú es visible para los clientes",
   "Menu is hidden from customers": "El menú está oculto para los clientes",
   "Upload Menu Photos": "Subir fotos del menú",
+  "Upload 1-6 menu images": "Sube de 1 a 6 imágenes del menú",
   "Create Digital Menu": "Crear menú digital",
   "Build items with prices and descriptions": "Crea elementos con precios y descripciones",
   "Menu hidden from customers": "Menú oculto para los clientes",
+  "Maximum 6 menu photos allowed": "Se permiten máximo 6 fotos del menú",
+  "Uploaded {} photo(s)": "Se subieron {} foto(s)",
   
   "Order Details": "Detalles del pedido",
   "My Orders": "Mis pedidos",
   "New Order": "Nuevo pedido",
   "Customer": "Cliente",
   "Items": "Artículos",
+  "Table": "Mesa",
   "Subtotal": "Subtotal",
   "Shipping Fee": "Tarifa de envío",
   "Delivery Fee": "Tarifa de entrega",
   "Total": "Total",
+  "Qty": "Cant.",
+  "Subtotal": "Subtotal",
   "Fulfillment": "Cumplimiento",
   "Dining In": "Comer aquí",
   "Shipping": "Envío",
@@ -283,6 +632,16 @@
   "Notes": "Notas",
   "Seller Note": "Nota del vendedor",
   "Payment": "Pago",
+  "Payment Methods": "Métodos de pago",
+  "Bank Transfer": "Transferencia bancaria",
+  "Bank": "Banco",
+  "Branch": "Sucursal",
+  "Account Name": "Nombre de la cuenta",
+  "Account Number": "Número de cuenta",
+  "SWIFT/BIC": "SWIFT/BIC",
+  "IBAN": "IBAN",
+  "Payment Apps": "Apps de pago",
+  "Copied to clipboard": "Copiado al portapapeles",
   "Proof of Payment": "Comprobante de pago",
   "Upload Proof of Payment": "Subir comprobante de pago",
   "This order requires proof of payment. Please upload a receipt or screenshot.": "Este pedido requiere comprobante de pago. Por favor, sube un recibo o captura de pantalla.",
@@ -316,14 +675,19 @@
   
   "Requested": "Solicitado",
   "Pending": "Pendiente",
+  "Active": "Activo",
+  "Closed": "Cerrado",
   "Confirmed": "Confirmado",
   "Preparing": "Preparando",
   "Ready": "Listo",
   "Served": "Servido",
   "Fulfilled": "Completado",
   "Completed": "Completado",
+  "Disputed": "En disputa",
   "Declined": "Rechazado",
   "Cancelled": "Cancelado",
+  "Start": "Inicio",
+  "End": "Fin",
   
   "Table Service": "Servicio de mesa",
   "Table Mode": "Modo mesa",
@@ -331,6 +695,20 @@
   "Create tables, share QR codes, and manage sessions": "Crea mesas, comparte códigos QR y administra sesiones",
   "Manage dine-in tables and QR codes for this listing": "Administra mesas y códigos QR para este listado",
   "Summon Waiter": "Llamar mesero",
+  "Assign Waiter": "Asignar mesero",
+  "Change Waiter": "Cambiar mesero",
+  "Acknowledge": "Reconocer",
+  "Customer Requests": "Solicitudes del cliente",
+  "No pending sessions": "No hay sesiones pendientes",
+  "No active sessions": "No hay sesiones activas",
+  "No closed sessions": "No hay sesiones cerradas",
+  "Started": "Iniciado",
+  "Activated": "Activado",
+  "Purpose": "Propósito",
+  "Payment": "Pago",
+  "Just now": "Ahora mismo",
+  "minutes_ago": "hace {} min",
+  "hours_ago": "hace {} h",
   "Wait $seconds": "Espera $seconds",
   "Request Bill": "Solicitar cuenta",
   "Your $role": "Tu $role",
@@ -381,6 +759,33 @@
   
   "My Bookings": "Mis reservas",
   "Booking Details": "Detalles de la reserva",
+  "Booking Information": "Información de la reserva",
+  "Pricing": "Precios",
+  "Unit Price": "Precio unitario",
+  "Deposit": "Depósito",
+  "Mileage Overage": "Exceso de kilometraje",
+  "Vehicle Information": "Información del vehículo",
+  "Start Odometer": "Odómetro inicial",
+  "End Odometer": "Odómetro final",
+  "Distance Driven": "Distancia recorrida",
+  "Checkout Evidence": "Evidencia de salida",
+  "Checkin Evidence": "Evidencia de entrada",
+  "OVERDUE FOR RETURN": "ATRASADO PARA DEVOLUCIÓN",
+  "Evidence details would be displayed here": "Los detalles de evidencia se mostrarían aquí",
+  "Rental item not found": "No se encontró el artículo de alquiler",
+  "No photos available": "No hay fotos disponibles",
+  "Failed to load image": "No se pudo cargar la imagen",
+  "Loading customer...": "Cargando cliente...",
+  "Rental Item": "Artículo de alquiler",
+  "at": "a las",
+  "hour": "hora",
+  "hours": "horas",
+  "day": "día",
+  "days": "días",
+  "week": "semana",
+  "weeks": "semanas",
+  "month": "mes",
+  "months": "meses",
   "Make Booking": "Hacer reserva",
   "Date & Time": "Fecha y hora",
   "Party Size": "Tamaño del grupo",
@@ -431,5 +836,196 @@
   "Error saving settings: $e": "Error al guardar configuración: $e",
   "Something went wrong": "Algo salió mal",
   "Network error": "Error de red",
-  "Please try again": "Por favor, inténtalo de nuevo"
+  "Please try again": "Por favor, inténtalo de nuevo",
+  "Quotes & Invoices": "Cotizaciones y Facturas",
+  "Company": "Empresa",
+  "Client name": "Nombre del cliente",
+  "Address": "Dirección",
+  "No items yet": "Aún no hay ítems",
+  "Discount": "Descuento",
+  "Tax": "Impuesto",
+  "Optional notes": "Notas opcionales",
+  "Optional terms": "Términos opcionales",
+  "Select date": "Seleccionar fecha",
+  "Terms": "Términos",
+  "Valid Until": "Válido hasta",
+  "Totals": "Totales",
+  "Currency": "Moneda",
+  "Line Items": "Líneas",
+  "Client": "Cliente",
+  "Listing": "Anuncio",
+  "Select listing": "Seleccionar anuncio",
+  "Code": "Código",
+  "Symbol": "Símbolo",
+  "Amount": "Monto",
+  "Percent": "Porcentaje",
+  "Save Draft": "Guardar borrador",
+  "Add Item": "Agregar ítem",
+  "Description": "Descripción",
+  "Enter valid item details": "Ingresa detalles válidos del ítem",
+  "Quotes": "Cotizaciones",
+  "Invoices": "Facturas",
+  "Draft": "Borrador",
+  "Sent": "Enviado",
+  "Accepted": "Aceptado",
+  "Expired": "Vencido",
+  "Paid": "Pagado",
+  "Overdue": "Atrasado",
+  "No quotes yet": "Aún no hay cotizaciones",
+  "No invoices yet": "Aún no hay facturas",
+  "Upgrade to Premium to use Quotes & Invoices": "Actualiza a Premium para usar Cotizaciones y Facturas",
+  "Upgrade to Premium to use Invoices": "Actualiza a Premium para usar Facturas",
+  "Failed to load quotes": "Error al cargar cotizaciones",
+  "Failed to load invoices": "Error al cargar facturas",
+  "Quote not found": "Cotización no encontrada",
+  "Failed to load quote": "Error al cargar la cotización",
+  "Failed to save quote": "Error al guardar la cotización",
+  "Failed to mark accepted": "Error al marcar como aceptada",
+  "Failed to mark declined": "Error al marcar como rechazada",
+  "Failed to convert to invoice": "Error al convertir a factura",
+  "Invoice not found": "Factura no encontrada",
+  "Failed to load invoice": "Error al cargar la factura",
+  "Failed to save invoice": "Error al guardar la factura",
+  "Failed to mark paid": "Error al marcar como pagada",
+  "Optional": "Opcional",
+  "quote_limit_reached_message": "Alcanzaste el límite de {} cotizaciones. Actualiza para historial ilimitado.",
+  "Quote link": "Enlace de cotización",
+  "Invoice link": "Enlace de factura",
+  "PDF downloaded to": "PDF descargado en",
+  "Failed to download PDF": "Error al descargar el PDF",
+  "CaribTap Business": "Negocio CaribTap"
+  ,"Item description hint": "p. ej., servicio de diseño web"
+  ,"Quantity hint": "p. ej., 1"
+  ,"Unit price hint": "p. ej., 120.00"
+  ,"Upload Promotion": "Subir promoción"
+  ,"Edit Promotion": "Editar promoción"
+  ,"Format Guidance": "Guía de formato"
+  ,"Add media": "Agregar multimedia"
+  ,"Choose Image from Gallery": "Elegir imagen de la galería"
+  ,"Choose Video from Gallery": "Elegir video de la galería"
+  ,"Ad Types": "Tipos de anuncio"
+  ,"Promotion:": "Promoción:"
+  ,"Advert:": "Anuncio:"
+  ,"Time-limited offers. Requires a specific start and end date (e.g., 20% off for 1 week).": "Ofertas por tiempo limitado. Requiere una fecha de inicio y fin específica (p. ej., 20% de descuento por 1 semana)."
+  ,"General business awareness. Runs indefinitely without a specific offer period.": "Reconocimiento general del negocio. Se ejecuta indefinidamente sin un período de oferta específico."
+  ,"Promo Period": "Período de promoción"
+  ,"A promo period ensures customers know exactly when your offer begins and ends. It creates urgency and helps them plan their purchase before the deal expires.": "Un período de promoción garantiza que los clientes sepan exactamente cuándo empieza y termina tu oferta. Crea urgencia y les ayuda a planificar su compra antes de que expire."
+  ,"About Country Selection": "Sobre la selección de países"
+  ,"This setting controls which countries can see your ad. When you select specific countries, only users from those locations will be able to view your promotion. If you leave it set to \"All Countries\", your ad will be visible to users everywhere.": "Esta opción controla qué países pueden ver tu anuncio. Cuando seleccionas países específicos, solo usuarios de esas ubicaciones podrán ver tu promoción. Si lo dejas en \"Todos los países\", tu anuncio será visible en todas partes."
+  ,"Select Categories": "Seleccionar categorías"
+  ,"Please select a listing for your deal": "Selecciona un listado para tu oferta"
+  ,"Add Image or Video": "Agregar imagen o video"
+  ,"High quality media gets more engagement": "El contenido de alta calidad obtiene más interacción"
+  ,"Type": "Tipo"
+  ,"Promotion": "Promoción"
+  ,"Advert": "Anuncio"
+  ,"Select Listing": "Seleccionar listado"
+  ,"Choose which listing this deal is for": "Elige para qué listado es esta oferta"
+  ,"You need an active listing to post a deal. Please create a listing first.": "Necesitas un listado activo para publicar una oferta. Crea primero un listado."
+  ,"Select a listing...": "Selecciona un listado..."
+  ,"Describe your deal": "Describe tu oferta"
+  ,"Ex: 20% off all summer items...": "Ej.: 20% de descuento en todos los artículos de verano..."
+  ,"Set Promo Period": "Definir período de promoción"
+  ,"Starts": "Empieza"
+  ,"Ends": "Termina"
+  ,"Select Date": "Seleccionar fecha"
+  ,"Targeting Options": "Opciones de segmentación"
+  ,"Choose who can see your ad": "Elige quién puede ver tu anuncio"
+  ,"Countries": "Países"
+  ,"Target Categories": "Categorías objetivo"
+  ,"Select categories": "Seleccionar categorías"
+  ,"x_selected": "{} seleccionados"
+  ,"Audience Type": "Tipo de audiencia"
+  ,"All Users": "Todos los usuarios"
+  ,"Viewed Similar": "Vieron similar"
+  ,"Favorited": "Favoritos"
+  ,"Near Location": "Cerca de la ubicación"
+  ,"I accept the": "Acepto los"
+  ,"Continue to Review": "Continuar a revisión"
+  ,"users_can_set_max_promo_period": "Los usuarios {} pueden establecer un período máximo de promoción de {} días."
+  ,"Analytics": "Analíticas"
+  ,"Advanced Analytics": "Analíticas avanzadas"
+  ,"Professional Feature": "Función profesional"
+  ,"Total Views": "Vistas totales"
+  ,"Total Favorites": "Favoritos totales"
+  ,"Avg Rating": "Calificación prom."
+  ,"Listing Performance": "Rendimiento de anuncios"
+  ,"No listings yet": "Aún no hay anuncios"
+  ,"No ratings": "Sin calificaciones"
+  ,"stars_reviews": "{} estrellas ({} reseñas)"
+  ,"Last 7 days": "Últimos 7 días"
+  ,"Last 30 days": "Últimos 30 días"
+  ,"Last 90 days": "Últimos 90 días"
+  ,"All Time": "Todo el tiempo"
+  ,"Performance Snapshot": "Resumen de rendimiento"
+  ,"Engagement Deep Dive": "Análisis profundo de interacción"
+  ,"Growth Opportunities": "Oportunidades de crecimiento"
+  ,"Bookings": "Reservas"
+  ,"Avg. Rating": "Calificación prom."
+  ,"Chat Initiations": "Inicios de chat"
+  ,"Taps / Vouch": "Toques / Avales"
+  ,"vs previous period": "vs período anterior"
+  ,"Improve Listing Quality": "Mejorar la calidad del anuncio"
+  ,"Become a Top Lister": "Conviértete en un anunciante destacado"
+  ,"you_have_listings_to_improve": "Tienes {} anuncios que podrían mejorarse con más fotos o una descripción más larga."
+  ,"you_are_bookings_away_for_badge": "¡Estás a {} reservas de obtener la insignia \"Avalado por la comunidad\"!"
+  ,"Choose Your Plan": "Elige tu plan"
+  ,"Unlock Premium Features": "Desbloquea funciones premium"
+  ,"Choose the perfect plan for your business": "Elige el plan perfecto para tu negocio"
+  ,"Monthly": "Mensual"
+  ,"Yearly (Save 17%)": "Anual (Ahorra 17%)"
+  ,"MOST POPULAR": "MÁS POPULAR"
+  ,"Free Forever": "Gratis para siempre"
+  ,"Current": "Actual"
+  ,"Current Plan": "Plan actual"
+  ,"Downgrade": "Bajar de plan"
+  ,"Subscribe Now": "Suscribirse ahora"
+  ,"Confirm Downgrade": "Confirmar baja de plan"
+  ,"Are you sure you want to downgrade to the Free plan? You will lose access to premium features.": "¿Seguro que quieres bajar al plan Gratis? Perderás acceso a funciones premium."
+  ,"Downgrade feature coming soon!": "¡La función de bajar de plan llegará pronto!"
+  ,"Failed to refresh subscription": "Error al actualizar la suscripción"
+  ,"Create up to 3 listings": "Crea hasta 3 anuncios"
+  ,"Basic listing management": "Gestión básica de anuncios"
+  ,"Standard search visibility": "Visibilidad estándar en búsquedas"
+  ,"Community support": "Soporte de la comunidad"
+  ,"Booking system with email & reminders": "Sistema de reservas con correo y recordatorios"
+  ,"Standard Analytics on listing performance": "Analíticas estándar del rendimiento de anuncios"
+  ,"AI photo enhancements": "Mejoras de fotos con IA"
+  ,"All Professional Services": "Todos los servicios profesionales"
+  ,"Enable Chat to talk directly with customers": "Habilita Chat para hablar directamente con clientes"
+  ,"Enable Quotes & Invoices": "Habilita Cotizaciones y Facturas"
+  ,"Unlock Advance Analytics": "Desbloquea analíticas avanzadas"
+  ,"Deal Analytics": "Analíticas del anuncio"
+  ,"No analytics available": "No hay analíticas disponibles"
+  ,"deal_with_caption": "Oferta: {}"
+  ,"Views": "Vistas"
+  ,"Saves": "Guardados"
+  ,"Claims": "Canjes"
+  ,"Users": "Usuarios"
+  ,"Redemption Status": "Estado de canjes"
+  ,"Total Redeemed": "Total canjeado"
+  ,"Limit": "Límite"
+  ,"Remaining": "Restante"
+  ,"Engagement Metrics": "Métricas de interacción"
+  ,"View to Claim Rate": "Tasa de vista a canje"
+  ,"of viewers claimed the deal": "de los espectadores canjaron la oferta"
+  ,"View to Save Rate": "Tasa de vista a guardado"
+  ,"of viewers saved the deal": "de los espectadores guardaron la oferta"
+  ,"Save to Claim Rate": "Tasa de guardado a canje"
+  ,"of savers claimed the deal": "de quienes guardaron canjaron la oferta"
+  ,"Avg Claims per User": "Canjes prom. por usuario"
+  ,"times each user claimed on average": "veces que cada usuario canjeó en promedio"
+  ,"Inactive": "Inactivo"
+  ,"Sold out": "Agotado"
+  ,"Accepting claims": "Aceptando canjes"
+  ,"on_free_plan": "Estás en el plan Gratis"
+  ,"pro_premium_plan_limits": "Plan Professional: 10 anuncios/mes\nPlan Premium: 20 anuncios/mes"
+  ,"Deal Details": "Detalles de la oferta"
+  ,"View Analytics": "Ver analíticas"
+  ,"Until {}": "Hasta {}"
+  ,"Availability": "Disponibilidad"
+  ,"redeemed_count": "Canjeado: {}/{}"
+  ,"remaining_count": "{} restantes"
+  ,"Promo Code": "Código promocional"
+  ,"Claim In-App": "Canjear en la app"
 }

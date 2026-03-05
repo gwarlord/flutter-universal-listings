@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:caribtap/listings/location/location_scope_cubit.dart';
 import 'package:caribtap/listings/location/location_scope_model.dart';
 import 'package:caribtap/listings/location/ui/location_scope_selector_sheet.dart';
@@ -36,13 +37,13 @@ class LocationScopeAppBarChip extends StatelessWidget {
         String displayLabel;
         IconData? iconData;
         if (scope.mode == LocationScopeMode.caribbean) {
-          displayLabel = 'Caribbean';
+          displayLabel = 'Caribbean'.tr();
           iconData = Icons.public;
         } else {
           final countryObj = effectiveCountry != null 
               ? CaribbeanCountries.byCode(effectiveCountry)
               : null;
-          displayLabel = countryObj?.name ?? 'Local';
+          displayLabel = countryObj?.name ?? 'Local'.tr();
           iconData = Icons.location_on;
         }
 
@@ -91,7 +92,7 @@ class LocationScopeAppBarChip extends StatelessWidget {
                     
                     // Microcopy hint
                     Text(
-                      _getMicrocopy(scope),
+                      _getMicrocopy(scope).tr(),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
                         fontSize: 10,

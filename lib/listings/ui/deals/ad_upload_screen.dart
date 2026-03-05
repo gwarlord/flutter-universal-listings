@@ -450,20 +450,20 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
     final result = await showCupertinoModalPopup<String>(
       context: context,
       builder: (context) => CupertinoActionSheet(
-        message: const Text('Add media'),
+        message: Text('Add media'.tr()),
         actions: [
           CupertinoActionSheetAction(
             onPressed: () => Navigator.pop(context, 'image'),
-            child: const Text('Choose Image from Gallery'),
+            child: Text('Choose Image from Gallery'.tr()),
           ),
           CupertinoActionSheetAction(
             onPressed: () => Navigator.pop(context, 'video'),
-            child: const Text('Choose Video from Gallery'),
+            child: Text('Choose Video from Gallery'.tr()),
           ),
         ],
         cancelButton: CupertinoActionSheetAction(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text('Cancel'.tr()),
         ),
       ),
     );
@@ -529,7 +529,10 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${tier == 'premium' ? 'Premium' : 'Professional'} users can set a maximum promo period of $maxDays days.',
+              content: Text('users_can_set_max_promo_period'.tr(args: [
+                (tier == 'premium' ? 'Premium' : 'Professional').tr(),
+                maxDays.toString(),
+              ]),
                 style: const TextStyle(color: Colors.white)),
               backgroundColor: Colors.orange,
               duration: const Duration(seconds: 3),
@@ -559,26 +562,26 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: dark ? const Color(0xFF1E1E1E) : Colors.white,
-        title: Text('Ad Types', style: TextStyle(color: dark ? Colors.white : Colors.black)),
+        title: Text('Ad Types'.tr(), style: TextStyle(color: dark ? Colors.white : Colors.black)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Promotion:', style: TextStyle(fontWeight: FontWeight.bold, color: Color(colorPrimary))),
+            Text('Promotion:'.tr(), style: TextStyle(fontWeight: FontWeight.bold, color: Color(colorPrimary))),
             const SizedBox(height: 4),
-            Text('Time-limited offers. Requires a specific start and end date (e.g., 20% off for 1 week).', 
+            Text('Time-limited offers. Requires a specific start and end date (e.g., 20% off for 1 week).'.tr(), 
               style: TextStyle(color: dark ? Colors.white70 : Colors.black87)),
             const SizedBox(height: 16),
-            Text('Advert:', style: TextStyle(fontWeight: FontWeight.bold, color: Color(colorPrimary))),
+            Text('Advert:'.tr(), style: TextStyle(fontWeight: FontWeight.bold, color: Color(colorPrimary))),
             const SizedBox(height: 4),
-            Text('General business awareness. Runs indefinitely without a specific offer period.', 
+            Text('General business awareness. Runs indefinitely without a specific offer period.'.tr(), 
               style: TextStyle(color: dark ? Colors.white70 : Colors.black87)),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Got it', style: TextStyle(color: Color(colorPrimary))),
+            child: Text('Got it'.tr(), style: TextStyle(color: Color(colorPrimary))),
           ),
         ],
       ),
@@ -591,15 +594,15 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: dark ? const Color(0xFF1E1E1E) : Colors.white,
-        title: Text('Promo Period', style: TextStyle(color: dark ? Colors.white : Colors.black)),
+        title: Text('Promo Period'.tr(), style: TextStyle(color: dark ? Colors.white : Colors.black)),
         content: Text(
-          'A promo period ensures customers know exactly when your offer begins and ends. It creates urgency and helps them plan their purchase before the deal expires.',
+          'A promo period ensures customers know exactly when your offer begins and ends. It creates urgency and helps them plan their purchase before the deal expires.'.tr(),
           style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Got it', style: TextStyle(color: Color(colorPrimary))),
+            child: Text('Got it'.tr(), style: TextStyle(color: Color(colorPrimary))),
           ),
         ],
       ),
@@ -652,7 +655,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
               Icon(Icons.info, color: Color(colorPrimary), size: 24),
               const SizedBox(width: 8),
               Text(
-                'About Country Selection',
+                  'About Country Selection'.tr(),
                 style: TextStyle(
                   color: isDark ? Colors.white : Colors.black,
                   fontSize: 16,
@@ -662,7 +665,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
             ],
           ),
           content: Text(
-            'This setting controls which countries can see your ad. When you select specific countries, only users from those locations will be able to view your promotion. If you leave it set to "All Countries", your ad will be visible to users everywhere.',
+            'This setting controls which countries can see your ad. When you select specific countries, only users from those locations will be able to view your promotion. If you leave it set to "All Countries", your ad will be visible to users everywhere.'.tr(),
             style: TextStyle(
               color: isDark ? Colors.white70 : Colors.black87,
               fontSize: 14,
@@ -676,8 +679,8 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'Got it',
+              child: Text(
+                'Got it'.tr(),
                 style: TextStyle(color: Colors.white),
               ),
             ),
@@ -702,7 +705,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
             return AlertDialog(
               backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               title: Text(
-                'Select Categories',
+                'Select Categories'.tr(),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -751,7 +754,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
                   child: Text(
-                    'Cancel',
+                    'Cancel'.tr(),
                     style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
                   ),
                 ),
@@ -766,8 +769,8 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                     });
                     Navigator.of(context).pop();
                   },
-                  child: const Text(
-                    'Confirm',
+                  child: Text(
+                    'Confirm'.tr(),
                     style: TextStyle(color: Colors.white),
                   ),
                 ),
@@ -838,7 +841,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
     if (listingId == null || listingId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Please select a listing for your deal'),
+          content: Text('Please select a listing for your deal'.tr()),
           backgroundColor: Colors.red,
         ),
       );
@@ -901,13 +904,13 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
       appBar: AppBar(
         elevation: _isScrolled ? 4 : 0,
         backgroundColor: _isScrolled ? primaryColor : Colors.transparent,
-        title: Text(widget.adToEdit != null ? 'Edit Promotion' : 'Upload Promotion', style: TextStyle(color: _isScrolled ? Colors.white : adaptiveTextColor, fontWeight: FontWeight.bold)),
+        title: Text(widget.adToEdit != null ? 'Edit Promotion'.tr() : 'Upload Promotion'.tr(), style: TextStyle(color: _isScrolled ? Colors.white : adaptiveTextColor, fontWeight: FontWeight.bold)),
         iconTheme: IconThemeData(color: _isScrolled ? Colors.white : adaptiveTextColor),
         actions: [
           IconButton(
             icon: const Icon(Icons.info_outline),
             onPressed: _showFormatGuidance,
-            tooltip: 'Format Guidance',
+            tooltip: 'Format Guidance'.tr(),
           ),
         ],
       ),
@@ -941,9 +944,9 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                         children: [
                           Icon(Icons.add_a_photo_outlined, size: 48, color: primaryColor),
                           const SizedBox(height: 12),
-                          Text('Add Image or Video', style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.w500)),
+                          Text('Add Image or Video'.tr(), style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.w500)),
                           const SizedBox(height: 4),
-                          Text('High quality media gets more engagement', 
+                          Text('High quality media gets more engagement'.tr(), 
                             style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 12)),
                         ],
                       )
@@ -963,7 +966,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
             // Ad Type Toggle
             Row(
               children: [
-                Text('Type', style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                Text('Type'.tr(), style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(width: 8),
                 GestureDetector(
                   onTap: _showTypeInfo,
@@ -993,7 +996,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            'Promotion',
+                            'Promotion'.tr(),
                             style: TextStyle(
                               color: _adType == 'promo' ? Colors.white : adaptiveTextColor,
                               fontWeight: FontWeight.bold,
@@ -1016,7 +1019,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            'Advert',
+                            'Advert'.tr(),
                             style: TextStyle(
                               color: _adType == 'advert' ? Colors.white : adaptiveTextColor,
                               fontWeight: FontWeight.bold,
@@ -1033,9 +1036,9 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
             const SizedBox(height: 24),
             
             // Listing Selection Section
-            Text('Select Listing', style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold, fontSize: 16)),
+            Text('Select Listing'.tr(), style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 8),
-            Text('Choose which listing this deal is for', style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 12)),
+            Text('Choose which listing this deal is for'.tr(), style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 12)),
             const SizedBox(height: 12),
             _loadingListings
                 ? Container(
@@ -1060,7 +1063,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'You need an active listing to post a deal. Please create a listing first.',
+                                'You need an active listing to post a deal. Please create a listing first.'.tr(),
                                 style: TextStyle(color: adaptiveTextColor, fontSize: 14),
                               ),
                             ),
@@ -1082,7 +1085,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                             isExpanded: true,
                             value: _selectedListingId,
                             hint: Text(
-                              'Select a listing...',
+                              'Select a listing...'.tr(),
                               style: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
                             ),
                             dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
@@ -1111,13 +1114,13 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
             const SizedBox(height: 24),
             
             // Caption Section
-            Text('Describe your deal', style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold, fontSize: 16)),
+            Text('Describe your deal'.tr(), style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 12),
             TextField(
               controller: _captionController,
               style: TextStyle(color: adaptiveTextColor),
               decoration: InputDecoration(
-                hintText: 'Ex: 20% off all summer items...',
+                hintText: 'Ex: 20% off all summer items...'.tr(),
                 hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
                 filled: true,
                 fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
@@ -1159,7 +1162,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                           children: [
                             Icon(Icons.calendar_today_outlined, color: primaryColor, size: 20),
                             const SizedBox(width: 12),
-                            Text('Set Promo Period', style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.w600)),
+                            Text('Set Promo Period'.tr(), style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.w600)),
                             const SizedBox(width: 8),
                             GestureDetector(
                               onTap: _showPeriodInfo,
@@ -1180,9 +1183,9 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Starts', style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 12)),
+                                  Text('Starts'.tr(), style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 12)),
                                   const SizedBox(height: 4),
-                                  Text(_promoStartDate != null ? DateFormat('MMM dd, yyyy').format(_promoStartDate!) : 'Select Date',
+                                  Text(_promoStartDate != null ? DateFormat('MMM dd, yyyy').format(_promoStartDate!) : 'Select Date'.tr(),
                                     style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold)),
                                 ],
                               ),
@@ -1192,9 +1195,9 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  Text('Ends', style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 12)),
+                                  Text('Ends'.tr(), style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 12)),
                                   const SizedBox(height: 4),
-                                  Text(_promoEndDate != null ? DateFormat('MMM dd, yyyy').format(_promoEndDate!) : 'Select Date',
+                                  Text(_promoEndDate != null ? DateFormat('MMM dd, yyyy').format(_promoEndDate!) : 'Select Date'.tr(),
                                     style: TextStyle(color: adaptiveTextColor, fontWeight: FontWeight.bold)),
                                 ],
                               ),
@@ -1224,7 +1227,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                       Icon(Icons.public, color: primaryColor, size: 20),
                       const SizedBox(width: 8),
                       Text(
-                        'Targeting Options',
+                        'Targeting Options'.tr(),
                         style: TextStyle(
                           color: adaptiveTextColor,
                           fontWeight: FontWeight.bold,
@@ -1235,7 +1238,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Choose who can see your ad',
+                    'Choose who can see your ad'.tr(),
                     style: TextStyle(
                       color: isDark ? Colors.white54 : Colors.black54,
                       fontSize: 12,
@@ -1247,7 +1250,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                   Row(
                     children: [
                       Text(
-                        'Countries',
+                        'Countries'.tr(),
                         style: TextStyle(
                           color: isDark ? Colors.white70 : Colors.black87,
                           fontSize: 13,
@@ -1281,7 +1284,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                             child: Text(
                               _selectedCountryCodes.isEmpty
                                   ? 'All Countries (Default)'.tr()
-                                  : '${_selectedCountryCodes.length} selected'.tr(),
+                                  : 'x_selected'.tr(args: [_selectedCountryCodes.length.toString()]),
                               style: TextStyle(
                                 color: _selectedCountryCodes.isEmpty
                                     ? (isDark ? Colors.white38 : Colors.black38)
@@ -1318,7 +1321,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                   
                   // Categories
                   Text(
-                    'Target Categories',
+                    'Target Categories'.tr(),
                     style: TextStyle(
                       color: isDark ? Colors.white70 : Colors.black87,
                       fontSize: 13,
@@ -1340,8 +1343,8 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                           Expanded(
                             child: Text(
                               _selectedCategories.isEmpty
-                                  ? 'Select categories'
-                                  : '${_selectedCategories.length} selected',
+                                  ? 'Select categories'.tr()
+                                  : 'x_selected'.tr(args: [_selectedCategories.length.toString()]),
                               style: TextStyle(
                                 color: _selectedCategories.isEmpty
                                     ? (isDark ? Colors.white38 : Colors.black38)
@@ -1378,7 +1381,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                   
                   // Audience Type
                   Text(
-                    'Audience Type',
+                    'Audience Type'.tr(),
                     style: TextStyle(
                       color: isDark ? Colors.white70 : Colors.black87,
                       fontSize: 13,
@@ -1390,10 +1393,10 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      _buildAudienceChip('All Users', 'ALL', primaryColor, isDark),
-                      _buildAudienceChip('Viewed Similar', 'VIEWED_SIMILAR', primaryColor, isDark),
-                      _buildAudienceChip('Favorited', 'FAVORITED', primaryColor, isDark),
-                      _buildAudienceChip('Near Location', 'NEAR_ME', primaryColor, isDark),
+                      _buildAudienceChip('All Users'.tr(), 'ALL', primaryColor, isDark),
+                      _buildAudienceChip('Viewed Similar'.tr(), 'VIEWED_SIMILAR', primaryColor, isDark),
+                      _buildAudienceChip('Favorited'.tr(), 'FAVORITED', primaryColor, isDark),
+                      _buildAudienceChip('Near Location'.tr(), 'NEAR_ME', primaryColor, isDark),
                     ],
                   ),
                 ],
@@ -1427,11 +1430,11 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                     onTap: _showTermsAndConditions,
                     child: RichText(
                       text: TextSpan(
-                        text: 'I accept the ',
+                        text: '${'I accept the'.tr()} ',
                         style: TextStyle(color: adaptiveTextColor),
                         children: [
                           TextSpan(
-                            text: 'Terms & Conditions',
+                            text: 'Terms & Conditions'.tr(),
                             style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -1463,7 +1466,7 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
                 ),
                 child: _isSubmitting
                     ? const CupertinoActivityIndicator(color: Colors.white)
-                    : Text('Continue to Review', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    : Text('Continue to Review'.tr(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ),
             const SizedBox(height: 40),

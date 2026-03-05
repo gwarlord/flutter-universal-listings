@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/listings/model/deal_ad_model.dart';
@@ -36,7 +37,7 @@ class _DealAnalyticsScreenState extends State<DealAnalyticsScreen> {
     return Scaffold(
       backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
-        title: const Text('Deal Analytics'),
+        title: Text('Deal Analytics'.tr()),
         centerTitle: true,
         elevation: 0,
         backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
@@ -57,7 +58,7 @@ class _DealAnalyticsScreenState extends State<DealAnalyticsScreen> {
           if (!snapshot.hasData) {
             return Center(
               child: Text(
-                'No analytics available',
+                'No analytics available'.tr(),
                 style: TextStyle(
                   color: isDark ? Colors.white70 : Colors.black87,
                 ),
@@ -114,7 +115,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
             // Deal title
             if (widget.analytics.dealCaption != null) ...[
               Text(
-                'Deal: ${widget.analytics.dealCaption}',
+                'deal_with_caption'.tr(args: [widget.analytics.dealCaption ?? '']),
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: isDark ? Colors.white : Colors.black87,
@@ -129,7 +130,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                 Expanded(
                   child: _StatusCard(
                     icon: Icons.visibility,
-                    label: 'Views',
+                    label: 'Views'.tr(),
                     value: widget.analytics.viewCount.toString(),
                     color: Colors.blue,
                     isDark: isDark,
@@ -139,7 +140,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                 Expanded(
                   child: _StatusCard(
                     icon: Icons.favorite,
-                    label: 'Saves',
+                    label: 'Saves'.tr(),
                     value: widget.analytics.saveCount.toString(),
                     color: Colors.red,
                     isDark: isDark,
@@ -155,7 +156,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                 Expanded(
                   child: _StatusCard(
                     icon: Icons.check_circle,
-                    label: 'Claims',
+                    label: 'Claims'.tr(),
                     value: widget.analytics.claimCount.toString(),
                     color: Colors.green,
                     isDark: isDark,
@@ -165,7 +166,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                 Expanded(
                   child: _StatusCard(
                     icon: Icons.people,
-                    label: 'Users',
+                    label: 'Users'.tr(),
                     value: widget.analytics.redemptionCountByUser.toString(),
                     color: Colors.purple,
                     isDark: isDark,
@@ -190,7 +191,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Redemption Status',
+                      'Redemption Status'.tr(),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: isDark ? Colors.white : Colors.black87,
@@ -201,7 +202,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Total Redeemed',
+                          'Total Redeemed'.tr(),
                           style: TextStyle(
                             color: isDark ? Colors.white70 : Colors.black87,
                           ),
@@ -221,7 +222,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Limit',
+                            'Limit'.tr(),
                             style: TextStyle(
                               color: isDark ? Colors.white70 : Colors.black87,
                             ),
@@ -240,7 +241,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Remaining',
+                            'Remaining'.tr(),
                             style: TextStyle(
                               color: isDark ? Colors.white70 : Colors.black87,
                             ),
@@ -297,7 +298,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Engagement Metrics',
+                          'Engagement Metrics'.tr(),
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: isDark ? Colors.white : Colors.black87,
@@ -305,27 +306,27 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                         ),
                         const SizedBox(height: 12),
                         _MetricRow(
-                          label: 'View to Claim Rate',
+                          label: 'View to Claim Rate'.tr(),
                           value: '${metrics.saleRate}%',
-                          description: 'of viewers claimed the deal',
+                          description: 'of viewers claimed the deal'.tr(),
                         ),
                         const SizedBox(height: 12),
                         _MetricRow(
-                          label: 'View to Save Rate',
+                          label: 'View to Save Rate'.tr(),
                           value: '${metrics.saveRate}%',
-                          description: 'of viewers saved the deal',
+                          description: 'of viewers saved the deal'.tr(),
                         ),
                         const SizedBox(height: 12),
                         _MetricRow(
-                          label: 'Save to Claim Rate',
+                          label: 'Save to Claim Rate'.tr(),
                           value: '${metrics.redemptionRate}%',
-                          description: 'of savers claimed the deal',
+                          description: 'of savers claimed the deal'.tr(),
                         ),
                         const SizedBox(height: 12),
                         _MetricRow(
-                          label: 'Avg Claims per User',
+                          label: 'Avg Claims per User'.tr(),
                           value: metrics.averageRedemptionsPerUser,
-                          description: 'times each user claimed on average',
+                          description: 'times each user claimed on average'.tr(),
                         ),
                       ],
                     ),
@@ -365,7 +366,7 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            widget.analytics.isActive ? 'Active' : 'Inactive',
+                            widget.analytics.isActive ? 'Active'.tr() : 'Inactive'.tr(),
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -374,8 +375,8 @@ class _AnalyticsContentState extends State<_AnalyticsContent> {
                           ),
                           Text(
                             widget.analytics.isSoldOut
-                                ? 'Sold out'
-                                : 'Accepting claims',
+                                ? 'Sold out'.tr()
+                                : 'Accepting claims'.tr(),
                             style: TextStyle(
                               fontSize: 12,
                               color: isDark ? Colors.white70 : Colors.black87,

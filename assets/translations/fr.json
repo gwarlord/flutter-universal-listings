@@ -45,6 +45,23 @@
   "Search": "Rechercher",
   "Filter": "Filtrer",
   "Sort": "Trier",
+  "Location Scope": "Portée de localisation",
+  "Choose what content you want to see": "Choisissez le contenu que vous voulez voir",
+  "Mode": "Mode",
+  "Local": "Local",
+  "Caribbean": "Caraïbes",
+  "Nearby": "À proximité",
+  "Show content from a specific country": "Afficher le contenu d'un pays spécifique",
+  "Show content from all Caribbean countries": "Afficher le contenu de tous les pays des Caraïbes",
+  "Show content based on your GPS location": "Afficher le contenu selon votre position GPS",
+  "Strict Local Only": "Local strict uniquement",
+  "Tap to localise": "Touchez pour localiser",
+  "Tap for Caribbean": "Touchez pour Caraïbes",
+  "Tap to change": "Touchez pour changer",
+  "Tap to toggle • Long press for options": "Touchez pour basculer • Appui long pour les options",
+  "Hold for more": "Maintenez pour plus",
+  "Search with AI": "Rechercher avec l'IA",
+  "Unable to open AI Search right now": "Impossible d'ouvrir la recherche IA pour le moment",
   "Details": "Détails",
   "Instagram": "Instagram",
   "Facebook": "Facebook",
@@ -56,6 +73,28 @@
   "Wheelchair Accessible": "Accessible en fauteuil roulant",
   "Business Type": "Type d'entreprise",
   "Restaurant": "Restaurant",
+  "Restaurants": "Restaurants",
+  "Real Estate": "Immobilier",
+  "Auto": "Automobile",
+  "Automotive": "Automobile",
+  "Beauty & Spa": "Beauté et spa",
+  "Electronics": "Électronique",
+  "Events": "Événements",
+  "Health & Fitness": "Santé et fitness",
+  "Home Services": "Services à domicile",
+  "Entertainment": "Divertissement",
+  "Professional Services": "Services professionnels",
+  "Professional Service": "Service professionnel",
+  "Education": "Éducation",
+  "Travel & Tourism": "Voyages et tourisme",
+  "Pets": "Animaux de compagnie",
+  "Sports": "Sports",
+  "Food & Drink": "Nourriture et boissons",
+  "Health & Beauty": "Santé et beauté",
+  "Accommodation": "Hébergement",
+  "Home & Garden": "Maison et jardin",
+  "Nightlife": "Vie nocturne",
+  "Shopping": "Shopping",
   "Cash,Card": "Espèces,Carte",
   "Parking": "Parking",
   "Available": "Disponible",
@@ -69,11 +108,76 @@
   "Explore": "Explorer",
   "Listings": "Annonces",
   "My Listings": "Mes Annonces",
+  "Listing Freshness": "Fraîcheur des annonces",
+  "Manage your active listings": "Gérez vos annonces actives",
+  "Select multiple": "Sélection multiple",
+  "Reload scores": "Recharger les scores",
+  "Urgent Attention": "Attention urgente",
+  "These listings will hide soon. Take action now!": "Ces annonces seront bientôt masquées. Agissez maintenant !",
+  "Needs Refresh Soon": "Doit être rafraîchi bientôt",
+  "Plan to refresh these listings soon.": "Prévoyez de rafraîchir ces annonces bientôt.",
+  "Active & Fresh": "Actif et récent",
+  "These listings are in good standing.": "Ces annonces sont en bon état.",
+  "Never Expire": "N'expire jamais",
+  "These listings are exempt from automatic hiding.": "Ces annonces sont exemptées du masquage automatique.",
+  "Hidden Listings": "Annonces masquées",
+  "Refresh to make these visible again.": "Rafraîchissez pour les rendre à nouveau visibles.",
+  "Refresh All Urgent ({})": "Rafraîchir toutes les urgentes ({})",
+  "Overview": "Aperçu",
+  "Urgent": "Urgent",
+  "Warning": "Avertissement",
+  "Fresh": "Récent",
+  "Hidden": "Masqué",
+  "Exempt (Never Expire)": "Exempté (N'expire jamais)",
+  "Refresh All": "Tout rafraîchir",
+  "Deselect All": "Tout désélectionner",
+  "Auto-Refresh Eligible": "Éligible à l'auto-rafraîchissement",
+  "Refresh Now": "Rafraîchir maintenant",
+  "Make Visible": "Rendre visible",
   "My Brands/Branches": "Mes Marques/Agences",
+  "Manage Locations": "Gérer les emplacements",
+  "Locations": "Emplacements",
+  "Delete Brand": "Supprimer la marque",
+  "Delete Brand?": "Supprimer la marque ?",
+  "No locations linked": "Aucun emplacement lié",
+  "No locations found": "Aucun emplacement trouvé",
+  "Verified Brand": "Marque vérifiée",
+  "Your brand will be deleted.": "Votre marque sera supprimée.",
+  "Your listings will be kept": "Vos annonces seront conservées",
+  "Deleting brand...": "Suppression de la marque...",
+  "Brand deleted successfully!": "Marque supprimée avec succès !",
   "Orders": "Commandes",
   "Rentals": "Locations",
+  "Post Event": "Publier un événement",
+  "Create Event": "Créer un événement",
+  "Edit Event": "Modifier l'événement",
+  "Event posted successfully.": "Événement publié avec succès.",
+  "Event Title Hint": "ex. : Nuit du Carnaval",
+  "Committee Hint": "ex. : Équipe marketing",
+  "Event Description Hint": "Partagez les détails de l'événement",
+  "Venue Name Hint": "ex. : Queen's Park Savannah",
+  "Ticket Link Hint": "https://...",
+  "Facebook Page Hint": "ex. : facebook.com/votreevenement",
+  "Instagram Username Hint": "ex. : @votreevenement",
+  "Ticket Name Hint": "ex. : VIP",
+  "Ticket Price Hint": "ex. : 25.00",
+  "Ticket Description Hint": "Détails optionnels du billet",
+  "Member Name Hint": "ex. : Jean Dupont",
+  "Contact Number Hint": "ex. : +1 868...",
+  "Manage Rentals": "Gérer les locations",
   "Bookings": "Réservations",
   "Booking Requests": "Demandes de Réservation",
+  "Host": "Hôte",
+  "Start Date": "Date de début",
+  "End Date": "Date de fin",
+  "Duration": "Durée",
+  "night": "nuit",
+  "nights": "nuits",
+  "No pending bookings": "Aucune réservation en attente",
+  "No confirmed bookings": "Aucune réservation confirmée",
+  "No rejected bookings": "Aucune réservation refusée",
+  "No cancelled bookings": "Aucune réservation annulée",
+  "Dates with bookings": "Dates avec réservations",
   "Activate Booking": "Activer les Réservations",
   "Conversations": "Conversations",
   "Chats": "Chats",
@@ -82,6 +186,10 @@
   "Settings": "Paramètres",
   "Favorites": "Favoris",
   "Notifications": "Notifications",
+  "Assigned Listings": "Annonces assignées",
+  "No Assigned Listings": "Aucune annonce assignée",
+  "You have not been added as a collaborator to any listings": "Vous n'avez été ajouté comme collaborateur à aucune annonce",
+  "x_more": "+{} de plus",
   
   "Analytics": "Analytiques",
   "Advanced Analytics": "Analytiques Avancées",
@@ -91,6 +199,20 @@
   "Log Out": "Se Déconnecter",
   
   "Deals & Promotions": "Offres et Promotions",
+  "Post your deals, promotions, and ads here!": "Publiez vos offres, promotions et annonces ici !",
+  "Upload New Ad": "Téléverser une nouvelle annonce",
+  "View All Deals": "Voir toutes les offres",
+  "Ad Posting Quota": "Quota de publication d'annonces",
+  "Tier": "Niveau",
+  "Free": "Gratuit",
+  "Professional": "Professionnel",
+  "Premium": "Premium",
+  "Posts this month": "Publications ce mois-ci",
+  "Resets on": "Réinitialisé le",
+  "Upgrade to Post Ads": "Passez à niveau pour publier des annonces",
+  "You're on the Free plan": "Vous êtes sur le plan Gratuit",
+  "Professional plan: 10 ads/month\nPremium plan: 20 ads/month": "Plan Professional : 10 annonces/mois\nPlan Premium : 20 annonces/mois",
+  "Also requires at least one active listing.": "Nécessite également au moins une annonce active.",
   "Categories": "Catégories",
   "Find what you need": "Trouvez ce dont vous avez besoin",
   "Search listings...": "Rechercher des annonces...",
@@ -107,6 +229,8 @@
   "View Full Menu": "Voir le Menu Complet",
   "Browse Rentals": "Parcurir les Locations",
   "Explore rental items": "Explorer les articles de location",
+  "Food": "Nourriture",
+  "General": "Général",
   "Services": "Services",
   "Show all": "Tout afficher",
   "Show less": "Afficher moins",
@@ -169,6 +293,7 @@
   "Sign Up": "S'inscrire",
   "Sign Out": "Se déconnecter",
   "Logout": "Déconnexion",
+  "It's ok, your listings are safe": "Ne vous inquiétez pas, vos annonces sont en sécurité",
   "Register": "S'inscrire",
   "Create Account": "Créer un compte",
   "Email": "Email",
@@ -202,14 +327,58 @@
 
   "Add Listing": "Ajouter une annonce",
   "Edit Listing": "Modifier l'annonce",
+  "Request Featured": "Demander une mise en avant",
+  "Manage Collaborators": "Gérer les collaborateurs",
+  "Team Chat": "Chat d'équipe",
+  "Manage Reviews": "Gérer les avis",
   "Delete Listing": "Supprimer l'annonce",
   "Delete Listing?": "Supprimer l'annonce?",
   "Are you sure you want to remove this listing?": "Êtes-vous sûr de vouloir supprimer cette annonce?",
   "Listing Details": "Détails de l'annonce",
+  "Details & Hours": "Détails et horaires",
+  "Contact Information": "Coordonnées",
+  "Social Media": "Réseaux sociaux",
+  "Business Details": "Détails de l'entreprise",
+  "Not seen on listing, used for quote and invoice generation": "Non visible sur l'annonce, utilisé pour générer des devis et des factures",
+  "Company Registration #": "N° d'enregistrement de l'entreprise",
+  "VAT / Tax ID #": "N° TVA / ID fiscal",
+  "Menu (Food & Beverage)": "Menu (Alimentation et boissons)",
+  "Store / Ecommerce (Optional)": "Boutique / E-commerce (Optionnel)",
+  "Logo (Optional)": "Logo (Optionnel)",
+  "Enable Store/Ecommerce": "Activer la boutique/e-commerce",
+  "Store Mode": "Mode boutique",
+  "External URL Only": "URL externe uniquement",
+  "Internal Catalog": "Catalogue interne",
+  "Both (URL + Catalog)": "Les deux (URL + Catalogue)",
+  "Lead Time (Hours)": "Délai de préparation (heures)",
+  "Minimum hours needed to prepare orders": "Nombre minimum d'heures nécessaires pour préparer les commandes",
+  "Internal Catalog requires Premium subscription": "Le catalogue interne nécessite un abonnement Premium",
+  "Please save the listing first, then you can manage catalog items": "Veuillez d'abord enregistrer l'annonce, puis vous pourrez gérer les articles du catalogue",
+  "Manage Catalog Items": "Gérer les articles du catalogue",
+  "Save Listing First": "Enregistrer l'annonce d'abord",
+  "Accept Proof of Payment": "Accepter une preuve de paiement",
+  "Require customers to provide proof of payment (photo/receipt) for orders": "Exiger que les clients fournissent une preuve de paiement (photo/reçu) pour les commandes",
+  "Enable Rentals": "Activer les locations",
+  "Allow customers to rent items from this listing": "Permettre aux clients de louer des articles de cette annonce",
+  "Manage Rental Catalog": "Gérer le catalogue de location",
   "Listing not found or has been removed.": "Annonce non trouvée ou supprimée.",
   "Failed to open listing. Please try again.": "Échec de l'ouverture de l'annonce. Veuillez réessayer.",
   "Failed to open listing management. Please try again.": "Échec de l'ouverture de la gestion de l'annonce. Veuillez réessayer.",
+  "Booking Services": "Services de réservation",
+  "Require Booking": "Exiger une réservation",
+  "Show a \"Book Now\" button on your listing": "Afficher un bouton \"Réserver\" sur votre annonce",
+  "Allow Quantity Selection": "Autoriser la sélection de quantité",
+  "Customers can select quantity when booking services": "Les clients peuvent sélectionner une quantité lors de la réservation de services",
+  "Use Time Blocks": "Utiliser des créneaux horaires",
+  "Enable hourly time slot bookings instead of full day bookings": "Activer les réservations par créneaux horaires plutôt que par journée complète",
+  "Custom Booking Questions": "Questions de réservation personnalisées",
+  "Ask customers to answer questions when they book": "Demander aux clients de répondre à des questions lors de la réservation",
+  "Allow Multiple Bookings Per Day": "Autoriser plusieurs réservations par jour",
+  "Multiple customers can book different time slots on the same day": "Plusieurs clients peuvent réserver différents créneaux le même jour",
   "No listings found": "Aucune annonce trouvée",
+  "Listing updated successfully": "Annonce mise à jour avec succès",
+  "Error loading listings": "Erreur lors du chargement des annonces",
+  "Error updating listing": "Erreur lors de la mise à jour de l'annonce",
   "Deleting...": "Suppression...",
   "Add To Favorites": "Ajouter aux favoris",
   "Remove From Favorites": "Retirer des favoris",
@@ -226,16 +395,81 @@
   
   "Store": "Boutique",
   "Mini Store": "Mini Boutique",
+  "Browse Full Store": "Parcourir toute la boutique",
   "Cart": "Panier",
   "Checkout": "Paiement",
   "Add to Cart": "Ajouter au panier",
   "Added to cart": "Ajouté au panier",
   "View Cart": "Voir le panier",
+  "Cart is empty": "Le panier est vide",
+  "Fulfillment Method": "Mode de livraison",
+  "Delivery Address *": "Adresse de livraison *",
+  "Shipping Address *": "Adresse d'expédition *",
+  "Shipping Instructions (Optional)": "Instructions d'expédition (Optionnel)",
+  "Street address, city, state, postal code": "Adresse, ville, état/région, code postal",
+  "Additional seating info (optional)": "Informations de placement supplémentaires (optionnel)",
+  "e.g., Special requests, dietary notes": "ex. : demandes spéciales, notes alimentaires",
+  "Preferred Date/Time (Optional)": "Date/heure préférée (Optionnel)",
+  "Not specified": "Non spécifié",
+  "Notes (Optional)": "Notes (Optionnel)",
+  "Send Order Request": "Envoyer la demande de commande",
+  "Please sign in to place an order": "Veuillez vous connecter pour passer une commande",
+  "Please enter delivery address": "Veuillez saisir l'adresse de livraison",
+  "Please enter shipping address": "Veuillez saisir l'adresse d'expédition",
+  "Order request sent successfully!": "Demande de commande envoyée avec succès !",
+  "Scan Table QR Code": "Scanner le code QR de la table",
+  "Table Scanned: {}": "Table scannée : {}",
+  "Table {} has been scanned. You can also add additional seating info below.": "La table {} a été scannée. Vous pouvez aussi ajouter des informations de placement ci-dessous.",
+  "Creating table session...": "Création de la session de table...",
+  "Table scanned successfully: {}": "Table scannée avec succès : {}",
+  "Failed to create table session. Please try again.": "Échec de la création de la session de table. Veuillez réessayer.",
+  "Invalid QR code format - missing table data": "Format de code QR invalide : données de table manquantes",
+  "Invalid QR code - Not a table QR code": "Code QR invalide - Ce n'est pas un code QR de table",
+  "Error parsing QR code: {}": "Erreur lors de l'analyse du code QR : {}",
+  "This QR code is for a different store": "Ce code QR est pour une autre boutique",
+  "Pin Delivery Location": "Épingler le lieu de livraison",
+  "Location Pinned": "Emplacement épinglé",
+  "Tap to pin your delivery location on map": "Touchez pour épingler votre lieu de livraison sur la carte",
+  "Location permission is required for delivery": "L'autorisation de localisation est requise pour la livraison",
+  "Delivery Location": "Lieu de livraison",
+  "Use Current Location": "Utiliser l'emplacement actuel",
+  "Or enter coordinates manually:": "Ou saisissez les coordonnées manuellement :",
+  "Latitude": "Latitude",
+  "Longitude": "Longitude",
+  "Invalid latitude or longitude": "Latitude ou longitude invalide",
+  "Failed to get location: {}": "Impossible d'obtenir la position : {}",
+  "Error parsing location: {}": "Erreur lors de l'analyse de la position : {}",
+  "e.g., Leave at front door, signature required": "ex. : Laisser à la porte d'entrée, signature requise",
   "Empty Cart": "Panier vide",
   "No items in cart": "Aucun article dans le panier",
   "Store Settings": "Paramètres de la boutique",
   "Save Settings": "Enregistrer les paramètres",
   "Store settings updated": "Paramètres de la boutique mis à jour",
+  "CaribTap Subscriptions": "Abonnements CaribTap",
+  "Store not available": "Boutique indisponible",
+  "Unable to open Google Play subscriptions": "Impossible d'ouvrir les abonnements Google Play",
+  "Unable to load plans": "Impossible de charger les forfaits",
+  "Choose a plan": "Choisissez un forfait",
+  "Pick Professional or Premium to unlock business tools.": "Choisissez Professional ou Premium pour débloquer les outils business.",
+  "AI photo enhancement": "Amélioration photo par IA",
+  "Watermarking tools": "Outils de filigrane",
+  "Priority support": "Support prioritaire",
+  "Everything in Professional": "Tout ce qui est dans Professional",
+  "Quotes & invoices tools": "Outils de devis et factures",
+  "Full suite with premium business features.": "Suite complète avec des fonctionnalités business premium.",
+  "Current plan": "Forfait actuel",
+  "Current plan: {}": "Forfait actuel : {}",
+  "You are currently on {}.": "Vous êtes actuellement sur {}.",
+  "Subscribe": "S'abonner",
+  "No expiration": "Aucune expiration",
+  "Status: {}": "Statut : {}",
+  "Expires: {}": "Expire : {}",
+  "Auto-renew: {}": "Renouvellement auto : {}",
+  "On": "Activé",
+  "Off": "Désactivé",
+  "Manage subscription in Google Play": "Gérer l'abonnement dans Google Play",
+  "Benefits": "Avantages",
+  "Restore": "Restaurer",
   "Fulfillment Methods": "Méthodes de livraison",
   "Select how customers can receive their orders": "Sélectionnez comment les clients peuvent recevoir leurs commandes",
   "At least one fulfillment method must be enabled": "Au moins une méthode de livraison doit être activée",
@@ -260,15 +494,19 @@
   "Menu is visible to customers": "Le menu est visible pour les clients",
   "Menu is hidden from customers": "Le menu est caché aux clients",
   "Upload Menu Photos": "Télécharger des photos du menu",
+  "Upload 1-6 menu images": "Téléchargez 1 à 6 images du menu",
   "Create Digital Menu": "Créer un menu numérique",
   "Build items with prices and descriptions": "Créez des articles avec prix et descriptions",
   "Menu hidden from customers": "Menu caché aux clients",
+  "Maximum 6 menu photos allowed": "Maximum 6 photos de menu autorisées",
+  "Uploaded {} photo(s)": "{} photo(s) téléchargée(s)",
   
   "Order Details": "Détails de la commande",
   "My Orders": "Mes commandes",
   "New Order": "Nouvelle commande",
   "Customer": "Client",
   "Items": "Articles",
+  "Table": "Table",
   "Subtotal": "Sous-total",
   "Shipping Fee": "Frais d'expédition",
   "Delivery Fee": "Frais de livraison",
@@ -283,6 +521,34 @@
   "Notes": "Notes",
   "Seller Note": "Note du vendeur",
   "Payment": "Paiement",
+  "Payment Methods": "Moyens de paiement",
+  "Bank Transfer": "Virement bancaire",
+  "Payment Apps": "Applications de paiement",
+  "Bank": "Banque",
+  "Account Name": "Nom du compte",
+  "Account Number": "Numéro de compte",
+  "Branch": "Agence",
+  "SWIFT/BIC": "SWIFT/BIC",
+  "IBAN": "IBAN",
+  "Copied to clipboard": "Copié dans le presse-papiers",
+  "Book Appointment": "Réserver un rendez-vous",
+  "Booking sent": "Réservation envoyée",
+  "Select Services": "Sélectionner des services",
+  "Select dates": "Sélectionner les dates",
+  "Please select check-in and check-out dates.": "Veuillez sélectionner les dates d'arrivée et de départ.",
+  "Select time block": "Sélectionner un créneau horaire",
+  "Please select a time slot for your booking.": "Veuillez sélectionner un créneau horaire pour votre réservation.",
+  "Select time slot": "Sélectionner un créneau",
+  "No time slots available for this date": "Aucun créneau horaire disponible pour cette date",
+  "Number of guests": "Nombre d'invités",
+  "Custom questions": "Questions personnalisées",
+  "Type your answer": "Saisissez votre réponse",
+  "Notes for the lister": "Notes pour l'annonceur",
+  "Any special requests...": "Des demandes spéciales...",
+  "Qty": "Qté",
+  "Nights": "Nuits",
+  "Total Amount:": "Montant total :",
+  "Your booking request has been sent to the lister. You will be notified once they respond.": "Votre demande de réservation a été envoyée à l'annonceur. Vous serez informé(e) dès qu'il répondra.",
   "Proof of Payment": "Preuve de paiement",
   "Upload Proof of Payment": "Télécharger une preuve de paiement",
   "This order requires proof of payment. Please upload a receipt or screenshot.": "Cette commande nécessite une preuve de paiement. Veuillez télécharger un reçu ou une capture d'écran.",
@@ -316,14 +582,19 @@
   
   "Requested": "Demandé",
   "Pending": "En attente",
+  "Active": "Actif",
+  "Closed": "Fermé",
   "Confirmed": "Confirmé",
   "Preparing": "En préparation",
   "Ready": "Prêt",
   "Served": "Servi",
   "Fulfilled": "Complété",
   "Completed": "Terminé",
+  "Disputed": "Contesté",
   "Declined": "Refusé",
   "Cancelled": "Annulé",
+  "Start": "Début",
+  "End": "Fin",
   
   "Table Service": "Service de table",
   "Table Mode": "Mode table",
@@ -331,6 +602,20 @@
   "Create tables, share QR codes, and manage sessions": "Créez des tables, partagez des codes QR et gérez les sessions",
   "Manage dine-in tables and QR codes for this listing": "Gérez les tables sur place et les codes QR pour cette annonce",
   "Summon Waiter": "Appeler le serveur",
+  "Assign Waiter": "Assigner un serveur",
+  "Change Waiter": "Changer de serveur",
+  "Acknowledge": "Accuser réception",
+  "Customer Requests": "Demandes client",
+  "No pending sessions": "Aucune session en attente",
+  "No active sessions": "Aucune session active",
+  "No closed sessions": "Aucune session fermée",
+  "Started": "Commencé",
+  "Activated": "Activé",
+  "Purpose": "Objet",
+  "Payment": "Paiement",
+  "Just now": "À l'instant",
+  "minutes_ago": "il y a {} min",
+  "hours_ago": "il y a {} h",
   "Wait $seconds": "Attendre $seconds",
   "Request Bill": "Demander l'addition",
   "Your $role": "Votre $role",
@@ -383,6 +668,33 @@
   "Bookings": "Réservations",
   "My Bookings": "Mes réservations",
   "Booking Details": "Détails de la réservation",
+  "Booking Information": "Informations de réservation",
+  "Pricing": "Tarification",
+  "Unit Price": "Prix unitaire",
+  "Deposit": "Dépôt",
+  "Mileage Overage": "Dépassement kilométrique",
+  "Vehicle Information": "Informations du véhicule",
+  "Start Odometer": "Odomètre de départ",
+  "End Odometer": "Odomètre de fin",
+  "Distance Driven": "Distance parcourue",
+  "Checkout Evidence": "Preuve de restitution",
+  "Checkin Evidence": "Preuve de prise en charge",
+  "OVERDUE FOR RETURN": "RETOUR EN RETARD",
+  "Evidence details would be displayed here": "Les détails des preuves s'afficheraient ici",
+  "Rental item not found": "Article de location introuvable",
+  "No photos available": "Aucune photo disponible",
+  "Failed to load image": "Échec du chargement de l'image",
+  "Loading customer...": "Chargement du client...",
+  "Rental Item": "Article de location",
+  "at": "à",
+  "hour": "heure",
+  "hours": "heures",
+  "day": "jour",
+  "days": "jours",
+  "week": "semaine",
+  "weeks": "semaines",
+  "month": "mois",
+  "months": "mois",
   "Make Booking": "Faire une réservation",
   "Date & Time": "Date et heure",
   "Party Size": "Taille du groupe",
@@ -434,5 +746,194 @@
   "Error saving settings: $e": "Erreur lors de l'enregistrement des paramètres: $e",
   "Something went wrong": "Quelque chose s'est mal passé",
   "Network error": "Erreur réseau",
-  "Please try again": "Veuillez réessayer"
+  "Please try again": "Veuillez réessayer",
+  "Quotes & Invoices": "Devis et Factures",
+  "Company": "Entreprise",
+  "Client name": "Nom du client",
+  "Address": "Adresse",
+  "No items yet": "Aucun article pour le moment",
+  "Discount": "Remise",
+  "Tax": "Taxe",
+  "Optional notes": "Notes facultatives",
+  "Optional terms": "Conditions facultatives",
+  "Select date": "Sélectionner une date",
+  "Terms": "Conditions",
+  "Valid Until": "Valide jusqu'au",
+  "Totals": "Totaux",
+  "Currency": "Devise",
+  "Line Items": "Lignes d'articles",
+  "Client": "Client",
+  "Listing": "Annonce",
+  "Select listing": "Sélectionner une annonce",
+  "Code": "Code",
+  "Symbol": "Symbole",
+  "Amount": "Montant",
+  "Percent": "Pourcentage",
+  "Save Draft": "Enregistrer le brouillon",
+  "Add Item": "Ajouter un article",
+  "Description": "Description",
+  "Enter valid item details": "Saisissez des détails d'article valides",
+  "Quotes": "Devis",
+  "Invoices": "Factures",
+  "Draft": "Brouillon",
+  "Sent": "Envoyé",
+  "Accepted": "Accepté",
+  "Expired": "Expiré",
+  "Paid": "Payé",
+  "Overdue": "En retard",
+  "No quotes yet": "Aucun devis pour le moment",
+  "No invoices yet": "Aucune facture pour le moment",
+  "Upgrade to Premium to use Quotes & Invoices": "Passez à Premium pour utiliser Devis et Factures",
+  "Upgrade to Premium to use Invoices": "Passez à Premium pour utiliser les Factures",
+  "Failed to load quotes": "Échec du chargement des devis",
+  "Failed to load invoices": "Échec du chargement des factures",
+  "Quote not found": "Devis introuvable",
+  "Failed to load quote": "Échec du chargement du devis",
+  "Failed to save quote": "Échec de l'enregistrement du devis",
+  "Failed to mark accepted": "Échec du marquage comme accepté",
+  "Failed to mark declined": "Échec du marquage comme refusé",
+  "Failed to convert to invoice": "Échec de la conversion en facture",
+  "Invoice not found": "Facture introuvable",
+  "Failed to load invoice": "Échec du chargement de la facture",
+  "Failed to save invoice": "Échec de l'enregistrement de la facture",
+  "Failed to mark paid": "Échec du marquage comme payé",
+  "Optional": "Optionnel",
+  "quote_limit_reached_message": "Vous avez atteint la limite de {} devis. Passez à niveau pour un historique illimité.",
+  "Quote link": "Lien du devis",
+  "Invoice link": "Lien de la facture",
+  "PDF downloaded to": "PDF téléchargé vers",
+  "Failed to download PDF": "Échec du téléchargement du PDF",
+  "CaribTap Business": "Entreprise CaribTap"
+  ,"Item description hint": "ex. : service de création de site web"
+  ,"Quantity hint": "ex. : 1"
+  ,"Unit price hint": "ex. : 120.00"
+  ,"Upload Promotion": "Téléverser une promotion"
+  ,"Edit Promotion": "Modifier la promotion"
+  ,"Format Guidance": "Guide de format"
+  ,"Add media": "Ajouter un média"
+  ,"Choose Image from Gallery": "Choisir une image depuis la galerie"
+  ,"Choose Video from Gallery": "Choisir une vidéo depuis la galerie"
+  ,"Ad Types": "Types d'annonce"
+  ,"Promotion:": "Promotion :"
+  ,"Advert:": "Annonce :"
+  ,"Time-limited offers. Requires a specific start and end date (e.g., 20% off for 1 week).": "Offres à durée limitée. Nécessite une date de début et de fin précise (ex. : 20 % de réduction pendant 1 semaine)."
+  ,"General business awareness. Runs indefinitely without a specific offer period.": "Visibilité générale de l'entreprise. Fonctionne indéfiniment sans période d'offre spécifique."
+  ,"Promo Period": "Période promo"
+  ,"A promo period ensures customers know exactly when your offer begins and ends. It creates urgency and helps them plan their purchase before the deal expires.": "Une période promo permet aux clients de savoir exactement quand votre offre commence et se termine. Cela crée un sentiment d'urgence et les aide à planifier leur achat avant expiration."
+  ,"About Country Selection": "À propos de la sélection des pays"
+  ,"This setting controls which countries can see your ad. When you select specific countries, only users from those locations will be able to view your promotion. If you leave it set to \"All Countries\", your ad will be visible to users everywhere.": "Ce paramètre contrôle les pays pouvant voir votre annonce. Si vous sélectionnez des pays spécifiques, seuls les utilisateurs de ces zones verront votre promotion. Si vous laissez \"Tous les pays\", elle sera visible partout."
+  ,"Select Categories": "Sélectionner des catégories"
+  ,"Please select a listing for your deal": "Veuillez sélectionner une annonce pour votre offre"
+  ,"Add Image or Video": "Ajouter une image ou une vidéo"
+  ,"High quality media gets more engagement": "Un média de haute qualité génère plus d'engagement"
+  ,"Type": "Type"
+  ,"Promotion": "Promotion"
+  ,"Advert": "Annonce"
+  ,"Select Listing": "Sélectionner une annonce"
+  ,"Choose which listing this deal is for": "Choisissez l'annonce concernée par cette offre"
+  ,"You need an active listing to post a deal. Please create a listing first.": "Vous avez besoin d'une annonce active pour publier une offre. Veuillez d'abord créer une annonce."
+  ,"Select a listing...": "Sélectionnez une annonce..."
+  ,"Describe your deal": "Décrivez votre offre"
+  ,"Ex: 20% off all summer items...": "Ex. : 20 % de réduction sur tous les articles d'été..."
+  ,"Set Promo Period": "Définir la période promo"
+  ,"Starts": "Débute"
+  ,"Ends": "Se termine"
+  ,"Select Date": "Sélectionner une date"
+  ,"Targeting Options": "Options de ciblage"
+  ,"Choose who can see your ad": "Choisissez qui peut voir votre annonce"
+  ,"Countries": "Pays"
+  ,"Target Categories": "Catégories ciblées"
+  ,"Select categories": "Sélectionner des catégories"
+  ,"x_selected": "{} sélectionnés"
+  ,"Audience Type": "Type d'audience"
+  ,"All Users": "Tous les utilisateurs"
+  ,"Viewed Similar": "A vu du similaire"
+  ,"Favorited": "Favorisé"
+  ,"Near Location": "Près de la localisation"
+  ,"I accept the": "J'accepte les"
+  ,"Continue to Review": "Continuer vers la révision"
+  ,"users_can_set_max_promo_period": "Les utilisateurs {} peuvent définir une période promo maximale de {} jours."
+  ,"Professional Feature": "Fonction professionnelle"
+  ,"Total Views": "Vues totales"
+  ,"Total Favorites": "Favoris totaux"
+  ,"Avg Rating": "Note moy."
+  ,"Listing Performance": "Performance des annonces"
+  ,"No listings yet": "Aucune annonce pour le moment"
+  ,"No ratings": "Aucune note"
+  ,"stars_reviews": "{} étoiles ({} avis)"
+  ,"Last 7 days": "7 derniers jours"
+  ,"Last 30 days": "30 derniers jours"
+  ,"Last 90 days": "90 derniers jours"
+  ,"All Time": "Depuis toujours"
+  ,"Performance Snapshot": "Aperçu des performances"
+  ,"Engagement Deep Dive": "Analyse approfondie de l'engagement"
+  ,"Growth Opportunities": "Opportunités de croissance"
+  ,"Bookings": "Réservations"
+  ,"Avg. Rating": "Note moy."
+  ,"Chat Initiations": "Ouvertures de chat"
+  ,"Taps / Vouch": "Taps / Recommandations"
+  ,"vs previous period": "vs période précédente"
+  ,"Improve Listing Quality": "Améliorer la qualité de l'annonce"
+  ,"Become a Top Lister": "Devenir un annonceur de premier plan"
+  ,"you_have_listings_to_improve": "Vous avez {} annonces qui pourraient être améliorées avec plus de photos ou une description plus longue."
+  ,"you_are_bookings_away_for_badge": "Vous êtes à {} réservations d'obtenir le badge \"Approuvé par la communauté\" !"
+  ,"Choose Your Plan": "Choisissez votre forfait"
+  ,"Unlock Premium Features": "Débloquez les fonctionnalités premium"
+  ,"Choose the perfect plan for your business": "Choisissez le forfait idéal pour votre entreprise"
+  ,"Monthly": "Mensuel"
+  ,"Yearly (Save 17%)": "Annuel (Économisez 17%)"
+  ,"MOST POPULAR": "LE PLUS POPULAIRE"
+  ,"Free Forever": "Gratuit à vie"
+  ,"Current": "Actuel"
+  ,"Current Plan": "Forfait actuel"
+  ,"Downgrade": "Rétrograder"
+  ,"Subscribe Now": "S'abonner maintenant"
+  ,"Confirm Downgrade": "Confirmer la rétrogradation"
+  ,"Are you sure you want to downgrade to the Free plan? You will lose access to premium features.": "Voulez-vous vraiment rétrograder vers le forfait Gratuit ? Vous perdrez l'accès aux fonctionnalités premium."
+  ,"Downgrade feature coming soon!": "La rétrogradation arrive bientôt !"
+  ,"Failed to refresh subscription": "Échec de l'actualisation de l'abonnement"
+  ,"Create up to 3 listings": "Créez jusqu'à 3 annonces"
+  ,"Basic listing management": "Gestion basique des annonces"
+  ,"Standard search visibility": "Visibilité standard dans la recherche"
+  ,"Community support": "Support communautaire"
+  ,"Booking system with email & reminders": "Système de réservation avec e-mails et rappels"
+  ,"Standard Analytics on listing performance": "Analytique standard des performances d'annonces"
+  ,"AI photo enhancements": "Améliorations photo par IA"
+  ,"All Professional Services": "Tous les services professionnels"
+  ,"Enable Chat to talk directly with customers": "Activez le chat pour parler directement aux clients"
+  ,"Enable Quotes & Invoices": "Activez Devis et Factures"
+  ,"Unlock Advance Analytics": "Débloquez l'analytique avancée"
+  ,"Deal Analytics": "Analytique de l'offre"
+  ,"No analytics available": "Aucune analytique disponible"
+  ,"deal_with_caption": "Offre : {}"
+  ,"Views": "Vues"
+  ,"Saves": "Enregistrements"
+  ,"Claims": "Réclamations"
+  ,"Users": "Utilisateurs"
+  ,"Redemption Status": "Statut des utilisations"
+  ,"Total Redeemed": "Total utilisé"
+  ,"Limit": "Limite"
+  ,"Remaining": "Restant"
+  ,"Engagement Metrics": "Métriques d'engagement"
+  ,"View to Claim Rate": "Taux vue→réclamation"
+  ,"of viewers claimed the deal": "des spectateurs ont réclamé l'offre"
+  ,"View to Save Rate": "Taux vue→enregistrement"
+  ,"of viewers saved the deal": "des spectateurs ont enregistré l'offre"
+  ,"Save to Claim Rate": "Taux enregistrement→réclamation"
+  ,"of savers claimed the deal": "des enregistreurs ont réclamé l'offre"
+  ,"Avg Claims per User": "Réclamations moy. par utilisateur"
+  ,"times each user claimed on average": "fois que chaque utilisateur a réclamé en moyenne"
+  ,"Inactive": "Inactif"
+  ,"Sold out": "Épuisé"
+  ,"Accepting claims": "Réclamations acceptées"
+  ,"on_free_plan": "Vous êtes sur le plan Gratuit"
+  ,"pro_premium_plan_limits": "Plan Professional : 10 annonces/mois\nPlan Premium : 20 annonces/mois"
+  ,"Deal Details": "Détails de l'offre"
+  ,"View Analytics": "Voir l'analytique"
+  ,"Until {}": "Jusqu'au {}"
+  ,"Availability": "Disponibilité"
+  ,"redeemed_count": "Utilisé : {}/{}"
+  ,"remaining_count": "{} restants"
+  ,"Promo Code": "Code promo"
+  ,"Claim In-App": "Réclamer dans l'app"
 }

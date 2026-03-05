@@ -563,6 +563,16 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
+
+    // Admin subscription audit log
+    match /admin_subscription_audit_logs/{logId} {
+      // Admins can create and read audit entries
+      allow create: if isAdmin() &&
+        request.resource.data.action == 'edit_user_subscription';
+      allow read: if isAdmin();
+      // Immutable audit records from client
+      allow update, delete: if false;
+    }
     
     // Email verification codes
     match /email_verifications/{verificationId} {

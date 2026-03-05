@@ -328,7 +328,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                 Row(
                                   children: [
                                     Text(
-                                      'Qty: ',
+                                      '${'Qty'.tr()}: ',
                                       style: TextStyle(
                                         fontSize: 11,
                                         color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
@@ -405,7 +405,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                     const SizedBox(width: 8),
                                     Flexible(
                                       child: Text(
-                                        'Subtotal: ${(service.price * quantity).toStringAsFixed(2)} ${widget.listing.currencyCode}',
+                                        '${'Subtotal'.tr()}: ${(service.price * quantity).toStringAsFixed(2)} ${widget.listing.currencyCode}',
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w600,

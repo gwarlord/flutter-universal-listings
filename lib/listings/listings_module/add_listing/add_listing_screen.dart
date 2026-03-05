@@ -255,6 +255,69 @@ class _AddListingScreenState extends State<AddListingScreen> {
   // Rentals (Premium Feature)
   RentalConfig? _rentalConfig;
 
+  String _localizedCategoryName(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return value;
+
+    final normalized = trimmed.replaceAll(RegExp(r'[_-]+'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+    final titleCase = normalized
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .map(
+          (word) =>
+              word.substring(0, 1).toUpperCase() + word.substring(1).toLowerCase(),
+        )
+        .join(' ');
+
+    final normalizedLower = normalized.toLowerCase();
+    const aliases = <String, String>{
+      'food drink': 'Food & Drink',
+      'food drinks': 'Food & Drink',
+      'food beverage': 'Food & Drink',
+      'food beverages': 'Food & Drink',
+      'restaurants': 'Restaurants',
+      'restaurant': 'Restaurant',
+      'realestate': 'Real Estate',
+      'real estate': 'Real Estate',
+      'automobile': 'Automotive',
+      'auto': 'Auto',
+      'automotive': 'Automotive',
+      'health beauty': 'Health & Beauty',
+      'health and beauty': 'Health & Beauty',
+      'beauty spa': 'Beauty & Spa',
+      'beauty and spa': 'Beauty & Spa',
+      'home service': 'Home Services',
+      'home services': 'Home Services',
+      'professional service': 'Professional Service',
+      'professional services': 'Professional Services',
+      'travel tourism': 'Travel & Tourism',
+      'travel and tourism': 'Travel & Tourism',
+      'home garden': 'Home & Garden',
+      'home and garden': 'Home & Garden',
+    };
+
+    final aliasKey = aliases[normalizedLower];
+    if (aliasKey != null) {
+      final aliasTranslated = aliasKey.tr();
+      if (aliasTranslated != aliasKey) return aliasTranslated;
+    }
+
+    final candidates = <String>[
+      trimmed,
+      normalized,
+      titleCase,
+      normalizedLower,
+      normalized.toUpperCase(),
+    ];
+
+    for (final key in candidates) {
+      final translated = key.tr();
+      if (translated != key) return translated;
+    }
+
+    return normalized;
+  }
+
   @override
   void initState() {
     if (isEdit) {
@@ -490,7 +553,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
         collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: children,
@@ -515,7 +578,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Bookings are available on Pro plans.',
+              'Bookings are available on Pro plans.'.tr(),
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 color: dark ? Colors.white : Colors.black,
@@ -523,7 +586,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Upgrade your subscription to enable booking for this listing.',
+              'Upgrade your subscription to enable booking for this listing.'.tr(),
               style: TextStyle(
                 color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
               ),
@@ -546,7 +609,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Turn on "Booking Services" from the Activate Booking screen.',
+              'Turn on "Booking Services" from the Activate Booking screen.'.tr(),
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 color: dark ? Colors.white : Colors.black,
@@ -554,7 +617,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Booking options are disabled here to avoid conflicting settings.',
+              'Booking options are disabled here to avoid conflicting settings.'.tr(),
               style: TextStyle(
                 color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
               ),
@@ -593,13 +656,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
           value: _bookingEnabled,
           onChanged: (value) => setState(() => _bookingEnabled = value),
           title: Text(
-            'Require booking',
+            'Require booking'.tr(),
             style: TextStyle(
               color: dark ? Colors.white : Colors.black,
             ),
           ),
           subtitle: Text(
-            'Show a "Book Now" button on your listing.',
+            'Show a "Book Now" button on your listing.'.tr(),
             style: TextStyle(
               color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
             ),
@@ -614,13 +677,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
             value: _allowQuantitySelection,
             onChanged: (value) => setState(() => _allowQuantitySelection = value),
             title: Text(
-              'Allow quantity selection',
+              'Allow quantity selection'.tr(),
               style: TextStyle(
                 color: dark ? Colors.white : Colors.black,
               ),
             ),
             subtitle: Text(
-              'Customers can select quantity when booking services.',
+              'Customers can select quantity when booking services.'.tr(),
               style: TextStyle(
                 color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
               ),
@@ -635,13 +698,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
             value: _useTimeBlocks,
             onChanged: (value) => setState(() => _useTimeBlocks = value),
             title: Text(
-              'Use time blocks',
+              'Use time blocks'.tr(),
               style: TextStyle(
                 color: dark ? Colors.white : Colors.black,
               ),
             ),
             subtitle: Text(
-              'Enable hourly time slot bookings instead of full day bookings.',
+              'Enable hourly time slot bookings instead of full day bookings.'.tr(),
               style: TextStyle(
                 color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
               ),
@@ -656,13 +719,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
             value: _allowMultipleBookingsPerDay,
             onChanged: (value) => setState(() => _allowMultipleBookingsPerDay = value),
             title: Text(
-              'Allow multiple bookings per day',
+              'Allow multiple bookings per day'.tr(),
               style: TextStyle(
                 color: dark ? Colors.white : Colors.black,
               ),
             ),
             subtitle: Text(
-              'Multiple customers can book different time slots on the same day.',
+              'Multiple customers can book different time slots on the same day.'.tr(),
               style: TextStyle(
                 color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
               ),
@@ -679,7 +742,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Available Time Blocks',
+                  'Available Time Blocks'.tr(),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -688,7 +751,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Define hourly time slots (e.g., 09:00-10:00, 10:00-11:00)',
+                  'Define hourly time slots (e.g., 09:00-10:00, 10:00-11:00)'.tr(),
                   style: TextStyle(
                     fontSize: 13,
                     color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -707,7 +770,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       labelStyle: TextStyle(color: dark ? Colors.white : Colors.black87),
                     )),
                     ActionChip(
-                      label: Text('+ Add Time Block'),
+                      label: Text('+ Add Time Block'.tr()),
                       onPressed: () => _showAddTimeBlockDialog(dark),
                       backgroundColor: Color(colorPrimary).withOpacity(0.1),
                       labelStyle: TextStyle(color: Color(colorPrimary)),
@@ -814,7 +877,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       controller: _servicePriceController,
                       keyboardType: TextInputType.number,
                       style: TextStyle(color: dark ? Colors.white : Colors.black),
-                      decoration: _getInputDecoration(label: 'Price (optional)', hint: '0.00'),
+                      decoration: _getInputDecoration(label: 'Price (optional)'.tr(), hint: '0.00'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -822,7 +885,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     child: TextField(
                       controller: _serviceDurationController,
                       style: TextStyle(color: dark ? Colors.white : Colors.black),
-                      decoration: _getInputDecoration(label: 'Duration', hint: 'e.g. 30 mins'),
+                      decoration: _getInputDecoration(label: 'Duration'.tr(), hint: 'e.g. 30 mins'),
                     ),
                   ),
                 ],
@@ -845,7 +908,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     });
                   },
                   icon: const Icon(Icons.add),
-                  label: const Text('Add to Services'),
+                  label: Text('Add to Services'.tr()),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Color(colorPrimary),
                     side: BorderSide(color: Color(colorPrimary)),
@@ -903,7 +966,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
           runSpacing: 8,
           children: [
             ActionChip(
-              label: Text('+ Add Blocked Dates'),
+              label: Text('+ Add Blocked Dates'.tr()),
               onPressed: () async {
                 final selectedDates = await showDialog<List<DateTime>>(
                   context: context,
@@ -1750,10 +1813,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         dropdownColor: dark ? Colors.grey[900] : Colors.white,
                         hint: Text('Choose Category'.tr()),
                         value: _categoryValue,
-                        items: (_categories.toList()..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase())))
+                        items: (_categories.toList()..sort((a, b) => _localizedCategoryName(a.title).toLowerCase().compareTo(_localizedCategoryName(b.title).toLowerCase())))
                           .map((category) => DropdownMenuItem<CategoriesModel>(
                               value: category,
-                              child: Text(category.title, overflow: TextOverflow.ellipsis),
+                              child: Text(_localizedCategoryName(category.title), overflow: TextOverflow.ellipsis),
                             ))
                           .toList(),
                         onChanged: isLoadingCategories
@@ -1851,7 +1914,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           child: OutlinedButton.icon(
                             icon: const Icon(Icons.auto_awesome, size: 18),
                             label: Text(
-                              _description.trim().isEmpty ? 'Generate with AI' : 'Enhance with AI',
+                              _description.trim().isEmpty ? 'Generate with AI'.tr() : 'Enhance with AI'.tr(),
                               style: const TextStyle(fontSize: 13),
                             ),
                             style: OutlinedButton.styleFrom(
@@ -1946,7 +2009,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       ),
                       child: CheckboxListTile(
                         title: Text(
-                          'Verified',
+                          'Verified'.tr(),
                           style: TextStyle(color: Color(colorPrimary), fontWeight: FontWeight.bold),
                         ),
                         value: _verified,
@@ -2011,32 +2074,32 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 children: [
                   TextField(
                     controller: _instagramController,
-                    decoration: _getInputDecoration(label: 'Instagram URL', icon: Icons.camera_alt),
+                    decoration: _getInputDecoration(label: 'Instagram URL'.tr(), icon: Icons.camera_alt),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _facebookController,
-                    decoration: _getInputDecoration(label: 'Facebook URL', icon: Icons.facebook),
+                    decoration: _getInputDecoration(label: 'Facebook URL'.tr(), icon: Icons.facebook),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _whatsappController,
-                    decoration: _getInputDecoration(label: 'WhatsApp Phone', icon: Icons.message),
+                    decoration: _getInputDecoration(label: 'WhatsApp Phone'.tr(), icon: Icons.message),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _tiktokController,
-                    decoration: _getInputDecoration(label: 'TikTok URL', icon: Icons.music_note),
+                    decoration: _getInputDecoration(label: 'TikTok URL'.tr(), icon: Icons.music_note),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _youtubeController,
-                    decoration: _getInputDecoration(label: 'YouTube URL', icon: Icons.ondemand_video),
+                    decoration: _getInputDecoration(label: 'YouTube URL'.tr(), icon: Icons.ondemand_video),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _xController,
-                    decoration: _getInputDecoration(label: 'X (Twitter) URL', icon: Icons.alternate_email),
+                    decoration: _getInputDecoration(label: 'X (Twitter) URL'.tr(), icon: Icons.alternate_email),
                   ),
                 ],
               ),
@@ -2105,9 +2168,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     contentPadding: EdgeInsets.zero,
                     value: _storeEnabled,
                     onChanged: (value) => setState(() => _storeEnabled = value),
-                    title: Text('Enable Store/Ecommerce'),
+                    title: Text('Enable Store/Ecommerce'.tr()),
                     subtitle: Text(
-                      'Allow users to visit your online store or shop.',
+                      'Allow users to visit your online store or shop.'.tr(),
                       style: TextStyle(fontSize: 12),
                     ),
                     activeColor: Color(colorPrimary),
@@ -2121,7 +2184,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     DropdownButtonFormField<String>(
                       value: _storeMode,
                       decoration: _getInputDecoration(
-                        label: 'Store Mode',
+                        label: 'Store Mode'.tr(),
                         icon: Icons.storefront,
                       ),
                       dropdownColor: isDarkMode(context) ? Colors.grey.shade800 : Colors.white,
@@ -2132,14 +2195,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       items: [
                         DropdownMenuItem(
                           value: 'external_url',
-                          child: Text('External URL Only'),
+                          child: Text('External URL Only'.tr()),
                         ),
                         DropdownMenuItem(
                           value: 'internal_catalog',
                           enabled: isPremiumUser(currentUser),
                           child: Row(
                             children: [
-                              Text('Internal Catalog'),
+                              Text('Internal Catalog'.tr()),
                               if (!isPremiumUser(currentUser)) ...[
                                 const SizedBox(width: 8),
                                 Container(
@@ -2149,7 +2212,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    'PREMIUM',
+                                    'PREMIUM'.tr(),
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
@@ -2166,7 +2229,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           enabled: isPremiumUser(currentUser),
                           child: Row(
                             children: [
-                              Text('Both (URL + Catalog)'),
+                              Text('Both (URL + Catalog)'.tr()),
                               if (!isPremiumUser(currentUser)) ...[
                                 const SizedBox(width: 8),
                                 Container(
@@ -2176,7 +2239,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    'PREMIUM',
+                                    'PREMIUM'.tr(),
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
@@ -2211,7 +2274,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       TextField(
                         controller: _storeUrlController,
                         keyboardType: TextInputType.url,
-                        decoration: _getInputDecoration(label: 'Store URL', icon: Icons.link),
+                        decoration: _getInputDecoration(label: 'Store URL'.tr(), icon: Icons.link),
                       ),
                       const SizedBox(height: 12),
                     ],
@@ -2219,9 +2282,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     TextField(
                       keyboardType: TextInputType.number,
                       decoration: _getInputDecoration(
-                        label: 'Lead Time (Hours)',
+                        label: 'Lead Time (Hours)'.tr(),
                         icon: Icons.access_time,
-                        hint: 'Minimum hours needed to prepare orders',
+                        hint: 'Minimum hours needed to prepare orders'.tr(),
                       ),
                       controller: TextEditingController(text: _storeLeadTimeHours.toString())
                         ..selection = TextSelection.fromPosition(
@@ -2256,7 +2319,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           ));
                         },
                         icon: Icon(Icons.inventory_2),
-                        label: Text(isEdit ? 'Manage Catalog Items' : 'Save Listing First'),
+                        label: Text(isEdit ? 'Manage Catalog Items'.tr() : 'Save Listing First'.tr()),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: isEdit ? Color(colorPrimary) : Colors.grey,
                           foregroundColor: Colors.white,
@@ -2275,11 +2338,11 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         value: _acceptProofOfPayment,
                         onChanged: (value) => setState(() => _acceptProofOfPayment = value),
                         title: Text(
-                          'Accept Proof of Payment',
+                          'Accept Proof of Payment'.tr(),
                           style: TextStyle(fontWeight: FontWeight.w500),
                         ),
                         subtitle: Text(
-                          'Require customers to provide proof of payment (photo/receipt) for orders',
+                          'Require customers to provide proof of payment (photo/receipt) for orders'.tr(),
                           style: TextStyle(fontSize: 12),
                         ),
                         activeColor: Color(colorPrimary),
@@ -2340,7 +2403,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           ));
                         },
                         icon: const Icon(Icons.inventory_2),
-                        label: Text('Manage Rental Catalog'),
+                        label: Text('Manage Rental Catalog'.tr()),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(colorPrimary),
                           foregroundColor: Colors.white,
@@ -3212,7 +3275,10 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
             _buildCalendar(),
             const SizedBox(height: 16),
             Text(
-              '${_selectedDates.length} ${_selectedDates.length == 1 ? 'date' : 'dates'} selected'.tr(),
+              (_selectedDates.length == 1
+                      ? '{} date selected'
+                      : '{} dates selected')
+                  .tr(args: [_selectedDates.length.toString()]),
               style: TextStyle(
                 fontSize: 14,
                 color: widget.dark ? Colors.grey.shade400 : Colors.grey.shade700,

@@ -2,6 +2,7 @@ import 'package:caribtap/listings/location/location_scope_cubit.dart';
 import 'package:caribtap/listings/location/location_scope_model.dart';
 import 'package:caribtap/listings/location/ui/location_scope_selector_sheet.dart';
 import 'package:caribtap/listings/utils/caribbean_countries.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -75,16 +76,16 @@ class _LocationScopeFloatingButtonState extends State<LocationScopeFloatingButto
         String? flagEmoji;
 
         if (scope.mode == LocationScopeMode.caribbean) {
-          label = 'Caribbean';
+              label = 'Caribbean'.tr();
           leadingIcon = Icons.public;
         } else if (scope.mode == LocationScopeMode.nearby) {
-          label = 'Nearby';
+              label = 'Nearby'.tr();
           leadingIcon = Icons.my_location;
         } else {
           final countryObj = effectiveCountry != null
               ? CaribbeanCountries.byCode(effectiveCountry)
               : null;
-          label = countryObj?.name ?? 'Local';
+              label = countryObj?.name ?? 'Local'.tr();
 
           if (effectiveCountry != null && effectiveCountry.length == 2) {
             flagEmoji = _countryCodeToFlag(effectiveCountry);
@@ -117,7 +118,7 @@ class _LocationScopeFloatingButtonState extends State<LocationScopeFloatingButto
           left: safePosition.dx,
           top: safePosition.dy,
           child: Tooltip(
-            message: 'Tap to toggle • Long press for options',
+                message: 'Tap to toggle • Long press for options'.tr(),
             child: GestureDetector(
               onPanUpdate: (details) {
                 setState(() {
@@ -203,7 +204,7 @@ class _LocationScopeFloatingButtonState extends State<LocationScopeFloatingButto
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    'Hold for more',
+                                        'Hold for more'.tr(),
                                     style: TextStyle(
                                       fontSize: 8,
                                       fontWeight: FontWeight.w500,

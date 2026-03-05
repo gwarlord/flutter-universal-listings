@@ -117,7 +117,7 @@ class _QuoteBuilderScreenState extends State<QuoteBuilderScreen> {
         listener: (context, state) {
           if (state.errorMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage!)),
+              SnackBar(content: Text(state.errorMessage!.tr())),
             );
           }
           if (!state.isSaving && state.quote.id.isNotEmpty) {
@@ -452,7 +452,7 @@ class _QuoteBuilderScreenState extends State<QuoteBuilderScreen> {
             decoration: InputDecoration(
               labelText: 'Company Registration #'.tr(),
               labelStyle: const TextStyle(color: Colors.white70),
-              hintText: 'Optional',
+              hintText: 'Optional'.tr(),
               hintStyle: const TextStyle(color: Colors.white54),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               prefix: const Padding(padding: EdgeInsets.only(right: 8), child: Icon(Icons.business, color: Colors.white70, size: 18)),
@@ -468,7 +468,7 @@ class _QuoteBuilderScreenState extends State<QuoteBuilderScreen> {
             decoration: InputDecoration(
               labelText: 'VAT / Tax ID #'.tr(),
               labelStyle: const TextStyle(color: Colors.white70),
-              hintText: 'Optional',
+              hintText: 'Optional'.tr(),
               hintStyle: const TextStyle(color: Colors.white54),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               prefix: const Padding(padding: EdgeInsets.only(right: 8), child: Icon(Icons.receipt_long, color: Colors.white70, size: 18)),
@@ -848,6 +848,7 @@ class _QuoteBuilderScreenState extends State<QuoteBuilderScreen> {
                 controller: descriptionController,
                 decoration: InputDecoration(
                   labelText: 'Description'.tr(),
+                  hintText: 'Item description hint'.tr(),
                   labelStyle: const TextStyle(color: Colors.white70),
                   filled: true,
                   fillColor: Colors.white.withOpacity(0.05),
@@ -859,6 +860,7 @@ class _QuoteBuilderScreenState extends State<QuoteBuilderScreen> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   labelText: 'Quantity'.tr(),
+                  hintText: 'Quantity hint'.tr(),
                   labelStyle: const TextStyle(color: Colors.white70),
                   filled: true,
                   fillColor: Colors.white.withOpacity(0.05),
@@ -870,6 +872,7 @@ class _QuoteBuilderScreenState extends State<QuoteBuilderScreen> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   labelText: 'Unit Price'.tr(),
+                  hintText: 'Unit price hint'.tr(),
                   labelStyle: const TextStyle(color: Colors.white70),
                   filled: true,
                   fillColor: Colors.white.withOpacity(0.05),
@@ -949,18 +952,18 @@ class _QuoteBuilderScreenState extends State<QuoteBuilderScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('PDF downloaded to: $path')),
+        SnackBar(content: Text('${'PDF downloaded to'.tr()}: $path')),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to download PDF: $e')),
+        SnackBar(content: Text('${'Failed to download PDF'.tr()}: $e')),
       );
     }
   }
 
   String _displayName(ListingsUser user) {
     final name = '${user.firstName} ${user.lastName}'.trim();
-    return name.isNotEmpty ? name : 'CaribTap Business';
+    return name.isNotEmpty ? name : 'CaribTap Business'.tr();
   }
 }

@@ -48,7 +48,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           if (state is InvoiceDetailError) {
             return Scaffold(
               appBar: AppBar(title: Text('Invoice'.tr())),
-              body: Center(child: Text(state.message)),
+              body: Center(child: Text(state.message.tr())),
             );
           }
 
@@ -180,7 +180,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     final token = invoice.shareToken;
     if (token == null || token.isEmpty) return;
     final link = ShareLinkService().buildPublicDocLink(type: 'invoice', token: token);
-    await Share.share('Invoice link: $link');
+    await Share.share('${'Invoice link'.tr()}: $link');
   }
 
   Future<void> _shareInvoicePdf(InvoiceModel invoice) async {
@@ -197,6 +197,6 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
   String _displayName(ListingsUser user) {
     final name = '${user.firstName} ${user.lastName}'.trim();
-    return name.isNotEmpty ? name : 'CaribTap Business';
+    return name.isNotEmpty ? name : 'CaribTap Business'.tr();
   }
 }

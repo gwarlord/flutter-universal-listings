@@ -38,7 +38,7 @@ class _MyBrandsScreenState extends State<MyBrandsScreen> {
         elevation: 0,
         backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
         title: Text(
-          'My Brands'.tr(),
+          'My Brands/Branches'.tr(),
           style: TextStyle(
             color: dark ? Colors.white : Colors.black,
             fontSize: 18,

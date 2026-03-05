@@ -471,22 +471,16 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
+              content: Text('Something went wrong'.tr()),
             backgroundColor: Colors.red,
           ),
         );
       }
     } finally {
       if (mounted) {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ProUpgradeScreen(
-                    currentUser: widget.currentUser,
-                    initialTier: tier == 'premium' ? 3 : 2,
-                  ),
-                ),
-              );
+          setState(() => _isLoading = false);
+          await _refreshUserData();
+        }
+      }
     }
-  }
 }

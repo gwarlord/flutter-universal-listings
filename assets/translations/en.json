@@ -46,6 +46,29 @@
   "Filter": "Filter",
   "Sort": "Sort",
   "Details": "Details",
+  "Location Scope": "Location Scope",
+  "Choose what content you want to see": "Choose what content you want to see",
+  "Mode": "Mode",
+  "Local": "Local",
+  "Caribbean": "Caribbean",
+  "Nearby": "Nearby",
+  "Show content from a specific country": "Show content from a specific country",
+  "Show content from all Caribbean countries": "Show content from all Caribbean countries",
+  "Show content based on your GPS location": "Show content based on your GPS location",
+  "Use Home Country": "Use Home Country",
+  "Strict Local Only": "Strict Local Only",
+  "Only show content from selected country": "Only show content from selected country",
+  "Show local content first, then other islands": "Show local content first, then other islands",
+  "Tap to localise": "Tap to localise",
+  "Tap for Caribbean": "Tap for Caribbean",
+  "Tap to change": "Tap to change",
+  "Tap to toggle • Long press for options": "Tap to toggle • Long press for options",
+  "Hold for more": "Hold for more",
+  "Location permission granted. Content will be filtered based on your GPS location.": "Location permission granted. Content will be filtered based on your GPS location.",
+  "Location permission required. You will be prompted when you save.": "Location permission required. You will be prompted when you save.",
+  "Location permission is required for Nearby mode": "Location permission is required for Nearby mode",
+  "Select Country": "Select Country",
+  "Search countries...": "Search countries...",
   "Instagram": "Instagram",
   "Facebook": "Facebook",
   "TikTok": "TikTok",
@@ -56,6 +79,28 @@
   "Wheelchair Accessible": "Wheelchair Accessible",
   "Business Type": "Business Type",
   "Restaurant": "Restaurant",
+  "Restaurants": "Restaurants",
+  "Real Estate": "Real Estate",
+  "Auto": "Auto",
+  "Automotive": "Automotive",
+  "Beauty & Spa": "Beauty & Spa",
+  "Electronics": "Electronics",
+  "Events": "Events",
+  "Health & Fitness": "Health & Fitness",
+  "Home Services": "Home Services",
+  "Entertainment": "Entertainment",
+  "Professional Services": "Professional Services",
+  "Professional Service": "Professional Service",
+  "Education": "Education",
+  "Travel & Tourism": "Travel & Tourism",
+  "Pets": "Pets",
+  "Sports": "Sports",
+  "Food & Drink": "Food & Drink",
+  "Health & Beauty": "Health & Beauty",
+  "Accommodation": "Accommodation",
+  "Home & Garden": "Home & Garden",
+  "Nightlife": "Nightlife",
+  "Shopping": "Shopping",
   "Cash,Card": "Cash,Card",
   "Parking": "Parking",
   "Available": "Available",
@@ -69,11 +114,76 @@
   "Explore": "Explore",
   "Listings": "Listings",
   "My Listings": "My Listings",
+  "Listing Freshness": "Listing Freshness",
+  "Manage your active listings": "Manage your active listings",
+  "Select multiple": "Select multiple",
+  "Reload scores": "Reload scores",
+  "Urgent Attention": "Urgent Attention",
+  "These listings will hide soon. Take action now!": "These listings will hide soon. Take action now!",
+  "Needs Refresh Soon": "Needs Refresh Soon",
+  "Plan to refresh these listings soon.": "Plan to refresh these listings soon.",
+  "Active & Fresh": "Active & Fresh",
+  "These listings are in good standing.": "These listings are in good standing.",
+  "Never Expire": "Never Expire",
+  "These listings are exempt from automatic hiding.": "These listings are exempt from automatic hiding.",
+  "Hidden Listings": "Hidden Listings",
+  "Refresh to make these visible again.": "Refresh to make these visible again.",
+  "Refresh All Urgent ({})": "Refresh All Urgent ({})",
+  "Overview": "Overview",
+  "Urgent": "Urgent",
+  "Warning": "Warning",
+  "Fresh": "Fresh",
+  "Hidden": "Hidden",
+  "Exempt (Never Expire)": "Exempt (Never Expire)",
+  "Refresh All": "Refresh All",
+  "Deselect All": "Deselect All",
+  "Auto-Refresh Eligible": "Auto-Refresh Eligible",
+  "Refresh Now": "Refresh Now",
+  "Make Visible": "Make Visible",
   "My Brands/Branches": "My Brands/Branches",
+  "Manage Locations": "Manage Locations",
+  "Locations": "Locations",
+  "Delete Brand": "Delete Brand",
+  "Delete Brand?": "Delete Brand?",
+  "No locations linked": "No locations linked",
+  "No locations found": "No locations found",
+  "Verified Brand": "Verified Brand",
+  "Your brand will be deleted.": "Your brand will be deleted.",
+  "Your listings will be kept": "Your listings will be kept",
+  "Deleting brand...": "Deleting brand...",
+  "Brand deleted successfully!": "Brand deleted successfully!",
   "Orders": "Orders",
   "Rentals": "Rentals",
+  "Post Event": "Post Event",
+  "Create Event": "Create Event",
+  "Edit Event": "Edit Event",
+  "Event posted successfully.": "Event posted successfully.",
+  "Event Title Hint": "e.g., Carnival Night",
+  "Committee Hint": "e.g., Marketing Team",
+  "Event Description Hint": "Share event details",
+  "Venue Name Hint": "e.g., Queen's Park Savannah",
+  "Ticket Link Hint": "https://...",
+  "Facebook Page Hint": "e.g., facebook.com/yourevent",
+  "Instagram Username Hint": "e.g., @yourevent",
+  "Ticket Name Hint": "e.g., VIP",
+  "Ticket Price Hint": "e.g., 25.00",
+  "Ticket Description Hint": "Optional ticket details",
+  "Member Name Hint": "e.g., John Doe",
+  "Contact Number Hint": "e.g., +1 868...",
+  "Manage Rentals": "Manage Rentals",
   "Bookings": "Bookings",
   "Booking Requests": "Booking Requests",
+  "Host": "Host",
+  "Start Date": "Start Date",
+  "End Date": "End Date",
+  "Duration": "Duration",
+  "night": "night",
+  "nights": "nights",
+  "No pending bookings": "No pending bookings",
+  "No confirmed bookings": "No confirmed bookings",
+  "No rejected bookings": "No rejected bookings",
+  "No cancelled bookings": "No cancelled bookings",
+  "Dates with bookings": "Dates with bookings",
   "Activate Booking": "Activate Booking",
   "Conversations": "Conversations",
   "Chats": "Chats",
@@ -82,6 +192,10 @@
   "Settings": "Settings",
   "Favorites": "Favorites",
   "Notifications": "Notifications",
+  "Assigned Listings": "Assigned Listings",
+  "No Assigned Listings": "No Assigned Listings",
+  "You have not been added as a collaborator to any listings": "You have not been added as a collaborator to any listings",
+  "x_more": "+{} more",
   
   "Analytics": "Analytics",
   "Advanced Analytics": "Advanced Analytics",
@@ -91,6 +205,20 @@
   "Log Out": "Log Out",
   
   "Deals & Promotions": "Deals & Promotions",
+  "Post your deals, promotions, and ads here!": "Post your deals, promotions, and ads here!",
+  "Upload New Ad": "Upload New Ad",
+  "View All Deals": "View All Deals",
+  "Ad Posting Quota": "Ad Posting Quota",
+  "Tier": "Tier",
+  "Free": "Free",
+  "Professional": "Professional",
+  "Premium": "Premium",
+  "Posts this month": "Posts this month",
+  "Resets on": "Resets on",
+  "Upgrade to Post Ads": "Upgrade to Post Ads",
+  "You're on the Free plan": "You're on the Free plan",
+  "Professional plan: 10 ads/month\nPremium plan: 20 ads/month": "Professional plan: 10 ads/month\nPremium plan: 20 ads/month",
+  "Also requires at least one active listing.": "Also requires at least one active listing.",
   "Categories": "Categories",
   "Find what you need": "Find what you need",
   "Search listings...": "Search listings...",
@@ -107,6 +235,8 @@
   "View Full Menu": "View Full Menu",
   "Browse Rentals": "Browse Rentals",
   "Explore rental items": "Explore rental items",
+  "Food": "Food",
+  "General": "General",
   "Services": "Services",
   "Show all": "Show all",
   "Show less": "Show less",
@@ -170,6 +300,7 @@
   "Sign Up": "Sign Up",
   "Sign Out": "Sign Out",
   "Logout": "Logout",
+  "It's ok, your listings are safe": "It's ok, your listings are safe",
   "Register": "Register",
   "Create Account": "Create Account",
   "Email": "Email",
@@ -206,14 +337,58 @@
 
   "Add Listing": "Add Listing",
   "Edit Listing": "Edit Listing",
+  "Request Featured": "Request Featured",
+  "Manage Collaborators": "Manage Collaborators",
+  "Team Chat": "Team Chat",
+  "Manage Reviews": "Manage Reviews",
   "Delete Listing": "Delete Listing",
   "Delete Listing?": "Delete Listing?",
   "Are you sure you want to remove this listing?": "Are you sure you want to remove this listing?",
   "Listing Details": "Listing Details",
+  "Details & Hours": "Details & Hours",
+  "Contact Information": "Contact Information",
+  "Social Media": "Social Media",
+  "Business Details": "Business Details",
+  "Not seen on listing, used for quote and invoice generation": "Not seen on listing, used for quote and invoice generation",
+  "Company Registration #": "Company Registration #",
+  "VAT / Tax ID #": "VAT / Tax ID #",
+  "Menu (Food & Beverage)": "Menu (Food & Beverage)",
+  "Store / Ecommerce (Optional)": "Store / Ecommerce (Optional)",
+  "Logo (Optional)": "Logo (Optional)",
+  "Enable Store/Ecommerce": "Enable Store/Ecommerce",
+  "Store Mode": "Store Mode",
+  "External URL Only": "External URL Only",
+  "Internal Catalog": "Internal Catalog",
+  "Both (URL + Catalog)": "Both (URL + Catalog)",
+  "Lead Time (Hours)": "Lead Time (Hours)",
+  "Minimum hours needed to prepare orders": "Minimum hours needed to prepare orders",
+  "Internal Catalog requires Premium subscription": "Internal Catalog requires Premium subscription",
+  "Please save the listing first, then you can manage catalog items": "Please save the listing first, then you can manage catalog items",
+  "Manage Catalog Items": "Manage Catalog Items",
+  "Save Listing First": "Save Listing First",
+  "Accept Proof of Payment": "Accept Proof of Payment",
+  "Require customers to provide proof of payment (photo/receipt) for orders": "Require customers to provide proof of payment (photo/receipt) for orders",
+  "Enable Rentals": "Enable Rentals",
+  "Allow customers to rent items from this listing": "Allow customers to rent items from this listing",
+  "Manage Rental Catalog": "Manage Rental Catalog",
   "Listing not found or has been removed.": "Listing not found or has been removed.",
   "Failed to open listing. Please try again.": "Failed to open listing. Please try again.",
   "Failed to open listing management. Please try again.": "Failed to open listing management. Please try again.",
+  "Booking Services": "Booking Services",
+  "Require Booking": "Require Booking",
+  "Show a \"Book Now\" button on your listing": "Show a \"Book Now\" button on your listing",
+  "Allow Quantity Selection": "Allow Quantity Selection",
+  "Customers can select quantity when booking services": "Customers can select quantity when booking services",
+  "Use Time Blocks": "Use Time Blocks",
+  "Enable hourly time slot bookings instead of full day bookings": "Enable hourly time slot bookings instead of full day bookings",
+  "Custom Booking Questions": "Custom Booking Questions",
+  "Ask customers to answer questions when they book": "Ask customers to answer questions when they book",
+  "Allow Multiple Bookings Per Day": "Allow Multiple Bookings Per Day",
+  "Multiple customers can book different time slots on the same day": "Multiple customers can book different time slots on the same day",
   "No listings found": "No listings found",
+  "Listing updated successfully": "Listing updated successfully",
+  "Error loading listings": "Error loading listings",
+  "Error updating listing": "Error updating listing",
   "Deleting...": "Deleting...",
   "Add To Favorites": "Add To Favorites",
   "Remove From Favorites": "Remove From Favorites",
@@ -230,16 +405,81 @@
   
   "Store": "Store",
   "Mini Store": "Mini Store",
+  "Browse Full Store": "Browse Full Store",
   "Cart": "Cart",
   "Checkout": "Checkout",
   "Add to Cart": "Add to Cart",
   "Added to cart": "Added to cart",
   "View Cart": "View Cart",
+  "Cart is empty": "Cart is empty",
+  "Fulfillment Method": "Fulfillment Method",
+  "Delivery Address *": "Delivery Address *",
+  "Shipping Address *": "Shipping Address *",
+  "Shipping Instructions (Optional)": "Shipping Instructions (Optional)",
+  "Street address, city, state, postal code": "Street address, city, state, postal code",
+  "Additional seating info (optional)": "Additional seating info (optional)",
+  "e.g., Special requests, dietary notes": "e.g., Special requests, dietary notes",
+  "Preferred Date/Time (Optional)": "Preferred Date/Time (Optional)",
+  "Not specified": "Not specified",
+  "Notes (Optional)": "Notes (Optional)",
+  "Send Order Request": "Send Order Request",
+  "Please sign in to place an order": "Please sign in to place an order",
+  "Please enter delivery address": "Please enter delivery address",
+  "Please enter shipping address": "Please enter shipping address",
+  "Order request sent successfully!": "Order request sent successfully!",
+  "Scan Table QR Code": "Scan Table QR Code",
+  "Table Scanned: {}": "Table Scanned: {}",
+  "Table {} has been scanned. You can also add additional seating info below.": "Table {} has been scanned. You can also add additional seating info below.",
+  "Creating table session...": "Creating table session...",
+  "Table scanned successfully: {}": "Table scanned successfully: {}",
+  "Failed to create table session. Please try again.": "Failed to create table session. Please try again.",
+  "Invalid QR code format - missing table data": "Invalid QR code format - missing table data",
+  "Invalid QR code - Not a table QR code": "Invalid QR code - Not a table QR code",
+  "Error parsing QR code: {}": "Error parsing QR code: {}",
+  "This QR code is for a different store": "This QR code is for a different store",
+  "Pin Delivery Location": "Pin Delivery Location",
+  "Location Pinned": "Location Pinned",
+  "Tap to pin your delivery location on map": "Tap to pin your delivery location on map",
+  "Location permission is required for delivery": "Location permission is required for delivery",
+  "Delivery Location": "Delivery Location",
+  "Use Current Location": "Use Current Location",
+  "Or enter coordinates manually:": "Or enter coordinates manually:",
+  "Latitude": "Latitude",
+  "Longitude": "Longitude",
+  "Invalid latitude or longitude": "Invalid latitude or longitude",
+  "Failed to get location: {}": "Failed to get location: {}",
+  "Error parsing location: {}": "Error parsing location: {}",
+  "e.g., Leave at front door, signature required": "e.g., Leave at front door, signature required",
   "Empty Cart": "Empty Cart",
   "No items in cart": "No items in cart",
   "Store Settings": "Store Settings",
   "Save Settings": "Save Settings",
   "Store settings updated": "Store settings updated",
+  "CaribTap Subscriptions": "CaribTap Subscriptions",
+  "Store not available": "Store not available",
+  "Unable to open Google Play subscriptions": "Unable to open Google Play subscriptions",
+  "Unable to load plans": "Unable to load plans",
+  "Choose a plan": "Choose a plan",
+  "Pick Professional or Premium to unlock business tools.": "Pick Professional or Premium to unlock business tools.",
+  "AI photo enhancement": "AI photo enhancement",
+  "Watermarking tools": "Watermarking tools",
+  "Priority support": "Priority support",
+  "Everything in Professional": "Everything in Professional",
+  "Quotes & invoices tools": "Quotes & invoices tools",
+  "Full suite with premium business features.": "Full suite with premium business features.",
+  "Current plan": "Current plan",
+  "Current plan: {}": "Current plan: {}",
+  "You are currently on {}.": "You are currently on {}.",
+  "Subscribe": "Subscribe",
+  "No expiration": "No expiration",
+  "Status: {}": "Status: {}",
+  "Expires: {}": "Expires: {}",
+  "Auto-renew: {}": "Auto-renew: {}",
+  "On": "On",
+  "Off": "Off",
+  "Manage subscription in Google Play": "Manage subscription in Google Play",
+  "Benefits": "Benefits",
+  "Restore": "Restore",
   "Fulfillment Methods": "Fulfillment Methods",
   "Select how customers can receive their orders": "Select how customers can receive their orders",
   "At least one fulfillment method must be enabled": "At least one fulfillment method must be enabled",
@@ -264,15 +504,19 @@
   "Menu is visible to customers": "Menu is visible to customers",
   "Menu is hidden from customers": "Menu is hidden from customers",
   "Upload Menu Photos": "Upload Menu Photos",
+  "Upload 1-6 menu images": "Upload 1-6 menu images",
   "Create Digital Menu": "Create Digital Menu",
   "Build items with prices and descriptions": "Build items with prices and descriptions",
   "Menu hidden from customers": "Menu hidden from customers",
+  "Maximum 6 menu photos allowed": "Maximum 6 menu photos allowed",
+  "Uploaded {} photo(s)": "Uploaded {} photo(s)",
   
   "Order Details": "Order Details",
   "My Orders": "My Orders",
   "New Order": "New Order",
   "Customer": "Customer",
   "Items": "Items",
+  "Table": "Table",
   "Subtotal": "Subtotal",
   "Shipping Fee": "Shipping Fee",
   "Delivery Fee": "Delivery Fee",
@@ -320,14 +564,19 @@
   
   "Requested": "Requested",
   "Pending": "Pending",
+  "Active": "Active",
+  "Closed": "Closed",
   "Confirmed": "Confirmed",
   "Preparing": "Preparing",
   "Ready": "Ready",
   "Served": "Served",
   "Fulfilled": "Fulfilled",
   "Completed": "Completed",
+  "Disputed": "Disputed",
   "Declined": "Declined",
   "Cancelled": "Cancelled",
+  "Start": "Start",
+  "End": "End",
   
   "Table Service": "Table Service",
   "Table Mode": "Table Mode",
@@ -335,6 +584,20 @@
   "Create tables, share QR codes, and manage sessions": "Create tables, share QR codes, and manage sessions",
   "Manage dine-in tables and QR codes for this listing": "Manage dine-in tables and QR codes for this listing",
   "Summon Waiter": "Summon Waiter",
+  "Assign Waiter": "Assign Waiter",
+  "Change Waiter": "Change Waiter",
+  "Acknowledge": "Acknowledge",
+  "Customer Requests": "Customer Requests",
+  "No pending sessions": "No pending sessions",
+  "No active sessions": "No active sessions",
+  "No closed sessions": "No closed sessions",
+  "Started": "Started",
+  "Activated": "Activated",
+  "Purpose": "Purpose",
+  "Payment": "Payment",
+  "Just now": "Just now",
+  "minutes_ago": "{}m ago",
+  "hours_ago": "{}h ago",
   "Wait $seconds": "Wait $seconds",
   "Request Bill": "Request Bill",
   "Your $role": "Your $role",
@@ -387,6 +650,33 @@
   "Bookings": "Bookings",
   "My Bookings": "My Bookings",
   "Booking Details": "Booking Details",
+  "Booking Information": "Booking Information",
+  "Pricing": "Pricing",
+  "Unit Price": "Unit Price",
+  "Deposit": "Deposit",
+  "Mileage Overage": "Mileage Overage",
+  "Vehicle Information": "Vehicle Information",
+  "Start Odometer": "Start Odometer",
+  "End Odometer": "End Odometer",
+  "Distance Driven": "Distance Driven",
+  "Checkout Evidence": "Checkout Evidence",
+  "Checkin Evidence": "Checkin Evidence",
+  "OVERDUE FOR RETURN": "OVERDUE FOR RETURN",
+  "Evidence details would be displayed here": "Evidence details would be displayed here",
+  "Rental item not found": "Rental item not found",
+  "No photos available": "No photos available",
+  "Failed to load image": "Failed to load image",
+  "Loading customer...": "Loading customer...",
+  "Rental Item": "Rental Item",
+  "at": "at",
+  "hour": "hour",
+  "hours": "hours",
+  "day": "day",
+  "days": "days",
+  "week": "week",
+  "weeks": "weeks",
+  "month": "month",
+  "months": "months",
   "Make Booking": "Make Booking",
   "Date & Time": "Date & Time",
   "Party Size": "Party Size",
@@ -437,5 +727,194 @@
   "Error saving settings: $e": "Error saving settings: $e",
   "Something went wrong": "Something went wrong",
   "Network error": "Network error",
-  "Please try again": "Please try again"
+  "Please try again": "Please try again",
+  "Quotes & Invoices": "Quotes & Invoices",
+  "Company": "Company",
+  "Client name": "Client name",
+  "Address": "Address",
+  "No items yet": "No items yet",
+  "Discount": "Discount",
+  "Tax": "Tax",
+  "Optional notes": "Optional notes",
+  "Optional terms": "Optional terms",
+  "Select date": "Select date",
+  "Terms": "Terms",
+  "Valid Until": "Valid Until",
+  "Totals": "Totals",
+  "Currency": "Currency",
+  "Line Items": "Line Items",
+  "Client": "Client",
+  "Listing": "Listing",
+  "Select listing": "Select listing",
+  "Code": "Code",
+  "Symbol": "Symbol",
+  "Amount": "Amount",
+  "Percent": "Percent",
+  "Save Draft": "Save Draft",
+  "Add Item": "Add Item",
+  "Description": "Description",
+  "Enter valid item details": "Enter valid item details",
+  "Quotes": "Quotes",
+  "Invoices": "Invoices",
+  "Draft": "Draft",
+  "Sent": "Sent",
+  "Accepted": "Accepted",
+  "Expired": "Expired",
+  "Paid": "Paid",
+  "Overdue": "Overdue",
+  "No quotes yet": "No quotes yet",
+  "No invoices yet": "No invoices yet",
+  "Upgrade to Premium to use Quotes & Invoices": "Upgrade to Premium to use Quotes & Invoices",
+  "Upgrade to Premium to use Invoices": "Upgrade to Premium to use Invoices",
+  "Failed to load quotes": "Failed to load quotes",
+  "Failed to load invoices": "Failed to load invoices",
+  "Quote not found": "Quote not found",
+  "Failed to load quote": "Failed to load quote",
+  "Failed to save quote": "Failed to save quote",
+  "Failed to mark accepted": "Failed to mark accepted",
+  "Failed to mark declined": "Failed to mark declined",
+  "Failed to convert to invoice": "Failed to convert to invoice",
+  "Invoice not found": "Invoice not found",
+  "Failed to load invoice": "Failed to load invoice",
+  "Failed to save invoice": "Failed to save invoice",
+  "Failed to mark paid": "Failed to mark paid",
+  "Optional": "Optional",
+  "quote_limit_reached_message": "You reached the {} quote limit. Upgrade for unlimited history.",
+  "Quote link": "Quote link",
+  "Invoice link": "Invoice link",
+  "PDF downloaded to": "PDF downloaded to",
+  "Failed to download PDF": "Failed to download PDF",
+  "CaribTap Business": "CaribTap Business"
+  ,"Item description hint": "e.g., Website design service"
+  ,"Quantity hint": "e.g., 1"
+  ,"Unit price hint": "e.g., 120.00"
+  ,"Upload Promotion": "Upload Promotion"
+  ,"Edit Promotion": "Edit Promotion"
+  ,"Format Guidance": "Format Guidance"
+  ,"Add media": "Add media"
+  ,"Choose Image from Gallery": "Choose Image from Gallery"
+  ,"Choose Video from Gallery": "Choose Video from Gallery"
+  ,"Ad Types": "Ad Types"
+  ,"Promotion:": "Promotion:"
+  ,"Advert:": "Advert:"
+  ,"Time-limited offers. Requires a specific start and end date (e.g., 20% off for 1 week).": "Time-limited offers. Requires a specific start and end date (e.g., 20% off for 1 week)."
+  ,"General business awareness. Runs indefinitely without a specific offer period.": "General business awareness. Runs indefinitely without a specific offer period."
+  ,"Promo Period": "Promo Period"
+  ,"A promo period ensures customers know exactly when your offer begins and ends. It creates urgency and helps them plan their purchase before the deal expires.": "A promo period ensures customers know exactly when your offer begins and ends. It creates urgency and helps them plan their purchase before the deal expires."
+  ,"About Country Selection": "About Country Selection"
+  ,"This setting controls which countries can see your ad. When you select specific countries, only users from those locations will be able to view your promotion. If you leave it set to \"All Countries\", your ad will be visible to users everywhere.": "This setting controls which countries can see your ad. When you select specific countries, only users from those locations will be able to view your promotion. If you leave it set to \"All Countries\", your ad will be visible to users everywhere."
+  ,"Select Categories": "Select Categories"
+  ,"Please select a listing for your deal": "Please select a listing for your deal"
+  ,"Add Image or Video": "Add Image or Video"
+  ,"High quality media gets more engagement": "High quality media gets more engagement"
+  ,"Type": "Type"
+  ,"Promotion": "Promotion"
+  ,"Advert": "Advert"
+  ,"Select Listing": "Select Listing"
+  ,"Choose which listing this deal is for": "Choose which listing this deal is for"
+  ,"You need an active listing to post a deal. Please create a listing first.": "You need an active listing to post a deal. Please create a listing first."
+  ,"Select a listing...": "Select a listing..."
+  ,"Describe your deal": "Describe your deal"
+  ,"Ex: 20% off all summer items...": "Ex: 20% off all summer items..."
+  ,"Set Promo Period": "Set Promo Period"
+  ,"Starts": "Starts"
+  ,"Ends": "Ends"
+  ,"Select Date": "Select Date"
+  ,"Targeting Options": "Targeting Options"
+  ,"Choose who can see your ad": "Choose who can see your ad"
+  ,"Countries": "Countries"
+  ,"Target Categories": "Target Categories"
+  ,"Select categories": "Select categories"
+  ,"x_selected": "{} selected"
+  ,"Audience Type": "Audience Type"
+  ,"All Users": "All Users"
+  ,"Viewed Similar": "Viewed Similar"
+  ,"Favorited": "Favorited"
+  ,"Near Location": "Near Location"
+  ,"I accept the": "I accept the"
+  ,"Continue to Review": "Continue to Review"
+  ,"users_can_set_max_promo_period": "{} users can set a maximum promo period of {} days."
+  ,"Professional Feature": "Professional Feature"
+  ,"Total Views": "Total Views"
+  ,"Total Favorites": "Total Favorites"
+  ,"Avg Rating": "Avg Rating"
+  ,"Listing Performance": "Listing Performance"
+  ,"No listings yet": "No listings yet"
+  ,"No ratings": "No ratings"
+  ,"stars_reviews": "{} stars ({} reviews)"
+  ,"Last 7 days": "Last 7 days"
+  ,"Last 30 days": "Last 30 days"
+  ,"Last 90 days": "Last 90 days"
+  ,"All Time": "All Time"
+  ,"Performance Snapshot": "Performance Snapshot"
+  ,"Engagement Deep Dive": "Engagement Deep Dive"
+  ,"Growth Opportunities": "Growth Opportunities"
+  ,"Bookings": "Bookings"
+  ,"Avg. Rating": "Avg. Rating"
+  ,"Chat Initiations": "Chat Initiations"
+  ,"Taps / Vouch": "Taps / Vouch"
+  ,"vs previous period": "vs previous period"
+  ,"Improve Listing Quality": "Improve Listing Quality"
+  ,"Become a Top Lister": "Become a Top Lister"
+  ,"you_have_listings_to_improve": "You have {} listings that could be improved with more photos or a longer description."
+  ,"you_are_bookings_away_for_badge": "You are {} bookings away from earning the \"Community Vouched\" badge!"
+  ,"Choose Your Plan": "Choose Your Plan"
+  ,"Unlock Premium Features": "Unlock Premium Features"
+  ,"Choose the perfect plan for your business": "Choose the perfect plan for your business"
+  ,"Monthly": "Monthly"
+  ,"Yearly (Save 17%)": "Yearly (Save 17%)"
+  ,"MOST POPULAR": "MOST POPULAR"
+  ,"Free Forever": "Free Forever"
+  ,"Current": "Current"
+  ,"Current Plan": "Current Plan"
+  ,"Downgrade": "Downgrade"
+  ,"Subscribe Now": "Subscribe Now"
+  ,"Confirm Downgrade": "Confirm Downgrade"
+  ,"Are you sure you want to downgrade to the Free plan? You will lose access to premium features.": "Are you sure you want to downgrade to the Free plan? You will lose access to premium features."
+  ,"Downgrade feature coming soon!": "Downgrade feature coming soon!"
+  ,"Failed to refresh subscription": "Failed to refresh subscription"
+  ,"Create up to 3 listings": "Create up to 3 listings"
+  ,"Basic listing management": "Basic listing management"
+  ,"Standard search visibility": "Standard search visibility"
+  ,"Community support": "Community support"
+  ,"Booking system with email & reminders": "Booking system with email & reminders"
+  ,"Standard Analytics on listing performance": "Standard Analytics on listing performance"
+  ,"AI photo enhancements": "AI photo enhancements"
+  ,"All Professional Services": "All Professional Services"
+  ,"Enable Chat to talk directly with customers": "Enable Chat to talk directly with customers"
+  ,"Enable Quotes & Invoices": "Enable Quotes & Invoices"
+  ,"Unlock Advance Analytics": "Unlock Advance Analytics"
+  ,"Deal Analytics": "Deal Analytics"
+  ,"No analytics available": "No analytics available"
+  ,"deal_with_caption": "Deal: {}"
+  ,"Views": "Views"
+  ,"Saves": "Saves"
+  ,"Claims": "Claims"
+  ,"Users": "Users"
+  ,"Redemption Status": "Redemption Status"
+  ,"Total Redeemed": "Total Redeemed"
+  ,"Limit": "Limit"
+  ,"Remaining": "Remaining"
+  ,"Engagement Metrics": "Engagement Metrics"
+  ,"View to Claim Rate": "View to Claim Rate"
+  ,"of viewers claimed the deal": "of viewers claimed the deal"
+  ,"View to Save Rate": "View to Save Rate"
+  ,"of viewers saved the deal": "of viewers saved the deal"
+  ,"Save to Claim Rate": "Save to Claim Rate"
+  ,"of savers claimed the deal": "of savers claimed the deal"
+  ,"Avg Claims per User": "Avg Claims per User"
+  ,"times each user claimed on average": "times each user claimed on average"
+  ,"Inactive": "Inactive"
+  ,"Sold out": "Sold out"
+  ,"Accepting claims": "Accepting claims"
+  ,"on_free_plan": "You're on the Free plan"
+  ,"pro_premium_plan_limits": "Professional plan: 10 ads/month\nPremium plan: 20 ads/month"
+  ,"Deal Details": "Deal Details"
+  ,"View Analytics": "View Analytics"
+  ,"Until {}": "Until {}"
+  ,"Availability": "Availability"
+  ,"redeemed_count": "Redeemed: {}/{}"
+  ,"remaining_count": "{} remaining"
+  ,"Promo Code": "Promo Code"
+  ,"Claim In-App": "Claim In-App"
 }

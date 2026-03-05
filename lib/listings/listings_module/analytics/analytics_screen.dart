@@ -369,7 +369,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'Listing',
+                      'Listing'.tr(),
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -384,8 +384,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     const SizedBox(width: 4),
                     Text(
                       listing.reviewsCount != null && listing.reviewsCount! > 0
-                          ? '${((listing.reviewsSum ?? 0) / (listing.reviewsCount ?? 1)).toStringAsFixed(1)} stars (${listing.reviewsCount} reviews)'
-                          : 'No ratings',
+                          ? 'stars_reviews'.tr(args: [
+                              ((listing.reviewsSum ?? 0) / (listing.reviewsCount ?? 1))
+                                  .toStringAsFixed(1),
+                              '${listing.reviewsCount}',
+                            ])
+                          : 'No ratings'.tr(),
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],

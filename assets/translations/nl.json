@@ -45,6 +45,23 @@
   "Search": "Zoeken",
   "Filter": "Filteren",
   "Sort": "Sorteren",
+  "Location Scope": "Locatiebereik",
+  "Choose what content you want to see": "Kies welke content je wilt zien",
+  "Mode": "Modus",
+  "Local": "Lokaal",
+  "Caribbean": "Caribisch",
+  "Nearby": "Dichtbij",
+  "Show content from a specific country": "Toon content uit een specifiek land",
+  "Show content from all Caribbean countries": "Toon content uit alle Caribische landen",
+  "Show content based on your GPS location": "Toon content op basis van je GPS-locatie",
+  "Strict Local Only": "Alleen strikt lokaal",
+  "Tap to localise": "Tik om te lokaliseren",
+  "Tap for Caribbean": "Tik voor Caribisch",
+  "Tap to change": "Tik om te wijzigen",
+  "Tap to toggle • Long press for options": "Tik om te wisselen • Houd ingedrukt voor opties",
+  "Hold for more": "Houd vast voor meer",
+  "Search with AI": "Zoeken met AI",
+  "Unable to open AI Search right now": "Kan AI-zoeken nu niet openen",
   "Details": "Details",
   "Instagram": "Instagram",
   "Facebook": "Facebook",
@@ -56,6 +73,28 @@
   "Wheelchair Accessible": "Rolstoeltoegankelijk",
   "Business Type": "Bedrijfstype",
   "Restaurant": "Restaurant",
+  "Restaurants": "Restaurants",
+  "Real Estate": "Onroerend goed",
+  "Auto": "Auto",
+  "Automotive": "Automobiel",
+  "Beauty & Spa": "Schoonheid en spa",
+  "Electronics": "Elektronica",
+  "Events": "Evenementen",
+  "Health & Fitness": "Gezondheid en fitness",
+  "Home Services": "Diensten aan huis",
+  "Entertainment": "Entertainment",
+  "Professional Services": "Professionele diensten",
+  "Professional Service": "Professionele dienst",
+  "Education": "Onderwijs",
+  "Travel & Tourism": "Reizen en toerisme",
+  "Pets": "Huisdieren",
+  "Sports": "Sport",
+  "Food & Drink": "Eten en drinken",
+  "Health & Beauty": "Gezondheid en schoonheid",
+  "Accommodation": "Accommodatie",
+  "Home & Garden": "Huis en tuin",
+  "Nightlife": "Nachtleven",
+  "Shopping": "Winkelen",
   "Cash,Card": "Contant,Kaart",
   "Parking": "Parkeren",
   "Available": "Beschikbaar",
@@ -69,11 +108,76 @@
   "Explore": "Ontdekken",
   "Listings": "Advertenties",
   "My Listings": "Mijn Advertenties",
+  "Listing Freshness": "Advertentieversheid",
+  "Manage your active listings": "Beheer je actieve advertenties",
+  "Select multiple": "Meerdere selecteren",
+  "Reload scores": "Scores opnieuw laden",
+  "Urgent Attention": "Dringende aandacht",
+  "These listings will hide soon. Take action now!": "Deze advertenties worden binnenkort verborgen. Kom nu in actie!",
+  "Needs Refresh Soon": "Moet snel worden vernieuwd",
+  "Plan to refresh these listings soon.": "Plan om deze advertenties binnenkort te vernieuwen.",
+  "Active & Fresh": "Actief en vers",
+  "These listings are in good standing.": "Deze advertenties staan er goed voor.",
+  "Never Expire": "Verloopt nooit",
+  "These listings are exempt from automatic hiding.": "Deze advertenties zijn vrijgesteld van automatisch verbergen.",
+  "Hidden Listings": "Verborgen advertenties",
+  "Refresh to make these visible again.": "Vernieuw om deze weer zichtbaar te maken.",
+  "Refresh All Urgent ({})": "Alle urgente vernieuwen ({})",
+  "Overview": "Overzicht",
+  "Urgent": "Urgent",
+  "Warning": "Waarschuwing",
+  "Fresh": "Vers",
+  "Hidden": "Verborgen",
+  "Exempt (Never Expire)": "Vrijgesteld (Verloopt nooit)",
+  "Refresh All": "Alles vernieuwen",
+  "Deselect All": "Alles deselecteren",
+  "Auto-Refresh Eligible": "In aanmerking voor automatisch vernieuwen",
+  "Refresh Now": "Nu vernieuwen",
+  "Make Visible": "Zichtbaar maken",
   "My Brands/Branches": "Mijn Merken/Filialen",
+  "Manage Locations": "Locaties beheren",
+  "Locations": "Locaties",
+  "Delete Brand": "Merk verwijderen",
+  "Delete Brand?": "Merk verwijderen?",
+  "No locations linked": "Geen gekoppelde locaties",
+  "No locations found": "Geen locaties gevonden",
+  "Verified Brand": "Geverifieerd merk",
+  "Your brand will be deleted.": "Je merk wordt verwijderd.",
+  "Your listings will be kept": "Je advertenties blijven behouden",
+  "Deleting brand...": "Merk verwijderen...",
+  "Brand deleted successfully!": "Merk succesvol verwijderd!",
   "Orders": "Bestellingen",
   "Rentals": "Verhuur",
+  "Post Event": "Evenement plaatsen",
+  "Create Event": "Evenement maken",
+  "Edit Event": "Evenement bewerken",
+  "Event posted successfully.": "Evenement succesvol geplaatst.",
+  "Event Title Hint": "bijv. Carnavalsavond",
+  "Committee Hint": "bijv. Marketingteam",
+  "Event Description Hint": "Deel details van het evenement",
+  "Venue Name Hint": "bijv. Queen's Park Savannah",
+  "Ticket Link Hint": "https://...",
+  "Facebook Page Hint": "bijv. facebook.com/jouwevenement",
+  "Instagram Username Hint": "bijv. @jouwevenement",
+  "Ticket Name Hint": "bijv. VIP",
+  "Ticket Price Hint": "bijv. 25.00",
+  "Ticket Description Hint": "Optionele ticketdetails",
+  "Member Name Hint": "bijv. Jan Jansen",
+  "Contact Number Hint": "bijv. +1 868...",
+  "Manage Rentals": "Verhuur beheren",
   "Bookings": "Boekingen",
   "Booking Requests": "Boekingsverzoeken",
+  "Host": "Gastheer",
+  "Start Date": "Startdatum",
+  "End Date": "Einddatum",
+  "Duration": "Duur",
+  "night": "nacht",
+  "nights": "nachten",
+  "No pending bookings": "Geen openstaande boekingen",
+  "No confirmed bookings": "Geen bevestigde boekingen",
+  "No rejected bookings": "Geen afgewezen boekingen",
+  "No cancelled bookings": "Geen geannuleerde boekingen",
+  "Dates with bookings": "Datums met boekingen",
   "Activate Booking": "Boekingen Activeren",
   "Conversations": "Gesprekken",
   "Chats": "Chats",
@@ -82,6 +186,10 @@
   "Settings": "Instellingen",
   "Favorites": "Favorieten",
   "Notifications": "Meldingen",
+  "Assigned Listings": "Toegewezen advertenties",
+  "No Assigned Listings": "Geen toegewezen advertenties",
+  "You have not been added as a collaborator to any listings": "Je bent niet als medewerker toegevoegd aan advertenties",
+  "x_more": "+{} meer",
   
   "Analytics": "Analytics",
   "Advanced Analytics": "Geavanceerde Analytics",
@@ -89,8 +197,48 @@
   "Activate Chat": "Chat Activeren",
   "Manage Subscription": "Abonnement Beheren",
   "Log Out": "Uitloggen",
+    "Analytics": "Analyses",
+    "Advanced Analytics": "Geavanceerde analyses",
+    "Professional Feature": "Professionele functie",
+    "Total Views": "Totale weergaven",
+    "Total Favorites": "Totale favorieten",
+    "Avg Rating": "Gem. beoordeling",
+    "Listing Performance": "Prestatie van advertenties",
+    "No listings yet": "Nog geen advertenties",
+    "No ratings": "Geen beoordelingen",
+    "stars_reviews": "{} sterren ({} beoordelingen)",
+    "Last 7 days": "Laatste 7 dagen",
+    "Last 30 days": "Laatste 30 dagen",
+    "Last 90 days": "Laatste 90 dagen",
+    "All Time": "Altijd",
+    "Performance Snapshot": "Prestatieoverzicht",
+    "Engagement Deep Dive": "Diepgaande betrokkenheidsanalyse",
+    "Growth Opportunities": "Groeikansen",
+    "Bookings": "Boekingen",
+    "Avg. Rating": "Gem. beoordeling",
+    "Chat Initiations": "Chatstarts",
+    "Taps / Vouch": "Taps / Aanbevelingen",
+    "vs previous period": "vs vorige periode",
+    "Improve Listing Quality": "Verbeter advertentiekwaliteit",
+    "Become a Top Lister": "Word een topaanbieder",
+    "you_have_listings_to_improve": "Je hebt {} advertenties die verbeterd kunnen worden met meer foto's of een langere beschrijving.",
+    "you_are_bookings_away_for_badge": "Je bent nog {} boekingen verwijderd van de badge \"Door de community aanbevolen\"!",
   
   "Deals & Promotions": "Deals en Promoties",
+  "Post your deals, promotions, and ads here!": "Plaats hier je deals, promoties en advertenties!",
+  "Upload New Ad": "Nieuwe advertentie uploaden",
+  "View All Deals": "Alle deals bekijken",
+  "Ad Posting Quota": "Advertentieplaatsingsquotum",
+  "Tier": "Niveau",
+  "Free": "Gratis",
+  "Professional": "Professioneel",
+  "Premium": "Premium",
+  "Posts this month": "Berichten deze maand",
+  "Resets on": "Wordt gereset op",
+  "Upgrade to Post Ads": "Upgrade om advertenties te plaatsen",
+  "You're on the Free plan": "Je gebruikt het Gratis plan",
+  "Professional plan: 10 ads/month\nPremium plan: 20 ads/month": "Professional-plan: 10 advertenties/maand\nPremium-plan: 20 advertenties/maand",
+  "Also requires at least one active listing.": "Vereist ook minstens één actieve advertentie.",
   "Categories": "Categorieën",
   "Find what you need": "Vind wat je nodig hebt",
   "Search listings...": "Zoek advertenties...",
@@ -107,6 +255,8 @@
   "View Full Menu": "Bekijk Volledige Menu",
   "Browse Rentals": "Bekijk Verhuur",
   "Explore rental items": "Ontdek verhuurartikelen",
+  "Food": "Eten",
+  "General": "Algemeen",
   "Services": "Diensten",
   "Show all": "Toon alles",
   "Show less": "Toon minder",
@@ -169,6 +319,7 @@
   "Sign Up": "Registreren",
   "Sign Out": "Uitloggen",
   "Logout": "Uitloggen",
+  "It's ok, your listings are safe": "Geen zorgen, je listings zijn veilig",
   "Register": "Registreren",
   "Create Account": "Account aanmaken",
   "Email": "E-mail",
@@ -202,14 +353,58 @@
 
   "Add Listing": "Advertentie toevoegen",
   "Edit Listing": "Advertentie bewerken",
+  "Request Featured": "Uitgelicht aanvragen",
+  "Manage Collaborators": "Samenwerkers beheren",
+  "Team Chat": "Teamchat",
+  "Manage Reviews": "Reviews beheren",
   "Delete Listing": "Advertentie verwijderen",
   "Delete Listing?": "Advertentie verwijderen?",
   "Are you sure you want to remove this listing?": "Weet je zeker dat je deze advertentie wilt verwijderen?",
   "Listing Details": "Advertentiedetails",
+  "Details & Hours": "Details en openingstijden",
+  "Contact Information": "Contactinformatie",
+  "Social Media": "Sociale media",
+  "Business Details": "Bedrijfsgegevens",
+  "Not seen on listing, used for quote and invoice generation": "Niet zichtbaar op de advertentie, gebruikt voor het genereren van offertes en facturen",
+  "Company Registration #": "Bedrijfsregistratienr.",
+  "VAT / Tax ID #": "BTW / Belasting-ID",
+  "Menu (Food & Beverage)": "Menu (Eten en drinken)",
+  "Store / Ecommerce (Optional)": "Winkel / E-commerce (Optioneel)",
+  "Logo (Optional)": "Logo (Optioneel)",
+  "Enable Store/Ecommerce": "Winkel/e-commerce inschakelen",
+  "Store Mode": "Winkelmodus",
+  "External URL Only": "Alleen externe URL",
+  "Internal Catalog": "Interne catalogus",
+  "Both (URL + Catalog)": "Beide (URL + Catalogus)",
+  "Lead Time (Hours)": "Voorbereidingstijd (uren)",
+  "Minimum hours needed to prepare orders": "Minimaal aantal uren nodig om bestellingen voor te bereiden",
+  "Internal Catalog requires Premium subscription": "Interne catalogus vereist een Premium-abonnement",
+  "Please save the listing first, then you can manage catalog items": "Sla eerst de advertentie op, daarna kun je catalogusitems beheren",
+  "Manage Catalog Items": "Catalogusitems beheren",
+  "Save Listing First": "Sla advertentie eerst op",
+  "Accept Proof of Payment": "Bewijs van betaling accepteren",
+  "Require customers to provide proof of payment (photo/receipt) for orders": "Vereis dat klanten betalingsbewijs (foto/bon) voor bestellingen aanleveren",
+  "Enable Rentals": "Verhuur inschakelen",
+  "Allow customers to rent items from this listing": "Sta klanten toe artikelen uit deze advertentie te huren",
+  "Manage Rental Catalog": "Verhuurcatalogus beheren",
   "Listing not found or has been removed.": "Advertentie niet gevonden of verwijderd.",
   "Failed to open listing. Please try again.": "Kan advertentie niet openen. Probeer het opnieuw.",
   "Failed to open listing management. Please try again.": "Kan advertentiebeheer niet openen. Probeer het opnieuw.",
+  "Booking Services": "Boekingsdiensten",
+  "Require Booking": "Boeking verplichten",
+  "Show a \"Book Now\" button on your listing": "Toon een \"Nu boeken\"-knop op je advertentie",
+  "Allow Quantity Selection": "Hoeveelheidsselectie toestaan",
+  "Customers can select quantity when booking services": "Klanten kunnen een hoeveelheid kiezen bij het boeken van diensten",
+  "Use Time Blocks": "Tijdsblokken gebruiken",
+  "Enable hourly time slot bookings instead of full day bookings": "Schakel boekingen per uur in plaats van hele dag-boekingen in",
+  "Custom Booking Questions": "Aangepaste boekingsvragen",
+  "Ask customers to answer questions when they book": "Vraag klanten om vragen te beantwoorden wanneer ze boeken",
+  "Allow Multiple Bookings Per Day": "Meerdere boekingen per dag toestaan",
+  "Multiple customers can book different time slots on the same day": "Meerdere klanten kunnen op dezelfde dag verschillende tijdsblokken boeken",
   "No listings found": "Geen advertenties gevonden",
+  "Listing updated successfully": "Advertentie succesvol bijgewerkt",
+  "Error loading listings": "Fout bij het laden van advertenties",
+  "Error updating listing": "Fout bij het bijwerken van advertentie",
   "Deleting...": "Verwijderen...",
   "Add To Favorites": "Toevoegen aan favorieten",
   "Remove From Favorites": "Verwijderen uit favorieten",
@@ -226,16 +421,81 @@
   
   "Store": "Winkel",
   "Mini Store": "Mini Winkel",
+  "Browse Full Store": "Volledige winkel bekijken",
   "Cart": "Winkelwagen",
   "Checkout": "Afrekenen",
   "Add to Cart": "Toevoegen aan winkelwagen",
   "Added to cart": "Toegevoegd aan winkelwagen",
   "View Cart": "Winkelwagen bekijken",
+  "Cart is empty": "Winkelwagen is leeg",
+  "Fulfillment Method": "Leveringsmethode",
+  "Delivery Address *": "Bezorgadres *",
+  "Shipping Address *": "Verzendadres *",
+  "Shipping Instructions (Optional)": "Verzendinstructies (Optioneel)",
+  "Street address, city, state, postal code": "Straatadres, stad, provincie, postcode",
+  "Additional seating info (optional)": "Aanvullende zitinformatie (optioneel)",
+  "e.g., Special requests, dietary notes": "bijv. Speciale verzoeken, dieetnotities",
+  "Preferred Date/Time (Optional)": "Voorkeursdatum/-tijd (Optioneel)",
+  "Not specified": "Niet gespecificeerd",
+  "Notes (Optional)": "Notities (Optioneel)",
+  "Send Order Request": "Bestelverzoek verzenden",
+  "Please sign in to place an order": "Log in om een bestelling te plaatsen",
+  "Please enter delivery address": "Voer een bezorgadres in",
+  "Please enter shipping address": "Voer een verzendadres in",
+  "Order request sent successfully!": "Bestelverzoek succesvol verzonden!",
+  "Scan Table QR Code": "Scan tafel-QR-code",
+  "Table Scanned: {}": "Tafel gescand: {}",
+  "Table {} has been scanned. You can also add additional seating info below.": "Tafel {} is gescand. Je kunt hieronder ook aanvullende zitinformatie toevoegen.",
+  "Creating table session...": "Tafelsessie maken...",
+  "Table scanned successfully: {}": "Tafel succesvol gescand: {}",
+  "Failed to create table session. Please try again.": "Kan tafelsessie niet maken. Probeer het opnieuw.",
+  "Invalid QR code format - missing table data": "Ongeldig QR-codeformaat - tafelgegevens ontbreken",
+  "Invalid QR code - Not a table QR code": "Ongeldige QR-code - Geen tafel-QR-code",
+  "Error parsing QR code: {}": "Fout bij verwerken van QR-code: {}",
+  "This QR code is for a different store": "Deze QR-code is voor een andere winkel",
+  "Pin Delivery Location": "Bezorglocatie vastzetten",
+  "Location Pinned": "Locatie vastgezet",
+  "Tap to pin your delivery location on map": "Tik om je bezorglocatie op de kaart vast te zetten",
+  "Location permission is required for delivery": "Locatietoestemming is vereist voor bezorging",
+  "Delivery Location": "Bezorglocatie",
+  "Use Current Location": "Huidige locatie gebruiken",
+  "Or enter coordinates manually:": "Of voer coördinaten handmatig in:",
+  "Latitude": "Breedtegraad",
+  "Longitude": "Lengtegraad",
+  "Invalid latitude or longitude": "Ongeldige breedte- of lengtegraad",
+  "Failed to get location: {}": "Kon locatie niet ophalen: {}",
+  "Error parsing location: {}": "Fout bij verwerken van locatie: {}",
+  "e.g., Leave at front door, signature required": "bijv. Voor de voordeur achterlaten, handtekening vereist",
   "Empty Cart": "Lege winkelwagen",
   "No items in cart": "Geen items in winkelwagen",
   "Store Settings": "Winkel instellingen",
   "Save Settings": "Instellingen opslaan",
   "Store settings updated": "Winkel instellingen bijgewerkt",
+  "CaribTap Subscriptions": "CaribTap-abonnementen",
+  "Store not available": "Winkel niet beschikbaar",
+  "Unable to open Google Play subscriptions": "Kan Google Play-abonnementen niet openen",
+  "Unable to load plans": "Kan abonnementen niet laden",
+  "Choose a plan": "Kies een abonnement",
+  "Pick Professional or Premium to unlock business tools.": "Kies Professional of Premium om zakelijke tools te ontgrendelen.",
+  "AI photo enhancement": "AI-fotoverbetering",
+  "Watermarking tools": "Watermerkhulpmiddelen",
+  "Priority support": "Prioriteitssupport",
+  "Everything in Professional": "Alles in Professional",
+  "Quotes & invoices tools": "Offerte- en factuurtools",
+  "Full suite with premium business features.": "Volledige suite met premium zakelijke functies.",
+  "Current plan": "Huidig abonnement",
+  "Current plan: {}": "Huidig abonnement: {}",
+  "You are currently on {}.": "Je zit momenteel op {}.",
+  "Subscribe": "Abonneren",
+  "No expiration": "Geen vervaldatum",
+  "Status: {}": "Status: {}",
+  "Expires: {}": "Verloopt: {}",
+  "Auto-renew: {}": "Automatisch verlengen: {}",
+  "On": "Aan",
+  "Off": "Uit",
+  "Manage subscription in Google Play": "Abonnement beheren in Google Play",
+  "Benefits": "Voordelen",
+  "Restore": "Herstellen",
   "Fulfillment Methods": "Leveringsmethoden",
   "Select how customers can receive their orders": "Selecteer hoe klanten hun bestellingen kunnen ontvangen",
   "At least one fulfillment method must be enabled": "Minstens één leveringsmethode moet ingeschakeld zijn",
@@ -258,15 +518,19 @@
   "Menu is visible to customers": "Menu is zichtbaar voor klanten",
   "Menu is hidden from customers": "Menu is verborgen voor klanten",
   "Upload Menu Photos": "Menu foto's uploaden",
+  "Upload 1-6 menu images": "Upload 1-6 menuafbeeldingen",
   "Create Digital Menu": "Digitaal menu maken",
   "Build items with prices and descriptions": "Maak items met prijzen en beschrijvingen",
   "Menu hidden from customers": "Menu verborgen voor klanten",
+  "Maximum 6 menu photos allowed": "Maximaal 6 menufoto's toegestaan",
+  "Uploaded {} photo(s)": "{} foto('s) geüpload",
   
   "Order Details": "Bestellingsdetails",
   "My Orders": "Mijn bestellingen",
   "New Order": "Nieuwe bestelling",
   "Customer": "Klant",
   "Items": "Items",
+  "Table": "Tafel",
   "Subtotal": "Subtotaal",
   "Shipping Fee": "Verzendkosten",
   "Delivery Fee": "Bezorgkosten",
@@ -279,6 +543,34 @@
   "Notes": "Notities",
   "Seller Note": "Verkopers notitie",
   "Payment": "Betaling",
+  "Payment Methods": "Betaalmethoden",
+  "Bank Transfer": "Bankoverschrijving",
+  "Payment Apps": "Betaalapps",
+  "Bank": "Bank",
+  "Account Name": "Rekeningnaam",
+  "Account Number": "Rekeningnummer",
+  "Branch": "Filiaal",
+  "SWIFT/BIC": "SWIFT/BIC",
+  "IBAN": "IBAN",
+  "Copied to clipboard": "Gekopieerd naar klembord",
+  "Book Appointment": "Afspraak boeken",
+  "Booking sent": "Boeking verzonden",
+  "Select Services": "Selecteer diensten",
+  "Select dates": "Selecteer datums",
+  "Please select check-in and check-out dates.": "Selecteer in- en uitcheckdatums.",
+  "Select time block": "Selecteer tijdsblok",
+  "Please select a time slot for your booking.": "Selecteer een tijdslot voor je boeking.",
+  "Select time slot": "Selecteer tijdslot",
+  "No time slots available for this date": "Geen tijdslots beschikbaar voor deze datum",
+  "Number of guests": "Aantal gasten",
+  "Custom questions": "Aangepaste vragen",
+  "Type your answer": "Typ je antwoord",
+  "Notes for the lister": "Opmerkingen voor de aanbieder",
+  "Any special requests...": "Speciale verzoeken...",
+  "Qty": "Aant.",
+  "Nights": "Nachten",
+  "Total Amount:": "Totaalbedrag:",
+  "Your booking request has been sent to the lister. You will be notified once they respond.": "Je boekingsaanvraag is naar de aanbieder gestuurd. Je krijgt een melding zodra die reageert.",
   "Proof of Payment": "Betalingsbewijs",
   "Upload Proof of Payment": "Betalingsbewijs uploaden",
   "This order requires proof of payment. Please upload a receipt or screenshot.": "Deze bestelling vereist een betalingsbewijs. Upload een ontvangstbewijs of screenshot.",
@@ -312,14 +604,19 @@
   
   "Requested": "Aangevraagd",
   "Pending": "In behandeling",
+  "Active": "Actief",
+  "Closed": "Gesloten",
   "Confirmed": "Bevestigd",
   "Preparing": "Voorbereiden",
   "Ready": "Klaar",
   "Served": "Geserveerd",
   "Fulfilled": "Voltooid",
   "Completed": "Afgerond",
+  "Disputed": "Betwist",
   "Declined": "Geweigerd",
   "Cancelled": "Geannuleerd",
+  "Start": "Start",
+  "End": "Einde",
   
   "Table Service": "Tafelservice",
   "Table Mode": "Tafelmodus",
@@ -327,6 +624,20 @@
   "Create tables, share QR codes, and manage sessions": "Maak tafels, deel QR-codes en beheer sessies",
   "Manage dine-in tables and QR codes for this listing": "Beheer tafels en QR-codes voor deze advertentie",
   "Summon Waiter": "Ober roepen",
+  "Assign Waiter": "Ober toewijzen",
+  "Change Waiter": "Ober wijzigen",
+  "Acknowledge": "Bevestigen",
+  "Customer Requests": "Klantverzoeken",
+  "No pending sessions": "Geen openstaande sessies",
+  "No active sessions": "Geen actieve sessies",
+  "No closed sessions": "Geen gesloten sessies",
+  "Started": "Gestart",
+  "Activated": "Geactiveerd",
+  "Purpose": "Doel",
+  "Payment": "Betaling",
+  "Just now": "Zojuist",
+  "minutes_ago": "{}m geleden",
+  "hours_ago": "{}u geleden",
   "Wait $seconds": "Wacht $seconds",
   "Request Bill": "Rekening vragen",
   "Your $role": "Uw $role",
@@ -377,6 +688,33 @@
   
   "My Bookings": "Mijn boekingen",
   "Booking Details": "Boekingsdetails",
+  "Booking Information": "Boekingsinformatie",
+  "Pricing": "Prijzen",
+  "Unit Price": "Prijs per stuk",
+  "Deposit": "Borg",
+  "Mileage Overage": "Kilometeroverschrijding",
+  "Vehicle Information": "Voertuiginformatie",
+  "Start Odometer": "Beginstand kilometerstand",
+  "End Odometer": "Eindstand kilometerstand",
+  "Distance Driven": "Afgelegde afstand",
+  "Checkout Evidence": "Inleverbewijs",
+  "Checkin Evidence": "Uitleverbewijs",
+  "OVERDUE FOR RETURN": "TE LAAT VOOR TERUGGAVE",
+  "Evidence details would be displayed here": "Bewijsdetails worden hier weergegeven",
+  "Rental item not found": "Verhuuritem niet gevonden",
+  "No photos available": "Geen foto's beschikbaar",
+  "Failed to load image": "Afbeelding laden mislukt",
+  "Loading customer...": "Klant laden...",
+  "Rental Item": "Verhuuritem",
+  "at": "om",
+  "hour": "uur",
+  "hours": "uur",
+  "day": "dag",
+  "days": "dagen",
+  "week": "week",
+  "weeks": "weken",
+  "month": "maand",
+  "months": "maanden",
   "Make Booking": "Boeking maken",
   "Date & Time": "Datum en tijd",
   "Party Size": "Groepsgrootte",
@@ -427,5 +765,170 @@
   "Error saving settings: $e": "Fout bij opslaan instellingen: $e",
   "Something went wrong": "Er is iets misgegaan",
   "Network error": "Netwerkfout",
-  "Please try again": "Probeer het opnieuw"
+  "Please try again": "Probeer het opnieuw",
+  "Quotes & Invoices": "Offertes en Facturen",
+  "Company": "Bedrijf",
+  "Client name": "Klantnaam",
+  "Address": "Adres",
+  "No items yet": "Nog geen items",
+  "Discount": "Korting",
+  "Tax": "Belasting",
+  "Optional notes": "Optionele notities",
+  "Optional terms": "Optionele voorwaarden",
+  "Select date": "Selecteer datum",
+  "Terms": "Voorwaarden",
+  "Valid Until": "Geldig tot",
+  "Totals": "Totalen",
+  "Currency": "Valuta",
+  "Line Items": "Regelitems",
+  "Client": "Klant",
+  "Listing": "Advertentie",
+  "Select listing": "Selecteer advertentie",
+  "Code": "Code",
+  "Symbol": "Symbool",
+  "Amount": "Bedrag",
+  "Percent": "Percentage",
+  "Save Draft": "Concept opslaan",
+  "Add Item": "Item toevoegen",
+  "Description": "Beschrijving",
+  "Enter valid item details": "Vul geldige itemgegevens in",
+  "Quotes": "Offertes",
+  "Invoices": "Facturen",
+  "Draft": "Concept",
+  "Sent": "Verzonden",
+  "Accepted": "Geaccepteerd",
+  "Expired": "Verlopen",
+  "Paid": "Betaald",
+  "Overdue": "Achterstallig",
+  "No quotes yet": "Nog geen offertes",
+  "No invoices yet": "Nog geen facturen",
+  "Upgrade to Premium to use Quotes & Invoices": "Upgrade naar Premium om Offertes en Facturen te gebruiken",
+  "Upgrade to Premium to use Invoices": "Upgrade naar Premium om Facturen te gebruiken",
+  "Failed to load quotes": "Offertes laden mislukt",
+  "Failed to load invoices": "Facturen laden mislukt",
+  "Quote not found": "Offerte niet gevonden",
+  "Failed to load quote": "Offerte laden mislukt",
+  "Failed to save quote": "Offerte opslaan mislukt",
+  "Failed to mark accepted": "Markeren als geaccepteerd mislukt",
+  "Failed to mark declined": "Markeren als geweigerd mislukt",
+  "Failed to convert to invoice": "Converteren naar factuur mislukt",
+  "Invoice not found": "Factuur niet gevonden",
+  "Failed to load invoice": "Factuur laden mislukt",
+  "Failed to save invoice": "Factuur opslaan mislukt",
+  "Failed to mark paid": "Markeren als betaald mislukt",
+  "Optional": "Optioneel",
+  "quote_limit_reached_message": "Je hebt de limiet van {} offertes bereikt. Upgrade voor onbeperkte geschiedenis.",
+  "Quote link": "Offertelink",
+  "Invoice link": "Factuurlink",
+  "PDF downloaded to": "PDF gedownload naar",
+  "Failed to download PDF": "PDF downloaden mislukt",
+  "CaribTap Business": "CaribTap Bedrijf"
+  ,"Item description hint": "bijv. website-ontwerpservice"
+  ,"Quantity hint": "bijv. 1"
+  ,"Unit price hint": "bijv. 120.00"
+  ,"Upload Promotion": "Promotie uploaden"
+  ,"Edit Promotion": "Promotie bewerken"
+  ,"Format Guidance": "Formaatrichtlijnen"
+  ,"Add media": "Media toevoegen"
+  ,"Choose Image from Gallery": "Kies afbeelding uit galerij"
+  ,"Choose Video from Gallery": "Kies video uit galerij"
+  ,"Ad Types": "Advertentietypen"
+  ,"Promotion:": "Promotie:"
+  ,"Advert:": "Advertentie:"
+  ,"Time-limited offers. Requires a specific start and end date (e.g., 20% off for 1 week).": "Tijdgebonden aanbiedingen. Vereist een specifieke start- en einddatum (bijv. 20% korting voor 1 week)."
+  ,"General business awareness. Runs indefinitely without a specific offer period.": "Algemene bedrijfszichtbaarheid. Loopt onbeperkt zonder specifieke aanbiedingsperiode."
+  ,"Promo Period": "Promoperiode"
+  ,"A promo period ensures customers know exactly when your offer begins and ends. It creates urgency and helps them plan their purchase before the deal expires.": "Een promoperiode zorgt dat klanten precies weten wanneer je aanbieding begint en eindigt. Het creëert urgentie en helpt hen hun aankoop te plannen voordat de deal verloopt."
+  ,"About Country Selection": "Over landselectie"
+  ,"This setting controls which countries can see your ad. When you select specific countries, only users from those locations will be able to view your promotion. If you leave it set to \"All Countries\", your ad will be visible to users everywhere.": "Deze instelling bepaalt welke landen je advertentie kunnen zien. Als je specifieke landen kiest, zien alleen gebruikers uit die locaties je promotie. Laat je \"Alle landen\" staan, dan is je advertentie overal zichtbaar."
+  ,"Select Categories": "Selecteer categorieën"
+  ,"Please select a listing for your deal": "Selecteer een advertentie voor je deal"
+  ,"Add Image or Video": "Afbeelding of video toevoegen"
+  ,"High quality media gets more engagement": "Media van hoge kwaliteit levert meer betrokkenheid op"
+  ,"Type": "Type"
+  ,"Promotion": "Promotie"
+  ,"Advert": "Advertentie"
+  ,"Select Listing": "Selecteer advertentie"
+  ,"Choose which listing this deal is for": "Kies voor welke advertentie deze deal is"
+  ,"You need an active listing to post a deal. Please create a listing first.": "Je hebt een actieve advertentie nodig om een deal te plaatsen. Maak eerst een advertentie aan."
+  ,"Select a listing...": "Selecteer een advertentie..."
+  ,"Describe your deal": "Beschrijf je deal"
+  ,"Ex: 20% off all summer items...": "Bijv.: 20% korting op alle zomerartikelen..."
+  ,"Set Promo Period": "Stel promoperiode in"
+  ,"Starts": "Begint"
+  ,"Ends": "Eindigt"
+  ,"Select Date": "Selecteer datum"
+  ,"Targeting Options": "Targetingopties"
+  ,"Choose who can see your ad": "Kies wie je advertentie kan zien"
+  ,"Countries": "Landen"
+  ,"Target Categories": "Doelcategorieën"
+  ,"Select categories": "Selecteer categorieën"
+  ,"x_selected": "{} geselecteerd"
+  ,"Audience Type": "Doelgroeptype"
+  ,"All Users": "Alle gebruikers"
+  ,"Viewed Similar": "Vergelijkbaar bekeken"
+  ,"Favorited": "Gefavoriet"
+  ,"Near Location": "Dichtbij locatie"
+  ,"I accept the": "Ik accepteer de"
+  ,"Continue to Review": "Doorgaan naar beoordeling"
+  ,"users_can_set_max_promo_period": "{}-gebruikers kunnen een maximale promoperiode van {} dagen instellen."
+  ,"Choose Your Plan": "Kies je plan"
+  ,"Unlock Premium Features": "Ontgrendel premiumfuncties"
+  ,"Choose the perfect plan for your business": "Kies het perfecte plan voor je bedrijf"
+  ,"Monthly": "Maandelijks"
+  ,"Yearly (Save 17%)": "Jaarlijks (Bespaar 17%)"
+  ,"MOST POPULAR": "MEEST POPULAIR"
+  ,"Free Forever": "Voor altijd gratis"
+  ,"Current": "Huidig"
+  ,"Current Plan": "Huidig plan"
+  ,"Downgrade": "Downgraden"
+  ,"Subscribe Now": "Nu abonneren"
+  ,"Confirm Downgrade": "Downgrade bevestigen"
+  ,"Are you sure you want to downgrade to the Free plan? You will lose access to premium features.": "Weet je zeker dat je wilt downgraden naar het Gratis-plan? Je verliest toegang tot premiumfuncties."
+  ,"Downgrade feature coming soon!": "Downgradefunctie komt binnenkort!"
+  ,"Failed to refresh subscription": "Abonnement vernieuwen mislukt"
+  ,"Create up to 3 listings": "Maak tot 3 advertenties"
+  ,"Basic listing management": "Basis advertentiebeheer"
+  ,"Standard search visibility": "Standaard zichtbaarheid in zoeken"
+  ,"Community support": "Community-ondersteuning"
+  ,"Booking system with email & reminders": "Boekingssysteem met e-mail en herinneringen"
+  ,"Standard Analytics on listing performance": "Standaard analyses van advertentieprestaties"
+  ,"AI photo enhancements": "AI-fotoverbeteringen"
+  ,"All Professional Services": "Alle professionele diensten"
+  ,"Enable Chat to talk directly with customers": "Schakel chat in om direct met klanten te praten"
+  ,"Enable Quotes & Invoices": "Schakel Offertes en Facturen in"
+  ,"Unlock Advance Analytics": "Ontgrendel geavanceerde analyses"
+  ,"Deal Analytics": "Deal-analyses"
+  ,"No analytics available": "Geen analyses beschikbaar"
+  ,"deal_with_caption": "Deal: {}"
+  ,"Views": "Weergaven"
+  ,"Saves": "Opslagen"
+  ,"Claims": "Claims"
+  ,"Users": "Gebruikers"
+  ,"Redemption Status": "Inwisselstatus"
+  ,"Total Redeemed": "Totaal ingewisseld"
+  ,"Limit": "Limiet"
+  ,"Remaining": "Resterend"
+  ,"Engagement Metrics": "Betrokkenheidsstatistieken"
+  ,"View to Claim Rate": "Weergave-naar-claimratio"
+  ,"of viewers claimed the deal": "van de kijkers claimde de deal"
+  ,"View to Save Rate": "Weergave-naar-opslagratio"
+  ,"of viewers saved the deal": "van de kijkers sloeg de deal op"
+  ,"Save to Claim Rate": "Opslag-naar-claimratio"
+  ,"of savers claimed the deal": "van de opslaanders claimde de deal"
+  ,"Avg Claims per User": "Gem. claims per gebruiker"
+  ,"times each user claimed on average": "keer dat elke gebruiker gemiddeld claimde"
+  ,"Inactive": "Inactief"
+  ,"Sold out": "Uitverkocht"
+  ,"Accepting claims": "Claims worden geaccepteerd"
+  ,"on_free_plan": "Je gebruikt het Gratis plan"
+  ,"pro_premium_plan_limits": "Professional-plan: 10 advertenties/maand\nPremium-plan: 20 advertenties/maand"
+  ,"Deal Details": "Dealgegevens"
+  ,"View Analytics": "Analyses bekijken"
+  ,"Until {}": "Tot {}"
+  ,"Availability": "Beschikbaarheid"
+  ,"redeemed_count": "Ingewisseld: {}/{}"
+  ,"remaining_count": "{} resterend"
+  ,"Promo Code": "Promocode"
+  ,"Claim In-App": "In app claimen"
 }

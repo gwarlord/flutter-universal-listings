@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/model/payment_details_model.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -50,10 +51,10 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
                 children: [
                   Icon(Icons.payment, color: Colors.blue[700]),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Payment Methods',
-                      style: TextStyle(
+                      'Payment Methods'.tr(),
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -78,7 +79,7 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
                   
                   // Bank Transfer
                   if (widget.paymentDetails.bankTransfer != null && widget.paymentDetails.bankTransfer!.enabled) ...[
-                    _buildSectionHeader('Bank Transfer', Icons.account_balance),
+                    _buildSectionHeader('Bank Transfer'.tr(), Icons.account_balance),
                     const SizedBox(height: 8),
                     _buildBankTransferDetails(context, widget.paymentDetails.bankTransfer!),
                     const SizedBox(height: 16),
@@ -86,7 +87,7 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
 
                   // Payment Apps
                   if (widget.paymentDetails.paymentApps.isNotEmpty) ...[
-                    _buildSectionHeader('Payment Apps', Icons.apps),
+                    _buildSectionHeader('Payment Apps'.tr(), Icons.apps),
                     const SizedBox(height: 8),
                     ...widget.paymentDetails.paymentApps.where((app) => app.enabled).map((app) {
                       return _buildPaymentAppTile(context, app);
@@ -157,14 +158,14 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (bank.bankName.isNotEmpty) _buildInfoRow('Bank', bank.bankName),
-          if (bank.accountName.isNotEmpty) _buildInfoRow('Account Name', bank.accountName),
+          if (bank.bankName.isNotEmpty) _buildInfoRow('Bank'.tr(), bank.bankName),
+          if (bank.accountName.isNotEmpty) _buildInfoRow('Account Name'.tr(), bank.accountName),
           if (bank.accountNumber.isNotEmpty)
-            _buildCopyableRow(context, 'Account Number', bank.accountNumber),
-          if (bank.branch.isNotEmpty) _buildInfoRow('Branch', bank.branch),
-          if (bank.currency.isNotEmpty) _buildInfoRow('Currency', bank.currency),
-          if (bank.swiftBic.isNotEmpty) _buildCopyableRow(context, 'SWIFT/BIC', bank.swiftBic),
-          if (bank.iban.isNotEmpty) _buildCopyableRow(context, 'IBAN', bank.iban),
+            _buildCopyableRow(context, 'Account Number'.tr(), bank.accountNumber),
+          if (bank.branch.isNotEmpty) _buildInfoRow('Branch'.tr(), bank.branch),
+          if (bank.currency.isNotEmpty) _buildInfoRow('Currency'.tr(), bank.currency),
+          if (bank.swiftBic.isNotEmpty) _buildCopyableRow(context, 'SWIFT/BIC'.tr(), bank.swiftBic),
+          if (bank.iban.isNotEmpty) _buildCopyableRow(context, 'IBAN'.tr(), bank.iban),
           if (bank.instructions.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
@@ -235,7 +236,7 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
           InkWell(
             onTap: () {
               Clipboard.setData(ClipboardData(text: value));
-              showSnackBar(context, 'Copied to clipboard');
+              showSnackBar(context, 'Copied to clipboard'.tr());
             },
             child: Padding(
               padding: const EdgeInsets.all(4),
@@ -294,7 +295,7 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
                 InkWell(
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: app.handle));
-                    showSnackBar(context, 'Copied to clipboard');
+                    showSnackBar(context, 'Copied to clipboard'.tr());
                   },
                   child: Padding(
                     padding: const EdgeInsets.all(8),

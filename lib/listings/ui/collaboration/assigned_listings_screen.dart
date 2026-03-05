@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/listings_module/api/collaboration_api_manager.dart';
 import 'package:caribtap/listings/model/collaboration_model.dart';
@@ -34,7 +35,7 @@ class _AssignedListingsScreenState extends State<AssignedListingsScreen> {
     return Scaffold(
       backgroundColor: dark ? Colors.grey[900] : Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Assigned Listings'),
+        title: Text('Assigned Listings'.tr()),
         elevation: 0,
         backgroundColor: dark ? Colors.grey[850] : null,
         foregroundColor: dark ? Colors.white : null,
@@ -71,14 +72,14 @@ class _AssignedListingsScreenState extends State<AssignedListingsScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No Assigned Listings',
+                      'No Assigned Listings'.tr(),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: dark ? Colors.white : Colors.black87,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'You have not been added as a collaborator to any listings',
+                      'You have not been added as a collaborator to any listings'.tr(),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: dark ? Colors.grey[400] : Colors.grey[600],
                       ),
@@ -165,7 +166,7 @@ class AssignedListingTile extends StatelessWidget {
                   .map(
                     (p) => Chip(
                       label: Text(
-                        _permissionLabel(p),
+                        _permissionLabel(p).tr(),
                         style: TextStyle(
                           fontSize: 10,
                           color: dark ? Colors.white : Colors.black87,
@@ -180,7 +181,7 @@ class AssignedListingTile extends StatelessWidget {
             ),
             if (listing.permissionsSummary.length > 3)
               Text(
-                '+${listing.permissionsSummary.length - 3} more',
+                'x_more'.tr(args: ['${listing.permissionsSummary.length - 3}']),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: dark ? Colors.grey[400] : Colors.grey[600],
                 ),

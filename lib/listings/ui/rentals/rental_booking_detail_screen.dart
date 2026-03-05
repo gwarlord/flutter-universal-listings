@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../../model/rental_booking.dart';
 import '../../model/rental_unit.dart';
@@ -245,7 +246,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Booking Details'),
+        title: Text('Booking Details'.tr()),
       ),
       body: ListView(
         padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 80),
@@ -297,6 +298,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
               final data = snapshot.data ?? {};
               final name = data['name'] as String?;
               final photos = data['photos'] as List<String>?;
+              final displayName = (name == 'Rental Item') ? 'Rental Item'.tr() : name;
 
               if (name == null || name.isEmpty) {
                 return Container(
@@ -315,7 +317,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         const SizedBox(height: 8),
-                        Text('Rental item not found'),
+                        Text('Rental item not found'.tr()),
                       ],
                     ),
                   ),
@@ -340,7 +342,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         const SizedBox(height: 8),
-                        Text('No photos available'),
+                        Text('No photos available'.tr()),
                       ],
                     ),
                   ),
@@ -377,7 +379,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
                                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
                                 const SizedBox(height: 8),
-                                Text('Failed to load image'),
+                                Text('Failed to load image'.tr()),
                               ],
                             ),
                           ),
@@ -387,7 +389,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    name,
+                    displayName ?? '',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).colorScheme.onSurface,
@@ -406,7 +408,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
 
           _buildSection(
             context,
-            title: 'Customer',
+            title: 'Customer'.tr(),
             children: [
               FutureBuilder<_CustomerPreview>(
                 future: _fetchCustomerPreview(),
@@ -421,14 +423,14 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          'Loading customer...',
+                          'Loading customer...'.tr(),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
                     );
                   }
 
-                  final preview = snapshot.data ?? const _CustomerPreview(name: 'Customer');
+                  final preview = snapshot.data ?? _CustomerPreview(name: 'Customer'.tr());
                   final onSurface = Theme.of(context).colorScheme.onSurface;
                   final onSurfaceMuted = onSurface.withOpacity(0.7);
 
@@ -451,7 +453,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              preview.name,
+                              preview.name == 'Customer' ? 'Customer'.tr() : preview.name,
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -492,22 +494,22 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
           // Booking info
           _buildSection(
             context,
-            title: 'Booking Information',
+            title: 'Booking Information'.tr(),
             children: [
               _buildInfoRow(
                 context,
-                'Start',
+                'Start'.tr(),
                 _formatDateTime(context, booking.startTime),
               ),
               _buildInfoRow(
                 context,
-                'End',
+                'End'.tr(),
                 _formatDateTime(context, booking.endTime),
               ),
               _buildInfoRow(
                 context,
-                'Duration',
-                '${booking.quantity} ${_durationUnitLabel(booking.pricingUnit.toString().split('.').last)}(s)',
+                'Duration'.tr(),
+                '${booking.quantity} ${_durationUnitLabel(booking.pricingUnit.toString().split('.').last, booking.quantity)}',
               ),
             ],
           ),
@@ -516,27 +518,27 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
           // Pricing
           _buildSection(
             context,
-            title: 'Pricing',
+            title: 'Pricing'.tr(),
             children: [
-              _buildInfoRow(context, 'Unit Price',
+              _buildInfoRow(context, 'Unit Price'.tr(),
                   '\$${booking.unitPrice.toStringAsFixed(2)}'),
-              _buildInfoRow(context, 'Subtotal',
+              _buildInfoRow(context, 'Subtotal'.tr(),
                   '\$${booking.subtotal.toStringAsFixed(2)}'),
               if (booking.depositAmount > 0)
-                _buildInfoRow(context, 'Deposit',
+                _buildInfoRow(context, 'Deposit'.tr(),
                     '\$${booking.depositAmount.toStringAsFixed(2)}'),
               if (booking.mileageOverageCharge != null &&
                   booking.mileageOverageCharge! > 0)
                 _buildInfoRow(
                   context,
-                  'Mileage Overage',
+                  'Mileage Overage'.tr(),
                   '\$${booking.mileageOverageCharge!.toStringAsFixed(2)}',
                   valueColor: Colors.orange,
                 ),
               const Divider(),
               _buildInfoRow(
                 context,
-                'Total',
+                'Total'.tr(),
                 '\$${booking.totalAmount.toStringAsFixed(2)}',
                 valueStyle: const TextStyle(
                   fontSize: 18,
@@ -551,16 +553,16 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
             const SizedBox(height: 16),
             _buildSection(
               context,
-              title: 'Vehicle Information',
+              title: 'Vehicle Information'.tr(),
               children: [
                 if (booking.startOdometer != null)
-                  _buildInfoRow(context, 'Start Odometer',
+                  _buildInfoRow(context, 'Start Odometer'.tr(),
                       '${booking.startOdometer} km'),
                 if (booking.endOdometer != null)
                   _buildInfoRow(
-                      context, 'End Odometer', '${booking.endOdometer} km'),
+                      context, 'End Odometer'.tr(), '${booking.endOdometer} km'),
                 if (booking.totalKilometersDriven != null)
-                  _buildInfoRow(context, 'Distance Driven',
+                  _buildInfoRow(context, 'Distance Driven'.tr(),
                       '${booking.totalKilometersDriven} km'),
               ],
             ),
@@ -571,7 +573,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
             const SizedBox(height: 16),
             _buildEvidenceSection(
               context,
-              'Checkout Evidence',
+              'Checkout Evidence'.tr(),
               booking.checkoutEvidence!,
             ),
           ],
@@ -581,7 +583,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
             const SizedBox(height: 16),
             _buildEvidenceSection(
               context,
-              'Checkin Evidence',
+              'Checkin Evidence'.tr(),
               booking.checkinEvidence!,
             ),
           ],
@@ -636,7 +638,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    booking.status.toString().split('.').last.toUpperCase(),
+                    _localizedBookingStatus(booking.status),
                     style: TextStyle(
                       color: statusColor,
                       fontSize: 20,
@@ -645,7 +647,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
                   ),
                   if (booking.isOverdue)
                     Text(
-                      'OVERDUE FOR RETURN',
+                      'OVERDUE FOR RETURN'.tr(),
                       style: TextStyle(
                         color: isDark ? Colors.red[300] : Colors.red[900],
                         fontSize: 12,
@@ -748,7 +750,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
             const SizedBox(height: 12),
             // TODO: Display evidence media, checklist, damage reports
             Text(
-              'Evidence details would be displayed here',
+              'Evidence details would be displayed here'.tr(),
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
@@ -766,21 +768,39 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
       TimeOfDay.fromDateTime(dateTime),
       alwaysUse24HourFormat: false,
     );
-    return '$date at $time';
+    return '$date ${'at'.tr()} $time';
   }
 
-  String _durationUnitLabel(String unit) {
+  String _localizedBookingStatus(RentalBookingStatus status) {
+    switch (status) {
+      case RentalBookingStatus.pending:
+        return 'Pending'.tr();
+      case RentalBookingStatus.confirmed:
+        return 'Confirmed'.tr();
+      case RentalBookingStatus.active:
+        return 'Active'.tr();
+      case RentalBookingStatus.completed:
+        return 'Completed'.tr();
+      case RentalBookingStatus.cancelled:
+        return 'Cancelled'.tr();
+      case RentalBookingStatus.disputed:
+        return 'Disputed'.tr();
+    }
+  }
+
+  String _durationUnitLabel(String unit, int quantity) {
+    final singular = quantity == 1;
     switch (unit.toLowerCase()) {
       case 'hourly':
-        return 'hour';
+        return singular ? 'hour'.tr() : 'hours'.tr();
       case 'daily':
-        return 'day';
+        return singular ? 'day'.tr() : 'days'.tr();
       case 'weekly':
-        return 'week';
+        return singular ? 'week'.tr() : 'weeks'.tr();
       case 'monthly':
-        return 'month';
+        return singular ? 'month'.tr() : 'months'.tr();
       default:
-        return unit;
+        return unit.tr();
     }
   }
 }

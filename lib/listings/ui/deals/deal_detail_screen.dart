@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/listings/model/deal_ad_model.dart';
@@ -65,13 +66,13 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
   AppBar _buildAppBar(BuildContext context) {
     final isOwner = widget.currentUser.userID == widget.deal.listerId;
     return AppBar(
-      title: const Text('Deal Details'),
+      title: Text('Deal Details'.tr()),
       centerTitle: true,
       actions: [
         if (isOwner)
           IconButton(
             icon: const Icon(Icons.analytics_outlined),
-            tooltip: 'View Analytics',
+            tooltip: 'View Analytics'.tr(),
             onPressed: () {
               push(
                 context,
@@ -213,7 +214,7 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
               ),
-            ),
+            ).tr(),
           ),
         if (isSoldOut && !isExpired)
           Container(
@@ -229,7 +230,7 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
               ),
-            ),
+            ).tr(),
           ),
       ],
     );
@@ -255,7 +256,7 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
             ),
           ),
           Text(
-            'Until ${DateFormat('MMM d, yyyy').format(widget.deal.expireAt)}',
+            'Until {}'.tr(args: [DateFormat('MMM d, yyyy').format(widget.deal.expireAt)]),
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey[600],
@@ -274,8 +275,8 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-          const Text(
-            'Availability',
+          Text(
+            'Availability'.tr(),
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
@@ -286,11 +287,16 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Redeemed: ${widget.deal.redemptionCountTotal}/${widget.deal.redemptionLimitTotal}',
+                'redeemed_count'.tr(args: [
+                  widget.deal.redemptionCountTotal.toString(),
+                  widget.deal.redemptionLimitTotal.toString(),
+                ]),
               ),
               if (widget.deal.redemptionLimitTotal != null && (widget.deal.redemptionLimitTotal! - widget.deal.redemptionCountTotal) > 0)
                 Text(
-                  '${widget.deal.redemptionLimitTotal! - widget.deal.redemptionCountTotal} remaining',
+                  'remaining_count'.tr(args: [
+                    (widget.deal.redemptionLimitTotal! - widget.deal.redemptionCountTotal).toString(),
+                  ]),
                   style: TextStyle(
                     color: primaryColor,
                     fontWeight: FontWeight.bold,
@@ -322,22 +328,22 @@ class _DealDetailScreenState extends State<DealDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _InfoRow(
-            label: 'Type',
+            label: 'Type'.tr(),
             value: widget.deal.redemptionType ==
                 'PROMO_CODE'
-                ? 'Promo Code'
-                : 'Claim In-App',
+                ? 'Promo Code'.tr()
+                : 'Claim In-App'.tr(),
           ),
           _InfoRow(
-            label: 'Views',
+            label: 'Views'.tr(),
             value: '${widget.deal.viewCount}',
           ),
           _InfoRow(
-            label: 'Saves',
+            label: 'Saves'.tr(),
             value: '${widget.deal.saveCount}',
           ),
           _InfoRow(
-            label: 'Claims',
+            label: 'Claims'.tr(),
             value: '${widget.deal.claimCount}',
           ),
         ],

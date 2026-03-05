@@ -506,7 +506,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: ChoiceChip(
-              label: Text(status == 'all' ? 'All'.tr() : status.capitalize()),
+              label: Text(_localizedStatusSlug(status)),
               selected: isSelected,
               onSelected: (_) => setState(() => _selectedStatus = status),
               selectedColor: primary.withOpacity(0.2),
@@ -528,6 +528,44 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
         }).toList(),
       ),
     );
+  }
+
+  String _localizedStatusSlug(String status) {
+    switch (status) {
+      case 'all':
+        return 'All'.tr();
+      case 'pending':
+        return 'Pending'.tr();
+      case 'confirmed':
+        return 'Confirmed'.tr();
+      case 'active':
+        return 'Active'.tr();
+      case 'completed':
+        return 'Completed'.tr();
+      case 'cancelled':
+        return 'Cancelled'.tr();
+      case 'disputed':
+        return 'Disputed'.tr();
+      default:
+        return status.capitalize();
+    }
+  }
+
+  String _localizedBookingStatus(RentalBookingStatus status) {
+    switch (status) {
+      case RentalBookingStatus.pending:
+        return 'Pending'.tr();
+      case RentalBookingStatus.confirmed:
+        return 'Confirmed'.tr();
+      case RentalBookingStatus.active:
+        return 'Active'.tr();
+      case RentalBookingStatus.completed:
+        return 'Completed'.tr();
+      case RentalBookingStatus.cancelled:
+        return 'Cancelled'.tr();
+      case RentalBookingStatus.disputed:
+        return 'Disputed'.tr();
+    }
   }
 
   Widget _buildCustomerBookingCard(BuildContext context, RentalBooking booking) {
@@ -564,7 +602,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                       Icon(statusStyle.icon, size: 20, color: statusStyle.color),
                       const SizedBox(width: 8),
                       Text(
-                        booking.status.toString().split('.').last.toUpperCase(),
+                        _localizedBookingStatus(booking.status),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: statusStyle.color,
                               fontWeight: FontWeight.bold,
@@ -615,11 +653,11 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Start: ${_formatDateTime(context, booking.startTime)}',
+                    '${'Start'.tr()}: ${_formatDateTime(context, booking.startTime)}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   Text(
-                    'End: ${_formatDateTime(context, booking.endTime)}',
+                    '${'End'.tr()}: ${_formatDateTime(context, booking.endTime)}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   if (canCancel) ...[
@@ -843,7 +881,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                       Icon(statusStyle.icon, size: 20, color: statusStyle.color),
                       const SizedBox(width: 8),
                       Text(
-                        booking.status.toString().split('.').last.toUpperCase(),
+                        _localizedBookingStatus(booking.status),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: statusStyle.color,
                               fontWeight: FontWeight.bold,
@@ -942,11 +980,11 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Start: ${_formatDateTime(context, booking.startTime)}',
+                    '${'Start'.tr()}: ${_formatDateTime(context, booking.startTime)}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   Text(
-                    'End: ${_formatDateTime(context, booking.endTime)}',
+                    '${'End'.tr()}: ${_formatDateTime(context, booking.endTime)}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   if (booking.status == RentalBookingStatus.pending) ...[

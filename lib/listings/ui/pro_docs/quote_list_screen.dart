@@ -53,13 +53,13 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
           if (state is QuoteListLocked) {
             return Scaffold(
               appBar: AppBar(title: Text('Quotes & Invoices'.tr())),
-              body: _buildLocked(state.message),
+              body: _buildLocked(state.message.tr()),
             );
           }
           if (state is QuoteListError) {
             return Scaffold(
               appBar: AppBar(title: Text('Quotes & Invoices'.tr())),
-              body: Center(child: Text(state.message)),
+              body: Center(child: Text(state.message.tr())),
             );
           }
 
@@ -210,7 +210,7 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (state is InvoiceListError) {
-            return Center(child: Text(state.message));
+            return Center(child: Text(state.message.tr()));
           }
 
           final invoices = (state as InvoiceListLoaded).invoices;
@@ -321,7 +321,7 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
           const Icon(Icons.info_outline_rounded, color: Colors.orange),
           const SizedBox(width: 8),
           Expanded(
-            child: Text('You reached the $limit quote limit. Upgrade for unlimited history.'.tr()),
+            child: Text('quote_limit_reached_message'.tr(args: [limit.toString()])),
           ),
           TextButton(
             onPressed: () {

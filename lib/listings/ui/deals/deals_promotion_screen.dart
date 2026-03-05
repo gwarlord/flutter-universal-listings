@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/model/deal_ad_quota.dart';
@@ -17,6 +18,17 @@ class DealsPromotionScreen extends StatefulWidget {
 
 class _DealsPromotionScreenState extends State<DealsPromotionScreen> {
   late Future<Map<String, String>> _quotaData;
+
+  String _localizedTierName(String? tier) {
+    switch (tier?.toLowerCase()) {
+      case 'professional':
+        return 'Professional'.tr();
+      case 'premium':
+        return 'Premium'.tr();
+      default:
+        return 'Free'.tr();
+    }
+  }
 
   @override
   void initState() {
@@ -52,7 +64,7 @@ class _DealsPromotionScreenState extends State<DealsPromotionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Deals & Promotions'),
+        title: Text('Deals & Promotions'.tr()),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -77,14 +89,14 @@ class _DealsPromotionScreenState extends State<DealsPromotionScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Post your deals, promotions, and ads here!',
+                    'Post your deals, promotions, and ads here!'.tr(),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 32),
                   ElevatedButton.icon(
                     icon: const Icon(Icons.add),
-                    label: const Text('Upload New Ad'),
+                    label: Text('Upload New Ad'.tr()),
                     onPressed: canPostAds ? () {
                       Navigator.push(
                         context,
@@ -95,7 +107,7 @@ class _DealsPromotionScreenState extends State<DealsPromotionScreen> {
                   const SizedBox(height: 16),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.local_offer),
-                    label: const Text('View All Deals'),
+                    label: Text('View All Deals'.tr()),
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -120,6 +132,10 @@ class _DealsPromotionScreenState extends State<DealsPromotionScreen> {
   ) {
     final textColor = isDark ? Colors.white : Colors.black87;
     final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final tierValue = user.subscriptionTier?.toString().trim();
+    final tierLabel = (tierValue != null && tierValue.isNotEmpty)
+      ? _localizedTierName(tierValue).toUpperCase()
+      : 'Free'.tr().toUpperCase();
 
     return Card(
       color: cardColor,
@@ -139,7 +155,7 @@ class _DealsPromotionScreenState extends State<DealsPromotionScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Ad Posting Quota',
+                        'Ad Posting Quota'.tr(),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -147,7 +163,7 @@ class _DealsPromotionScreenState extends State<DealsPromotionScreen> {
                         ),
                       ),
                       Text(
-                        '${user.subscriptionTier?.toUpperCase() ?? 'FREE'} Tier',
+                        '$tierLabel ${'Tier'.tr()}',
                         style: TextStyle(
                           fontSize: 12,
                           color: isDark ? Colors.white70 : Colors.black54,
@@ -186,7 +202,7 @@ class _DealsPromotionScreenState extends State<DealsPromotionScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Posts this month',
+                          'Posts this month'.tr(),
                           style: TextStyle(
                             fontSize: 14,
                             color: textColor,
@@ -223,7 +239,7 @@ class _DealsPromotionScreenState extends State<DealsPromotionScreen> {
                     // Reset Info
                     if (resetDate.isNotEmpty)
                       Text(
-                        'Resets on $resetDate',
+                        '${'Resets on'.tr()} $resetDate',
                         style: TextStyle(
                           fontSize: 12,
                           color: isDark ? Colors.white70 : Colors.black54,
@@ -269,7 +285,7 @@ class _DealsPromotionScreenState extends State<DealsPromotionScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Upgrade to Post Ads',
+                        'Upgrade to Post Ads'.tr(),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -277,7 +293,7 @@ class _DealsPromotionScreenState extends State<DealsPromotionScreen> {
                         ),
                       ),
                       Text(
-                        'You\'re on the Free plan',
+                        'on_free_plan'.tr(),
                         style: TextStyle(
                           fontSize: 12,
                           color: isDark ? Colors.white70 : Colors.black54,
@@ -290,7 +306,7 @@ class _DealsPromotionScreenState extends State<DealsPromotionScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Professional plan: 10 ads/month\nPremium plan: 20 ads/month',
+              'pro_premium_plan_limits'.tr(),
               style: TextStyle(
                 fontSize: 13,
                 color: isDark ? Colors.white : Colors.black87,
@@ -298,7 +314,7 @@ class _DealsPromotionScreenState extends State<DealsPromotionScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Also requires at least one active listing.',
+              'Also requires at least one active listing.'.tr(),
               style: TextStyle(
                 fontSize: 12,
                 color: isDark ? Colors.white70 : Colors.black54,

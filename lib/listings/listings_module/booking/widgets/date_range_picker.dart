@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:intl/intl.dart';
 
 class DateRange {
@@ -82,6 +83,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final localeCode = context.locale.toString();
     return Column(
       children: [
         Padding(
@@ -103,7 +105,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
                 },
               ),
               Text(
-                DateFormat('MMMM yyyy').format(_displayedMonth),
+                DateFormat('MMMM yyyy', localeCode).format(_displayedMonth),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -134,18 +136,18 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Start Date: ${DateFormat('MMM dd, yyyy').format(_checkInDate!)}',
+                  '${'Start Date'.tr()}: ${DateFormat('MMM dd, yyyy', localeCode).format(_checkInDate!)}',
                   style: TextStyle(fontWeight: FontWeight.bold, color: isDarkMode ? Colors.white : Colors.black),
                 ),
                 if (_checkOutDate != null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    'End Date: ${DateFormat('MMM dd, yyyy').format(_checkOutDate!)}',
+                    '${'End Date'.tr()}: ${DateFormat('MMM dd, yyyy', localeCode).format(_checkOutDate!)}',
                     style: TextStyle(fontWeight: FontWeight.bold, color: isDarkMode ? Colors.white : Colors.black),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Nights: ${_checkOutDate!.difference(_checkInDate!).inDays}',
+                    '${'Nights'.tr()}: ${_checkOutDate!.difference(_checkInDate!).inDays}',
                     style: TextStyle(color: isDarkMode ? Colors.grey.shade400 : Colors.grey),
                   ),
                 ],

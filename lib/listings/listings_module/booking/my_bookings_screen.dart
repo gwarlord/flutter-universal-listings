@@ -190,7 +190,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
   Widget _buildBookingsList(List<dynamic> bookings, String status) {
     if (bookings.isEmpty) {
-      return Center(child: Text('No $status bookings'.tr()));
+      return Center(child: Text(_emptyBookingsLabel(status)));
     }
 
     return ListView.builder(
@@ -249,7 +249,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Host: ${booking.listersName}',
+                        '${'Host'.tr()}: ${booking.listersName}',
                         style: TextStyle(
                           fontSize: 12,
                           color: dark ? Colors.white70 : Colors.black87,
@@ -266,7 +266,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          booking.status.toUpperCase(),
+                          _localizedBookingStatus(booking.status),
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -293,7 +293,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             ),
             const SizedBox(height: 12),
             Text(
-              'Start Date: ${DateFormat('MMM dd, yyyy').format(booking.checkInDate)}',
+              '${'Start Date'.tr()}: ${DateFormat('MMM dd, yyyy').format(booking.checkInDate)}',
               style: TextStyle(
                 fontSize: 12,
                 color: dark ? Colors.white70 : Colors.black87,
@@ -301,7 +301,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             ),
             const SizedBox(height: 4),
             Text(
-              'End Date: ${DateFormat('MMM dd, yyyy').format(booking.checkOutDate)}',
+              '${'End Date'.tr()}: ${DateFormat('MMM dd, yyyy').format(booking.checkOutDate)}',
               style: TextStyle(
                 fontSize: 11,
                 color: dark ? Colors.white70 : Colors.black87,
@@ -309,7 +309,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             ),
             const SizedBox(height: 4),
             Text(
-              'Duration: ${booking.numberOfNights} night${booking.numberOfNights > 1 ? 's' : ''}',
+              '${'Duration'.tr()}: ${booking.numberOfNights} ${booking.numberOfNights > 1 ? 'nights'.tr() : 'night'.tr()}',
               style: TextStyle(
                 fontSize: 11,
                 color: dark ? Colors.white70 : Colors.black87,
@@ -317,7 +317,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             ),
             const SizedBox(height: 4),
             Text(
-              'Guests: ${booking.numberOfGuests}',
+              '${'Guests'.tr()}: ${booking.numberOfGuests}',
               style: TextStyle(
                 fontSize: 11,
                 color: dark ? Colors.white70 : Colors.black87,
@@ -386,6 +386,36 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         ),
       ),
     );
+  }
+
+  String _localizedBookingStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'Pending'.tr();
+      case 'confirmed':
+        return 'Confirmed'.tr();
+      case 'rejected':
+        return 'Rejected'.tr();
+      case 'cancelled':
+        return 'Cancelled'.tr();
+      default:
+        return status;
+    }
+  }
+
+  String _emptyBookingsLabel(String status) {
+    switch (status) {
+      case 'pending':
+        return 'No pending bookings'.tr();
+      case 'confirmed':
+        return 'No confirmed bookings'.tr();
+      case 'rejected':
+        return 'No rejected bookings'.tr();
+      case 'cancelled':
+        return 'No cancelled bookings'.tr();
+      default:
+        return 'No bookings'.tr();
+    }
   }
 
   Color _getStatusColor(String status) {

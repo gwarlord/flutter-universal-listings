@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/services/menu_service.dart';
@@ -67,7 +68,7 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
           value: _menuEnabled,
           onChanged: _isLoading ? null : _toggleMenuEnabled,
           title: Text(
-            'Show Menu on Listing',
+            'Show Menu on Listing'.tr(),
             style: TextStyle(
               color: theme.colorScheme.onSurface,
               fontWeight: FontWeight.w600,
@@ -75,8 +76,8 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
           ),
           subtitle: Text(
             _menuEnabled
-                ? 'Menu is visible to customers'
-                : 'Menu is hidden from customers',
+                ? 'Menu is visible to customers'.tr()
+                : 'Menu is hidden from customers'.tr(),
             style: TextStyle(
               color: appColors.mutedText,
               fontSize: 12,
@@ -94,8 +95,8 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
           // Option A: Upload Menu
           _buildMenuOptionCard(
             context,
-            title: 'Upload Menu Photos',
-            description: 'Upload 1-6 menu images',
+            title: 'Upload Menu Photos'.tr(),
+            description: 'Upload 1-6 menu images'.tr(),
             icon: Icons.image_outlined,
             onTap: () => _uploadMenuPhotos(context),
             count: _menuUploads.length,
@@ -106,8 +107,8 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
           // Option B: Create Digital Menu
           _buildMenuOptionCard(
             context,
-            title: 'Create Digital Menu',
-            description: 'Build items with prices and descriptions',
+            title: 'Create Digital Menu'.tr(),
+            description: 'Build items with prices and descriptions'.tr(),
             icon: Icons.restaurant_menu,
             onTap: () => _openMenuBuilder(context),
             count: _menuSections.length,
@@ -123,7 +124,7 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'Menu hidden from customers',
+                'Menu hidden from customers'.tr(),
                 style: TextStyle(
                   color: appColors.mutedText,
                   fontSize: 13,
@@ -226,7 +227,7 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 24, 4, 12),
           child: Text(
-            'Menu (Food & Beverage)',
+            'Menu (Food & Beverage)'.tr(),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
@@ -263,7 +264,7 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
   Future<void> _uploadMenuPhotos(BuildContext context) async {
     if (_menuUploads.length >= 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Maximum 6 menu photos allowed')),
+        SnackBar(content: Text('Maximum 6 menu photos allowed'.tr())),
       );
       return;
     }
@@ -298,7 +299,7 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Uploaded ${filesToUpload.length} photo(s)'),
+            content: Text('Uploaded {} photo(s)'.tr(args: [filesToUpload.length.toString()])),
             backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );

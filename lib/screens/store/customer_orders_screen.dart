@@ -353,10 +353,10 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                             ),
                             Text(
                               order.fulfillment.method.value == 'pickup'
-                                  ? 'Pickup'
+                                  ? 'Pickup'.tr()
                                   : order.fulfillment.method.value == 'dine_in'
-                                      ? 'Dining In'
-                                      : 'Shipping',
+                                      ? 'Dining In'.tr()
+                                      : 'Shipping'.tr(),
                               style: TextStyle(
                                 fontSize: 13,
                                 color: dark ? Colors.white54 : Colors.black54,
@@ -373,7 +373,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  tableName ?? 'Table',
+                                  tableName ?? 'Table'.tr(),
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -384,7 +384,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
 
                             // Item count
                             Text(
-                              '• ${order.items.length} item${order.items.length != 1 ? 's' : ''}',
+                              '• ${order.items.length} ${'Items'.tr()}',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: dark ? Colors.white54 : Colors.black54,

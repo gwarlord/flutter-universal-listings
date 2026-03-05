@@ -24,6 +24,18 @@
     "other": "Comments"
   },
   "My Brands/Branches": "علاماتي/فروعي",
+  "Manage Locations": "إدارة المواقع",
+  "Locations": "المواقع",
+  "Delete Brand": "حذف العلامة التجارية",
+  "Delete Brand?": "حذف العلامة التجارية؟",
+  "No locations linked": "لا توجد مواقع مرتبطة",
+  "No locations found": "لم يتم العثور على مواقع",
+  "It's ok, your listings are safe": "لا تقلق، قوائمك بأمان",
+  "Verified Brand": "علامة تجارية موثقة",
+  "Your brand will be deleted.": "سيتم حذف علامتك التجارية.",
+  "Your listings will be kept": "سيتم الاحتفاظ بقوائمك",
+  "Deleting brand...": "جارٍ حذف العلامة التجارية...",
+  "Brand deleted successfully!": "تم حذف العلامة التجارية بنجاح!",
   "Instagram": "Instagram",
   "Facebook": "Facebook",
   "TikTok": "TikTok",
@@ -34,6 +46,28 @@
   "Wheelchair Accessible": "مناسب للكراسي المتحركة",
   "Business Type": "نوع النشاط",
   "Restaurant": "مطعم",
+  "Restaurants": "مطاعم",
+  "Real Estate": "العقارات",
+  "Auto": "السيارات",
+  "Automotive": "السيارات",
+  "Beauty & Spa": "الجمال والسبا",
+  "Electronics": "إلكترونيات",
+  "Events": "فعاليات",
+  "Health & Fitness": "الصحة واللياقة",
+  "Home Services": "خدمات منزلية",
+  "Entertainment": "ترفيه",
+  "Professional Services": "خدمات مهنية",
+  "Professional Service": "خدمة مهنية",
+  "Education": "التعليم",
+  "Travel & Tourism": "السفر والسياحة",
+  "Pets": "حيوانات أليفة",
+  "Sports": "رياضة",
+  "Food & Drink": "طعام وشراب",
+  "Health & Beauty": "الصحة والجمال",
+  "Accommodation": "إقامة",
+  "Home & Garden": "المنزل والحديقة",
+  "Nightlife": "الحياة الليلية",
+  "Shopping": "التسوق",
   "Cash,Card": "نقدًا,بطاقة",
   "Parking": "مواقف سيارات",
   "Available": "متاح",
@@ -41,6 +75,501 @@
   "Walk-ins Welcome": "الزيارة بدون موعد مرحب بها",
   "Premium Listing": "إعلان مميز",
   "About": "حول",
-  "Where we're located": "مكان تواجدنا"
-  ,"Details": "التفاصيل"
+  "Where we're located": "مكان تواجدنا",
+  "Details": "التفاصيل",
+  "Location Scope": "نطاق الموقع",
+  "Choose what content you want to see": "اختر المحتوى الذي تريد رؤيته",
+  "Mode": "الوضع",
+  "Local": "محلي",
+  "Caribbean": "الكاريبي",
+  "Nearby": "بالقرب",
+  "Show content from a specific country": "عرض المحتوى من بلد محدد",
+  "Show content from all Caribbean countries": "عرض المحتوى من جميع دول الكاريبي",
+  "Show content based on your GPS location": "عرض المحتوى بناءً على موقع GPS الخاص بك",
+  "Strict Local Only": "محلي فقط بشكل صارم",
+  "Tap to localise": "اضغط للتحديد المحلي",
+  "Tap for Caribbean": "اضغط للكاريبي",
+  "Tap to change": "اضغط للتغيير",
+  "Tap to toggle • Long press for options": "اضغط للتبديل • اضغط مطولاً للخيارات",
+  "Hold for more": "اضغط مطولاً للمزيد",
+  "Search with AI": "البحث بالذكاء الاصطناعي",
+  "Unable to open AI Search right now": "تعذر فتح البحث بالذكاء الاصطناعي الآن",
+  "Food": "طعام",
+  "General": "عام",
+  "Deals & Promotions": "العروض والترويجات",
+  "Post your deals, promotions, and ads here!": "انشر عروضك وترويجاتك وإعلاناتك هنا!",
+  "Upload New Ad": "رفع إعلان جديد",
+  "View All Deals": "عرض كل العروض",
+  "Ad Posting Quota": "حصة نشر الإعلانات",
+  "Tier": "الفئة",
+  "Free": "مجاني",
+  "Professional": "احترافي",
+  "Premium": "مميز",
+  "Posts this month": "المنشورات هذا الشهر",
+  "Resets on": "تتم إعادة الضبط في",
+  "Upgrade to Post Ads": "قم بالترقية لنشر الإعلانات",
+  "You're on the Free plan": "أنت على الخطة المجانية",
+  "Professional plan: 10 ads/month\nPremium plan: 20 ads/month": "خطة Professional: 10 إعلانات/شهر\nخطة Premium: 20 إعلانًا/شهر",
+  "Also requires at least one active listing.": "يتطلب أيضًا قائمة نشطة واحدة على الأقل.",
+  "Post Event": "نشر حدث",
+  "Create Event": "إنشاء حدث",
+  "Edit Event": "تعديل الحدث",
+  "Event posted successfully.": "تم نشر الحدث بنجاح.",
+  "Event Title Hint": "مثال: ليلة الكرنفال",
+  "Committee Hint": "مثال: فريق التسويق",
+  "Event Description Hint": "شارك تفاصيل الحدث",
+  "Venue Name Hint": "مثال: Queen's Park Savannah",
+  "Ticket Link Hint": "https://...",
+  "Facebook Page Hint": "مثال: facebook.com/yourevent",
+  "Instagram Username Hint": "مثال: @yourevent",
+  "Ticket Name Hint": "مثال: VIP",
+  "Ticket Price Hint": "مثال: 25.00",
+  "Ticket Description Hint": "تفاصيل اختيارية للتذكرة",
+  "Member Name Hint": "مثال: John Doe",
+  "Contact Number Hint": "مثال: +1 868...",
+  "Manage Rentals": "إدارة الإيجارات",
+  "Listing Freshness": "حداثة القوائم",
+  "Manage your active listings": "إدارة قوائمك النشطة",
+  "Select multiple": "تحديد متعدد",
+  "Reload scores": "إعادة تحميل الدرجات",
+  "Urgent Attention": "انتباه عاجل",
+  "These listings will hide soon. Take action now!": "ستُخفى هذه القوائم قريبًا. اتخذ إجراءً الآن!",
+  "Needs Refresh Soon": "تحتاج تحديثًا قريبًا",
+  "Plan to refresh these listings soon.": "خطط لتحديث هذه القوائم قريبًا.",
+  "Active & Fresh": "نشطة وحديثة",
+  "These listings are in good standing.": "هذه القوائم في حالة جيدة.",
+  "Never Expire": "لا تنتهي أبدًا",
+  "These listings are exempt from automatic hiding.": "هذه القوائم معفاة من الإخفاء التلقائي.",
+  "Hidden Listings": "القوائم المخفية",
+  "Refresh to make these visible again.": "حدّث لجعل هذه القوائم مرئية مرة أخرى.",
+  "Refresh All Urgent ({})": "تحديث كل العاجل ({})",
+  "Overview": "نظرة عامة",
+  "Urgent": "عاجل",
+  "Warning": "تحذير",
+  "Fresh": "حديث",
+  "Hidden": "مخفي",
+  "Exempt (Never Expire)": "معفى (لا ينتهي أبدًا)",
+  "Refresh All": "تحديث الكل",
+  "Deselect All": "إلغاء تحديد الكل",
+  "Auto-Refresh Eligible": "مؤهل للتحديث التلقائي",
+  "Refresh Now": "تحديث الآن",
+  "Make Visible": "اجعلها مرئية",
+  "Booking Details": "تفاصيل الحجز",
+  "Booking Information": "معلومات الحجز",
+  "Pricing": "التسعير",
+  "Unit Price": "سعر الوحدة",
+  "Deposit": "العربون",
+  "Mileage Overage": "رسوم زيادة المسافة",
+  "Vehicle Information": "معلومات المركبة",
+  "Start Odometer": "عداد الكيلومترات عند البداية",
+  "End Odometer": "عداد الكيلومترات عند النهاية",
+  "Distance Driven": "المسافة المقطوعة",
+  "Checkout Evidence": "إثبات التسليم",
+  "Checkin Evidence": "إثبات الاستلام",
+  "OVERDUE FOR RETURN": "متأخر عن الإرجاع",
+  "Evidence details would be displayed here": "سيتم عرض تفاصيل الإثبات هنا",
+  "Rental item not found": "لم يتم العثور على عنصر الإيجار",
+  "No photos available": "لا توجد صور متاحة",
+  "Failed to load image": "تعذر تحميل الصورة",
+  "Loading customer...": "جارٍ تحميل العميل...",
+  "Rental Item": "عنصر إيجار",
+  "at": "في",
+  "hour": "ساعة",
+  "hours": "ساعات",
+  "day": "يوم",
+  "days": "أيام",
+  "week": "أسبوع",
+  "weeks": "أسابيع",
+  "month": "شهر",
+  "months": "أشهر",
+  "Booking Services": "خدمات الحجز",
+  "Require Booking": "يتطلب حجز",
+  "Show a \"Book Now\" button on your listing": "أظهر زر \"احجز الآن\" في قائمتك",
+  "Allow Quantity Selection": "السماح باختيار الكمية",
+  "Customers can select quantity when booking services": "يمكن للعملاء اختيار الكمية عند حجز الخدمات",
+  "Use Time Blocks": "استخدام فترات زمنية",
+  "Enable hourly time slot bookings instead of full day bookings": "فعّل الحجوزات بالساعة بدلًا من حجوزات اليوم الكامل",
+  "Custom Booking Questions": "أسئلة حجز مخصصة",
+  "Ask customers to answer questions when they book": "اطلب من العملاء الإجابة عن أسئلة عند الحجز",
+  "Allow Multiple Bookings Per Day": "السماح بعدة حجوزات في اليوم",
+  "Multiple customers can book different time slots on the same day": "يمكن لعدة عملاء حجز فترات زمنية مختلفة في اليوم نفسه",
+  "No listings found": "لم يتم العثور على قوائم",
+  "Listing updated successfully": "تم تحديث القائمة بنجاح",
+  "Error loading listings": "حدث خطأ أثناء تحميل القوائم",
+  "Error updating listing": "حدث خطأ أثناء تحديث القائمة",
+  "Host": "المضيف",
+  "Start Date": "تاريخ البدء",
+  "End Date": "تاريخ الانتهاء",
+  "Duration": "المدة",
+  "night": "ليلة",
+  "nights": "ليالٍ",
+  "No pending bookings": "لا توجد حجوزات قيد الانتظار",
+  "No confirmed bookings": "لا توجد حجوزات مؤكدة",
+  "No rejected bookings": "لا توجد حجوزات مرفوضة",
+  "No cancelled bookings": "لا توجد حجوزات ملغاة",
+  "Dates with bookings": "تواريخ بها حجوزات",
+  "Assigned Listings": "القوائم المعيّنة",
+  "No Assigned Listings": "لا توجد قوائم معيّنة",
+  "You have not been added as a collaborator to any listings": "لم تتم إضافتك كمتعاون في أي قائمة",
+  "x_more": "+{} المزيد",
+  "Confirmed": "مؤكد",
+  "Completed": "مكتمل",
+  "Cancelled": "ملغى",
+  "Disputed": "متنازع عليه",
+  "Start": "البداية",
+  "End": "النهاية",
+  "Pending": "قيد الانتظار",
+  "Active": "نشط",
+  "Closed": "مغلق",
+  "Table Sessions": "جلسات الطاولات",
+  "Assign Waiter": "تعيين نادل",
+  "Change Waiter": "تغيير النادل",
+  "Acknowledge": "تأكيد",
+  "Customer Requests": "طلبات العملاء",
+  "No pending sessions": "لا توجد جلسات قيد الانتظار",
+  "No active sessions": "لا توجد جلسات نشطة",
+  "No closed sessions": "لا توجد جلسات مغلقة",
+  "Started": "بدأ",
+  "Activated": "تم التفعيل",
+  "Purpose": "الغرض",
+  "Payment": "الدفع",
+  "Browse Full Store": "تصفح المتجر بالكامل",
+  "Payment Methods": "طرق الدفع",
+  "Bank Transfer": "تحويل بنكي",
+  "Payment Apps": "تطبيقات الدفع",
+  "Bank": "البنك",
+  "Account Name": "اسم الحساب",
+  "Account Number": "رقم الحساب",
+  "Branch": "الفرع",
+  "SWIFT/BIC": "SWIFT/BIC",
+  "IBAN": "IBAN",
+  "Copied to clipboard": "تم النسخ إلى الحافظة",
+  "Book Appointment": "حجز موعد",
+  "Booking sent": "تم إرسال الحجز",
+  "Select Services": "اختر الخدمات",
+  "Select dates": "اختر التواريخ",
+  "Please select check-in and check-out dates.": "يرجى اختيار تاريخي تسجيل الوصول والمغادرة.",
+  "Select time block": "اختر كتلة زمنية",
+  "Please select a time slot for your booking.": "يرجى اختيار فترة زمنية لحجزك.",
+  "Select time slot": "اختر فترة زمنية",
+  "No time slots available for this date": "لا توجد فترات زمنية متاحة لهذا التاريخ",
+  "Number of guests": "عدد الضيوف",
+  "Custom questions": "أسئلة مخصصة",
+  "Type your answer": "اكتب إجابتك",
+  "Notes for the lister": "ملاحظات لصاحب القائمة",
+  "Any special requests...": "أي طلبات خاصة...",
+  "Qty": "الكمية",
+  "Nights": "الليالي",
+  "Total Amount:": "المبلغ الإجمالي:",
+  "Your booking request has been sent to the lister. You will be notified once they respond.": "تم إرسال طلب الحجز إلى صاحب القائمة. سيتم إشعارك بمجرد الرد.",
+  "Confirm": "تأكيد",
+  "Error": "خطأ",
+  "Retry": "إعادة المحاولة",
+  "Just now": "الآن",
+  "minutes_ago": "منذ {} د",
+  "hours_ago": "منذ {} س",
+  "Quotes & Invoices": "عروض الأسعار والفواتير",
+  "Company": "الشركة",
+  "Client name": "اسم العميل",
+  "Address": "العنوان",
+  "No items yet": "لا توجد عناصر بعد",
+  "Discount": "الخصم",
+  "Tax": "الضريبة",
+  "Optional notes": "ملاحظات اختيارية",
+  "Optional terms": "شروط اختيارية",
+  "Select date": "اختر التاريخ",
+  "Terms": "الشروط",
+  "Valid Until": "صالح حتى",
+  "Total": "الإجمالي",
+  "Totals": "الإجماليات",
+  "Currency": "العملة",
+  "Line Items": "بنود العناصر",
+  "Client": "العميل",
+  "Listing": "القائمة",
+  "Add Listing": "إضافة قائمة",
+  "Edit Listing": "تعديل القائمة",
+  "Request Featured": "طلب تمييز",
+  "Manage Collaborators": "إدارة المتعاونين",
+  "Team Chat": "دردشة الفريق",
+  "Manage Reviews": "إدارة المراجعات",
+  "Delete Listing": "حذف القائمة",
+  "Delete Listing?": "حذف القائمة؟",
+  "Listing Details": "تفاصيل القائمة",
+  "Details & Hours": "التفاصيل وساعات العمل",
+  "Contact Information": "معلومات الاتصال",
+  "Social Media": "وسائل التواصل الاجتماعي",
+  "Business Details": "تفاصيل النشاط التجاري",
+  "Menu (Food & Beverage)": "القائمة (طعام وشراب)",
+  "Store / Ecommerce (Optional)": "المتجر / التجارة الإلكترونية (اختياري)",
+  "View Cart": "عرض السلة",
+  "CaribTap Subscriptions": "اشتراكات CaribTap",
+  "Store not available": "المتجر غير متاح",
+  "Unable to open Google Play subscriptions": "تعذر فتح اشتراكات Google Play",
+  "Unable to load plans": "تعذر تحميل الخطط",
+  "Choose a plan": "اختر خطة",
+  "Pick Professional or Premium to unlock business tools.": "اختر Professional أو Premium لفتح أدوات الأعمال.",
+  "AI photo enhancement": "تحسين الصور بالذكاء الاصطناعي",
+  "Watermarking tools": "أدوات العلامة المائية",
+  "Priority support": "دعم ذو أولوية",
+  "Everything in Professional": "كل ما في Professional",
+  "Quotes & invoices tools": "أدوات عروض الأسعار والفواتير",
+  "Full suite with premium business features.": "حزمة كاملة بميزات أعمال متميزة.",
+  "Current plan": "الخطة الحالية",
+  "Current plan: {}": "الخطة الحالية: {}",
+  "You are currently on {}.": "أنت حالياً على {}.",
+  "Subscribe": "اشترك",
+  "No expiration": "لا يوجد انتهاء",
+  "Status: {}": "الحالة: {}",
+  "Expires: {}": "ينتهي: {}",
+  "Auto-renew: {}": "التجديد التلقائي: {}",
+  "On": "تشغيل",
+  "Off": "إيقاف",
+  "Manage subscription in Google Play": "إدارة الاشتراك في Google Play",
+  "Benefits": "المزايا",
+  "Restore": "استعادة",
+  "Cart": "السلة",
+  "Cart is empty": "السلة فارغة",
+  "Fulfillment Method": "طريقة التسليم",
+  "Pickup": "استلام",
+  "Delivery": "توصيل",
+  "Dining In": "تناول داخل المكان",
+  "Shipping": "شحن",
+  "Delivery Address *": "عنوان التوصيل *",
+  "Shipping Address *": "عنوان الشحن *",
+  "Shipping Instructions (Optional)": "تعليمات الشحن (اختياري)",
+  "Street address, city, state, postal code": "عنوان الشارع، المدينة، الولاية/المنطقة، الرمز البريدي",
+  "Additional seating info (optional)": "معلومات جلوس إضافية (اختياري)",
+  "e.g., Special requests, dietary notes": "مثال: طلبات خاصة، ملاحظات غذائية",
+  "Preferred Date/Time (Optional)": "التاريخ/الوقت المفضل (اختياري)",
+  "Not specified": "غير محدد",
+  "Notes (Optional)": "ملاحظات (اختياري)",
+  "Send Order Request": "إرسال طلب الشراء",
+  "Please sign in to place an order": "يرجى تسجيل الدخول لإجراء طلب",
+  "Please enter delivery address": "يرجى إدخال عنوان التوصيل",
+  "Please enter shipping address": "يرجى إدخال عنوان الشحن",
+  "Order request sent successfully!": "تم إرسال طلب الشراء بنجاح!",
+  "Scan Table QR Code": "مسح رمز QR للطاولة",
+  "Table Scanned: {}": "تم مسح الطاولة: {}",
+  "Table {} has been scanned. You can also add additional seating info below.": "تم مسح الطاولة {}. يمكنك أيضًا إضافة معلومات جلوس إضافية أدناه.",
+  "Creating table session...": "جاري إنشاء جلسة الطاولة...",
+  "Table scanned successfully: {}": "تم مسح الطاولة بنجاح: {}",
+  "Failed to create table session. Please try again.": "فشل إنشاء جلسة الطاولة. يرجى المحاولة مرة أخرى.",
+  "Invalid QR code format - missing table data": "تنسيق رمز QR غير صالح - بيانات الطاولة مفقودة",
+  "Invalid QR code - Not a table QR code": "رمز QR غير صالح - ليس رمز QR لطاولة",
+  "Error parsing QR code: {}": "خطأ في تحليل رمز QR: {}",
+  "This QR code is for a different store": "رمز QR هذا يخص متجرًا آخر",
+  "Pin Delivery Location": "تثبيت موقع التوصيل",
+  "Location Pinned": "تم تثبيت الموقع",
+  "Tap to pin your delivery location on map": "اضغط لتثبيت موقع التوصيل على الخريطة",
+  "Location permission is required for delivery": "مطلوب إذن الموقع للتوصيل",
+  "Delivery Location": "موقع التوصيل",
+  "Use Current Location": "استخدام الموقع الحالي",
+  "Or enter coordinates manually:": "أو أدخل الإحداثيات يدويًا:",
+  "Latitude": "خط العرض",
+  "Longitude": "خط الطول",
+  "Invalid latitude or longitude": "خط عرض أو خط طول غير صالح",
+  "Failed to get location: {}": "فشل الحصول على الموقع: {}",
+  "Error parsing location: {}": "خطأ في تحليل الموقع: {}",
+  "e.g., Leave at front door, signature required": "مثال: اتركه عند الباب الأمامي، التوقيع مطلوب",
+  "Logo (Optional)": "الشعار (اختياري)",
+  "Enable Store/Ecommerce": "تفعيل المتجر/التجارة الإلكترونية",
+  "Store Mode": "وضع المتجر",
+  "External URL Only": "رابط خارجي فقط",
+  "Internal Catalog": "كتالوج داخلي",
+  "Both (URL + Catalog)": "كلاهما (رابط + كتالوج)",
+  "Lead Time (Hours)": "مدة التجهيز (بالساعات)",
+  "Minimum hours needed to prepare orders": "الحد الأدنى من الساعات اللازمة لتجهيز الطلبات",
+  "Internal Catalog requires Premium subscription": "الكتالوج الداخلي يتطلب اشتراك Premium",
+  "Please save the listing first, then you can manage catalog items": "يرجى حفظ القائمة أولاً، ثم يمكنك إدارة عناصر الكتالوج",
+  "Manage Catalog Items": "إدارة عناصر الكتالوج",
+  "Save Listing First": "احفظ القائمة أولاً",
+  "Accept Proof of Payment": "قبول إثبات الدفع",
+  "Require customers to provide proof of payment (photo/receipt) for orders": "مطالبة العملاء بتقديم إثبات الدفع (صورة/إيصال) للطلبات",
+  "Enable Rentals": "تفعيل التأجير",
+  "Allow customers to rent items from this listing": "السماح للعملاء باستئجار عناصر من هذه القائمة",
+  "Manage Rental Catalog": "إدارة كتالوج التأجير",
+  "Select listing": "اختر القائمة",
+  "Code": "الرمز",
+  "Symbol": "الرمز",
+  "Subtotal": "المجموع الفرعي",
+  "Amount": "المبلغ",
+  "Percent": "النسبة المئوية",
+  "Save Draft": "حفظ كمسودة",
+  "Add Item": "إضافة عنصر",
+  "Description": "الوصف",
+  "Quantity": "الكمية",
+  "Cancel": "إلغاء",
+  "Enter valid item details": "أدخل تفاصيل عنصر صالحة",
+  "Quotes": "عروض الأسعار",
+  "Invoices": "الفواتير",
+  "All": "الكل",
+  "Draft": "مسودة",
+  "Something went wrong": "حدث خطأ ما",
+  "Sent": "مرسل",
+  "Accepted": "مقبول",
+  "Declined": "مرفوض",
+  "Expired": "منتهي",
+  "Paid": "مدفوع",
+  "Overdue": "متأخر",
+  "No quotes yet": "لا توجد عروض أسعار بعد",
+  "No invoices yet": "لا توجد فواتير بعد",
+  "Upgrade to Premium to use Quotes & Invoices": "قم بالترقية إلى Premium لاستخدام عروض الأسعار والفواتير",
+  "Upgrade to Premium to use Invoices": "قم بالترقية إلى Premium لاستخدام الفواتير",
+  "Failed to load quotes": "فشل تحميل عروض الأسعار",
+  "Failed to load invoices": "فشل تحميل الفواتير",
+  "Quote not found": "عرض السعر غير موجود",
+  "Failed to load quote": "فشل تحميل عرض السعر",
+  "Failed to save quote": "فشل حفظ عرض السعر",
+  "Failed to mark accepted": "فشل التعيين كمقبول",
+  "Failed to mark declined": "فشل التعيين كمرفوض",
+  "Failed to convert to invoice": "فشل التحويل إلى فاتورة",
+  "Invoice not found": "الفاتورة غير موجودة",
+  "Failed to load invoice": "فشل تحميل الفاتورة",
+  "Failed to save invoice": "فشل حفظ الفاتورة",
+  "Failed to mark paid": "فشل التعيين كمدفوع",
+  "Optional": "اختياري",
+  "quote_limit_reached_message": "لقد وصلت إلى حد {} من عروض الأسعار. قم بالترقية لسجل غير محدود.",
+  "Quote link": "رابط عرض السعر",
+  "Invoice link": "رابط الفاتورة",
+  "PDF downloaded to": "تم تنزيل ملف PDF إلى",
+  "Failed to download PDF": "فشل تنزيل ملف PDF",
+  "CaribTap Business": "شركة CaribTap"
+  ,"Item description hint": "مثال: خدمة تصميم موقع ويب"
+  ,"Quantity hint": "مثال: 1"
+  ,"Unit price hint": "مثال: 120.00"
+  ,"Upload Promotion": "رفع ترويج"
+  ,"Edit Promotion": "تعديل الترويج"
+  ,"Format Guidance": "إرشادات التنسيق"
+  ,"Add media": "إضافة وسائط"
+  ,"Choose Image from Gallery": "اختر صورة من المعرض"
+  ,"Choose Video from Gallery": "اختر فيديو من المعرض"
+  ,"Ad Types": "أنواع الإعلانات"
+  ,"Promotion:": "ترويج:"
+  ,"Advert:": "إعلان:"
+  ,"Time-limited offers. Requires a specific start and end date (e.g., 20% off for 1 week).": "عروض محددة المدة. تتطلب تاريخ بداية ونهاية محددًا (مثل خصم 20٪ لمدة أسبوع)."
+  ,"General business awareness. Runs indefinitely without a specific offer period.": "تعزيز الوعي العام بالنشاط التجاري. يعمل بشكل مستمر دون فترة عرض محددة."
+  ,"Promo Period": "فترة الترويج"
+  ,"A promo period ensures customers know exactly when your offer begins and ends. It creates urgency and helps them plan their purchase before the deal expires.": "تضمن فترة الترويج أن يعرف العملاء بدقة متى يبدأ العرض ومتى ينتهي. هذا يخلق إحساسًا بالإلحاح ويساعدهم على التخطيط للشراء قبل انتهاء العرض."
+  ,"About Country Selection": "حول اختيار الدول"
+  ,"This setting controls which countries can see your ad. When you select specific countries, only users from those locations will be able to view your promotion. If you leave it set to \"All Countries\", your ad will be visible to users everywhere.": "هذا الإعداد يتحكم في الدول التي يمكنها رؤية إعلانك. عند اختيار دول محددة، سيتمكن فقط المستخدمون من تلك المواقع من رؤية ترويجك. إذا تركته على \"كل الدول\" فسيكون إعلانك مرئيًا للجميع."
+  ,"Select Categories": "اختر الفئات"
+  ,"Please select a listing for your deal": "يرجى اختيار قائمة لعرضك"
+  ,"Add Image or Video": "أضف صورة أو فيديو"
+  ,"High quality media gets more engagement": "الوسائط عالية الجودة تحقق تفاعلًا أكبر"
+  ,"Type": "النوع"
+  ,"Promotion": "ترويج"
+  ,"Advert": "إعلان"
+  ,"Select Listing": "اختر القائمة"
+  ,"Choose which listing this deal is for": "اختر القائمة التي يخصها هذا العرض"
+  ,"You need an active listing to post a deal. Please create a listing first.": "تحتاج إلى قائمة نشطة لنشر عرض. يرجى إنشاء قائمة أولًا."
+  ,"Select a listing...": "اختر قائمة..."
+  ,"Describe your deal": "صف عرضك"
+  ,"Ex: 20% off all summer items...": "مثال: خصم 20٪ على كل منتجات الصيف..."
+  ,"Set Promo Period": "تحديد فترة الترويج"
+  ,"Starts": "يبدأ"
+  ,"Ends": "ينتهي"
+  ,"Select Date": "اختر التاريخ"
+  ,"Targeting Options": "خيارات الاستهداف"
+  ,"Choose who can see your ad": "اختر من يمكنه رؤية إعلانك"
+  ,"Countries": "الدول"
+  ,"Target Categories": "الفئات المستهدفة"
+  ,"Select categories": "اختر الفئات"
+  ,"x_selected": "{} محدد"
+  ,"Audience Type": "نوع الجمهور"
+  ,"All Users": "كل المستخدمين"
+  ,"Viewed Similar": "شاهدوا مشابهًا"
+  ,"Favorited": "أضافوه إلى المفضلة"
+  ,"Near Location": "بالقرب من الموقع"
+  ,"I accept the": "أوافق على"
+  ,"Continue to Review": "المتابعة للمراجعة"
+  ,"users_can_set_max_promo_period": "يمكن لمستخدمي {} تحديد فترة ترويج قصوى قدرها {} يومًا."
+  ,"Analytics": "التحليلات"
+  ,"Advanced Analytics": "التحليلات المتقدمة"
+  ,"Listings": "القوائم"
+  ,"Favorites": "المفضلة"
+  ,"Reviews": "المراجعات"
+  ,"Bookings": "الحجوزات"
+  ,"Professional Feature": "ميزة احترافية"
+  ,"Total Views": "إجمالي المشاهدات"
+  ,"Total Favorites": "إجمالي المفضلات"
+  ,"Avg Rating": "متوسط التقييم"
+  ,"Avg. Rating": "متوسط التقييم"
+  ,"Listing Performance": "أداء القائمة"
+  ,"No listings yet": "لا توجد قوائم بعد"
+  ,"No ratings": "لا توجد تقييمات"
+  ,"stars_reviews": "{} نجوم ({} مراجعات)"
+  ,"Last 7 days": "آخر 7 أيام"
+  ,"Last 30 days": "آخر 30 يومًا"
+  ,"Last 90 days": "آخر 90 يومًا"
+  ,"All Time": "كل الوقت"
+  ,"Performance Snapshot": "لمحة الأداء"
+  ,"Engagement Deep Dive": "تحليل التفاعل المتعمق"
+  ,"Growth Opportunities": "فرص النمو"
+  ,"Chat Initiations": "بدء المحادثات"
+  ,"Taps / Vouch": "النقرات / التزكيات"
+  ,"vs previous period": "مقارنة بالفترة السابقة"
+  ,"Improve Listing Quality": "تحسين جودة القائمة"
+  ,"Become a Top Lister": "كن مُدرِجًا متميزًا"
+  ,"you_have_listings_to_improve": "لديك {} قوائم يمكن تحسينها بمزيد من الصور أو وصف أطول."
+  ,"you_are_bookings_away_for_badge": "أنت على بُعد {} حجوزات من الحصول على شارة \"موثوق من المجتمع\"!"
+  ,"Choose Your Plan": "اختر خطتك"
+  ,"Unlock Premium Features": "افتح الميزات المميزة"
+  ,"Choose the perfect plan for your business": "اختر الخطة المثالية لعملك"
+  ,"Monthly": "شهري"
+  ,"Yearly (Save 17%)": "سنوي (وفّر 17٪)"
+  ,"MOST POPULAR": "الأكثر شيوعًا"
+  ,"Free Forever": "مجاني دائمًا"
+  ,"Current": "الحالي"
+  ,"Current Plan": "الخطة الحالية"
+  ,"Downgrade": "الرجوع إلى خطة أقل"
+  ,"Subscribe Now": "اشترك الآن"
+  ,"Confirm Downgrade": "تأكيد الرجوع إلى خطة أقل"
+  ,"Are you sure you want to downgrade to the Free plan? You will lose access to premium features.": "هل أنت متأكد أنك تريد الرجوع إلى الخطة المجانية؟ ستفقد الوصول إلى الميزات المميزة."
+  ,"Downgrade feature coming soon!": "ميزة الرجوع إلى خطة أقل قريبًا!"
+  ,"Failed to refresh subscription": "فشل تحديث الاشتراك"
+  ,"Create up to 3 listings": "أنشئ حتى 3 قوائم"
+  ,"Basic listing management": "إدارة أساسية للقوائم"
+  ,"Standard search visibility": "ظهور قياسي في البحث"
+  ,"Community support": "دعم المجتمع"
+  ,"Booking system with email & reminders": "نظام حجز مع البريد الإلكتروني والتذكيرات"
+  ,"Standard Analytics on listing performance": "تحليلات قياسية لأداء القوائم"
+  ,"AI photo enhancements": "تحسينات الصور بالذكاء الاصطناعي"
+  ,"All Professional Services": "كل الخدمات الاحترافية"
+  ,"Enable Chat to talk directly with customers": "فعّل الدردشة للتحدث مباشرة مع العملاء"
+  ,"Enable Quotes & Invoices": "فعّل عروض الأسعار والفواتير"
+  ,"Unlock Advance Analytics": "افتح التحليلات المتقدمة"
+  ,"Deal Analytics": "تحليلات العرض"
+  ,"No analytics available": "لا توجد تحليلات متاحة"
+  ,"deal_with_caption": "العرض: {}"
+  ,"Views": "المشاهدات"
+  ,"Saves": "الحفظ"
+  ,"Claims": "المطالبات"
+  ,"Users": "المستخدمون"
+  ,"Table": "طاولة"
+  ,"Redemption Status": "حالة الاسترداد"
+  ,"Total Redeemed": "إجمالي المسترد"
+  ,"Limit": "الحد"
+  ,"Remaining": "المتبقي"
+  ,"Engagement Metrics": "مقاييس التفاعل"
+  ,"View to Claim Rate": "معدل التحويل من مشاهدة إلى مطالبة"
+  ,"of viewers claimed the deal": "من المشاهدين طالبوا بالعرض"
+  ,"View to Save Rate": "معدل التحويل من مشاهدة إلى حفظ"
+  ,"of viewers saved the deal": "من المشاهدين حفظوا العرض"
+  ,"Save to Claim Rate": "معدل التحويل من حفظ إلى مطالبة"
+  ,"of savers claimed the deal": "من الحافظين طالبوا بالعرض"
+  ,"Avg Claims per User": "متوسط المطالبات لكل مستخدم"
+  ,"times each user claimed on average": "مرة يطالب فيها كل مستخدم في المتوسط"
+  ,"Inactive": "غير نشط"
+  ,"Sold out": "نفدت الكمية"
+  ,"Accepting claims": "يقبل المطالبات"
+  ,"on_free_plan": "أنت على الخطة المجانية"
+  ,"pro_premium_plan_limits": "خطة Professional: 10 إعلانات/شهر\nخطة Premium: 20 إعلانًا/شهر"
+  ,"Deal Details": "تفاصيل العرض"
+  ,"View Analytics": "عرض التحليلات"
+  ,"Until {}": "حتى {}"
+  ,"Availability": "التوفر"
+  ,"redeemed_count": "تم الاسترداد: {}/{}"
+  ,"remaining_count": "{} متبقٍ"
+  ,"Promo Code": "رمز ترويجي"
+  ,"Claim In-App": "المطالبة داخل التطبيق"
 }

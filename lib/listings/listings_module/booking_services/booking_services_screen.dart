@@ -63,7 +63,7 @@ class _BookingServicesScreenState extends State<BookingServicesScreen> {
       setState(() => isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading listings: $e')),
+          SnackBar(content: Text('${'Error loading listings'.tr()}: $e')),
         );
       }
     }
@@ -84,7 +84,7 @@ class _BookingServicesScreenState extends State<BookingServicesScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating listing: $e')),
+          SnackBar(content: Text('${'Error updating listing'.tr()}: $e')),
         );
       }
     } finally {

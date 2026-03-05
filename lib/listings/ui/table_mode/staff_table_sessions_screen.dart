@@ -381,6 +381,19 @@ class _SessionCard extends StatefulWidget {
 class _SessionCardState extends State<_SessionCard> {
   bool _expandedRequests = false;
 
+  String _localizedStatus(TableSessionStatus status) {
+    switch (status) {
+      case TableSessionStatus.PENDING:
+        return 'Pending'.tr();
+      case TableSessionStatus.ACTIVE:
+        return 'Active'.tr();
+      case TableSessionStatus.CLOSED:
+        return 'Closed'.tr();
+      case TableSessionStatus.REJECTED:
+        return 'Rejected'.tr();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = isDarkMode(context);
@@ -445,7 +458,7 @@ class _SessionCardState extends State<_SessionCard> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    widget.session.status.value,
+                    _localizedStatus(widget.session.status),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -464,7 +477,7 @@ class _SessionCardState extends State<_SessionCard> {
 
             // Time info
             Text(
-              'Started: ${_formatTime(widget.session.createdAt)}'.tr(),
+              '${'Started'.tr()}: ${_formatTime(widget.session.createdAt)}',
               style: TextStyle(
                 fontSize: 12,
                 color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -472,7 +485,7 @@ class _SessionCardState extends State<_SessionCard> {
             ),
             if (widget.session.activatedAt != null)
               Text(
-                'Activated: ${_formatTime(widget.session.activatedAt!)}'.tr(),
+                '${'Activated'.tr()}: ${_formatTime(widget.session.activatedAt!)}',
                 style: TextStyle(
                   fontSize: 12,
                   color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -729,7 +742,7 @@ class _SessionCardState extends State<_SessionCard> {
           if (isSummon && event.metadata != null) ...[
             const SizedBox(height: 4),
             Text(
-              'Purpose: ${event.metadata?['purpose'] ?? 'N/A'}'.tr(),
+              '${'Purpose'.tr()}: ${event.metadata?['purpose'] ?? 'N/A'}',
               style: TextStyle(
                 fontSize: 11,
                 color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
@@ -738,7 +751,7 @@ class _SessionCardState extends State<_SessionCard> {
           ] else if (!isSummon && event.metadata != null) ...[
             const SizedBox(height: 4),
             Text(
-              'Payment: ${event.metadata?['paymentMethod'] ?? 'N/A'}'.tr(),
+              '${'Payment'.tr()}: ${event.metadata?['paymentMethod'] ?? 'N/A'}',
               style: TextStyle(
                 fontSize: 11,
                 color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
@@ -754,9 +767,13 @@ class _SessionCardState extends State<_SessionCard> {
     final now = DateTime.now();
     final diff = now.difference(time);
 
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inMinutes < 1) return 'Just now'.tr();
+    if (diff.inMinutes < 60) {
+      return 'minutes_ago'.tr(args: [diff.inMinutes.toString()]);
+    }
+    if (diff.inHours < 24) {
+      return 'hours_ago'.tr(args: [diff.inHours.toString()]);
+    }
     return DateFormat('MMM d, HH:mm').format(time);
   }
 

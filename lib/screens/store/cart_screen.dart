@@ -257,7 +257,7 @@ class _CartScreenState extends State<CartScreen> {
                                 : const Icon(Icons.qr_code_2, color: Colors.white),
                             label: Text(
                               _scannedTableId != null 
-                                  ? 'Table Scanned: $_scannedTableName'.tr()
+                                  ? 'Table Scanned: {}'.tr(args: [_scannedTableName ?? ''])
                                   : 'Scan Table QR Code'.tr(),
                               style: const TextStyle(
                                 color: Colors.white,
@@ -284,7 +284,7 @@ class _CartScreenState extends State<CartScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              'Table $_scannedTableName has been scanned. You can also add additional seating info below.'.tr(),
+                              'Table {} has been scanned. You can also add additional seating info below.'.tr(args: [_scannedTableName ?? '']),
                               style: const TextStyle(
                                 color: Colors.green,
                                 fontSize: 12,
@@ -781,7 +781,7 @@ class _CartScreenState extends State<CartScreen> {
             });
             
             debugPrint('✅ Table session created: $sessionId');
-            showSnackBar(context, 'Table scanned successfully: $displayName'.tr());
+            showSnackBar(context, 'Table scanned successfully: {}'.tr(args: [displayName]));
           } catch (e) {
             hideProgress();
             debugPrint('❌ Failed to create table session: $e');
@@ -797,7 +797,7 @@ class _CartScreenState extends State<CartScreen> {
       }
     } catch (e) {
       debugPrint('❌ Error parsing QR code: $e');
-      showSnackBar(context, 'Error parsing QR code: $e'.tr());
+      showSnackBar(context, 'Error parsing QR code: {}'.tr(args: [e.toString()]));
     }
   }
 
@@ -1089,7 +1089,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
       });
     } catch (e) {
       if (mounted) {
-        showSnackBar(context, 'Failed to get location: $e');
+        showSnackBar(context, 'Failed to get location: {}'.tr(args: [e.toString()]));
       }
     } finally {
       if (mounted) {
@@ -1113,7 +1113,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
         'longitude': lng,
       });
     } catch (e) {
-      showSnackBar(context, 'Error parsing location: $e');
+      showSnackBar(context, 'Error parsing location: {}'.tr(args: [e.toString()]));
     }
   }
 

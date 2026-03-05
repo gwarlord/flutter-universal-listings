@@ -71,7 +71,7 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
         listener: (context, state) {
           if (state.errorMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage!)),
+              SnackBar(content: Text(state.errorMessage!.tr())),
             );
           }
           if (!state.isSending && state.invoice?.status == 'sent') {
@@ -151,7 +151,7 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
                   decoration: InputDecoration(
                     labelText: 'Company Registration #'.tr(),
                     labelStyle: const TextStyle(color: Colors.white70),
-                    hintText: 'Optional',
+                    hintText: 'Optional'.tr(),
                     hintStyle: const TextStyle(color: Colors.white54),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     prefix: const Padding(padding: EdgeInsets.only(right: 8), child: Icon(Icons.business, color: Colors.white70, size: 18)),
@@ -165,7 +165,7 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
                   decoration: InputDecoration(
                     labelText: 'VAT / Tax ID #'.tr(),
                     labelStyle: const TextStyle(color: Colors.white70),
-                    hintText: 'Optional',
+                    hintText: 'Optional'.tr(),
                     hintStyle: const TextStyle(color: Colors.white54),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     prefix: const Padding(padding: EdgeInsets.only(right: 8), child: Icon(Icons.receipt_long, color: Colors.white70, size: 18)),
@@ -290,7 +290,7 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
     final token = invoice?.shareToken;
     if (token == null || token.isEmpty) return;
     final link = ShareLinkService().buildPublicDocLink(type: 'invoice', token: token);
-    await Share.share('Invoice link: $link');
+    await Share.share('${'Invoice link'.tr()}: $link');
   }
 
   void _updateListingContextFromFields(BuildContext context) {

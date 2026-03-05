@@ -4,6 +4,7 @@ import 'package:caribtap/listings/model/listing_activity.dart';
 import 'package:caribtap/listings/services/listing_activity_service.dart';
 import 'package:caribtap/listings/widgets/freshness_indicators.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 /// Comprehensive dashboard for listers to manage freshness
 class ListingFreshnessDashboard extends StatefulWidget {
@@ -59,27 +60,27 @@ class _ListingFreshnessDashboardState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Listing Freshness'),
+        title: Text('Listing Freshness'.tr()),
         actions: [
           if (_selectMode)
             TextButton.icon(
               onPressed: _cancelSelection,
               icon: const Icon(Icons.close, color: Colors.white),
-              label: const Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white),
+              label: Text(
+                'Cancel'.tr(),
+                style: const TextStyle(color: Colors.white),
               ),
             )
           else
             IconButton(
               icon: const Icon(Icons.checklist),
               onPressed: _enterSelectMode,
-              tooltip: 'Select multiple',
+              tooltip: 'Select multiple'.tr(),
             ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadActivityScores,
-            tooltip: 'Reload scores',
+            tooltip: 'Reload scores'.tr(),
           ),
         ],
       ),
@@ -94,50 +95,50 @@ class _ListingFreshnessDashboardState
             const SizedBox(height: 8),
             if (urgent.isNotEmpty) ...[
               _buildSection(
-                'Urgent Attention',
+                'Urgent Attention'.tr(),
                 urgent,
                 Colors.red,
-                'These listings will hide soon. Take action now!',
+                'These listings will hide soon. Take action now!'.tr(),
                 Icons.error,
               ),
               const SizedBox(height: 16),
             ],
             if (warning.isNotEmpty) ...[
               _buildSection(
-                'Needs Refresh Soon',
+                'Needs Refresh Soon'.tr(),
                 warning,
                 Colors.orange,
-                'Plan to refresh these listings soon.',
+                'Plan to refresh these listings soon.'.tr(),
                 Icons.warning,
               ),
               const SizedBox(height: 16),
             ],
             if (fresh.isNotEmpty) ...[
               _buildSection(
-                'Active & Fresh',
+                'Active & Fresh'.tr(),
                 fresh,
                 Colors.green,
-                'These listings are in good standing.',
+                'These listings are in good standing.'.tr(),
                 Icons.check_circle,
               ),
               const SizedBox(height: 16),
             ],
             if (exempt.isNotEmpty) ...[
               _buildSection(
-                'Never Expire',
+                'Never Expire'.tr(),
                 exempt,
                 Colors.blue,
-                'These listings are exempt from automatic hiding.',
+                'These listings are exempt from automatic hiding.'.tr(),
                 Icons.stars,
               ),
               const SizedBox(height: 16),
             ],
             if (hidden.isNotEmpty) ...[
               _buildSection(
-                'Hidden Listings',
+                'Hidden Listings'.tr(),
                 hidden,
                 Colors.grey,
-                'Refresh to make these visible again.',
+                'Refresh to make these visible again.'.tr(),
                 Icons.visibility_off,
               ),
             ],
@@ -149,7 +150,7 @@ class _ListingFreshnessDashboardState
               onPressed: () => _refreshUrgentListings(urgent, warning),
               icon: const Icon(Icons.refresh),
               label: Text(
-                'Refresh All Urgent (${urgent.length + warning.length})',
+                'Refresh All Urgent ({})'.tr(args: ['${urgent.length + warning.length}']),
               ),
             )
           : null,
@@ -173,7 +174,7 @@ class _ListingFreshnessDashboardState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Overview',
+              'Overview'.tr(),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -185,7 +186,7 @@ class _ListingFreshnessDashboardState
               children: [
                 Expanded(
                   child: _buildSummaryTile(
-                    'Urgent',
+                    'Urgent'.tr(),
                     urgent.length,
                     Colors.red,
                     Icons.error,
@@ -193,7 +194,7 @@ class _ListingFreshnessDashboardState
                 ),
                 Expanded(
                   child: _buildSummaryTile(
-                    'Warning',
+                    'Warning'.tr(),
                     warning.length,
                     Colors.orange,
                     Icons.warning,
@@ -206,7 +207,7 @@ class _ListingFreshnessDashboardState
               children: [
                 Expanded(
                   child: _buildSummaryTile(
-                    'Fresh',
+                    'Fresh'.tr(),
                     fresh.length,
                     Colors.green,
                     Icons.check_circle,
@@ -214,7 +215,7 @@ class _ListingFreshnessDashboardState
                 ),
                 Expanded(
                   child: _buildSummaryTile(
-                    'Hidden',
+                    'Hidden'.tr(),
                     hidden.length,
                     Colors.grey,
                     Icons.visibility_off,
@@ -225,7 +226,7 @@ class _ListingFreshnessDashboardState
             if (exempt.isNotEmpty) ...[
               const SizedBox(height: 8),
               _buildSummaryTile(
-                'Exempt (Never Expire)',
+                'Exempt (Never Expire)'.tr(),
                 exempt.length,
                 Colors.blue,
                 Icons.stars,
@@ -290,7 +291,7 @@ class _ListingFreshnessDashboardState
             Icon(Icons.check_circle, color: isDark ? Colors.blue.shade300 : Colors.blue.shade700),
             const SizedBox(width: 8),
             Text(
-              '$selectedCount selected',
+              'x_selected'.tr(args: [selectedCount.toString()]),
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
@@ -301,7 +302,7 @@ class _ListingFreshnessDashboardState
               ElevatedButton.icon(
                 onPressed: _refreshSelected,
                 icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('Refresh All'),
+                label: Text('Refresh All'.tr()),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   foregroundColor: Colors.white,
@@ -310,7 +311,7 @@ class _ListingFreshnessDashboardState
               const SizedBox(width: 8),
               OutlinedButton(
                 onPressed: _deselectAll,
-                child: const Text('Deselect All'),
+                child: Text('Deselect All'.tr()),
               ),
             ],
           ],
@@ -433,7 +434,7 @@ class _ListingFreshnessDashboardState
                         label: const Text(
                           'Auto-Refresh Eligible',
                           style: TextStyle(fontSize: 11),
-                        ),
+                        ).tr(),
                         avatar: const Icon(Icons.auto_awesome, size: 16),
                         backgroundColor: Colors.purple.shade50,
                         labelStyle: TextStyle(color: Colors.purple.shade700),
@@ -450,13 +451,13 @@ class _ListingFreshnessDashboardState
                       TextButton.icon(
                         onPressed: () => widget.onRefreshListing(listing),
                         icon: const Icon(Icons.refresh, size: 18),
-                        label: const Text('Refresh Now'),
+                        label: Text('Refresh Now'.tr()),
                       ),
                     if (listing.hidden)
                       ElevatedButton.icon(
                         onPressed: () => widget.onRefreshListing(listing),
                         icon: const Icon(Icons.visibility, size: 18),
-                        label: const Text('Make Visible'),
+                        label: Text('Make Visible'.tr()),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
