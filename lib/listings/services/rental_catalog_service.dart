@@ -72,6 +72,9 @@ class RentalCatalogService {
         .collection('rental_catalog')
         .doc(item.id)
         .set(itemData, SetOptions(merge: true));
+
+    // ✅ Refine search keywords on parent listing
+    await _updateListingSearchKeywords(listingId);
   }
 
   /// Delete rental catalog item
@@ -82,6 +85,43 @@ class RentalCatalogService {
         .collection('rental_catalog')
         .doc(itemId)
         .delete();
+
+    // ✅ Refine search keywords on parent listing
+    await _updateListingSearchKeywords(listingId);
+  }
+
+  /// Re-aggregates all rental item names and categories into the parent listing's searchKeywords
+  Future<void> _updateListingSearchKeywords(String listingId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('listings')
+          .doc(listingId)
+          .collection('rental_catalog')
+          .get();
+
+      final Set<String> keywords = {};
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final name = data['name'] as String?;
+        final category = data['category'] as String?;
+        if (name != null) keywords.addAll(name.toLowerCase().split(RegExp(r'\s+')));
+        if (category != null) keywords.addAll(category.toLowerCase().split(RegExp(r'\s+')));
+      }
+
+      // Also get store items to preserve them if they exist
+      final listingDoc = await _firestore.collection('listings').doc(listingId).get();
+      final existingKeywords = List<String>.from(listingDoc.data()?['searchKeywords'] ?? []);
+
+      // We only update the rental-related keywords or just merge everything found in subcollections.
+      // For simplicity, we can let this service only handle rentals, but better to fetch all and merge.
+      // However, usually keywords are derived from all subcatalogs.
+
+      await _firestore.collection('listings').doc(listingId).update({
+        'searchKeywords': FieldValue.arrayUnion(keywords.toList()),
+      });
+    } catch (e) {
+      print('Error updating search keywords: $e');
+    }
   }
 
   /// Upload media for rental item

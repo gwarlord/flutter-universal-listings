@@ -23,7 +23,6 @@
     "two": "Kòmantè",
     "other": "Kòmantè"
   },
-  
   "Save": "Anrejistre",
   "Cancel": "Anile",
   "Close": "Fèmen",
@@ -103,7 +102,6 @@
   "Premium Listing": "Anons Premium",
   "About": "Konsènan",
   "Where we're located": "Kote nou ye",
-  
   "Home": "Akèy",
   "Explore": "Eksplore",
   "Listings": "Lis",
@@ -190,55 +188,50 @@
   "No Assigned Listings": "Pa gen lis yo asiyen",
   "You have not been added as a collaborator to any listings": "Yo poko ajoute ou kòm kolaboratè sou okenn lis",
   "x_more": "+{} plis",
-  
   "Analytics": "Analitik",
   "Advanced Analytics": "Analitik Avanse",
   "Account": "Kont",
   "Activate Chat": "Aktive Chat",
   "Manage Subscription": "Jere Abònman",
   "Log Out": "Dekonekte",
-    "Analytics": "Analitik",
-    "Advanced Analytics": "Analitik Avanse",
-    "Professional Feature": "Fonksyon pwofesyonèl",
-    "Total Views": "Total vizyalizasyon",
-    "Total Favorites": "Total favori",
-    "Avg Rating": "Nòt mwayèn",
-    "Listing Performance": "Pèfòmans lis yo",
-    "No listings yet": "Poko gen lis",
-    "No ratings": "Pa gen nòt",
-    "stars_reviews": "{} zetwal ({} revizyon)",
-    "Last 7 days": "7 dènye jou yo",
-    "Last 30 days": "30 dènye jou yo",
-    "Last 90 days": "90 dènye jou yo",
-    "All Time": "Depi tout tan",
-    "Performance Snapshot": "Rezime pèfòmans",
-    "Engagement Deep Dive": "Analiz pwofon sou angajman",
-    "Growth Opportunities": "Opòtinite kwasans",
-    "Bookings": "Rezèvasyon",
-    "Avg. Rating": "Nòt mwayèn",
-    "Chat Initiations": "Inisyasyon chat",
-    "Taps / Vouch": "Taps / Apwobasyon",
-    "vs previous period": "konpare ak peryòd anvan",
-    "Improve Listing Quality": "Amelyore kalite lis la",
-    "Become a Top Lister": "Vin yon lisè an tèt",
-    "you_have_listings_to_improve": "Ou gen {} lis ki ka amelyore ak plis foto oswa yon deskripsyon ki pi long.",
-    "you_are_bookings_away_for_badge": "Ou bezwen {} rezèvasyon ankò pou jwenn badj \"Kominote a Verifye\" a!",
-  
+  "Professional Feature": "Fonksyon pwofesyonèl",
+  "Total Views": "Total vizyalizasyon",
+  "Total Favorites": "Total favori",
+  "Avg Rating": "Nòt mwayèn",
+  "Listing Performance": "Pèfòmans lis yo",
+  "No listings yet": "Poko gen lis",
+  "No ratings": "Pa gen nòt",
+  "stars_reviews": "{} zetwal ({} revizyon)",
+  "Last 7 days": "7 dènye jou yo",
+  "Last 30 days": "30 dènye jou yo",
+  "Last 90 days": "90 dènye jou yo",
+  "All Time": "Depi tout tan",
+  "Performance Snapshot": "Rezime pèfòmans",
+  "Engagement Deep Dive": "Analiz pwofon sou angajman",
+  "Growth Opportunities": "Opòtinite kwasans",
+  "Avg. Rating": "Nòt mwayèn",
+  "Chat Initiations": "Inisyasyon chat",
+  "Taps / Vouch": "Taps / Apwobasyon",
+  "vs previous period": "konpare ak peryòd anvan",
+  "Improve Listing Quality": "Amelyore kalite lis la",
+  "Become a Top Lister": "Vin yon lisè an tèt",
+  "you_have_listings_to_improve": "Ou gen {} lis ki ka amelyore ak plis foto oswa yon deskripsyon ki pi long.",
+  "you_are_bookings_away_for_badge": "Ou bezwen {} rezèvasyon ankò pou jwenn badj \"Kominote a Verifye\" a!",
   "Deals & Promotions": "Bon Afè yo ak Pwomasyon",
-    "Post your deals, promotions, and ads here!": "Pibliye bon afè, pwomosyon ak anons ou yo isit la!",
-    "Upload New Ad": "Telechaje nouvo anons",
-    "View All Deals": "Gade tout bon afè yo",
-    "Ad Posting Quota": "Kota pou pibliye anons",
-    "Tier": "Nivo",
-    "Free": "Gratis",
-    "Professional": "Pwofesyonèl",
-    "Premium": "Premium",
-    "Posts this month": "Piblikasyon mwa sa a",
-    "Resets on": "Li rekòmanse sou",
-    "Upgrade to Post Ads": "Mete ajou pou pibliye anons",
-    "You're on the Free plan": "Ou sou plan Gratis la",
-    "Professional plan: 10 ads/month\nPremium plan: 20 ads/month": "Plan Professional: 10 anons/mwa\nPlan Premium: 20 anons/mwa",
-    "Also requires at least one active listing.": "Li mande tou omwen yon lis aktif.",
+  "Post your deals, promotions, and ads here!": "Pibliye bon afè, pwomosyon ak anons ou yo isit la!",
+  "Upload New Ad": "Telechaje nouvo anons",
+  "View All Deals": "Gade tout bon afè yo",
+  "Ad Posting Quota": "Kota pou pibliye anons",
+  "Tier": "Nivo",
+  "Free": "Gratis",
+  "Professional": "Pwofesyonèl",
+  "Premium": "Premium",
+  "Posts this month": "Piblikasyon mwa sa a",
+  "Resets on": "Li rekòmanse sou",
+  "Upgrade to Post Ads": "Mete ajou pou pibliye anons",
+  "You're on the Free plan": "Ou sou plan Gratis la",
+  "Professional plan: 10 ads/month\nPremium plan: 20 ads/month": "Plan Professional: 10 anons/mwa\nPlan Premium: 20 anons/mwa",
+  "Also requires at least one active listing.": "Li mande tou omwen yon lis aktif.",
   "Categories": "Kategori",
   "Find what you need": "Jwenn sa w bezwen",
   "Search listings...": "Chèche lis yo...",
@@ -261,7 +254,6 @@
   "Show all": "Montre tout",
   "Show less": "Montre mwens",
   "Contact, Hours & Social": "Kontak, Orè ak Sosyal",
-  
   "Active Orders": "Kòmand Aktif",
   "Show History": "Montre Listwa",
   "Active Only": "Aktif Sèlman",
@@ -270,20 +262,17 @@
   "No active orders": "Pa gen kòmand aktif",
   "Your waiter": "Sèvitè ou",
   "Your Waiter": "Sèvitè Ou",
-  
   "Popular": "Popilè",
   "Spicy": "Pike",
   "Vegan": "Vejetalyen",
   "Vegetarian": "Vegetaryen",
   "Gluten-Free": "San Gluten",
-  
   "Ad Approval": "Apwobasyon Anons",
   "My Favorites": "Favori Mwen",
   "Saved Deals": "Bon Afè Anrejistre",
   "Account Details": "Detèy Kont",
   "Theme": "Tèm",
   "Contact Us": "Kontakte Nou",
-  
   "Filters": "Filt",
   "Clear All": "Efase Tout",
   "Apply Filters": "Aplike Filt",
@@ -307,7 +296,6 @@
   "Category": "Kategori",
   "All Categories": "Tout Kategori",
   "Active filters": "Filt aktif",
-  
   "Sort by": "Triye pa",
   "Recommended": "Rekòmande",
   "Most Vouched": "Plis apwouve",
@@ -334,7 +322,6 @@
   "Email verified successfully!": "Imèl verifye avèk siksè!",
   "Verification failed: $e": "Verifikasyon echwe: $e",
   "Email Verification": "Verifikasyon imèl",
-  
   "Country": "Peyi",
   "Gender": "Sèks",
   "Age Range": "Gwoup laj",
@@ -350,7 +337,6 @@
   "55-64": "55-64",
   "65+": "65+",
   "Country is required": "Peyi a obligatwa",
-
   "Add Listing": "Ajoute lis",
   "Edit Listing": "Modifye lis",
   "Request Featured": "Mande pou mete an avan",
@@ -415,7 +401,6 @@
   "Phone": "Telefòn",
   "Website": "Sitwèb",
   "Opening Hours": "Orè ouvèti",
-  
   "Store": "Magazen",
   "Mini Store": "Ti Magazen",
   "Browse Full Store": "Gade tout magazen an",
@@ -518,7 +503,6 @@
   "Create Digital Menu": "Kreye meni dijital",
   "Build items with prices and descriptions": "Kreye atik ak pri ak deskripsyon",
   "Menu hidden from customers": "Meni kache pou kliyan yo",
-  
   "Order Details": "Detay kòmand",
   "My Orders": "Kòmand mwen",
   "New Order": "Nouvo kòmand",
@@ -595,7 +579,6 @@
   "You can only cancel your pending orders": "Ou ka sèlman anile kòmand ou ki an atant",
   "Failed to update status": "Pa kapab mete ajou estati",
   "No listings with tables. Create tables first from Store Settings.": "Pa gen lis ak tab. Kreye tab dabò nan Paramèt Magazen.",
-  
   "Requested": "Mande",
   "Pending": "An atant",
   "Active": "Aktif",
@@ -611,7 +594,6 @@
   "Cancelled": "Anile",
   "Start": "Kòmansman",
   "End": "Fen",
-  
   "Table Service": "Sèvis tab",
   "Table Mode": "Mòd tab",
   "Tables & QR Codes": "Tab ak kòd QR",
@@ -628,7 +610,6 @@
   "Started": "Kòmanse",
   "Activated": "Aktive",
   "Purpose": "Objektif",
-  "Payment": "Peman",
   "Just now": "Kounye a",
   "minutes_ago": "sa gen {} min",
   "hours_ago": "sa gen {} è",
@@ -642,7 +623,6 @@
   "Cash": "Lajan kach",
   "Card": "Kat",
   "Digital Payment": "Peman dijital",
-  
   "Tracking": "Suivi",
   "Order Tracking": "Suivi kòmand",
   "Shipping Tracking": "Suivi ekspedisyon",
@@ -669,17 +649,12 @@
   "In Transit": "An transit",
   "Out for Delivery": "Ap livre",
   "Delivered": "Livre",
-  
   "My Rentals": "Lwaye mwen",
   "Rental Details": "Detay lwaye",
   "Book Now": "Rezerve kounye a",
-  "Start Date": "Dat kòmansman",
-  "End Date": "Dat fen",
-  "Duration": "Dire",
   "Price per Day": "Pri pa jou",
   "Total Price": "Pri total",
   "Rental Period": "Peryòd lwaye",
-  
   "My Bookings": "Rezèvasyon mwen",
   "Booking Details": "Detay rezèvasyon",
   "Booking Information": "Enfòmasyon rezèvasyon",
@@ -713,7 +688,6 @@
   "Date & Time": "Dat ak lè",
   "Party Size": "Gwosè gwoup",
   "Special Requests": "Demann espesyal",
-  
   "Settings saved successfully": "Paramèt anrejistre avèk siksè",
   "Save Changes": "Anrejistre chanjman",
   "Saving changes...": "Ap anrejistre chanjman...",
@@ -728,7 +702,6 @@
   "ACCOUNT SECURITY": "SEKIRITE KONT",
   "Password & Security": "Modpas ak sekirite",
   "Privacy Policy": "Politik konfidansyalite",
-  
   "APP LANGUAGE": "LANG APLIKASYON",
   "Language": "Lang",
   "App Language": "Lang aplikasyon",
@@ -741,7 +714,6 @@
   "Haitian Creole": "Kreyòl Ayisyen",
   "Language updated successfully": "Lang mete ajou avèk siksè",
   "Applies to the app interface. Listings and reviews remain as written.": "Aplike nan entèfas aplikasyon an. Lis ak revizyon rete jan yo ekri.",
-  
   "Customers pick up their order at your location": "Kliyan yo al chèche kòmand yo nan kote ou",
   "You deliver orders to customer addresses": "Ou livre kòmand bay adrès kliyan yo",
   "Customers order for dining in at your location": "Kliyan yo kòmande pou manje sou plas ou",
@@ -755,7 +727,6 @@
   "$_leadTimeHours hours": "$_leadTimeHours èdtan",
   "Lead Time Help": "Èd tan",
   "For example, 24 hours means customers cannot place orders for same-day fulfillment. They must order at least 24 hours in advance.": "Pa egzanp, 24 èdtan vle di kliyan yo pa ka pase kòmand pou menm jou a. Yo dwe kòmande omwen 24 èdtan davans.",
-  
   "Error saving settings: $e": "Erè nan anrejistreman paramèt: $e",
   "Something went wrong": "Gen yon bagay ki pa mache",
   "Network error": "Erè rezo",
@@ -816,113 +787,128 @@
   "Invoice link": "Lyen fakti",
   "PDF downloaded to": "PDF telechaje nan",
   "Failed to download PDF": "Echèk nan telechaje PDF la",
-  "CaribTap Business": "Biznis CaribTap"
-  ,"Item description hint": "egz.: sèvis konsepsyon sit entènèt"
-  ,"Quantity hint": "egz.: 1"
-  ,"Unit price hint": "egz.: 120.00"
-  ,"Upload Promotion": "Telechaje pwomosyon"
-  ,"Edit Promotion": "Modifye pwomosyon"
-  ,"Format Guidance": "Gid fòma"
-  ,"Add media": "Ajoute medya"
-  ,"Choose Image from Gallery": "Chwazi imaj nan galri"
-  ,"Choose Video from Gallery": "Chwazi videyo nan galri"
-  ,"Ad Types": "Tip anons"
-  ,"Promotion:": "Pwomosyon:"
-  ,"Advert:": "Anons:"
-  ,"Time-limited offers. Requires a specific start and end date (e.g., 20% off for 1 week).": "Ofri ki limite nan tan. Li mande yon dat kòmansman ak fen espesifik (egzanp: 20% rabè pandan 1 semèn)."
-  ,"General business awareness. Runs indefinitely without a specific offer period.": "Vizibilite jeneral biznis la. Li mache san limit san yon peryòd ofri espesifik."
-  ,"Promo Period": "Peryòd pwomosyon"
-  ,"A promo period ensures customers know exactly when your offer begins and ends. It creates urgency and helps them plan their purchase before the deal expires.": "Yon peryòd pwomosyon fè kliyan yo konnen egzakteman kilè òf ou a kòmanse ak fini. Sa kreye ijans epi ede yo planifye acha yo avan òf la ekspire."
-  ,"About Country Selection": "Konsènan seleksyon peyi"
-  ,"This setting controls which countries can see your ad. When you select specific countries, only users from those locations will be able to view your promotion. If you leave it set to \"All Countries\", your ad will be visible to users everywhere.": "Paramèt sa a kontwole ki peyi ki ka wè anons ou a. Lè ou chwazi peyi espesifik, sèlman itilizatè nan kote sa yo ap ka wè pwomosyon ou. Si ou kite li sou \"Tout Peyi\", anons ou a ap vizib tout kote."
-  ,"Select Categories": "Chwazi kategori"
-  ,"Please select a listing for your deal": "Tanpri chwazi yon lis pou òf ou a"
-  ,"Add Image or Video": "Ajoute imaj oswa videyo"
-  ,"High quality media gets more engagement": "Medya bon kalite jwenn plis angajman"
-  ,"Type": "Tip"
-  ,"Promotion": "Pwomosyon"
-  ,"Advert": "Anons"
-  ,"Select Listing": "Chwazi lis"
-  ,"Choose which listing this deal is for": "Chwazi ki lis òf sa a ye"
-  ,"You need an active listing to post a deal. Please create a listing first.": "Ou bezwen yon lis aktif pou poste yon òf. Tanpri kreye yon lis anvan."
-  ,"Select a listing...": "Chwazi yon lis..."
-  ,"Describe your deal": "Dekri òf ou a"
-  ,"Ex: 20% off all summer items...": "Egz.: 20% rabè sou tout atik ete yo..."
-  ,"Set Promo Period": "Mete peryòd pwomosyon an"
-  ,"Starts": "Kòmanse"
-  ,"Ends": "Fini"
-  ,"Select Date": "Chwazi dat"
-  ,"Targeting Options": "Opsyon sib"
-  ,"Choose who can see your ad": "Chwazi kiyès ki ka wè anons ou a"
-  ,"Countries": "Peyi"
-  ,"Target Categories": "Kategori sib"
-  ,"Select categories": "Chwazi kategori"
-  ,"x_selected": "{} chwazi"
-  ,"Audience Type": "Tip odyans"
-  ,"All Users": "Tout itilizatè"
-  ,"Viewed Similar": "Gade bagay ki sanble"
-  ,"Favorited": "Mete an favori"
-  ,"Near Location": "Toupre kote a"
-  ,"I accept the": "Mwen aksepte"
-  ,"Continue to Review": "Kontinye pou revizyon"
-  ,"users_can_set_max_promo_period": "Itilizatè {} yo ka mete yon peryòd pwomosyon maksimòm {} jou."
-  ,"Choose Your Plan": "Chwazi plan ou"
-  ,"Unlock Premium Features": "Debloke fonksyon premium"
-  ,"Choose the perfect plan for your business": "Chwazi plan pafè a pou biznis ou"
-  ,"Monthly": "Chak mwa"
-  ,"Yearly (Save 17%)": "Chak ane (Ekonomize 17%)"
-  ,"MOST POPULAR": "PI POPILÈ"
-  ,"Free Forever": "Gratis pou tout tan"
-  ,"Current": "Aktif"
-  ,"Current Plan": "Plan aktyèl"
-  ,"Downgrade": "Desann plan"
-  ,"Subscribe Now": "Abòne kounye a"
-  ,"Confirm Downgrade": "Konfime desann plan"
-  ,"Are you sure you want to downgrade to the Free plan? You will lose access to premium features.": "Èske ou sèten ou vle desann nan plan Gratis la? Ou pral pèdi aksè ak fonksyon premium yo."
-  ,"Downgrade feature coming soon!": "Fonksyon desann plan an ap vini byento!"
-  ,"Failed to refresh subscription": "Echèk nan rafrechi abònman an"
-  ,"Create up to 3 listings": "Kreye jiska 3 lis"
-  ,"Basic listing management": "Jesyon lis debaz"
-  ,"Standard search visibility": "Vizibilite rechèch estanda"
-  ,"Community support": "Sipò kominotè"
-  ,"Booking system with email & reminders": "Sistèm rezèvasyon ak imèl ak rapèl"
-  ,"Standard Analytics on listing performance": "Analitik estanda sou pèfòmans lis"
-  ,"AI photo enhancements": "Amelyorasyon foto ak IA"
-  ,"All Professional Services": "Tout sèvis pwofesyonèl"
-  ,"Enable Chat to talk directly with customers": "Aktive chat pou pale dirèkteman ak kliyan"
-  ,"Enable Quotes & Invoices": "Aktive Estimasyon ak Fakti"
-  ,"Unlock Advance Analytics": "Debloke analitik avanse"
-  ,"Deal Analytics": "Analitik òf la"
-  ,"No analytics available": "Pa gen analitik disponib"
-  ,"deal_with_caption": "Òf: {}"
-  ,"Views": "Vizyalizasyon"
-  ,"Saves": "Sove"
-  ,"Claims": "Reklamasyon"
-  ,"Users": "Itilizatè"
-  ,"Redemption Status": "Estati itilizasyon"
-  ,"Total Redeemed": "Total itilize"
-  ,"Limit": "Limit"
-  ,"Remaining": "Rès"
-  ,"Engagement Metrics": "Metrik angajman"
-  ,"View to Claim Rate": "To vizyalizasyon pou reklamasyon"
-  ,"of viewers claimed the deal": "nan moun ki te gade yo te reklame òf la"
-  ,"View to Save Rate": "To vizyalizasyon pou sove"
-  ,"of viewers saved the deal": "nan moun ki te gade yo te sove òf la"
-  ,"Save to Claim Rate": "To sove pou reklamasyon"
-  ,"of savers claimed the deal": "nan moun ki te sove yo te reklame òf la"
-  ,"Avg Claims per User": "Mwayèn reklamasyon pa itilizatè"
-  ,"times each user claimed on average": "fwa chak itilizatè te reklame an mwayèn"
-  ,"Inactive": "Pa aktif"
-  ,"Sold out": "Fini"
-  ,"Accepting claims": "Ap aksepte reklamasyon"
-  ,"on_free_plan": "Ou sou plan Gratis la"
-  ,"pro_premium_plan_limits": "Plan Professional: 10 anons/mwa\nPlan Premium: 20 anons/mwa"
-  ,"Deal Details": "Detay òf la"
-  ,"View Analytics": "Gade analitik"
-  ,"Until {}": "Jiska {}"
-  ,"Availability": "Disponiblite"
-  ,"redeemed_count": "Itilize: {}/{}"
-  ,"remaining_count": "{} ki rete"
-  ,"Promo Code": "Kòd promo"
-  ,"Claim In-App": "Reklame nan app la"
+  "CaribTap Business": "Biznis CaribTap",
+  "Item description hint": "egz.: sèvis konsepsyon sit entènèt",
+  "Quantity hint": "egz.: 1",
+  "Unit price hint": "egz.: 120.00",
+  "Upload Promotion": "Telechaje pwomosyon",
+  "Edit Promotion": "Modifye pwomosyon",
+  "Format Guidance": "Gid fòma",
+  "Add media": "Ajoute medya",
+  "Choose Image from Gallery": "Chwazi imaj nan galri",
+  "Choose Video from Gallery": "Chwazi videyo nan galri",
+  "Ad Types": "Tip anons",
+  "Promotion:": "Pwomosyon:",
+  "Advert:": "Anons:",
+  "Time-limited offers. Requires a specific start and end date (e.g., 20% off for 1 week).": "Ofri ki limite nan tan. Li mande yon dat kòmansman ak fen espesifik (egzanp: 20% rabè pandan 1 semèn).",
+  "General business awareness. Runs indefinitely without a specific offer period.": "Vizibilite jeneral biznis la. Li mache san limit san yon peryòd ofri espesifik.",
+  "Promo Period": "Peryòd pwomosyon",
+  "A promo period ensures customers know exactly when your offer begins and ends. It creates urgency and helps them plan their purchase before the deal expires.": "Yon peryòd pwomosyon fè kliyan yo konnen egzakteman kilè òf ou a kòmanse ak fini. Sa kreye ijans epi ede yo planifye acha yo avan òf la ekspire.",
+  "About Country Selection": "Konsènan seleksyon peyi",
+  "This setting controls which countries can see your ad. When you select specific countries, only users from those locations will be able to view your promotion. If you leave it set to \"All Countries\", your ad will be visible to users everywhere.": "Paramèt sa a kontwole ki peyi ki ka wè anons ou a. Lè ou chwazi peyi espesifik, sèlman itilizatè nan kote sa yo ap ka wè pwomosyon ou. Si ou kite li sou \"Tout Peyi\", anons ou a ap vizib tout kote.",
+  "Select Categories": "Chwazi kategori",
+  "Please select a listing for your deal": "Tanpri chwazi yon lis pou òf ou a",
+  "Add Image or Video": "Ajoute imaj oswa videyo",
+  "High quality media gets more engagement": "Medya bon kalite jwenn plis angajman",
+  "Type": "Tip",
+  "Promotion": "Pwomosyon",
+  "Advert": "Anons",
+  "Select Listing": "Chwazi lis",
+  "Choose which listing this deal is for": "Chwazi ki lis òf sa a ye",
+  "You need an active listing to post a deal. Please create a listing first.": "Ou bezwen yon lis aktif pou poste yon òf. Tanpri kreye yon lis anvan.",
+  "Select a listing...": "Chwazi yon lis...",
+  "Describe your deal": "Dekri òf ou a",
+  "Ex: 20% off all summer items...": "Egz.: 20% rabè sou tout atik ete yo...",
+  "Set Promo Period": "Mete peryòd pwomosyon an",
+  "Starts": "Kòmanse",
+  "Ends": "Fini",
+  "Select Date": "Chwazi dat",
+  "Targeting Options": "Opsyon sib",
+  "Choose who can see your ad": "Chwazi kiyès ki ka wè anons ou a",
+  "Countries": "Peyi",
+  "Target Categories": "Kategori sib",
+  "Select categories": "Chwazi kategori",
+  "x_selected": "{} chwazi",
+  "Audience Type": "Tip odyans",
+  "All Users": "Tout itilizatè",
+  "Viewed Similar": "Gade bagay ki sanble",
+  "Favorited": "Mete an favori",
+  "Near Location": "Toupre kote a",
+  "I accept the": "Mwen aksepte",
+  "Continue to Review": "Kontinye pou revizyon",
+  "users_can_set_max_promo_period": "Itilizatè {} yo ka mete yon peryòd pwomosyon maksimòm {} jou.",
+  "Choose Your Plan": "Chwazi plan ou",
+  "Unlock Premium Features": "Debloke fonksyon premium",
+  "Choose the perfect plan for your business": "Chwazi plan pafè a pou biznis ou",
+  "Monthly": "Chak mwa",
+  "Yearly (Save 17%)": "Chak ane (Ekonomize 17%)",
+  "MOST POPULAR": "PI POPILÈ",
+  "Free Forever": "Gratis pou tout tan",
+  "Current": "Aktif",
+  "Current Plan": "Plan aktyèl",
+  "Downgrade": "Desann plan",
+  "Subscribe Now": "Abòne kounye a",
+  "Confirm Downgrade": "Konfime desann plan",
+  "Are you sure you want to downgrade to the Free plan? You will lose access to premium features.": "Èske ou sèten ou vle desann nan plan Gratis la? Ou pral pèdi aksè ak fonksyon premium yo.",
+  "Downgrade feature coming soon!": "Fonksyon desann plan an ap vini byento!",
+  "Failed to refresh subscription": "Echèk nan rafrechi abònman an",
+  "Create up to 3 listings": "Kreye jiska 3 lis",
+  "Basic listing management": "Jesyon lis debaz",
+  "Standard search visibility": "Vizibilite rechèch estanda",
+  "Community support": "Sipò kominotè",
+  "Booking system with email & reminders": "Sistèm rezèvasyon ak imèl ak rapèl",
+  "Standard Analytics on listing performance": "Analitik estanda sou pèfòmans lis",
+  "AI photo enhancements": "Amelyorasyon foto ak IA",
+  "All Professional Services": "Tout sèvis pwofesyonèl",
+  "Enable Chat to talk directly with customers": "Aktive chat pou pale dirèkteman ak kliyan",
+  "Enable Quotes & Invoices": "Aktive Estimasyon ak Fakti",
+  "Unlock Advance Analytics": "Debloke analitik avanse",
+  "Deal Analytics": "Analitik òf la",
+  "No analytics available": "Pa gen analitik disponib",
+  "deal_with_caption": "Òf: {}",
+  "Views": "Vizyalizasyon",
+  "Saves": "Sove",
+  "Claims": "Reklamasyon",
+  "Users": "Itilizatè",
+  "Redemption Status": "Estati itilizasyon",
+  "Total Redeemed": "Total itilize",
+  "Limit": "Limit",
+  "Remaining": "Rès",
+  "Engagement Metrics": "Metrik angajman",
+  "View to Claim Rate": "To vizyalizasyon pou reklamasyon",
+  "of viewers claimed the deal": "nan moun ki te gade yo te reklame òf la",
+  "View to Save Rate": "To vizyalizasyon pou sove",
+  "of viewers saved the deal": "nan moun ki te gade yo te sove òf la",
+  "Save to Claim Rate": "To sove pou reklamasyon",
+  "of savers claimed the deal": "nan moun ki te sove yo te reklame òf la",
+  "Avg Claims per User": "Mwayèn reklamasyon pa itilizatè",
+  "times each user claimed on average": "fwa chak itilizatè te reklame an mwayèn",
+  "Inactive": "Pa aktif",
+  "Sold out": "Fini",
+  "Accepting claims": "Ap aksepte reklamasyon",
+  "on_free_plan": "Ou sou plan Gratis la",
+  "pro_premium_plan_limits": "Plan Professional: 10 anons/mwa\nPlan Premium: 20 anons/mwa",
+  "Deal Details": "Detay òf la",
+  "View Analytics": "Gade analitik",
+  "Until {}": "Jiska {}",
+  "Availability": "Disponiblite",
+  "redeemed_count": "Itilize: {}/{}",
+  "remaining_count": "{} ki rete",
+  "Promo Code": "Kòd promo",
+  "Claim In-App": "Reklame nan app la",
+  "Help & Tutorials": "Èd ak leson",
+  "Search tutorials": "Chèche leson",
+  "No tutorials found": "Pa jwenn okenn leson",
+  "What this feature does": "Sa fonksyon sa a fè",
+  "Who should use it": "Ki moun ki ta dwe itilize sa",
+  "Step-by-step instructions": "Enstriksyon etap pa etap",
+  "Common issues": "Pwoblèm komen",
+  "Getting Started": "Kòmanse",
+  "Buying & Discovering": "Achte ak dekouvri",
+  "Selling on CaribTap": "Vann sou CaribTap",
+  "Rentals & Bookings": "Lwaye ak rezèvasyon",
+  "Business Tools": "Zouti biznis",
+  "Orders & Payments": "Kòmand ak peman",
+  "Advanced Features": "Fonksyon avanse",
+  "Account & Subscriptions": "Kont ak abònman"
 }

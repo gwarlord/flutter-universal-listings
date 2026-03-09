@@ -23,7 +23,6 @@
     "two": "Commentaires",
     "other": "Commentaires"
   },
-  
   "Save": "Enregistrer",
   "Cancel": "Annuler",
   "Close": "Fermer",
@@ -103,7 +102,6 @@
   "Premium Listing": "Annonce Premium",
   "About": "À propos",
   "Where we're located": "Où nous sommes situés",
-  
   "Home": "Accueil",
   "Explore": "Explorer",
   "Listings": "Annonces",
@@ -190,14 +188,12 @@
   "No Assigned Listings": "Aucune annonce assignée",
   "You have not been added as a collaborator to any listings": "Vous n'avez été ajouté comme collaborateur à aucune annonce",
   "x_more": "+{} de plus",
-  
   "Analytics": "Analytiques",
   "Advanced Analytics": "Analytiques Avancées",
   "Account": "Compte",
   "Activate Chat": "Activer le Chat",
   "Manage Subscription": "Gérer l'Abonnement",
   "Log Out": "Se Déconnecter",
-  
   "Deals & Promotions": "Offres et Promotions",
   "Post your deals, promotions, and ads here!": "Publiez vos offres, promotions et annonces ici !",
   "Upload New Ad": "Téléverser une nouvelle annonce",
@@ -225,8 +221,8 @@
   "Clear Filters": "Effacer les Filtres",
   "Show All": "Tout Afficher",
   "Visit My Store": "Visitez Ma Boutique",
-  "Menu Preview": "Aperçu du Menu",
-  "View Full Menu": "Voir le Menu Complet",
+  "Menu Preview": "Aperçu du menu",
+  "View Full Menu": "Voir le menu complet",
   "Browse Rentals": "Parcurir les Locations",
   "Explore rental items": "Explorer les articles de location",
   "Food": "Nourriture",
@@ -235,7 +231,6 @@
   "Show all": "Tout afficher",
   "Show less": "Afficher moins",
   "Contact, Hours & Social": "Contact, Horaires et Réseaux",
-  
   "Active Orders": "Commandes Actives",
   "Show History": "Afficher l'Historique",
   "Active Only": "Actifs Seulement",
@@ -244,20 +239,17 @@
   "No active orders": "Aucune commande active",
   "Your waiter": "Votre serveur",
   "Your Waiter": "Votre Serveur",
-  
   "Popular": "Populaire",
   "Spicy": "Épicé",
   "Vegan": "Végétalien",
   "Vegetarian": "Végétarien",
   "Gluten-Free": "Sans Gluten",
-  
   "Ad Approval": "Approbation des Annonces",
   "My Favorites": "Mes Favoris",
   "Saved Deals": "Offres Enregistrées",
   "Account Details": "Détails du Compte",
   "Theme": "Thème",
   "Contact Us": "Contactez-nous",
-  
   "Filters": "Filtres",
   "Clear All": "Tout Effacer",
   "Apply Filters": "Appliquer les Filtres",
@@ -281,7 +273,6 @@
   "Category": "Catégorie",
   "All Categories": "Toutes les Catégories",
   "Active filters": "Filtres actifs",
-  
   "Sort by": "Trier par",
   "Recommended": "Recommandé",
   "Most Vouched": "Les plus approuvés",
@@ -308,7 +299,6 @@
   "Email verified successfully!": "Email vérifié avec succès!",
   "Verification failed: $e": "Vérification échouée: $e",
   "Email Verification": "Vérification de l'email",
-  
   "Country": "Pays",
   "Gender": "Sexe",
   "Age Range": "Tranche d'âge",
@@ -324,7 +314,6 @@
   "55-64": "55-64",
   "65+": "65+",
   "Country is required": "Le pays est requis",
-
   "Add Listing": "Ajouter une annonce",
   "Edit Listing": "Modifier l'annonce",
   "Request Featured": "Demander une mise en avant",
@@ -392,7 +381,6 @@
   "Phone": "Téléphone",
   "Website": "Site web",
   "Opening Hours": "Heures d'ouverture",
-  
   "Store": "Boutique",
   "Mini Store": "Mini Boutique",
   "Browse Full Store": "Parcourir toute la boutique",
@@ -488,8 +476,6 @@
   "Digital Menu": "Menu numérique",
   "Menu Photos": "Photos du menu",
   "Full Menu": "Menu complet",
-  "Menu Preview": "Aperçu du menu",
-  "View Full Menu": "Voir le menu complet",
   "Show Menu on Listing": "Afficher le menu sur l'annonce",
   "Menu is visible to customers": "Le menu est visible pour les clients",
   "Menu is hidden from customers": "Le menu est caché aux clients",
@@ -500,7 +486,6 @@
   "Menu hidden from customers": "Menu caché aux clients",
   "Maximum 6 menu photos allowed": "Maximum 6 photos de menu autorisées",
   "Uploaded {} photo(s)": "{} photo(s) téléchargée(s)",
-  
   "Order Details": "Détails de la commande",
   "My Orders": "Mes commandes",
   "New Order": "Nouvelle commande",
@@ -512,8 +497,6 @@
   "Delivery Fee": "Frais de livraison",
   "Total": "Total",
   "Fulfillment": "Livraison",
-  "Pickup": "Ramassage",
-  "Delivery": "Livraison",
   "Dining In": "Sur place",
   "Shipping": "Expédition",
   "Shipping Address": "Adresse d'expédition",
@@ -579,7 +562,6 @@
   "You can only cancel your pending orders": "Vous ne pouvez annuler que vos commandes en attente",
   "Failed to update status": "Échec de la mise à jour du statut",
   "No listings with tables. Create tables first from Store Settings.": "Aucune annonce avec tables. Créez d'abord des tables depuis les paramètres de la boutique.",
-  
   "Requested": "Demandé",
   "Pending": "En attente",
   "Active": "Actif",
@@ -595,7 +577,6 @@
   "Cancelled": "Annulé",
   "Start": "Début",
   "End": "Fin",
-  
   "Table Service": "Service de table",
   "Table Mode": "Mode table",
   "Tables & QR Codes": "Tables et codes QR",
@@ -612,7 +593,6 @@
   "Started": "Commencé",
   "Activated": "Activé",
   "Purpose": "Objet",
-  "Payment": "Paiement",
   "Just now": "À l'instant",
   "minutes_ago": "il y a {} min",
   "hours_ago": "il y a {} h",
@@ -626,7 +606,6 @@
   "Cash": "Espèces",
   "Card": "Carte",
   "Digital Payment": "Paiement numérique",
-  
   "Tracking": "Suivi",
   "Order Tracking": "Suivi de commande",
   "Shipping Tracking": "Suivi d'expédition",
@@ -653,19 +632,12 @@
   "In Transit": "En transit",
   "Out for Delivery": "En livraison",
   "Delivered": "Livré",
-  
-  "Rentals": "Locations",
   "My Rentals": "Mes locations",
   "Rental Details": "Détails de la location",
   "Book Now": "Réserver maintenant",
-  "Start Date": "Date de début",
-  "End Date": "Date de fin",
-  "Duration": "Durée",
   "Price per Day": "Prix par jour",
   "Total Price": "Prix total",
   "Rental Period": "Période de location",
-  
-  "Bookings": "Réservations",
   "My Bookings": "Mes réservations",
   "Booking Details": "Détails de la réservation",
   "Booking Information": "Informations de réservation",
@@ -699,8 +671,6 @@
   "Date & Time": "Date et heure",
   "Party Size": "Taille du groupe",
   "Special Requests": "Demandes spéciales",
-  
-  "Settings": "Paramètres",
   "Settings saved successfully": "Paramètres enregistrés avec succès",
   "Save Changes": "Enregistrer les modifications",
   "Saving changes...": "Enregistrement des modifications...",
@@ -715,7 +685,6 @@
   "ACCOUNT SECURITY": "SÉCURITÉ DU COMPTE",
   "Password & Security": "Mot de passe et sécurité",
   "Privacy Policy": "Politique de confidentialité",
-  
   "APP LANGUAGE": "LANGUE DE L'APPLICATION",
   "Language": "Langue",
   "App Language": "Langue de l'application",
@@ -728,7 +697,6 @@
   "Haitian Creole": "Kreyòl Ayisyen",
   "Language updated successfully": "Langue mise à jour avec succès",
   "Applies to the app interface. Listings and reviews remain as written.": "S'applique à l'interface de l'application. Les annonces et avis restent tels qu'écrits.",
-  
   "Customers pick up their order at your location": "Les clients récupèrent leur commande à votre emplacement",
   "You deliver orders to customer addresses": "Vous livrez les commandes aux adresses des clients",
   "Customers order for dining in at your location": "Les clients commandent pour manger sur place",
@@ -742,7 +710,6 @@
   "$_leadTimeHours hours": "$_leadTimeHours heures",
   "Lead Time Help": "Aide sur le délai",
   "For example, 24 hours means customers cannot place orders for same-day fulfillment. They must order at least 24 hours in advance.": "Par exemple, 24 heures signifie que les clients ne peuvent pas passer de commandes pour une livraison le jour même. Ils doivent commander au moins 24 heures à l'avance.",
-  
   "Error saving settings: $e": "Erreur lors de l'enregistrement des paramètres: $e",
   "Something went wrong": "Quelque chose s'est mal passé",
   "Network error": "Erreur réseau",
@@ -803,137 +770,151 @@
   "Invoice link": "Lien de la facture",
   "PDF downloaded to": "PDF téléchargé vers",
   "Failed to download PDF": "Échec du téléchargement du PDF",
-  "CaribTap Business": "Entreprise CaribTap"
-  ,"Item description hint": "ex. : service de création de site web"
-  ,"Quantity hint": "ex. : 1"
-  ,"Unit price hint": "ex. : 120.00"
-  ,"Upload Promotion": "Téléverser une promotion"
-  ,"Edit Promotion": "Modifier la promotion"
-  ,"Format Guidance": "Guide de format"
-  ,"Add media": "Ajouter un média"
-  ,"Choose Image from Gallery": "Choisir une image depuis la galerie"
-  ,"Choose Video from Gallery": "Choisir une vidéo depuis la galerie"
-  ,"Ad Types": "Types d'annonce"
-  ,"Promotion:": "Promotion :"
-  ,"Advert:": "Annonce :"
-  ,"Time-limited offers. Requires a specific start and end date (e.g., 20% off for 1 week).": "Offres à durée limitée. Nécessite une date de début et de fin précise (ex. : 20 % de réduction pendant 1 semaine)."
-  ,"General business awareness. Runs indefinitely without a specific offer period.": "Visibilité générale de l'entreprise. Fonctionne indéfiniment sans période d'offre spécifique."
-  ,"Promo Period": "Période promo"
-  ,"A promo period ensures customers know exactly when your offer begins and ends. It creates urgency and helps them plan their purchase before the deal expires.": "Une période promo permet aux clients de savoir exactement quand votre offre commence et se termine. Cela crée un sentiment d'urgence et les aide à planifier leur achat avant expiration."
-  ,"About Country Selection": "À propos de la sélection des pays"
-  ,"This setting controls which countries can see your ad. When you select specific countries, only users from those locations will be able to view your promotion. If you leave it set to \"All Countries\", your ad will be visible to users everywhere.": "Ce paramètre contrôle les pays pouvant voir votre annonce. Si vous sélectionnez des pays spécifiques, seuls les utilisateurs de ces zones verront votre promotion. Si vous laissez \"Tous les pays\", elle sera visible partout."
-  ,"Select Categories": "Sélectionner des catégories"
-  ,"Please select a listing for your deal": "Veuillez sélectionner une annonce pour votre offre"
-  ,"Add Image or Video": "Ajouter une image ou une vidéo"
-  ,"High quality media gets more engagement": "Un média de haute qualité génère plus d'engagement"
-  ,"Type": "Type"
-  ,"Promotion": "Promotion"
-  ,"Advert": "Annonce"
-  ,"Select Listing": "Sélectionner une annonce"
-  ,"Choose which listing this deal is for": "Choisissez l'annonce concernée par cette offre"
-  ,"You need an active listing to post a deal. Please create a listing first.": "Vous avez besoin d'une annonce active pour publier une offre. Veuillez d'abord créer une annonce."
-  ,"Select a listing...": "Sélectionnez une annonce..."
-  ,"Describe your deal": "Décrivez votre offre"
-  ,"Ex: 20% off all summer items...": "Ex. : 20 % de réduction sur tous les articles d'été..."
-  ,"Set Promo Period": "Définir la période promo"
-  ,"Starts": "Débute"
-  ,"Ends": "Se termine"
-  ,"Select Date": "Sélectionner une date"
-  ,"Targeting Options": "Options de ciblage"
-  ,"Choose who can see your ad": "Choisissez qui peut voir votre annonce"
-  ,"Countries": "Pays"
-  ,"Target Categories": "Catégories ciblées"
-  ,"Select categories": "Sélectionner des catégories"
-  ,"x_selected": "{} sélectionnés"
-  ,"Audience Type": "Type d'audience"
-  ,"All Users": "Tous les utilisateurs"
-  ,"Viewed Similar": "A vu du similaire"
-  ,"Favorited": "Favorisé"
-  ,"Near Location": "Près de la localisation"
-  ,"I accept the": "J'accepte les"
-  ,"Continue to Review": "Continuer vers la révision"
-  ,"users_can_set_max_promo_period": "Les utilisateurs {} peuvent définir une période promo maximale de {} jours."
-  ,"Professional Feature": "Fonction professionnelle"
-  ,"Total Views": "Vues totales"
-  ,"Total Favorites": "Favoris totaux"
-  ,"Avg Rating": "Note moy."
-  ,"Listing Performance": "Performance des annonces"
-  ,"No listings yet": "Aucune annonce pour le moment"
-  ,"No ratings": "Aucune note"
-  ,"stars_reviews": "{} étoiles ({} avis)"
-  ,"Last 7 days": "7 derniers jours"
-  ,"Last 30 days": "30 derniers jours"
-  ,"Last 90 days": "90 derniers jours"
-  ,"All Time": "Depuis toujours"
-  ,"Performance Snapshot": "Aperçu des performances"
-  ,"Engagement Deep Dive": "Analyse approfondie de l'engagement"
-  ,"Growth Opportunities": "Opportunités de croissance"
-  ,"Bookings": "Réservations"
-  ,"Avg. Rating": "Note moy."
-  ,"Chat Initiations": "Ouvertures de chat"
-  ,"Taps / Vouch": "Taps / Recommandations"
-  ,"vs previous period": "vs période précédente"
-  ,"Improve Listing Quality": "Améliorer la qualité de l'annonce"
-  ,"Become a Top Lister": "Devenir un annonceur de premier plan"
-  ,"you_have_listings_to_improve": "Vous avez {} annonces qui pourraient être améliorées avec plus de photos ou une description plus longue."
-  ,"you_are_bookings_away_for_badge": "Vous êtes à {} réservations d'obtenir le badge \"Approuvé par la communauté\" !"
-  ,"Choose Your Plan": "Choisissez votre forfait"
-  ,"Unlock Premium Features": "Débloquez les fonctionnalités premium"
-  ,"Choose the perfect plan for your business": "Choisissez le forfait idéal pour votre entreprise"
-  ,"Monthly": "Mensuel"
-  ,"Yearly (Save 17%)": "Annuel (Économisez 17%)"
-  ,"MOST POPULAR": "LE PLUS POPULAIRE"
-  ,"Free Forever": "Gratuit à vie"
-  ,"Current": "Actuel"
-  ,"Current Plan": "Forfait actuel"
-  ,"Downgrade": "Rétrograder"
-  ,"Subscribe Now": "S'abonner maintenant"
-  ,"Confirm Downgrade": "Confirmer la rétrogradation"
-  ,"Are you sure you want to downgrade to the Free plan? You will lose access to premium features.": "Voulez-vous vraiment rétrograder vers le forfait Gratuit ? Vous perdrez l'accès aux fonctionnalités premium."
-  ,"Downgrade feature coming soon!": "La rétrogradation arrive bientôt !"
-  ,"Failed to refresh subscription": "Échec de l'actualisation de l'abonnement"
-  ,"Create up to 3 listings": "Créez jusqu'à 3 annonces"
-  ,"Basic listing management": "Gestion basique des annonces"
-  ,"Standard search visibility": "Visibilité standard dans la recherche"
-  ,"Community support": "Support communautaire"
-  ,"Booking system with email & reminders": "Système de réservation avec e-mails et rappels"
-  ,"Standard Analytics on listing performance": "Analytique standard des performances d'annonces"
-  ,"AI photo enhancements": "Améliorations photo par IA"
-  ,"All Professional Services": "Tous les services professionnels"
-  ,"Enable Chat to talk directly with customers": "Activez le chat pour parler directement aux clients"
-  ,"Enable Quotes & Invoices": "Activez Devis et Factures"
-  ,"Unlock Advance Analytics": "Débloquez l'analytique avancée"
-  ,"Deal Analytics": "Analytique de l'offre"
-  ,"No analytics available": "Aucune analytique disponible"
-  ,"deal_with_caption": "Offre : {}"
-  ,"Views": "Vues"
-  ,"Saves": "Enregistrements"
-  ,"Claims": "Réclamations"
-  ,"Users": "Utilisateurs"
-  ,"Redemption Status": "Statut des utilisations"
-  ,"Total Redeemed": "Total utilisé"
-  ,"Limit": "Limite"
-  ,"Remaining": "Restant"
-  ,"Engagement Metrics": "Métriques d'engagement"
-  ,"View to Claim Rate": "Taux vue→réclamation"
-  ,"of viewers claimed the deal": "des spectateurs ont réclamé l'offre"
-  ,"View to Save Rate": "Taux vue→enregistrement"
-  ,"of viewers saved the deal": "des spectateurs ont enregistré l'offre"
-  ,"Save to Claim Rate": "Taux enregistrement→réclamation"
-  ,"of savers claimed the deal": "des enregistreurs ont réclamé l'offre"
-  ,"Avg Claims per User": "Réclamations moy. par utilisateur"
-  ,"times each user claimed on average": "fois que chaque utilisateur a réclamé en moyenne"
-  ,"Inactive": "Inactif"
-  ,"Sold out": "Épuisé"
-  ,"Accepting claims": "Réclamations acceptées"
-  ,"on_free_plan": "Vous êtes sur le plan Gratuit"
-  ,"pro_premium_plan_limits": "Plan Professional : 10 annonces/mois\nPlan Premium : 20 annonces/mois"
-  ,"Deal Details": "Détails de l'offre"
-  ,"View Analytics": "Voir l'analytique"
-  ,"Until {}": "Jusqu'au {}"
-  ,"Availability": "Disponibilité"
-  ,"redeemed_count": "Utilisé : {}/{}"
-  ,"remaining_count": "{} restants"
-  ,"Promo Code": "Code promo"
-  ,"Claim In-App": "Réclamer dans l'app"
+  "CaribTap Business": "Entreprise CaribTap",
+  "Item description hint": "ex. : service de création de site web",
+  "Quantity hint": "ex. : 1",
+  "Unit price hint": "ex. : 120.00",
+  "Upload Promotion": "Téléverser une promotion",
+  "Edit Promotion": "Modifier la promotion",
+  "Format Guidance": "Guide de format",
+  "Add media": "Ajouter un média",
+  "Choose Image from Gallery": "Choisir une image depuis la galerie",
+  "Choose Video from Gallery": "Choisir une vidéo depuis la galerie",
+  "Ad Types": "Types d'annonce",
+  "Promotion:": "Promotion :",
+  "Advert:": "Annonce :",
+  "Time-limited offers. Requires a specific start and end date (e.g., 20% off for 1 week).": "Offres à durée limitée. Nécessite une date de début et de fin précise (ex. : 20 % de réduction pendant 1 semaine).",
+  "General business awareness. Runs indefinitely without a specific offer period.": "Visibilité générale de l'entreprise. Fonctionne indéfiniment sans période d'offre spécifique.",
+  "Promo Period": "Période promo",
+  "A promo period ensures customers know exactly when your offer begins and ends. It creates urgency and helps them plan their purchase before the deal expires.": "Une période promo permet aux clients de savoir exactement quand votre offre commence et se termine. Cela crée un sentiment d'urgence et les aide à planifier leur achat avant expiration.",
+  "About Country Selection": "À propos de la sélection des pays",
+  "This setting controls which countries can see your ad. When you select specific countries, only users from those locations will be able to view your promotion. If you leave it set to \"All Countries\", your ad will be visible to users everywhere.": "Ce paramètre contrôle les pays pouvant voir votre annonce. Si vous sélectionnez des pays spécifiques, seuls les utilisateurs de ces zones verront votre promotion. Si vous laissez \"Tous les pays\", elle sera visible partout.",
+  "Select Categories": "Sélectionner des catégories",
+  "Please select a listing for your deal": "Veuillez sélectionner une annonce pour votre offre",
+  "Add Image or Video": "Ajouter une image ou une vidéo",
+  "High quality media gets more engagement": "Un média de haute qualité génère plus d'engagement",
+  "Type": "Type",
+  "Promotion": "Promotion",
+  "Advert": "Annonce",
+  "Select Listing": "Sélectionner une annonce",
+  "Choose which listing this deal is for": "Choisissez l'annonce concernée par cette offre",
+  "You need an active listing to post a deal. Please create a listing first.": "Vous avez besoin d'une annonce active pour publier une offre. Veuillez d'abord créer une annonce.",
+  "Select a listing...": "Sélectionnez une annonce...",
+  "Describe your deal": "Décrivez votre offre",
+  "Ex: 20% off all summer items...": "Ex. : 20 % de réduction sur tous les articles d'été...",
+  "Set Promo Period": "Définir la période promo",
+  "Starts": "Débute",
+  "Ends": "Se termine",
+  "Select Date": "Sélectionner une date",
+  "Targeting Options": "Options de ciblage",
+  "Choose who can see your ad": "Choisissez qui peut voir votre annonce",
+  "Countries": "Pays",
+  "Target Categories": "Catégories ciblées",
+  "Select categories": "Sélectionner des catégories",
+  "x_selected": "{} sélectionnés",
+  "Audience Type": "Type d'audience",
+  "All Users": "Tous les utilisateurs",
+  "Viewed Similar": "A vu du similaire",
+  "Favorited": "Favorisé",
+  "Near Location": "Près de la localisation",
+  "I accept the": "J'accepte les",
+  "Continue to Review": "Continuer vers la révision",
+  "users_can_set_max_promo_period": "Les utilisateurs {} peuvent définir une période promo maximale de {} jours.",
+  "Professional Feature": "Fonction professionnelle",
+  "Total Views": "Vues totales",
+  "Total Favorites": "Favoris totaux",
+  "Avg Rating": "Note moy.",
+  "Listing Performance": "Performance des annonces",
+  "No listings yet": "Aucune annonce pour le moment",
+  "No ratings": "Aucune note",
+  "stars_reviews": "{} étoiles ({} avis)",
+  "Last 7 days": "7 derniers jours",
+  "Last 30 days": "30 derniers jours",
+  "Last 90 days": "90 derniers jours",
+  "All Time": "Depuis toujours",
+  "Performance Snapshot": "Aperçu des performances",
+  "Engagement Deep Dive": "Analyse approfondie de l'engagement",
+  "Growth Opportunities": "Opportunités de croissance",
+  "Avg. Rating": "Note moy.",
+  "Chat Initiations": "Ouvertures de chat",
+  "Taps / Vouch": "Taps / Recommandations",
+  "vs previous period": "vs période précédente",
+  "Improve Listing Quality": "Améliorer la qualité de l'annonce",
+  "Become a Top Lister": "Devenir un annonceur de premier plan",
+  "you_have_listings_to_improve": "Vous avez {} annonces qui pourraient être améliorées avec plus de photos ou une description plus longue.",
+  "you_are_bookings_away_for_badge": "Vous êtes à {} réservations d'obtenir le badge \"Approuvé par la communauté\" !",
+  "Choose Your Plan": "Choisissez votre forfait",
+  "Unlock Premium Features": "Débloquez les fonctionnalités premium",
+  "Choose the perfect plan for your business": "Choisissez le forfait idéal pour votre entreprise",
+  "Monthly": "Mensuel",
+  "Yearly (Save 17%)": "Annuel (Économisez 17%)",
+  "MOST POPULAR": "LE PLUS POPULAIRE",
+  "Free Forever": "Gratuit à vie",
+  "Current": "Actuel",
+  "Current Plan": "Forfait actuel",
+  "Downgrade": "Rétrograder",
+  "Subscribe Now": "S'abonner maintenant",
+  "Confirm Downgrade": "Confirmer la rétrogradation",
+  "Are you sure you want to downgrade to the Free plan? You will lose access to premium features.": "Voulez-vous vraiment rétrograder vers le forfait Gratuit ? Vous perdrez l'accès aux fonctionnalités premium.",
+  "Downgrade feature coming soon!": "La rétrogradation arrive bientôt !",
+  "Failed to refresh subscription": "Échec de l'actualisation de l'abonnement",
+  "Create up to 3 listings": "Créez jusqu'à 3 annonces",
+  "Basic listing management": "Gestion basique des annonces",
+  "Standard search visibility": "Visibilité standard dans la recherche",
+  "Community support": "Support communautaire",
+  "Booking system with email & reminders": "Système de réservation avec e-mails et rappels",
+  "Standard Analytics on listing performance": "Analytique standard des performances d'annonces",
+  "AI photo enhancements": "Améliorations photo par IA",
+  "All Professional Services": "Tous les services professionnels",
+  "Enable Chat to talk directly with customers": "Activez le chat pour parler directement aux clients",
+  "Enable Quotes & Invoices": "Activez Devis et Factures",
+  "Unlock Advance Analytics": "Débloquez l'analytique avancée",
+  "Deal Analytics": "Analytique de l'offre",
+  "No analytics available": "Aucune analytique disponible",
+  "deal_with_caption": "Offre : {}",
+  "Views": "Vues",
+  "Saves": "Enregistrements",
+  "Claims": "Réclamations",
+  "Users": "Utilisateurs",
+  "Redemption Status": "Statut des utilisations",
+  "Total Redeemed": "Total utilisé",
+  "Limit": "Limite",
+  "Remaining": "Restant",
+  "Engagement Metrics": "Métriques d'engagement",
+  "View to Claim Rate": "Taux vue→réclamation",
+  "of viewers claimed the deal": "des spectateurs ont réclamé l'offre",
+  "View to Save Rate": "Taux vue→enregistrement",
+  "of viewers saved the deal": "des spectateurs ont enregistré l'offre",
+  "Save to Claim Rate": "Taux enregistrement→réclamation",
+  "of savers claimed the deal": "des enregistreurs ont réclamé l'offre",
+  "Avg Claims per User": "Réclamations moy. par utilisateur",
+  "times each user claimed on average": "fois que chaque utilisateur a réclamé en moyenne",
+  "Inactive": "Inactif",
+  "Sold out": "Épuisé",
+  "Accepting claims": "Réclamations acceptées",
+  "on_free_plan": "Vous êtes sur le plan Gratuit",
+  "pro_premium_plan_limits": "Plan Professional : 10 annonces/mois\nPlan Premium : 20 annonces/mois",
+  "Deal Details": "Détails de l'offre",
+  "View Analytics": "Voir l'analytique",
+  "Until {}": "Jusqu'au {}",
+  "Availability": "Disponibilité",
+  "redeemed_count": "Utilisé : {}/{}",
+  "remaining_count": "{} restants",
+  "Promo Code": "Code promo",
+  "Claim In-App": "Réclamer dans l'app",
+  "Help & Tutorials": "Aide et tutoriels",
+  "Search tutorials": "Rechercher des tutoriels",
+  "No tutorials found": "Aucun tutoriel trouvé",
+  "What this feature does": "Ce que fait cette fonctionnalité",
+  "Who should use it": "Qui devrait l'utiliser",
+  "Step-by-step instructions": "Instructions étape par étape",
+  "Common issues": "Problèmes courants",
+  "Getting Started": "Prise en main",
+  "Buying & Discovering": "Acheter et découvrir",
+  "Selling on CaribTap": "Vendre sur CaribTap",
+  "Rentals & Bookings": "Locations et réservations",
+  "Business Tools": "Outils professionnels",
+  "Orders & Payments": "Commandes et paiements",
+  "Advanced Features": "Fonctionnalités avancées",
+  "Account & Subscriptions": "Compte et abonnements"
 }

@@ -1,16 +1,16 @@
 
 import 'package:flutter/material.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
-import 'package:provider/provider.dart';
 import 'package:caribtap/listings/services/deal_ad_admin_service.dart';
 import 'package:caribtap/listings/services/deal_ad_service.dart';
 import 'package:caribtap/listings/model/deal_ad_model.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:caribtap/core/ui/video/adaptive_video_player.dart';
 import 'package:caribtap/listings/ui/profile/profile/_dialog_video_player.dart';
+import 'package:caribtap/listings/ui/deals/ad_review_screen.dart';
 import 'package:video_player/video_player.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'dart:typed_data';
+import 'package:caribtap/core/utils/helper.dart';
 
 // Widget to show a video thumbnail (from URL or generated)
 class _VideoThumbnailWidget extends StatefulWidget {
@@ -52,6 +52,7 @@ class _VideoThumbnailWidgetState extends State<_VideoThumbnailWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (widget.thumbnailUrl != null && widget.thumbnailUrl!.isNotEmpty) {
       return Stack(
         alignment: Alignment.center,
@@ -73,10 +74,14 @@ class _VideoThumbnailWidgetState extends State<_VideoThumbnailWidget> {
     return Container(
       width: 48,
       height: 48,
-      color: Colors.black12,
+      color: isDark ? Colors.white10 : Colors.black12,
       child: _loading
           ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))
-          : const Icon(Icons.videocam, size: 32, color: Colors.black54),
+          : Icon(
+              Icons.videocam,
+              size: 32,
+              color: isDark ? Colors.white70 : Colors.black54,
+            ),
     );
   }
 }
@@ -117,6 +122,10 @@ class _AdApprovalScreenState extends State<AdApprovalScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final titleColor = theme.colorScheme.onSurface;
+    final subtitleColor = theme.colorScheme.onSurface.withOpacity(0.7);
+
     return Scaffold(
       appBar: AppBar(title: Text('Ad Approval'.tr())),
       body: StreamBuilder<List<DealAdModel>>(
@@ -130,6 +139,7 @@ class _AdApprovalScreenState extends State<AdApprovalScreen> {
             return Center(child: Text('No pending ads'.tr()));
           }
           return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: ads.length,
             itemBuilder: (context, index) {
               final ad = ads[index];
@@ -139,7 +149,13 @@ class _AdApprovalScreenState extends State<AdApprovalScreen> {
                   final lister = snapshot.data;
                   return Card(
                     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    color: theme.colorScheme.surface,
                     child: ListTile(
+                      onTap: () => _openAdDetails(ad),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                       leading: ad.mediaUrl.isNotEmpty
                           ? GestureDetector(
                               onTap: () {
@@ -164,12 +180,23 @@ class _AdApprovalScreenState extends State<AdApprovalScreen> {
                         maxLines: null,
                         softWrap: true,
                         overflow: TextOverflow.visible,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: titleColor,
                         ),
                       ),
-                      subtitle: Text('Duration: ${ad.durationDays} days'),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          [
+                            'Duration: ${ad.durationDays} days',
+                            'Type: ${ad.adType == 'promo' ? 'Promotion' : 'Advert'}',
+                            if (lister != null)
+                              'Lister: ${lister.fullName().isNotEmpty ? lister.fullName() : lister.email}',
+                          ].join('\n'),
+                          style: TextStyle(color: subtitleColor),
+                        ),
+                      ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -178,10 +205,12 @@ class _AdApprovalScreenState extends State<AdApprovalScreen> {
                             onPressed: () async {
                               try {
                                 await _dealAdAdminService.approveAd(ad.id!, widget.currentUser.userID);
+                                if (!mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text('Ad approved'.tr())),
                                 );
                               } catch (e) {
+                                if (!mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text('Failed to approve ad: $e')), // Show error
                                 );
@@ -193,10 +222,12 @@ class _AdApprovalScreenState extends State<AdApprovalScreen> {
                             onPressed: () async {
                               try {
                                 await _dealAdAdminService.rejectAd(ad.id!, widget.currentUser.userID);
+                                if (!mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text('Ad rejected'.tr())),
                                 );
                               } catch (e) {
+                                if (!mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text('Failed to reject ad: $e')), // Show error
                                 );
@@ -212,6 +243,37 @@ class _AdApprovalScreenState extends State<AdApprovalScreen> {
             },
           );
         },
+      ),
+    );
+  }
+
+  void _openAdDetails(DealAdModel ad) {
+    push(
+      context,
+      AdReviewScreen(
+        existingMediaUrl: ad.mediaUrl,
+        existingThumbnailUrl: ad.thumbnailUrl,
+        mediaType: ad.mediaType,
+        caption: ad.caption,
+        adDays: ad.durationDays,
+        promoStartDate: ad.adType == 'promo' ? ad.startDate : null,
+        promoEndDate: ad.adType == 'promo' ? ad.endDate : null,
+        adType: ad.adType,
+        selectedCountryCodes: ad.visibilityCountries,
+        targeting: ad.targeting,
+        pricePaid: ad.pricePaid,
+        redemptionType: ad.redemptionType,
+        promoCode: ad.promoCode,
+        redemptionLimitTotal: ad.redemptionLimitTotal,
+        redemptionLimitPerUser: ad.redemptionLimitPerUser,
+        expireAt: ad.expireAt,
+        scheduleAt: ad.scheduleAt,
+        listerId: ad.listerId,
+        listingId: ad.listingId,
+        adToEdit: ad,
+        readOnly: true,
+        screenTitle: 'Review Pending Ad'.tr(),
+        instructionText: 'Review how this ad will appear to users before approving or rejecting it.'.tr(),
       ),
     );
   }

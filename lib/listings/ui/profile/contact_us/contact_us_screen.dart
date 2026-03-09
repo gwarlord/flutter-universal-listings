@@ -1,16 +1,22 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ContactUsScreen extends StatefulWidget {
   final ListingsUser currentUser;
+  final bool openSuggestionsOnStart;
   
   const ContactUsScreen({
     super.key,
     required this.currentUser,
+    this.openSuggestionsOnStart = false,
   });
 
   @override
@@ -21,6 +27,25 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
   static const String contactEmail = 'support@caribtap.com';
   static const String supportChatEmail = 'support@caribtap.com';
   static const String contactWebsite = 'https://www.caribtap.com';
+  static const List<String> _suggestionCategories = [
+    'Look & Feel',
+    'Listing Feature',
+    'General App Feature',
+    'Search & Discovery',
+    'Performance & Reliability',
+    'Other',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.openSuggestionsOnStart) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _showSuggestionsDialog();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -133,6 +158,26 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 32),
+            Text('SUGGESTIONS BOX'.tr(), style: titleStyle),
+            const SizedBox(height: 12),
+            Card(
+              color: cardColor,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+                ),
+              ),
+              child: _buildContactTile(
+                context,
+                title: 'Share a suggestion'.tr(),
+                subtitle: 'Tell us what you would like to see new or changed in the app.'.tr(),
+                icon: Icons.lightbulb_outline,
+                onTap: _showSuggestionsDialog,
+              ),
+            ),
             const SizedBox(height: 40),
           ],
         ),
@@ -191,6 +236,261 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
 
   void _openDirectChat() {
     _showChatDialog();
+  }
+
+  void _showSuggestionsDialog() {
+    final suggestionController = TextEditingController();
+    final isDark = isDarkMode(context);
+    String selectedCategory = _suggestionCategories[2];
+    String? selectedListingId;
+    String? selectedListingTitle;
+    final listingsFuture = listingApiManager.getMyListings(
+      currentUserID: widget.currentUser.userID,
+      favListingsIDs: widget.currentUser.likedListingsIDs,
+    );
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Suggestions Box'.tr(),
+            style: TextStyle(color: isDark ? Colors.white : Colors.black),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'We read every suggestion. Share what you want us to add or improve.'.tr(),
+                  style: TextStyle(
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Category'.tr(),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.grey[300] : Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: selectedCategory,
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+                    ),
+                    filled: true,
+                    fillColor: isDark ? Colors.black26 : Colors.grey[50],
+                  ),
+                  dropdownColor: isDark ? Colors.grey[850] : Colors.white,
+                  items: _suggestionCategories
+                      .map((category) => DropdownMenuItem<String>(
+                            value: category,
+                            child: Text(category.tr()),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setDialogState(() => selectedCategory = value);
+                  },
+                ),
+                const SizedBox(height: 14),
+                FutureBuilder<List<ListingModel>>(
+                  future: listingsFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Row(
+                          children: [
+                            const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Loading your listings...'.tr(),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Text(
+                          'Could not load your listings. You can still submit a general suggestion.'.tr(),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                        ),
+                      );
+                    }
+
+                    final listings = snapshot.data ?? const <ListingModel>[];
+                    if (listings.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Text(
+                          'No listings found. You can still submit a general suggestion.'.tr(),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                        ),
+                      );
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Related Listing (optional)'.tr(),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.grey[300] : Colors.grey[700],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<String?>(
+                            value: selectedListingId,
+                            decoration: InputDecoration(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+                              ),
+                              filled: true,
+                              fillColor: isDark ? Colors.black26 : Colors.grey[50],
+                            ),
+                            dropdownColor: isDark ? Colors.grey[850] : Colors.white,
+                            items: [
+                              DropdownMenuItem<String?>(
+                                value: null,
+                                child: Text('None'.tr()),
+                              ),
+                              ...listings.map(
+                                (listing) => DropdownMenuItem<String?>(
+                                  value: listing.id,
+                                  child: Text(
+                                    listing.title,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              setDialogState(() {
+                                selectedListingId = value;
+                                if (value == null) {
+                                  selectedListingTitle = null;
+                                  return;
+                                }
+                                for (final listing in listings) {
+                                  if (listing.id == value) {
+                                    selectedListingTitle = listing.title;
+                                    break;
+                                  }
+                                }
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                TextField(
+                  controller: suggestionController,
+                  maxLines: 6,
+                  minLines: 4,
+                  inputFormatters: [LengthLimitingTextInputFormatter(600)],
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                  decoration: InputDecoration(
+                    hintText: 'Example: Add saved filters for my favorite searches'.tr(),
+                    hintStyle: TextStyle(color: isDark ? Colors.grey[600] : Colors.grey[400]),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+                    ),
+                    filled: true,
+                    fillColor: isDark ? Colors.black26 : Colors.grey[50],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Minimum 10 characters.'.tr(),
+                  style: TextStyle(
+                    color: isDark ? Colors.grey[500] : Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text('Cancel'.tr(), style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(colorPrimary),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () async {
+                final suggestion = suggestionController.text.trim();
+                if (suggestion.length < 10) {
+                  showSnackBar(context, 'Please enter a bit more detail.'.tr());
+                  return;
+                }
+
+                Navigator.pop(dialogContext);
+                await _submitSuggestion(
+                  suggestion: suggestion,
+                  category: selectedCategory,
+                  relatedListingId: selectedListingId,
+                  relatedListingTitle: selectedListingTitle,
+                );
+              },
+              child: Text('Submit'.tr(), style: const TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showChatDialog() {
@@ -276,6 +576,44 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
     } catch (e) {
       if (!mounted) return;
       showAlertDialog(context, 'Error'.tr(), 'Failed to send message: $e');
+    }
+  }
+
+  Future<void> _submitSuggestion({
+    required String suggestion,
+    required String category,
+    String? relatedListingId,
+    String? relatedListingTitle,
+  }) async {
+    try {
+      final payload = <String, dynamic>{
+        'userId': widget.currentUser.userID,
+        'userName': widget.currentUser.fullName(),
+        'userEmail': widget.currentUser.email,
+        'subscriptionTier': widget.currentUser.subscriptionTier,
+        'isPremium': widget.currentUser.isPremium,
+        'category': category,
+        'suggestion': suggestion,
+        'archived': false,
+        'source': 'contact_us_screen',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      if (relatedListingId != null && relatedListingId.isNotEmpty) {
+        payload['relatedListingId'] = relatedListingId;
+      }
+      if (relatedListingTitle != null && relatedListingTitle.isNotEmpty) {
+        payload['relatedListingTitle'] = relatedListingTitle;
+      }
+
+      await FirebaseFirestore.instance.collection('app_suggestions').add(payload);
+
+      if (!mounted) return;
+      showSnackBar(context, 'Thanks. Your suggestion was sent.'.tr());
+    } catch (e) {
+      if (!mounted) return;
+      showAlertDialog(context, 'Error'.tr(), 'Could not send your suggestion. Please try again.'.tr());
     }
   }
 }

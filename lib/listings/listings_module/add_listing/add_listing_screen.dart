@@ -200,6 +200,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final TextEditingController _serviceNameController = TextEditingController();
   final TextEditingController _servicePriceController = TextEditingController();
   final TextEditingController _serviceDurationController = TextEditingController();
+  final TextEditingController _keywordController = TextEditingController();
 
   Map<String, String>? _filters = {};
   PlaceDetails? _placeDetail;
@@ -224,6 +225,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   
   // ✅ Service Menu State
   final List<ServiceItem> _services = [];
+  final List<String> _searchKeywords = [];
 
   List<CategoriesModel> _categories = [];
   late ListingsUser currentUser;
@@ -412,6 +414,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
     // ✅ Load existing services
     _services.clear();
     _services.addAll(l.services);
+    _searchKeywords
+      ..clear()
+      ..addAll(
+        l.searchKeywords
+            .map((keyword) => keyword.trim())
+            .where((keyword) => keyword.isNotEmpty),
+      );
 
     // ✅ Load existing time blocks
     _timeBlocks.clear();
@@ -918,6 +927,82 @@ class _AddListingScreenState extends State<AddListingScreen> {
             ],
           ),
         ),
+      ],
+    );
+  }
+
+  void _addKeyword(String value) {
+    final incoming = value
+        .split(RegExp(r'[,;\n]'))
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+    if (incoming.isEmpty) return;
+
+    setState(() {
+      for (final keyword in incoming) {
+        final normalized = keyword.toLowerCase();
+        if (_searchKeywords.any((k) => k.toLowerCase() == normalized)) {
+          continue;
+        }
+        _searchKeywords.add(keyword);
+      }
+      _keywordController.clear();
+    });
+  }
+
+  Widget _buildKeywordEditor(bool dark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _keywordController,
+          textInputAction: TextInputAction.done,
+          onSubmitted: _addKeyword,
+          decoration: _getInputDecoration(
+            label: 'Keywords'.tr(),
+            hint: 'Type a keyword and tap +'.tr(),
+            icon: Icons.tag,
+          ).copyWith(
+            suffixIcon: IconButton(
+              icon: Icon(Icons.add, color: Color(colorPrimary)),
+              onPressed: () => _addKeyword(_keywordController.text),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Add words customers would search for (e.g.  cake, wiring, hair, 24 hours, boat etc)'.tr(),
+          style: TextStyle(
+            fontSize: 12,
+            color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+          ),
+        ),
+        if (_searchKeywords.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _searchKeywords
+                .map(
+                  (keyword) => Chip(
+                    label: Text(keyword),
+                    onDeleted: () {
+                      setState(() {
+                        _searchKeywords.remove(keyword);
+                      });
+                    },
+                    deleteIcon: const Icon(Icons.close, size: 18),
+                    backgroundColor:
+                        dark ? Colors.grey.shade800 : Colors.grey.shade200,
+                    labelStyle: TextStyle(
+                      color: dark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
       ],
     );
   }
@@ -1927,6 +2012,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         ),
                       ],
                     ),
+                  const SizedBox(height: 16),
+                  _buildKeywordEditor(dark),
                 ],
               ),
               const SizedBox(height: 8),
@@ -2571,6 +2658,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _serviceNameController.dispose();
     _servicePriceController.dispose();
     _serviceDurationController.dispose();
+    _keywordController.dispose();
     _storeUrlController.dispose();
     super.dispose();
   }
@@ -2639,6 +2727,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
       companyRegistration: _companyRegistrationController.text.trim(),
       vatNumber: _vatNumberController.text.trim(),
       filters: _filters ?? {},
+      searchKeywords: _searchKeywords
+          .map((keyword) => keyword.trim())
+          .where((keyword) => keyword.isNotEmpty)
+          .toList(),
       countryCode: _countryCode ?? '',
       verified: _verified,
       authorID: currentUser.userID,

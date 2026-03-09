@@ -524,12 +524,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               const Divider(height: 32, indent: 32, endIndent: 32),
                             ],
                             if (currentUser.isAdmin)
-                              _modernListTile(
-                                context,
-                                icon: Icons.verified_outlined,
-                                iconColor: Theme.of(context).colorScheme.primary,
-                                title: 'Ad Approval'.tr(),
-                                onTap: () => push(context, AdApprovalScreen(currentUser: currentUser)),
+                              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                                stream: FirebaseFirestore.instance
+                                    .collection('deal_ads')
+                                    .where('status', isEqualTo: 'pending')
+                                    .snapshots(),
+                                builder: (context, snapshot) {
+                                  final pendingCount = snapshot.data?.docs.length ?? 0;
+                                  return _modernListTile(
+                                    context,
+                                    icon: Icons.verified_outlined,
+                                    iconColor: Theme.of(context).colorScheme.primary,
+                                    title: 'Ad Approval'.tr(),
+                                    trailing: pendingCount > 0 ? _buildPendingBadge(pendingCount) : null,
+                                    onTap: () => push(context, AdApprovalScreen(currentUser: currentUser)),
+                                  );
+                                },
                               ),
                             _modernListTile(
                               context,
@@ -594,6 +604,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               title: 'Theme'.tr(),
                               onTap: () => _showThemeSelectionDialog(context),
                             ),
+                            if (currentUser.isAdmin)
+                              _modernListTile(
+                                context,
+                                icon: Icons.feedback_outlined,
+                                iconColor: Theme.of(context).colorScheme.primary,
+                                title: 'Suggestions Box'.tr(),
+                                onTap: () => push(
+                                  context,
+                                  AdminDashboardWrappingWidget(
+                                    currentUser: currentUser,
+                                    initialTabIndex: 4,
+                                  ),
+                                ),
+                              ),
                             _modernListTile(
                               context,
                               icon: Icons.call_outlined,
@@ -945,7 +969,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
 
-  Widget _modernListTile(BuildContext context, {required IconData icon, required Color iconColor, required String title, String? subtitle, required VoidCallback onTap}) {
+  Widget _modernListTile(BuildContext context, {required IconData icon, required Color iconColor, required String title, String? subtitle, Widget? trailing, required VoidCallback onTap}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
       child: Card(
@@ -955,9 +979,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
           leading: Icon(icon, color: iconColor, size: 28),
           title: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
           subtitle: subtitle != null ? Text(subtitle, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))) : null,
+          trailing: trailing,
           onTap: onTap,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           tileColor: Theme.of(context).colorScheme.surface,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPendingBadge(int count) {
+    final label = count > 99 ? '99+' : '$count';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.redAccent,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      constraints: const BoxConstraints(minWidth: 28),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );

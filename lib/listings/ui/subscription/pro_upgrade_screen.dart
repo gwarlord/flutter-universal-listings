@@ -1,4 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
@@ -35,12 +36,21 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
   List<ProductDetails> _products = const [];
   int? _selectedTier;
 
+  bool get _isApplePlatform =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
   @override
   void initState() {
     super.initState();
     _subscriptionService.startListening(userId: widget.currentUser.userID);
     _selectedTier = widget.initialTier;
     _loadProducts();
+  }
+
+  @override
+  void dispose() {
+    _subscriptionService.stopListening();
+    super.dispose();
   }
 
   Future<void> _loadProducts() async {
@@ -65,9 +75,10 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
         _products = products;
         _isLoading = false;
       });
-      
+
       if (products.isEmpty) {
-        print('⚠️ WARNING: No products loaded! Check Google Play Console configuration.');
+        final store = _isApplePlatform ? 'App Store Connect' : 'Google Play Console';
+        print('⚠️ WARNING: No products loaded! Check $store configuration.');
       }
     } catch (e) {
       print('❌ Error loading products: $e');
@@ -83,10 +94,20 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
   }
 
   Future<void> _openManageSubscriptions() async {
-    final uri = Uri.parse('https://play.google.com/store/account/subscriptions');
+    final uri = Uri.parse(
+      _isApplePlatform
+          ? 'https://apps.apple.com/account/subscriptions'
+          : 'https://play.google.com/store/account/subscriptions',
+    );
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!launched && mounted) {
-      showSnackBar(context, 'Unable to open Google Play subscriptions'.tr());
+      showSnackBar(
+        context,
+        (_isApplePlatform
+                ? 'Unable to open App Store subscriptions'
+                : 'Unable to open Google Play subscriptions')
+            .tr(),
+      );
     }
   }
 
@@ -481,7 +502,10 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
               foregroundColor: Color(cfg.colorPrimary),
             ),
             child: Text(
-              'Manage subscription in Google Play'.tr(),
+                (_isApplePlatform
+                      ? 'Manage subscription in App Store'
+                      : 'Manage subscription in Google Play')
+                  .tr(),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: Color(cfg.colorPrimary),
                 decoration: TextDecoration.underline,

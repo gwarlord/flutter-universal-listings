@@ -423,6 +423,7 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           'categoryPhoto': event.listingModel.categoryPhoto,
           'categoryTitle': event.listingModel.categoryTitle,
           'filters': event.listingModel.filters,
+          'searchKeywords': event.listingModel.searchKeywords,
           'place': event.listingModel.place,
           'latitude': event.listingModel.latitude,
           'longitude': event.listingModel.longitude,

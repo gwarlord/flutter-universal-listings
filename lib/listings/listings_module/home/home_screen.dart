@@ -31,6 +31,7 @@ import 'package:caribtap/listings/utils/caribbean_countries.dart';
 import 'package:caribtap/listings/utils/listing_filter_helpers.dart';
 import 'package:caribtap/listings/model/deal_ad_model.dart';
 import 'package:caribtap/listings/services/deal_ad_service.dart';
+import 'package:caribtap/listings/utils/search_utils.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import '../../ui/deals/deals_feed_screen.dart';
 import 'package:caribtap/listings/location/location_scope_cubit.dart';
@@ -246,11 +247,12 @@ class HomeScreenState extends State<HomeScreen> {
 
   late ListingsUser currentUser;
   
-  // Search and filter variables
-  String _searchQuery = '';
-  List<String> _selectedCountryCodes = [];
-  late TextEditingController _searchController;
-  HomeFilterState _currentFilters = HomeFilterState();
+	  // Search and filter variables
+	  String _searchQuery = '';
+	  List<String> _selectedCountryCodes = [];
+	  late TextEditingController _searchController;
+	  late FocusNode _searchFocusNode;
+	  HomeFilterState _currentFilters = HomeFilterState();
 
   // Cycling controllers
   late ScrollController _categoryScrollController;
@@ -263,11 +265,12 @@ class HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    currentUser = widget.currentUser;
-    _searchController = TextEditingController();
-    _categoryScrollController = ScrollController();
-    _dealsScrollController = ScrollController();
-    _featuredScrollController = ScrollController();
+	    currentUser = widget.currentUser;
+	    _searchController = TextEditingController();
+	    _searchFocusNode = FocusNode();
+	    _categoryScrollController = ScrollController();
+	    _dealsScrollController = ScrollController();
+	    _featuredScrollController = ScrollController();
     context.read<HomeBloc>().add(GetCategoriesEvent());
     context.read<HomeBloc>().add(GetListingsEvent());
     _loadFeaturedListings();
@@ -384,11 +387,12 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    _categoryScrollController.dispose();
-    _dealsScrollController.dispose();
-     _featuredScrollController.dispose();
+	  void dispose() {
+	    _searchController.dispose();
+	    _searchFocusNode.dispose();
+	    _categoryScrollController.dispose();
+	    _dealsScrollController.dispose();
+	     _featuredScrollController.dispose();
     _categoryCycleTimer?.cancel();
     _dealsCycleTimer?.cancel();
      _featuredCycleTimer?.cancel();
@@ -421,18 +425,11 @@ class HomeScreenState extends State<HomeScreen> {
         }
       }
 
-      // Filter by search query
+      // Filter by search query using comprehensive SearchUtils
       final matchesSearch = _searchQuery.isEmpty ||
           (item.type == FeedItemType.listing
-              ? item.listing!.title.toLowerCase().contains(_searchQuery) ||
-                  item.listing!.description.toLowerCase().contains(_searchQuery) ||
-                  item.listing!.place.toLowerCase().contains(_searchQuery) ||
-                  item.listing!.services.any((service) =>
-                      service.name.toLowerCase().contains(_searchQuery) ||
-                      service.duration.toLowerCase().contains(_searchQuery))
-              : item.event!.title.toLowerCase().contains(_searchQuery) ||
-                  item.event!.description.toLowerCase().contains(_searchQuery) ||
-                  item.event!.venueName.toLowerCase().contains(_searchQuery));
+              ? SearchUtils.fuzzyMatch(_searchQuery, SearchUtils.buildListingSearchString(item.listing!))
+              : SearchUtils.fuzzyMatch(_searchQuery, SearchUtils.buildEventSearchString(item.event!)));
 
       // Filter by country (if countries are selected, listing must be in that list)
       final matchesCountry = _selectedCountryCodes.isEmpty ||
@@ -459,14 +456,9 @@ class HomeScreenState extends State<HomeScreen> {
       }
 
       // Apply the same filters as regular listings
-      // Filter by search query
+      // Filter by search query using comprehensive SearchUtils
       final matchesSearch = _searchQuery.isEmpty ||
-          listing.title.toLowerCase().contains(_searchQuery) ||
-          listing.description.toLowerCase().contains(_searchQuery) ||
-          listing.place.toLowerCase().contains(_searchQuery) ||
-          listing.services.any((service) => 
-            service.name.toLowerCase().contains(_searchQuery) ||
-            service.duration.toLowerCase().contains(_searchQuery));
+          SearchUtils.fuzzyMatch(_searchQuery, SearchUtils.buildListingSearchString(listing));
 
       // Filter by country (if countries are selected, listing must be in that list)
       final matchesCountry = _selectedCountryCodes.isEmpty ||
@@ -806,11 +798,12 @@ class HomeScreenState extends State<HomeScreen> {
               listingsCrossAxisCount = 2;
             }
 
-            return Padding(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
+	            return Padding(
+	              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+	              child: CustomScrollView(
+	                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+	                physics: const AlwaysScrollableScrollPhysics(),
+	                slivers: [
                   const SliverToBoxAdapter(child: SizedBox(height: 16)),
                   
                   // 1. Deals & Promotions Section
@@ -943,10 +936,12 @@ class HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          TextField(
-                            controller: _searchController,
-                            style: TextStyle(color: dark ? Colors.white : Colors.black),
-                            onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+	                          TextField(
+	                            controller: _searchController,
+	                            focusNode: _searchFocusNode,
+	                            onTapOutside: (_) => FocusScope.of(context).unfocus(),
+	                            style: TextStyle(color: dark ? Colors.white : Colors.black),
+	                            onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
                             decoration: InputDecoration(
                               hintText: 'Search listings...'.tr(),
                               hintStyle: TextStyle(color: dark ? Colors.grey[400] : Colors.grey[600]),

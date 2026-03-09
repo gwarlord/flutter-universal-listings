@@ -952,7 +952,10 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                           _buildDetailsList(dark, primaryColor),
                         ],
                         // Payment Methods
-                        PaymentMethodsStreamWidget(userId: listing.authorID),
+                        PaymentMethodsStreamWidget(
+                          userId: listing.authorID,
+                          listingId: listing.id,
+                        ),
                         // Reviews
                         const SizedBox(height: 32),
                         _buildReviewsSection(dark, primaryColor),
@@ -2058,9 +2061,133 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     );
   }
 
-  void _handleMessage() {
+  String _formatChatHoursSummary(String hours) {
+    final trimmed = hours.trim();
+    if (trimmed.isEmpty) return 'Always available'.tr();
+    final lines = trimmed
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
+    if (lines.isEmpty) return 'Always available'.tr();
+    if (lines.length <= 2) return lines.join('\n');
+    return '${lines[0]}\n${lines[1]}\n...';
+  }
+
+  bool _isChatAvailableNow(String hoursString) {
+    final trimmed = hoursString.trim();
+    if (trimmed.isEmpty) return true;
+
+    final lower = trimmed.toLowerCase();
+    if (lower.contains('24/7') || lower.contains('always open')) return true;
+
+    final now = DateTime.now();
+    final weekday = now.weekday;
+    final currentMinutes = now.hour * 60 + now.minute;
+    final dayNames = const [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
+
+    String? lineForDay;
+    for (final line in trimmed.split('\n')) {
+      for (final day in dayNames) {
+        if (line.startsWith('$day:') &&
+            dayNames.indexOf(day) + 1 == weekday) {
+          lineForDay = line;
+          break;
+        }
+      }
+      if (lineForDay != null) break;
+    }
+
+    if (lineForDay == null) return true;
+
+    final content = lineForDay.split(':').sublist(1).join(':').trim();
+    if (content.toLowerCase() == 'closed') return false;
+
+    final parts = content.split(content.contains('→') ? '→' : '-');
+    if (parts.length != 2) return true;
+
+    try {
+      final open = DateFormat.jm().parse(parts[0].trim());
+      final close = DateFormat.jm().parse(parts[1].trim());
+      final openMinutes = open.hour * 60 + open.minute;
+      final closeMinutes = close.hour * 60 + close.minute;
+
+      if (closeMinutes < openMinutes) {
+        return currentMinutes >= openMinutes || currentMinutes < closeMinutes;
+      }
+      return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<void> _showClosedChatDialog() async {
+    if (!mounted) return;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        title: Text(
+          'Business Closed'.tr(),
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This business is currently closed.'.tr(),
+              style: TextStyle(
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Hours:'.tr(),
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black87,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _formatChatHoursSummary(listing.chatAvailabilityHours),
+              style: TextStyle(
+                color: isDark ? Colors.white70 : Colors.black87,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text('OK'.tr()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleMessage() async {
     // Chat is allowed if the listing owner has enabled it (listing.chatEnabled)
     // No subscription required for users wanting to chat with a listing
+    if (!_isChatAvailableNow(listing.chatAvailabilityHours)) {
+      await _showClosedChatDialog();
+      return;
+    }
     
     // Create the channel ID correctly
     List<String> ids = [currentUser.userID, listing.authorID];

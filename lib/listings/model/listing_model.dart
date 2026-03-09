@@ -203,6 +203,7 @@ class ListingModel {
 
   /// Chat
   bool chatEnabled;
+  String chatAvailabilityHours;
 
   /// Store (Premium Feature)
   bool storeEnabled;
@@ -234,6 +235,7 @@ class ListingModel {
 
   /// Filters / meta
   Map<String, dynamic> filters;
+  List<String> searchKeywords; // ✅ Denormalized items from catalogs (Saw, Drill, etc.)
   ListingFreshness freshness;
   bool isApproved;
   bool suspended;
@@ -323,6 +325,7 @@ class ListingModel {
     this.services = const [],
     this.blockedDates = const [],
     this.chatEnabled = true,
+    this.chatAvailabilityHours = '',
     this.storeEnabled = false,
     this.storeMode,
     this.storeUrl = '',
@@ -343,6 +346,7 @@ class ListingModel {
     this.youtube = '',
     this.x = '',
     this.filters = const {},
+    this.searchKeywords = const [],
     ListingFreshness? freshness,
     this.isApproved = false,
     this.suspended = false,
@@ -439,6 +443,7 @@ class ListingModel {
           .toList(),
       blockedDates: List<int>.from(json['blockedDates'] ?? []),
       chatEnabled: json['chatEnabled'] ?? true,
+      chatAvailabilityHours: json['chatAvailabilityHours'] ?? '',
       storeEnabled: json['storeEnabled'] ?? false,
       storeMode: json['storeMode'],
       storeUrl: json['storeUrl'] ?? '',
@@ -459,6 +464,7 @@ class ListingModel {
       youtube: json['youtube'] ?? '',
       x: json['x'] ?? '',
       filters: Map<String, dynamic>.from(json['filters'] ?? {}),
+      searchKeywords: List<String>.from(json['searchKeywords'] ?? []),
       freshness: ListingFreshness.fromJson(
         (json['freshness'] as Map?)?.cast<String, dynamic>(),
         createdAtSeconds: createdAtSeconds,
@@ -539,6 +545,7 @@ class ListingModel {
       'services': services.map((e) => e.toJson()).toList(),
       'blockedDates': blockedDates,
       'chatEnabled': chatEnabled,
+      'chatAvailabilityHours': chatAvailabilityHours,
       'storeEnabled': storeEnabled,
       'storeMode': storeMode,
       'storeUrl': storeUrl,
@@ -559,6 +566,7 @@ class ListingModel {
       'youtube': youtube,
       'x': x,
       'filters': filters,
+      'searchKeywords': searchKeywords,
       'freshness': freshness.toJson(),
       'isApproved': isApproved,
       'suspended': suspended,
@@ -629,6 +637,7 @@ class ListingModel {
     List<ServiceItem>? services,
     List<int>? blockedDates,
     bool? chatEnabled,
+    String? chatAvailabilityHours,
     bool? storeEnabled,
     String? storeUrl,
     String? instagram,
@@ -638,6 +647,7 @@ class ListingModel {
     String? youtube,
     String? x,
     Map<String, dynamic>? filters,
+    List<String>? searchKeywords,
     ListingFreshness? freshness,
     bool? isApproved,
     bool? suspended,
@@ -690,6 +700,8 @@ class ListingModel {
       services: services ?? this.services,
       blockedDates: blockedDates ?? this.blockedDates,
       chatEnabled: chatEnabled ?? this.chatEnabled,
+      chatAvailabilityHours:
+          chatAvailabilityHours ?? this.chatAvailabilityHours,
       storeEnabled: storeEnabled ?? this.storeEnabled,
       storeUrl: storeUrl ?? this.storeUrl,
       instagram: instagram ?? this.instagram,
@@ -699,6 +711,7 @@ class ListingModel {
       youtube: youtube ?? this.youtube,
       x: x ?? this.x,
       filters: filters ?? this.filters,
+      searchKeywords: searchKeywords ?? this.searchKeywords,
       freshness: freshness ?? this.freshness,
       isApproved: isApproved ?? this.isApproved,
       suspended: suspended ?? this.suspended,

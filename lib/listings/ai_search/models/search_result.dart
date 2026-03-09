@@ -86,24 +86,80 @@ class SearchResult extends Equatable {
   }
 
   factory SearchResult.fromJson(Map<String, dynamic> json) {
+    final dynamic listingValue = json['listing'];
+    final listingJson = listingValue is Map<String, dynamic>
+        ? listingValue
+        : _listingFromFlatJson(json);
+
     return SearchResult(
-      listing: json['listing'] != null
-          ? ListingModel.fromJson(json['listing'] as Map<String, dynamic>)
-          : null,
+      listing: listingJson != null ? ListingModel.fromJson(listingJson) : null,
       deal: null, // DealAdModel doesn't have fromJson, will be set separately if needed
-      matchScore: (json['matchScore'] as num?)?.toDouble() ?? 0.0,
+      matchScore: (json['matchScore'] as num?)?.toDouble() ??
+          (json['finalScore'] as num?)?.toDouble() ??
+          (json['relevanceScore'] as num?)?.toDouble() ??
+          0.0,
       explainabilityChips: (json['explainabilityChips'] as List<dynamic>?)
-              ?.map((e) => _chipFromJson(e as Map<String, dynamic>))
+              ?.map(_chipFromDynamic)
               .toList() ??
           [],
       distance: (json['distance'] as num?)?.toDouble(),
     );
   }
 
+  static Map<String, dynamic>? _listingFromFlatJson(Map<String, dynamic> json) {
+    // Cloud Function returns a flat result object (id/title/category/location/etc.)
+    // Convert it into a ListingModel-shaped JSON with safe defaults.
+    if (json['id'] == null && json['title'] == null) return null;
+
+    final reviewCount = (json['reviewCount'] as num?)?.toInt() ?? 0;
+    final rating = (json['rating'] as num?)?.toDouble() ?? 0.0;
+    final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    return {
+      'id': (json['id'] ?? '').toString(),
+      'title': (json['title'] ?? '').toString(),
+      'description': (json['description'] ?? '').toString(),
+      'place': (json['location'] ?? '').toString(),
+      'categoryTitle': (json['category'] ?? '').toString(),
+      'photo': (json['imageUrl'] ?? '').toString(),
+      'price': json['price']?.toString() ?? '',
+      'createdAt': nowSeconds,
+      'isApproved': true,
+      'reviewsCount': reviewCount,
+      'reviewsSum': rating * reviewCount,
+      'services': const <Map<String, dynamic>>[],
+      'menuSections': const <Map<String, dynamic>>[],
+      'searchKeywords': const <String>[],
+      'filters': const <String, dynamic>{},
+      if (json['latitude'] is num) 'latitude': (json['latitude'] as num).toDouble(),
+      if (json['longitude'] is num) 'longitude': (json['longitude'] as num).toDouble(),
+    };
+  }
+
+  static ExplainabilityChip _chipFromDynamic(dynamic raw) {
+    if (raw is String) {
+      return ExplainabilityChip(
+        label: raw,
+        icon: Icons.info,
+        color: Colors.blue,
+      );
+    }
+
+    if (raw is Map<String, dynamic>) {
+      return _chipFromJson(raw);
+    }
+
+    return const ExplainabilityChip(
+      label: 'AI Match',
+      icon: Icons.info,
+      color: Colors.blue,
+    );
+  }
+
   static ExplainabilityChip _chipFromJson(Map<String, dynamic> json) {
-    final label = json['label'] as String;
+    final label = (json['label'] ?? 'AI Match').toString();
     final iconCode = json['iconCode'] as int? ?? Icons.info.codePoint;
-    final colorValue = json['colorValue'] as int? ?? Colors.blue.value;
+    final colorValue = json['colorValue'] as int? ?? Colors.blue.toARGB32();
 
     return ExplainabilityChip(
       label: label,
@@ -121,7 +177,7 @@ class SearchResult extends Equatable {
           .map((chip) => {
                 'label': chip.label,
                 'iconCode': chip.icon.codePoint,
-                'colorValue': chip.color.value,
+                'colorValue': chip.color.toARGB32(),
               })
           .toList(),
       if (distance != null) 'distance': distance,

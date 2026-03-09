@@ -813,7 +813,6 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
   Widget _buildInsights() {
     final lowQualityListings =
         _advancedMetrics['lowQualityListings'] as List<ListingModel>? ?? [];
-    final bookingsNeeded = _advancedMetrics['bookingsForBadge'] as int? ?? 0;
 
     return Column(
       children: [
@@ -824,14 +823,6 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
             'Improve Listing Quality'.tr(),
             'you_have_listings_to_improve'
                 .tr(args: [lowQualityListings.length.toString()]),
-          ),
-        if (bookingsNeeded > 0)
-          _buildInsightCard(
-            Icons.military_tech_outlined,
-            Colors.green,
-            'Become a Top Lister'.tr(),
-            'you_are_bookings_away_for_badge'
-                .tr(args: [bookingsNeeded.toString()]),
           ),
       ],
     );
@@ -867,7 +858,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
                 color: isDark ? Colors.white : Colors.black)),
         subtitle: Text(subtitle,
             style: TextStyle(fontSize: 13, color: subtleTextColor)),
-        trailing: const Icon(Icons.arrow_forward, size: 18),
+        trailing:
+            onTap != null ? const Icon(Icons.arrow_forward, size: 18) : null,
       ),
     );
   }

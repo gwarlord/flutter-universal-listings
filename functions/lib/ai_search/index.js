@@ -41,6 +41,7 @@ const functions = __importStar(require("firebase-functions/v1"));
 __exportStar(require("./interpretation/search_interpreter"), exports);
 // Export the other existing AI search functions
 __exportStar(require("./retrieval/search_listings"), exports);
+__exportStar(require("./indexing/listings_index_maintenance"), exports);
 __exportStar(require("./rate_limiting/rate_limiter"), exports);
 __exportStar(require("./rate_limiting/abuse_detector"), exports);
 __exportStar(require("./analytics/log_search"), exports);

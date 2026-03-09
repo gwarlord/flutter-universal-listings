@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class BookingModel {
   String id;
   String listingId;
@@ -63,6 +65,26 @@ class BookingModel {
       updatedAt = updatedAt ?? DateTime.now(),
       customAnswers = customAnswers ?? {};
 
+  static DateTime _parseDateTime(dynamic value, {DateTime? fallback}) {
+    if (value == null) return fallback ?? DateTime.now();
+    if (value is DateTime) return value;
+    if (value is Timestamp) return value.toDate();
+    if (value is String && value.isNotEmpty) {
+      return DateTime.tryParse(value) ?? (fallback ?? DateTime.now());
+    }
+    return fallback ?? DateTime.now();
+  }
+
+  static DateTime? _parseNullableDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is Timestamp) return value.toDate();
+    if (value is String && value.isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
+  }
+
   factory BookingModel.fromJson(Map<String, dynamic> json) {
     return BookingModel(
       id: json['id'] ?? '',
@@ -76,31 +98,19 @@ class BookingModel {
       customerName: json['customerName'] ?? '',
       customerEmail: json['customerEmail'] ?? '',
       customerPhone: json['customerPhone'] ?? '',
-      checkInDate: json['checkInDate'] != null
-          ? DateTime.parse(json['checkInDate'] as String)
-          : DateTime.now(),
-      checkOutDate: json['checkOutDate'] != null
-          ? DateTime.parse(json['checkOutDate'] as String)
-          : DateTime.now(),
+      checkInDate: _parseDateTime(json['checkInDate']),
+      checkOutDate: _parseDateTime(json['checkOutDate']),
       numberOfGuests: json['numberOfGuests'] ?? 1,
       guestNotes: json['guestNotes'] ?? '',
       timeBlock: json['timeBlock'] ?? '',
       totalPrice: json['totalPrice'] ?? 0,
       currency: json['currency'] ?? 'USD',
       status: json['status'] ?? 'pending',
-        customAnswers: Map<String, String>.from(json['customAnswers'] ?? {}),
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'] as String)
-          : DateTime.now(),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'] as String)
-          : DateTime.now(),
-      reminder24hSentAt: json['reminder24hSentAt'] != null
-          ? DateTime.parse(json['reminder24hSentAt'] as String)
-          : null,
-      reminder1hSentAt: json['reminder1hSentAt'] != null
-          ? DateTime.parse(json['reminder1hSentAt'] as String)
-          : null,
+      customAnswers: Map<String, String>.from(json['customAnswers'] ?? {}),
+      createdAt: _parseDateTime(json['createdAt']),
+      updatedAt: _parseDateTime(json['updatedAt']),
+      reminder24hSentAt: _parseNullableDateTime(json['reminder24hSentAt']),
+      reminder1hSentAt: _parseNullableDateTime(json['reminder1hSentAt']),
       timezone: json['timezone'] as String?,
       proofOfPayment: json['proofOfPayment'] as Map<String, dynamic>?,
       listingAcceptsProofOfPayment: json['listingAcceptsProofOfPayment'] ?? false,

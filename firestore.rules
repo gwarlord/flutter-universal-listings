@@ -71,21 +71,21 @@ service cloud.firestore {
     function hasActiveListingForAdCreate() {
       // Validate the referenced listing exists and belongs to the signed-in user.
       // "Active" check is based on listing freshness not being hidden when present.
+      // Uses safe 'get' to handle older listings with incomplete freshness data.
       let listingId = request.resource.data.listingId;
       let listingPath = /databases/$(database)/documents/listings/$(listingId);
       return listingId is string &&
         listingId.size() > 0 &&
         exists(listingPath) &&
         get(listingPath).data.authorID == request.auth.uid &&
-        (
-          get(listingPath).data.freshness == null ||
-          get(listingPath).data.freshness.status != 'HIDDEN'
-        );
+        get(listingPath).data.get(['freshness', 'status'], 'ACTIVE') != 'HIDDEN';
     }
 
     // DEAL ADS collection
     match /deal_ads/{adId} {
-      allow create: if isSignedIn() && hasActiveSubscription() && hasActiveListingForAdCreate();
+      // Robust bypass for admins. Admins can create ads for ANY listing.
+      // Owners can create ads for their OWN active listings.
+      allow create: if isSignedIn() && (isAdmin() || hasActiveListingForAdCreate());
       allow update: if isSignedIn() && (request.auth.uid == resource.data.authorID || isAdmin());
       allow read: if true;
       allow delete: if isAdmin();

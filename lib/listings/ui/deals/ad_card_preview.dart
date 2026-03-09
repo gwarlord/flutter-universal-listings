@@ -263,21 +263,7 @@ class _AdCardPreviewState extends State<AdCardPreview> {
     if (redemptionType == null) return SizedBox.shrink();
 
     List<Widget> info = [];
-    if (redemptionType == 'IN_APP_CLAIM') {
-      info.add(Row(
-        children: [
-          Icon(Icons.card_giftcard, size: 16, color: Theme.of(context).colorScheme.primary),
-          SizedBox(width: 6),
-          Text('In-App Claim', style: TextStyle(fontWeight: FontWeight.bold)),
-        ],
-      ));
-      if (redemptionLimitTotal != null) {
-        info.add(Text('Total Claims: $redemptionLimitTotal'));
-      }
-      if (redemptionLimitPerUser != null) {
-        info.add(Text('Per User: $redemptionLimitPerUser'));
-      }
-    } else if (redemptionType == 'PROMO_CODE') {
+    if (redemptionType == 'PROMO_CODE') {
       info.add(Row(
         children: [
           Icon(Icons.confirmation_number, size: 16, color: Theme.of(context).colorScheme.primary),

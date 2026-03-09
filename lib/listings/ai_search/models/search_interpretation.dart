@@ -18,16 +18,29 @@ class SearchInterpretation extends Equatable {
   });
 
   factory SearchInterpretation.fromJson(Map<String, dynamic> json) {
+    final intentRaw = json['intent'];
+    final contentTypeRaw = json['contentType'];
+    final summaryRaw = json['naturalLanguageSummary'];
+
+    final filtersRaw = json['filters'];
+    final filtersMap = filtersRaw is Map<String, dynamic>
+      ? filtersRaw
+      : <String, dynamic>{};
+
+    final suggestedRaw = json['suggestedRefinements'];
+    final suggested = suggestedRaw is List
+      ? suggestedRaw.map((e) => e.toString()).toList()
+      : null;
+
     return SearchInterpretation(
-      intent: json['intent'] as String? ?? 'browse',
-      contentType: json['contentType'] as String? ?? 'listing',
-      filters: json['filters'] != null
-          ? SearchFilters.fromJson(json['filters'] as Map<String, dynamic>)
-          : const SearchFilters(),
-      naturalLanguageSummary: json['naturalLanguageSummary'] as String? ?? '',
-      suggestedRefinements: (json['suggestedRefinements'] as List<dynamic>?)
-          ?.map((e) => e as String)
-          .toList(),
+      intent: intentRaw is String ? intentRaw : (intentRaw?.toString() ?? 'browse'),
+      contentType: contentTypeRaw is String
+        ? contentTypeRaw
+        : (contentTypeRaw?.toString() ?? 'listing'),
+      filters: SearchFilters.fromJson(filtersMap),
+      naturalLanguageSummary:
+        summaryRaw is String ? summaryRaw : (summaryRaw?.toString() ?? ''),
+      suggestedRefinements: suggested,
     );
   }
 

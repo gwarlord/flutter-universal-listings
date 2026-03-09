@@ -25,8 +25,13 @@ import 'package:caribtap/constants.dart';
 
 class AdminDashboardWrappingWidget extends StatelessWidget {
   final ListingsUser currentUser;
+  final int initialTabIndex;
 
-  const AdminDashboardWrappingWidget({super.key, required this.currentUser});
+  const AdminDashboardWrappingWidget({
+    super.key,
+    required this.currentUser,
+    this.initialTabIndex = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -36,15 +41,23 @@ class AdminDashboardWrappingWidget extends StatelessWidget {
         listingsRepository: listingApiManager,
         profileRepository: profileApiManager,
       ),
-      child: AdminDashboardScreen(currentUser: currentUser),
+      child: AdminDashboardScreen(
+        currentUser: currentUser,
+        initialTabIndex: initialTabIndex,
+      ),
     );
   }
 }
 
 class AdminDashboardScreen extends StatefulWidget {
   final ListingsUser currentUser;
+  final int initialTabIndex;
 
-  const AdminDashboardScreen({super.key, required this.currentUser});
+  const AdminDashboardScreen({
+    super.key,
+    required this.currentUser,
+    this.initialTabIndex = 0,
+  });
 
   @override
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
@@ -82,7 +95,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    final safeInitialIndex = widget.initialTabIndex.clamp(0, 5);
+    _tabController = TabController(length: 6, vsync: this, initialIndex: safeInitialIndex);
     currentUser = widget.currentUser;
     _loadAllData();
     _loadPendingRequestsCount();
@@ -199,15 +213,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           controller: _tabController,
           indicatorColor: Platform.isIOS ? Color(colorPrimary) : Colors.white,
           indicatorWeight: 3,
-          labelColor: Platform.isIOS ? Color(colorPrimary) : Colors.white,
-          unselectedLabelColor: Platform.isIOS
-              ? (isDark ? Colors.white70 : Colors.black54)
-              : Colors.white70,
+          labelColor: isDark ? Colors.white : Colors.black87,
+          unselectedLabelColor: isDark ? Colors.white70 : Colors.black54,
           tabs: [
             Tab(text: 'Users'.tr()),
             Tab(text: 'Listings'.tr()),
             Tab(text: 'Verification'.tr()),
             Tab(text: 'Reports'.tr()),
+            Tab(text: 'Suggestions'.tr()),
             Tab(text: 'Featured'.tr()),
           ],
         ),
@@ -247,12 +260,273 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               _buildAllListingsTab(),
               _buildVerificationTab(),
               _buildReportsTab(),
+              _buildSuggestionsTab(),
               _buildFeaturedTab(),
             ],
           );
         },
       ),
     );
+  }
+
+  Widget _buildSuggestionsTab() {
+    final isDark = isDarkMode(context);
+    final categoryOrder = <String>[
+      'Look & Feel',
+      'Listing Feature',
+      'General App Feature',
+      'Search & Discovery',
+      'Performance & Reliability',
+      'Other',
+    ];
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('app_suggestions')
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Failed to load suggestions'.tr(),
+              style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
+            ),
+          );
+        }
+
+        final allDocs = snapshot.data?.docs ?? const [];
+        final docs = allDocs
+            .where((doc) => (doc.data()['archived'] as bool?) != true)
+            .toList();
+
+        if (docs.isEmpty) {
+          return Center(
+            child: Text(
+              'No active suggestions'.tr(),
+              style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
+            ),
+          );
+        }
+
+        final grouped = <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
+        for (final doc in docs) {
+          final data = doc.data();
+          final rawCategory = (data['category'] as String?)?.trim();
+          final category = (rawCategory == null || rawCategory.isEmpty) ? 'Other' : rawCategory;
+          grouped.putIfAbsent(category, () => []).add(doc);
+        }
+
+        final orderedCategories = [
+          ...categoryOrder.where(grouped.containsKey),
+          ...grouped.keys.where((c) => !categoryOrder.contains(c)).toList()..sort(),
+        ];
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+          children: [
+            Text(
+              'Suggestions by Category'.tr(),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${docs.length} total suggestions'.tr(),
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 14),
+            for (final category in orderedCategories)
+              _buildSuggestionCategoryCard(
+                category: category,
+                docs: grouped[category]!,
+                isDark: isDark,
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSuggestionCategoryCard({
+    required String category,
+    required List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+    required bool isDark,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      color: isDark ? Colors.grey[900] : Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+      ),
+      child: ExpansionTile(
+        collapsedIconColor: isDark ? Colors.white70 : Colors.black54,
+        iconColor: Color(colorPrimary),
+        title: Text(
+          category.tr(),
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+        subtitle: Text(
+          '${docs.length} suggestions'.tr(),
+          style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
+        ),
+        children: docs.map((doc) {
+          final data = doc.data();
+          final suggestion = (data['suggestion'] as String?) ?? '';
+          final userName = (data['userName'] as String?) ?? 'Unknown user';
+          final userEmail = (data['userEmail'] as String?) ?? '';
+          final relatedListingId = (data['relatedListingId'] as String?)?.trim() ?? '';
+          final relatedListingTitle = (data['relatedListingTitle'] as String?)?.trim() ?? '';
+          final createdAt = data['createdAt'];
+          String timeLabel = '';
+          if (createdAt is Timestamp) {
+            timeLabel = DateFormat.yMMMd().add_jm().format(createdAt.toDate());
+          }
+
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[850] : Colors.grey[50],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    suggestion,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$userName${userEmail.isNotEmpty ? ' • $userEmail' : ''}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.grey[300] : Colors.grey[700],
+                    ),
+                  ),
+                  if (timeLabel.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        timeLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.grey[500] : Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                  if (relatedListingId.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
+                          ),
+                          onPressed: () => _openSuggestionListing(
+                            relatedListingId,
+                            relatedListingTitle,
+                          ),
+                          icon: const Icon(Icons.open_in_new, size: 16),
+                          label: Text(
+                            relatedListingTitle.isNotEmpty
+                                ? 'View Listing: $relatedListingTitle'
+                                : 'View Related Listing'.tr(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: false,
+                        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                        onChanged: (checked) async {
+                          if (checked != true) return;
+                          await FirebaseFirestore.instance
+                              .collection('app_suggestions')
+                              .doc(doc.id)
+                              .update({
+                            'archived': true,
+                            'archivedAt': FieldValue.serverTimestamp(),
+                            'updatedAt': FieldValue.serverTimestamp(),
+                          });
+                        },
+                      ),
+                      Text(
+                        'Archive'.tr(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.grey[400] : Colors.grey[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Future<void> _openSuggestionListing(String listingId, String listingTitle) async {
+    context.read<LoadingCubit>().showLoading(
+          context,
+          'Loading listing...'.tr(),
+          false,
+          Color(colorPrimary),
+        );
+    try {
+      final listing = await listingApiManager.getListing(listingID: listingId);
+      if (!mounted) return;
+      context.read<LoadingCubit>().hideLoading();
+
+      if (listing == null) {
+        showSnackBar(
+          context,
+          listingTitle.isNotEmpty
+              ? 'Listing "$listingTitle" is no longer available.'.tr()
+              : 'Listing is no longer available.'.tr(),
+        );
+        return;
+      }
+
+      await push(
+        context,
+        ListingDetailsWrappingWidget(listing: listing, currentUser: currentUser),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      context.read<LoadingCubit>().hideLoading();
+      showSnackBar(context, 'Error loading listing: $e'.tr());
+    }
   }
 
   Widget _buildTabHeader({

@@ -1,14 +1,18 @@
 import 'dart:io';
 import 'dart:ui';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/listings/model/ad_targeting_model.dart';
+import 'package:caribtap/listings/model/categories_model.dart';
 import 'package:caribtap/listings/model/deal_ad_model.dart';
 import 'package:caribtap/listings/model/deal_ad_quota.dart';
+import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
 import 'package:caribtap/listings/services/deal_ad_service.dart';
 import 'package:caribtap/listings/services/media_upload_service.dart';
 import 'package:caribtap/listings/services/deal_ad_quota_manager.dart';
@@ -31,7 +35,7 @@ String _countryCodeToFlag(String countryCode) {
 /// Review step in ad creation flow
 /// Shows accurate preview of ad and allows user to go back to edit or confirm submission
 class AdReviewScreen extends StatefulWidget {
-    final List<dynamic>? availableCategories;
+  final List<dynamic>? availableCategories;
   // Draft data from upload screen
   final File? mediaFile;
   final String? existingMediaUrl;
@@ -60,6 +64,9 @@ class AdReviewScreen extends StatefulWidget {
   
   // Edit mode
   final DealAdModel? adToEdit;
+  final bool readOnly;
+  final String? screenTitle;
+  final String? instructionText;
 
   const AdReviewScreen({
     Key? key,
@@ -85,6 +92,9 @@ class AdReviewScreen extends StatefulWidget {
     required this.listingId,
     this.adToEdit,
     this.availableCategories,
+    this.readOnly = false,
+    this.screenTitle,
+    this.instructionText,
   }) : super(key: key);
 
   @override
@@ -93,6 +103,118 @@ class AdReviewScreen extends StatefulWidget {
 
 class _AdReviewScreenState extends State<AdReviewScreen> {
   bool _isSubmitting = false;
+  late final Future<List<CategoriesModel>> _categoriesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _categoriesFuture = _loadCategories();
+  }
+
+  Future<List<CategoriesModel>> _loadCategories() async {
+    if ((widget.availableCategories ?? []).isNotEmpty) {
+      return (widget.availableCategories ?? []).cast<CategoriesModel>();
+    }
+    if (widget.targeting.categories.isEmpty) {
+      return const <CategoriesModel>[];
+    }
+    return listingApiManager.getCategories();
+  }
+
+  bool _isPaidTier(String? rawTier) {
+    final tier = (rawTier ?? '').trim().toLowerCase();
+    return tier.contains('professional') ||
+        tier.contains('premium') ||
+        tier == 'pro' ||
+        tier.contains('business');
+  }
+
+  Future<void> _validateSubmitAccess({
+    required String userId,
+    required String listingId,
+  }) async {
+    final firestore = FirebaseFirestore.instance;
+    if (listingId.trim().isEmpty) {
+      throw 'Selected listing is invalid. Please reselect and try again.';
+    }
+
+    final userDoc = await firestore
+        .collection('users')
+        .doc(userId)
+        .get(const GetOptions(source: Source.server));
+    if (!userDoc.exists) {
+      throw 'Your user profile was not found. Please sign out and sign in again.';
+    }
+    final userData = userDoc.data() ?? const <String, dynamic>{};
+    if (!_isPaidTier(userData['subscriptionTier'] as String?)) {
+      throw 'Your current subscription tier is not allowed to submit ads.';
+    }
+
+    final listingDoc = await firestore
+        .collection('listings')
+        .doc(listingId)
+        .get(const GetOptions(source: Source.server));
+    if (!listingDoc.exists) {
+      throw 'Selected listing no longer exists.';
+    }
+
+    final listingData = listingDoc.data() ?? const <String, dynamic>{};
+    final listingAuthor = (listingData['authorID'] as String?) ?? '';
+    if (listingAuthor != userId) {
+      throw 'You can only submit ads for listings you own.';
+    }
+
+    final freshness = listingData['freshness'];
+    if (freshness is Map<String, dynamic>) {
+      final status = (freshness['status'] as String?) ?? '';
+      if (status.toUpperCase() == 'HIDDEN') {
+        throw 'This listing is hidden and cannot be used for ads.';
+      }
+    }
+  }
+
+  Future<String?> _diagnosePermissionDenied({
+    required String authUid,
+    required String listingId,
+  }) async {
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final listingDoc = await firestore
+          .collection('listings')
+          .doc(listingId)
+          .get(const GetOptions(source: Source.server));
+      if (!listingDoc.exists) {
+        return 'Selected listing does not exist on server.';
+      }
+
+      final listingData = listingDoc.data() ?? const <String, dynamic>{};
+      final listingAuthor = (listingData['authorID'] as String?) ?? '';
+      if (listingAuthor != authUid) {
+        return 'Server says this listing is owned by another account.';
+      }
+
+      final freshness = listingData['freshness'];
+      if (freshness is Map<String, dynamic>) {
+        final status = (freshness['status'] as String?) ?? '';
+        if (status.toUpperCase() == 'HIDDEN') {
+          return 'Listing freshness status is HIDDEN on server.';
+        }
+      }
+
+      final userDoc = await firestore
+          .collection('users')
+          .doc(authUid)
+          .get(const GetOptions(source: Source.server));
+      final userTier = (userDoc.data()?['subscriptionTier'] as String?) ?? '';
+      if (!_isPaidTier(userTier)) {
+        return 'Server user profile tier is "$userTier".';
+      }
+
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   void _showFullScreenPreview() {
     Navigator.push(
@@ -122,28 +244,39 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
 
   Future<void> _confirmAndSubmit() async {
     setState(() => _isSubmitting = true);
+    var stage = 'initialize';
     try {
       // Get current user data from context
       final authBloc = context.read<AuthenticationBloc>();
       final user = authBloc.user;
+      final firebaseUser = auth.FirebaseAuth.instance.currentUser;
+      final authUid = firebaseUser?.uid;
       
-      if (user == null) {
+      if (user == null || authUid == null || authUid.isEmpty) {
         throw 'User not authenticated';
       }
+
+      stage = 'preflight_validation';
+      await _validateSubmitAccess(
+        userId: authUid,
+        listingId: widget.listingId,
+      );
+
       final normalizedTier = DealAdQuota.normalizeTier(user.subscriptionTier);
 
       // Check if this is an edit (editing existing ads doesn't count against quota)
       if (widget.adToEdit == null) {
+        stage = 'quota_precheck';
         // Check quota for new ads
         final quotaManager = DealAdQuotaManager();
         final hasQuota = await quotaManager.hasRemainingQuota(
-          user.userID,
+          authUid,
           normalizedTier,
         );
 
         if (!hasQuota) {
           if (!mounted) return;
-          final resetDate = await quotaManager.getResetDateString(user.userID, normalizedTier);
+          final resetDate = await quotaManager.getResetDateString(authUid, normalizedTier);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -193,7 +326,7 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
 
       final ad = DealAdModel(
         id: adId,
-        listerId: widget.listerId,
+        listerId: authUid,
         listingId: widget.listingId,
         mediaUrl: mediaUrl!,
         mediaType: widget.mediaType,
@@ -209,7 +342,7 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
         createdAt: widget.adToEdit?.createdAt ?? now,
         approvedAt: widget.adToEdit?.approvedAt,
         reviewerId: widget.adToEdit?.reviewerId,
-        authorID: widget.listerId,
+        authorID: authUid,
         adType: widget.adType,
         visibilityCountries: widget.selectedCountryCodes,
         targeting: widget.targeting,
@@ -219,12 +352,19 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
         redemptionLimitPerUser: widget.redemptionLimitPerUser,
       );
 
+      stage = 'submit_ad';
       await DealAdService().submitAd(ad);
       
       // Increment quota after successful submission (new ads only)
-      if (widget.adToEdit == null && user.userID.isNotEmpty) {
-        final quotaManager = DealAdQuotaManager();
-        await quotaManager.incrementAdPosted(user.userID, normalizedTier);
+      if (widget.adToEdit == null && authUid.isNotEmpty) {
+        try {
+          stage = 'quota_increment';
+          final quotaManager = DealAdQuotaManager();
+          await quotaManager.incrementAdPosted(authUid, normalizedTier);
+        } catch (quotaError) {
+          // Non-fatal: ad already submitted. Keep UX successful and log for follow-up.
+          print('⚠️ Quota increment failed after ad submission: $quotaError');
+        }
       }
       
       if (!mounted) return;
@@ -240,6 +380,30 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
       // Pop twice to go back to the original screen
       Navigator.pop(context);
       Navigator.pop(context);
+    } on FirebaseException catch (e) {
+      if (!mounted) return;
+      print('❌ FirebaseException during ad submit at stage=$stage code=${e.code} message=${e.message}');
+      String message;
+      if (e.code == 'permission-denied') {
+        final authUid = auth.FirebaseAuth.instance.currentUser?.uid;
+        final diagnostic = (authUid != null && authUid.isNotEmpty)
+            ? await _diagnosePermissionDenied(
+                authUid: authUid,
+                listingId: widget.listingId,
+              )
+            : null;
+        message = diagnostic != null
+            ? 'Permission denied at $stage: $diagnostic'
+            : 'Permission denied at $stage. Please verify your access and try again.';
+      } else {
+        message = 'Failed at $stage: ${e.message ?? e.code}';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -260,6 +424,9 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
     final isDark = isDarkMode(context);
     final primaryColor = Color(colorPrimary);
     final adaptiveTextColor = isDark ? Colors.white : Colors.black87;
+    final screenTitle = widget.screenTitle ?? 'Review Your Ad';
+    final instructionText = widget.instructionText ??
+        'Review how your ad will appear to users. You can go back to edit or confirm to submit.';
 
     return Scaffold(
       backgroundColor: isDark ? Colors.black : Colors.grey[50],
@@ -267,7 +434,7 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
         elevation: 0,
         backgroundColor: Colors.transparent,
         title: Text(
-          'Review Your Ad',
+          screenTitle,
           style: TextStyle(
             color: adaptiveTextColor,
             fontWeight: FontWeight.bold,
@@ -294,7 +461,7 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Review how your ad will appear to users. You can go back to edit or confirm to submit.',
+                      instructionText,
                       style: TextStyle(
                         color: isDark ? Colors.white : Colors.black87,
                         fontSize: 13,
@@ -473,16 +640,24 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: widget.targeting.categories.map((catId) {
-                        final cat = (widget.availableCategories ?? [])
-                            .where((c) => c.id == catId)
-                            .firstOrNull;
-                        final catName = cat != null && cat.title != null ? cat.title : catId;
-                        return _buildChip(catName, isDark, primaryColor);
-                      }).toList(),
+                    FutureBuilder<List<CategoriesModel>>(
+                      future: _categoriesFuture,
+                      builder: (context, snapshot) {
+                        final categories = snapshot.data ?? const <CategoriesModel>[];
+                        return Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: widget.targeting.categories.map((catId) {
+                            final cat = categories
+                                .where((c) => c.id == catId)
+                                .firstOrNull;
+                            final catName = cat?.title.isNotEmpty == true
+                                ? cat!.title
+                                : catId;
+                            return _buildChip(catName, isDark, primaryColor);
+                          }).toList(),
+                        );
+                      },
                     ),
                     const SizedBox(height: 12),
                   ],
@@ -562,60 +737,77 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
             const SizedBox(height: 32),
             
             // Action Buttons
-            Row(
-              children: [
-                // Edit Button
-                Expanded(
-                  child: SizedBox(
-                    height: 56,
-                    child: OutlinedButton.icon(
-                      onPressed: _isSubmitting ? null : () => Navigator.pop(context),
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Edit'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: primaryColor,
-                        side: BorderSide(color: primaryColor),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+            if (widget.readOnly)
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                  label: Text('Close'.tr()),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: primaryColor,
+                    side: BorderSide(color: primaryColor),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 56,
+                      child: OutlinedButton.icon(
+                        onPressed:
+                            _isSubmitting ? null : () => Navigator.pop(context),
+                        icon: const Icon(Icons.edit),
+                        label: const Text('Edit'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: primaryColor,
+                          side: BorderSide(color: primaryColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                
-                const SizedBox(width: 12),
-                
-                // Confirm Button
-                Expanded(
-                  flex: 2,
-                  child: SizedBox(
-                    height: 56,
-                    child: ElevatedButton.icon(
-                      onPressed: _isSubmitting ? null : _confirmAndSubmit,
-                      icon: _isSubmitting 
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : const Icon(Icons.check_circle),
-                      label: Text(_isSubmitting ? 'Submitting...' : 'Confirm & Submit'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: SizedBox(
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: _isSubmitting ? null : _confirmAndSubmit,
+                        icon: _isSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor:
+                                      AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Icon(Icons.check_circle),
+                        label: Text(
+                            _isSubmitting ? 'Submitting...' : 'Confirm & Submit'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
                         ),
-                        elevation: 0,
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
             
             const SizedBox(height: 40),
           ],
@@ -633,21 +825,7 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
     if (redemptionType == null) return SizedBox.shrink();
 
     List<Widget> info = [];
-    if (redemptionType == 'IN_APP_CLAIM') {
-      info.add(Row(
-        children: [
-          Icon(Icons.card_giftcard, size: 16, color: Theme.of(context).colorScheme.primary),
-          SizedBox(width: 6),
-          Text('In-App Claim', style: TextStyle(fontWeight: FontWeight.bold)),
-        ],
-      ));
-      if (redemptionLimitTotal != null) {
-        info.add(Text('Total Claims: $redemptionLimitTotal'));
-      }
-      if (redemptionLimitPerUser != null) {
-        info.add(Text('Per User: $redemptionLimitPerUser'));
-      }
-    } else if (redemptionType == 'PROMO_CODE') {
+    if (redemptionType == 'PROMO_CODE') {
       info.add(Row(
         children: [
           Icon(Icons.confirmation_number, size: 16, color: Theme.of(context).colorScheme.primary),
@@ -689,20 +867,29 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
         children: [
           Icon(icon, color: primaryColor, size: 20),
           const SizedBox(width: 12),
-          Text(
-            label,
-            style: TextStyle(
-              color: isDark ? Colors.white70 : Colors.black54,
-              fontSize: 14,
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: isDark ? Colors.white70 : Colors.black54,
+                fontSize: 14,
+              ),
             ),
           ),
-          const Spacer(),
-          Text(
-            value,
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black87,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              maxLines: 1,
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black87,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -1030,21 +1217,7 @@ class _FullScreenAdPreviewState extends State<_FullScreenAdPreview> {
     if (redemptionType == null) return SizedBox.shrink();
 
     List<Widget> info = [];
-    if (redemptionType == 'IN_APP_CLAIM') {
-      info.add(Row(
-        children: [
-          Icon(Icons.card_giftcard, size: 16, color: Theme.of(context).colorScheme.primary),
-          SizedBox(width: 6),
-          Text('In-App Claim', style: TextStyle(fontWeight: FontWeight.bold)),
-        ],
-      ));
-      if (redemptionLimitTotal != null) {
-        info.add(Text('Total Claims: $redemptionLimitTotal'));
-      }
-      if (redemptionLimitPerUser != null) {
-        info.add(Text('Per User: $redemptionLimitPerUser'));
-      }
-    } else if (redemptionType == 'PROMO_CODE') {
+    if (redemptionType == 'PROMO_CODE') {
       info.add(Row(
         children: [
           Icon(Icons.confirmation_number, size: 16, color: Theme.of(context).colorScheme.primary),

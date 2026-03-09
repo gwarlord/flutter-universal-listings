@@ -1,17 +1,21 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:caribtap/listings/services/deal_ad_service.dart';
 import 'package:caribtap/listings/model/deal_ad_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/core/ui/video/adaptive_video_player.dart';
 import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/core/utils/ads/ads_utils.dart';
 import 'package:video_player/video_player.dart';
 import 'package:intl/intl.dart';
 import 'share_ad_widget.dart';
 import 'ad_upload_screen.dart';
 import 'package:caribtap/listings/utils/caribbean_countries.dart';
+import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
+import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
 
 // Helper function to convert country code to flag emoji
 String _countryCodeToFlag(String countryCode) {
@@ -36,8 +40,8 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
   bool _isUserScrolling = false;
   bool _isMutedPreference = true;
   int _currentIndex = 0;
-  List<DealAdModel> _currentAds = []; // Added to store the ads
-  StreamSubscription<List<DealAdModel>>? _adsSubscription; // Added subscription
+  List<dynamic> _feedItems = []; // Changed to store both DealAdModel and Ads
+  StreamSubscription<List<DealAdModel>>? _adsSubscription;
 
   @override
   void initState() {
@@ -45,18 +49,29 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
     
-    // Subscribe to the stream to get ads and start auto-scroll
     _adsSubscription = DealAdService().getApprovedAds().listen((ads) {
       if (mounted) {
         setState(() {
-          _currentAds = ads;
-          if (_currentAds.isNotEmpty && _currentIndex >= _currentAds.length) {
+          _feedItems = _injectAds(ads);
+          if (_feedItems.isNotEmpty && _currentIndex >= _feedItems.length) {
             _currentIndex = 0;
           }
         });
-        _startAutoScroll(); // Start auto-scroll once ads are available
+        _startAutoScroll();
       }
     });
+  }
+
+  List<dynamic> _injectAds(List<DealAdModel> ads) {
+    List<dynamic> items = [];
+    for (int i = 0; i < ads.length; i++) {
+      items.add(ads[i]);
+      // Inject an ad every 3 items
+      if ((i + 1) % 3 == 0) {
+        items.add('ad_placeholder');
+      }
+    }
+    return items;
   }
 
   void _startAutoScroll() {
@@ -66,26 +81,26 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
   void _scheduleCurrentAdAdvance() {
     _autoScrollTimer?.cancel();
 
-    if (_isUserScrolling || _currentAds.isEmpty || !_pageController.hasClients) {
+    if (_isUserScrolling || _feedItems.isEmpty || !_pageController.hasClients) {
       return;
     }
 
-    final currentAd = _currentAds[_currentIndex.clamp(0, _currentAds.length - 1)];
-    if (currentAd.mediaType == 'video') {
+    final currentItem = _feedItems[_currentIndex.clamp(0, _feedItems.length - 1)];
+    if (currentItem is DealAdModel && currentItem.mediaType == 'video') {
       return;
     }
 
-    _autoScrollTimer = Timer(const Duration(seconds: 3), () {
+    _autoScrollTimer = Timer(const Duration(seconds: 4), () {
       _goToNextPage();
     });
   }
 
   void _goToNextPage() {
-    if (_isUserScrolling || _currentAds.isEmpty || !_pageController.hasClients || !mounted) {
+    if (_isUserScrolling || _feedItems.isEmpty || !_pageController.hasClients || !mounted) {
       return;
     }
 
-    final nextPage = (_currentIndex + 1) % _currentAds.length;
+    final nextPage = (_currentIndex + 1) % _feedItems.length;
     _pageController.animateToPage(
       nextPage,
       duration: const Duration(milliseconds: 450),
@@ -100,7 +115,7 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
   @override
   void dispose() {
     _stopAutoScroll();
-    _adsSubscription?.cancel(); // Cancel the stream subscription
+    _adsSubscription?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -133,50 +148,54 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
           }
           return false;
         },
-        child: StreamBuilder<List<DealAdModel>>(
-          stream: DealAdService().getApprovedAds(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: Colors.white));
-            }
-            // Use _currentAds which is updated in initState for data
-            // final ads = snapshot.data ?? []; // No longer needed here as _currentAds holds the data
-            if (_currentAds.isEmpty) {
-              return const Center(
+        child: _feedItems.isEmpty
+            ? const Center(
                 child: Text('No deals or promotions available.', style: TextStyle(color: Colors.white)),
-              );
-            }
-
-            return PageView.builder(
-              scrollDirection: Axis.vertical,
-              itemCount: _currentAds.length, // Use _currentAds.length
-              controller: _pageController,
-              onPageChanged: (index) {
-                _currentIndex = index;
-                _startAutoScroll();
-              },
-              itemBuilder: (context, index) {
-                return DealFeedItem(
-                  ad: _currentAds[index], // Use _currentAds[index]
-                  currentUser: widget.currentUser,
-                  isActive: index == _currentIndex,
-                  isMuted: _isMutedPreference,
-                  onMuteChanged: (isMuted) {
-                    if (_isMutedPreference == isMuted) return;
-                    setState(() {
-                      _isMutedPreference = isMuted;
-                    });
-                  },
-                  onVideoCompleted: () {
-                    if (index == _currentIndex && !_isUserScrolling) {
-                      _goToNextPage();
-                    }
-                  },
-                );
-              },
-            );
-          },
-        ),
+              )
+            : PageView.builder(
+                scrollDirection: Axis.vertical,
+                itemCount: _feedItems.length,
+                controller: _pageController,
+                onPageChanged: (index) {
+                  _currentIndex = index;
+                  _startAutoScroll();
+                },
+                itemBuilder: (context, index) {
+                  final item = _feedItems[index];
+                  if (item is String && item == 'ad_placeholder') {
+                    return Container(
+                      color: Colors.white,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('Sponsored', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                            const SizedBox(height: 10),
+                            AdsUtils.adsContainer(),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  return DealFeedItem(
+                    ad: item as DealAdModel,
+                    currentUser: widget.currentUser,
+                    isActive: index == _currentIndex,
+                    isMuted: _isMutedPreference,
+                    onMuteChanged: (isMuted) {
+                      if (_isMutedPreference == isMuted) return;
+                      setState(() {
+                        _isMutedPreference = isMuted;
+                      });
+                    },
+                    onVideoCompleted: () {
+                      if (index == _currentIndex && !_isUserScrolling) {
+                        _goToNextPage();
+                      }
+                    },
+                  );
+                },
+              ),
       ),
     );
   }
@@ -210,6 +229,7 @@ class _DealFeedItemState extends State<DealFeedItem> {
   late bool _isMuted;
   bool _isExpanded = false;
   bool _hasReportedVideoCompletion = false;
+  bool _isNavigatingToListing = false;
 
   @override
   void initState() {
@@ -319,6 +339,46 @@ class _DealFeedItemState extends State<DealFeedItem> {
         ],
       ),
     );
+  }
+
+  Future<void> _navigateToListingDetails() async {
+    if (_isNavigatingToListing) return;
+
+    setState(() => _isNavigatingToListing = true);
+
+    try {
+      final listing = await listingApiManager.getListing(listingID: widget.ad.listingId);
+
+      if (!mounted) return;
+
+      if (listing != null) {
+        if (widget.currentUser != null) {
+          push(context, ListingDetailsWrappingWidget(
+            listing: listing,
+            currentUser: widget.currentUser!,
+          ));
+        } else {
+          // If no user is logged in, show a snackbar or handle appropriately
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please log in to view listing details')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Listing not found or was removed')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading listing: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isNavigatingToListing = false);
+      }
+    }
   }
 
   @override
@@ -557,6 +617,34 @@ class _DealFeedItemState extends State<DealFeedItem> {
                       style: const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                // NEW: View Listing Button
+                SizedBox(
+                  height: 36,
+                  child: TextButton.icon(
+                    onPressed: _isNavigatingToListing ? null : _navigateToListingDetails,
+                    icon: _isNavigatingToListing
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
+                          )
+                        : const Icon(Icons.store_outlined, color: Colors.white, size: 18),
+                    label: Text(
+                      _isNavigatingToListing ? 'Loading...'.tr() : 'View Listing'.tr(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      alignment: Alignment.centerLeft,
+                    ),
+                  ),
                 ),
               ],
             ),

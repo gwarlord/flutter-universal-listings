@@ -34,8 +34,6 @@ class NativeAdState extends State<NativeAdWidget> {
   late final Key key;
   bool visible = false;
 
-  bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-
   @override
   void initState() {
     super.initState();
@@ -48,18 +46,13 @@ class NativeAdState extends State<NativeAdWidget> {
       return;
     }
 
-    if (_isIOS && kDebugMode) {
-      nativeAdCompleter.completeError(
-        Exception('Native ads are disabled on iOS debug to reduce memory pressure.'),
-      );
-      return;
-    }
-
     MobileAds.instance.updateRequestConfiguration(RequestConfiguration(
         testDeviceIds: ['A667B3D01D8435D19CD3D433B706F7D0']));
     _nativeAd = NativeAd(
-      adUnitId: '/6499/example/native',
-      request: const AdManagerAdRequest(),
+      adUnitId: defaultTargetPlatform == TargetPlatform.iOS
+          ? 'ca-app-pub-3940256099942544/3986624511' // iOS AdMob Test ID
+          : 'ca-app-pub-3940256099942544/2247696110', // Android AdMob Test ID
+      request: const AdRequest(),
       factoryId: 'adFactoryExample',
       customOptions: {},
       listener: NativeAdListener(

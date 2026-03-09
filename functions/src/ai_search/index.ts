@@ -5,6 +5,7 @@ export * from "./interpretation/search_interpreter";
 
 // Export the other existing AI search functions
 export * from "./retrieval/search_listings";
+export * from "./indexing/listings_index_maintenance";
 export * from "./rate_limiting/rate_limiter";
 export * from "./rate_limiting/abuse_detector";
 export * from "./analytics/log_search";

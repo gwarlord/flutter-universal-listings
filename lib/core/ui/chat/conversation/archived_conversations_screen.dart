@@ -186,7 +186,7 @@ class _ConversationItemState extends State<_ConversationItem> {
     if (listingId.isEmpty) return '';
     try {
       final doc = await FirebaseFirestore.instance.collection(listingsCollection).doc(listingId).get();
-      return doc.data()?['openingHours']?.toString() ?? '';
+      return doc.data()?['chatAvailabilityHours']?.toString() ?? '';
     } catch (_) {
       return '';
     }

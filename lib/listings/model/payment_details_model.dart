@@ -217,6 +217,7 @@ class PaymentApp {
 class PaymentDetailsProfile {
   final bool isEnabled;
   final PaymentDisplayMode displayMode;
+  final List<String> selectedListingIds;
   final DateTime? updatedAt;
   final BankTransferDetails bankTransfer;
   final List<PaymentApp> paymentApps;
@@ -225,6 +226,7 @@ class PaymentDetailsProfile {
   const PaymentDetailsProfile({
     this.isEnabled = false,
     this.displayMode = PaymentDisplayMode.invoiceOnly,
+    this.selectedListingIds = const [],
     this.updatedAt,
     this.bankTransfer = const BankTransferDetails(),
     this.paymentApps = const [],
@@ -235,6 +237,7 @@ class PaymentDetailsProfile {
     return {
       'isEnabled': isEnabled,
       'displayMode': displayMode.value,
+      'selectedListingIds': selectedListingIds,
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : FieldValue.serverTimestamp(),
       'bankTransfer': bankTransfer.toJson(),
       'paymentApps': paymentApps.map((app) => app.toJson()).toList(),
@@ -248,6 +251,11 @@ class PaymentDetailsProfile {
     return PaymentDetailsProfile(
       isEnabled: json['isEnabled'] as bool? ?? false,
       displayMode: PaymentDisplayMode.fromString(json['displayMode']?.toString()),
+      selectedListingIds: (json['selectedListingIds'] as List<dynamic>?)
+              ?.map((id) => id.toString())
+              .where((id) => id.isNotEmpty)
+              .toList() ??
+          const [],
       updatedAt: readDateTime(json['updatedAt']),
       bankTransfer: BankTransferDetails.fromJson(json['bankTransfer'] as Map<String, dynamic>?),
       paymentApps: (json['paymentApps'] as List<dynamic>?)
@@ -261,6 +269,7 @@ class PaymentDetailsProfile {
   PaymentDetailsProfile copyWith({
     bool? isEnabled,
     PaymentDisplayMode? displayMode,
+    List<String>? selectedListingIds,
     DateTime? updatedAt,
     BankTransferDetails? bankTransfer,
     List<PaymentApp>? paymentApps,
@@ -269,6 +278,7 @@ class PaymentDetailsProfile {
     return PaymentDetailsProfile(
       isEnabled: isEnabled ?? this.isEnabled,
       displayMode: displayMode ?? this.displayMode,
+      selectedListingIds: selectedListingIds ?? this.selectedListingIds,
       updatedAt: updatedAt ?? this.updatedAt,
       bankTransfer: bankTransfer ?? this.bankTransfer,
       paymentApps: paymentApps ?? this.paymentApps,
@@ -283,12 +293,16 @@ class PaymentDetailsProfile {
 
 /// Public snapshot of payment details (safe for display)
 class PaymentDetailsPublic {
+  final PaymentDisplayMode displayMode;
+  final List<String> selectedListingIds;
   final BankTransferDetails? bankTransfer;
   final List<PaymentApp> paymentApps;
   final String notes;
   final DateTime? updatedAt;
 
   const PaymentDetailsPublic({
+    this.displayMode = PaymentDisplayMode.private,
+    this.selectedListingIds = const [],
     this.bankTransfer,
     this.paymentApps = const [],
     this.notes = '',
@@ -297,6 +311,8 @@ class PaymentDetailsPublic {
 
   Map<String, dynamic> toJson() {
     return {
+      'displayMode': displayMode.value,
+      'selectedListingIds': selectedListingIds,
       if (bankTransfer != null) 'bankTransfer': bankTransfer!.toJson(),
       'paymentApps': paymentApps.map((app) => app.toJson()).toList(),
       'notes': notes,
@@ -308,6 +324,12 @@ class PaymentDetailsPublic {
     if (json == null) return const PaymentDetailsPublic();
     
     return PaymentDetailsPublic(
+      displayMode: PaymentDisplayMode.fromString(json['displayMode']?.toString()),
+      selectedListingIds: (json['selectedListingIds'] as List<dynamic>?)
+              ?.map((id) => id.toString())
+              .where((id) => id.isNotEmpty)
+              .toList() ??
+          const [],
       bankTransfer: json['bankTransfer'] != null
           ? BankTransferDetails.fromJson(json['bankTransfer'] as Map<String, dynamic>)
           : null,
@@ -328,6 +350,10 @@ class PaymentDetailsPublic {
   factory PaymentDetailsPublic.fromProfile(PaymentDetailsProfile profile) {
     // Only include enabled methods
     return PaymentDetailsPublic(
+      displayMode: profile.displayMode,
+      selectedListingIds: profile.displayMode == PaymentDisplayMode.publicListing
+          ? profile.selectedListingIds
+          : const [],
       bankTransfer: profile.bankTransfer.enabled ? profile.bankTransfer : null,
       paymentApps: profile.paymentApps.where((app) => app.enabled).toList(),
       notes: profile.notes,

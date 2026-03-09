@@ -7,11 +7,13 @@ import 'package:caribtap/listings/ui/widgets/payment_methods_widget.dart';
 /// Automatically fetches and displays public payment details if available
 class PaymentMethodsStreamWidget extends StatelessWidget {
   final String userId;
+  final String? listingId;
   final PaymentDetailsService? paymentDetailsService;
 
   const PaymentMethodsStreamWidget({
     super.key,
     required this.userId,
+    this.listingId,
     this.paymentDetailsService,
   });
 
@@ -27,9 +29,22 @@ class PaymentMethodsStreamWidget extends StatelessWidget {
         }
 
         final paymentDetails = snapshot.data!;
-        
-        // Only show if there are payment methods available
+
         if (!paymentDetails.hasAnyPaymentMethod) {
+          return const SizedBox.shrink();
+        }
+
+        if (listingId != null) {
+          if (paymentDetails.displayMode != PaymentDisplayMode.publicListing) {
+            return const SizedBox.shrink();
+          }
+
+          // Empty selection means legacy "show on all listings" behavior.
+          if (paymentDetails.selectedListingIds.isNotEmpty &&
+              !paymentDetails.selectedListingIds.contains(listingId)) {
+            return const SizedBox.shrink();
+          }
+        } else if (paymentDetails.displayMode == PaymentDisplayMode.private) {
           return const SizedBox.shrink();
         }
 

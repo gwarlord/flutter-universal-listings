@@ -34,14 +34,14 @@ import 'package:caribtap/listings/services/deep_link_service.dart';
 import 'package:caribtap/listings/ui/pro_docs/public_invoice_view_screen.dart';
 import 'package:caribtap/listings/ui/pro_docs/public_quote_view_screen.dart';
 import 'package:caribtap/listings/ui/pro_docs/quote_list_screen.dart';
+import 'package:caribtap/listings/ui/help/tutorials_hub_screen.dart';
 import 'package:caribtap/screens/brand/my_brands_screen.dart';
 import 'package:caribtap/main.dart' as main_entry;
 import 'package:caribtap/listings/ui/widgets/attention_badge.dart'; // Import the new widget
-import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
-import 'package:caribtap/listings/utils/opening_hours_editor.dart';
 import '../deals/deals_promotion_screen.dart';
 import '../deals/ad_review_approval_screen.dart';
-import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart' as listings_api; // Corrected import with alias
+import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart'
+    as listings_api; // Corrected import with alias
 import 'package:provider/provider.dart';
 import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:caribtap/listings/services/attention_service.dart';
@@ -49,7 +49,15 @@ import 'package:caribtap/listings/ui/attention/attention_cubit.dart';
 import 'package:caribtap/listings/model/attention_state_model.dart';
 import 'package:caribtap/listings/model/feed_item.dart';
 
-enum DrawerSelection { home, conversations, categories, search, orders, rentalOrders, profile }
+enum DrawerSelection {
+  home,
+  conversations,
+  categories,
+  search,
+  orders,
+  rentalOrders,
+  profile
+}
 
 class ContainerWrapperWidget extends StatefulWidget {
   final ListingsUser currentUser;
@@ -62,7 +70,7 @@ class ContainerWrapperWidget extends StatefulWidget {
 
 class _ContainerWrapperState extends State<ContainerWrapperWidget> {
   late final AttentionCubit _attentionCubit;
-  
+
   @override
   void initState() {
     super.initState();
@@ -71,11 +79,11 @@ class _ContainerWrapperState extends State<ContainerWrapperWidget> {
     _attentionCubit.attentionService.initialize(widget.currentUser.userID);
     // Start listening to attention state
     _attentionCubit.startListening();
-    
+
     // Set user's preferred language
     _setUserLanguage();
   }
-  
+
   void _setUserLanguage() {
     final languageCode = widget.currentUser.settings.languageCode;
     if (languageCode != null && languageCode.isNotEmpty) {
@@ -111,7 +119,6 @@ class ContainerScreen extends StatefulWidget {
   const ContainerScreen({super.key, required this.user});
 
   @override
-
   State<ContainerScreen> createState() {
     return _ContainerState();
   }
@@ -125,7 +132,7 @@ class _ContainerState extends State<ContainerScreen> {
   int _selectedTapIndex = 0;
   GlobalKey<HomeScreenState> homeKey = GlobalKey();
   late Widget _currentWidget;
-  
+
   bool _showProfessionalFeatures = false;
   bool _showPremiumFeatures = false;
 
@@ -145,7 +152,7 @@ class _ContainerState extends State<ContainerScreen> {
       provisional: false,
       sound: true,
     );
-    
+
     // Handle pending deep link navigation
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _handlePendingDeepLink();
@@ -185,15 +192,15 @@ class _ContainerState extends State<ContainerScreen> {
     }
 
     final pendingListingId = main_entry.getPendingListingId();
-    
+
     if (pendingListingId != null) {
       print('🔗 Navigating to pending listing: $pendingListingId');
-      
+
       try {
         // Fetch the listing
         final deepLinkService = DeepLinkService();
         final listing = await deepLinkService.getListingById(pendingListingId);
-        
+
         if (listing != null && mounted) {
           // Navigate to listing details
           await push(
@@ -227,13 +234,93 @@ class _ContainerState extends State<ContainerScreen> {
 
   void _navigateToListingServices(BuildContext context) {
     Navigator.pop(context); // Close drawer
-    final currentUser = context.read<AuthenticationBloc>().state.user ?? widget.user;
+    final currentUser =
+        context.read<AuthenticationBloc>().state.user ?? widget.user;
     push(context, BookingServicesWrapperWidget(currentUser: currentUser));
   }
 
-  void _showUpgradeDialog(BuildContext context, String featureName, String requiredTier) {
+  Future<void> _showCreateOptions(ListingsUser currentUser) async {
+    final isDark = isDarkMode(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.black12,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.add_business_outlined),
+                  title: Text('Add Listing'.tr()),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    push(
+                      context,
+                      AddListingWrappingWidget(currentUser: currentUser),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.event_outlined),
+                  title: Text('Post Event'.tr()),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _openCreateEventScreen(currentUser);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.campaign_outlined),
+                  title: Text('Upload New Ad'.tr()),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    push(context, DealsPromotionScreen());
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openCreateEventScreen(ListingsUser currentUser) async {
+    if (currentUser.isAdmin || currentUser.hasBookingServices) {
+      final bool? created = await push(
+        context,
+        CreateEventScreen(currentUser: currentUser),
+      );
+      if (created == true) {
+        homeKey.currentState?.refreshFeed();
+        if (mounted) {
+          showSnackBar(context, 'Event posted successfully.'.tr());
+        }
+      }
+      return;
+    }
+
+    _showUpgradeDialog(context, 'Post Event', 'Professional');
+  }
+
+  void _showUpgradeDialog(
+      BuildContext context, String featureName, String requiredTier) {
     final dark = isDarkMode(context);
-    final currentUser = context.read<AuthenticationBloc>().state.user ?? widget.user;
+    final currentUser =
+        context.read<AuthenticationBloc>().state.user ?? widget.user;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -251,7 +338,8 @@ class _ContainerState extends State<ContainerScreen> {
           ],
         ),
         content: Text(
-          'This feature requires a $requiredTier subscription. Upgrade now to unlock $featureName and other exclusive features!'.tr(),
+          'This feature requires a $requiredTier subscription. Upgrade now to unlock $featureName and other exclusive features!'
+              .tr(),
           style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
         ),
         actions: [
@@ -328,19 +416,26 @@ class _ContainerState extends State<ContainerScreen> {
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         Builder(
-                          builder: (context) => BlocBuilder<AttentionCubit, AttentionState>(
+                          builder: (context) =>
+                              BlocBuilder<AttentionCubit, AttentionState>(
                             builder: (context, attentionState) {
-                              final hasAttention = attentionState.attentionState?.globalHasAttention ?? false;
+                              final hasAttention = attentionState
+                                      .attentionState?.globalHasAttention ??
+                                  false;
                               return Stack(
                                 children: [
                                   IconButton(
                                     icon: const Icon(Icons.menu),
-                                    onPressed: () => Scaffold.of(context).openDrawer(),
+                                    onPressed: () =>
+                                        Scaffold.of(context).openDrawer(),
                                   ),
                                   Positioned(
-                                    right: 2, // Adjusted position for visibility
-                                    top: 6,   // Adjusted position for visibility
-                                    child: AttentionDot(hasAttention: hasAttention, dotSize: 12),
+                                    right:
+                                        2, // Adjusted position for visibility
+                                    top: 6, // Adjusted position for visibility
+                                    child: AttentionDot(
+                                        hasAttention: hasAttention,
+                                        dotSize: 12),
                                   ),
                                 ],
                               );
@@ -348,7 +443,8 @@ class _ContainerState extends State<ContainerScreen> {
                           ),
                         ),
                         GestureDetector(
-                          onTap: () => push(context, ProfileScreen(currentUser: currentUser)),
+                          onTap: () => push(
+                              context, ProfileScreen(currentUser: currentUser)),
                           child: Padding(
                             padding: const EdgeInsets.only(left: 8, right: 4),
                             child: currentUser.profilePictureURL.isNotEmpty
@@ -360,7 +456,8 @@ class _ContainerState extends State<ContainerScreen> {
                                 : CircleAvatar(
                                     radius: 18,
                                     backgroundColor: Colors.grey[300],
-                                    child: Icon(Icons.person, color: Colors.grey[700]),
+                                    child: Icon(Icons.person,
+                                        color: Colors.grey[700]),
                                   ),
                           ),
                         ),
@@ -370,13 +467,11 @@ class _ContainerState extends State<ContainerScreen> {
                   actions: [
                     if (_currentWidget is HomeWrapperWidget)
                       IconButton(
-                        tooltip: 'Add Listing'.tr(),
+                        tooltip: 'Create'.tr(),
                         icon: const Icon(
                           Icons.add,
                         ),
-                        onPressed: () => push(
-                            context,
-                            AddListingWrappingWidget(currentUser: currentUser)),
+                        onPressed: () => _showCreateOptions(currentUser),
                       ),
                     if (_currentWidget is HomeWrapperWidget)
                       IconButton(
@@ -387,7 +482,7 @@ class _ContainerState extends State<ContainerScreen> {
                         onPressed: () {
                           final homeState = homeKey.currentState;
                           if (homeState != null) {
-                             final items = homeState.listingsWithAds
+                            final items = homeState.listingsWithAds
                                 .where((e) => e != null)
                                 .cast<FeedItem>()
                                 .toList();
@@ -406,20 +501,13 @@ class _ContainerState extends State<ContainerScreen> {
                       IconButton(
                         tooltip: 'Chat Hours'.tr(),
                         icon: const Icon(Icons.settings),
-                        onPressed: () async {
-                          final initial = currentUser.settings.chatAvailabilityHours;
-                          final result = await OpeningHoursEditorSheet.show(
-                            context,
-                            initialValue: initial,
-                          );
-                          if (result == null) return;
-                          currentUser.settings.chatAvailabilityHours = result.trim();
-                          await profileApiManager.updateCurrentUser(currentUser);
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Chat hours updated'.tr())),
-                          );
-                        },
+                        onPressed: () => push(
+                          context,
+                          ChatSettingsScreen(
+                            currentUser: currentUser,
+                            listingsRepository: listings_api.listingApiManager,
+                          ),
+                        ),
                       ),
                     if (_currentWidget is ConversationsWrapperWidget)
                       IconButton(
@@ -433,7 +521,8 @@ class _ContainerState extends State<ContainerScreen> {
                                 chatRepository: chatApiManager,
                                 currentUser: currentUser,
                               ),
-                              child: ArchivedConversationsScreen(user: currentUser),
+                              child: ArchivedConversationsScreen(
+                                  user: currentUser),
                             ),
                           );
                         },
@@ -468,12 +557,14 @@ class _ContainerState extends State<ContainerScreen> {
     );
   }
 
-  Widget _buildModernDrawer(BuildContext context, ListingsUser currentUser, bool isDark) {
+  Widget _buildModernDrawer(
+      BuildContext context, ListingsUser currentUser, bool isDark) {
     final primaryColorValue = Color(cfg.colorPrimary);
     final selectedBgColor = primaryColorValue.withOpacity(0.1);
 
-    final drawerWidth =
-        (MediaQuery.of(context).size.width * 0.85).clamp(280.0, 380.0).toDouble();
+    final drawerWidth = (MediaQuery.of(context).size.width * 0.85)
+        .clamp(280.0, 380.0)
+        .toDouble();
 
     return Drawer(
       width: drawerWidth,
@@ -498,11 +589,12 @@ class _ContainerState extends State<ContainerScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       context.read<ContainerBloc>().add(TabSelectedEvent(
-                        appBarTitle: 'Home'.tr(),
-                        currentTabIndex: 0,
-                        drawerSelection: DrawerSelection.home,
-                        currentWidget: HomeWrapperWidget(homeKey: homeKey, currentUser: currentUser),
-                      ));
+                            appBarTitle: 'Home'.tr(),
+                            currentTabIndex: 0,
+                            drawerSelection: DrawerSelection.home,
+                            currentWidget: HomeWrapperWidget(
+                                homeKey: homeKey, currentUser: currentUser),
+                          ));
                     },
                     isDark: isDark,
                     primaryColor: primaryColorValue,
@@ -514,29 +606,42 @@ class _ContainerState extends State<ContainerScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       context.read<ContainerBloc>().add(TabSelectedEvent(
-                        appBarTitle: 'Categories'.tr(),
-                        currentTabIndex: 1,
-                        drawerSelection: DrawerSelection.categories,
-                        currentWidget: CategoriesWrapperWidget(currentUser: currentUser),
-                      ));
+                            appBarTitle: 'Categories'.tr(),
+                            currentTabIndex: 1,
+                            drawerSelection: DrawerSelection.categories,
+                            currentWidget: CategoriesWrapperWidget(
+                                currentUser: currentUser),
+                          ));
                     },
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
                   BlocBuilder<AttentionCubit, AttentionState>(
                     builder: (context, state) {
-                      final badgeCount = state.attentionState?.getCountForModule(AttentionModule.conversations) ?? 0;
+                      final badgeCount = state.attentionState
+                              ?.getCountForModule(
+                                  AttentionModule.conversations) ??
+                          0;
                       return _drawerTile(
                         title: 'Conversations'.tr(),
                         icon: Icons.chat_bubble_rounded,
-                        isSelected: _drawerSelection == DrawerSelection.conversations,
+                        isSelected:
+                            _drawerSelection == DrawerSelection.conversations,
                         trailing: badgeCount > 0
                             ? Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(color: Color(cfg.colorPrimary), borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                    color: Color(cfg.colorPrimary),
+                                    borderRadius: BorderRadius.circular(10)),
                                 child: Text(
-                                  badgeCount > 99 ? '99+' : badgeCount.toString(),
-                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                  badgeCount > 99
+                                      ? '99+'
+                                      : badgeCount.toString(),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               )
                             : null,
@@ -544,11 +649,12 @@ class _ContainerState extends State<ContainerScreen> {
                           // NOTE: markModuleAsSeen is now handled in ConversationsScreen initState
                           Navigator.pop(context);
                           context.read<ContainerBloc>().add(TabSelectedEvent(
-                            appBarTitle: 'Conversations'.tr(),
-                            currentTabIndex: 2,
-                            drawerSelection: DrawerSelection.conversations,
-                            currentWidget: ConversationsWrapperWidget(user: currentUser),
-                          ));
+                                appBarTitle: 'Conversations'.tr(),
+                                currentTabIndex: 2,
+                                drawerSelection: DrawerSelection.conversations,
+                                currentWidget: ConversationsWrapperWidget(
+                                    user: currentUser),
+                              ));
                         },
                         isDark: isDark,
                         primaryColor: primaryColorValue,
@@ -562,45 +668,61 @@ class _ContainerState extends State<ContainerScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       context.read<ContainerBloc>().add(TabSelectedEvent(
-                        appBarTitle: 'Search'.tr(),
-                        currentTabIndex: 3,
-                        drawerSelection: DrawerSelection.search,
-                        currentWidget: SearchWrapperWidget(currentUser: currentUser),
-                      ));
+                            appBarTitle: 'Search'.tr(),
+                            currentTabIndex: 3,
+                            drawerSelection: DrawerSelection.search,
+                            currentWidget:
+                                SearchWrapperWidget(currentUser: currentUser),
+                          ));
                     },
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
 
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
+                  const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Divider()),
                   // SHOPPING SECTION
                   _drawerSectionLabel('Shopping'.tr(), isDark),
                   BlocBuilder<AttentionCubit, AttentionState>(
                     builder: (context, state) {
-                      final badgeCount = state.attentionState?.getCountForModule(AttentionModule.myOrders) ?? 0;
+                      final badgeCount = state.attentionState
+                              ?.getCountForModule(AttentionModule.myOrders) ??
+                          0;
                       return _drawerTile(
                         title: 'My Orders'.tr(),
                         icon: Icons.shopping_bag_rounded,
                         isSelected: _drawerSelection == DrawerSelection.orders,
                         trailing: badgeCount > 0
                             ? Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(color: Color(cfg.colorPrimary), borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                    color: Color(cfg.colorPrimary),
+                                    borderRadius: BorderRadius.circular(10)),
                                 child: Text(
-                                  badgeCount > 99 ? '99+' : badgeCount.toString(),
-                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                  badgeCount > 99
+                                      ? '99+'
+                                      : badgeCount.toString(),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               )
                             : null,
                         onTap: () {
-                          context.read<AttentionCubit>().markModuleAsSeen(AttentionModule.myOrders);
+                          context
+                              .read<AttentionCubit>()
+                              .markModuleAsSeen(AttentionModule.myOrders);
                           Navigator.pop(context);
                           context.read<ContainerBloc>().add(TabSelectedEvent(
-                            appBarTitle: 'My Orders'.tr(),
-                            currentTabIndex: 4,
-                            drawerSelection: DrawerSelection.orders,
-                            currentWidget: CustomerOrdersScreen(currentUser: currentUser),
-                          ));
+                                appBarTitle: 'My Orders'.tr(),
+                                currentTabIndex: 4,
+                                drawerSelection: DrawerSelection.orders,
+                                currentWidget: CustomerOrdersScreen(
+                                    currentUser: currentUser),
+                              ));
                         },
                         isDark: isDark,
                         primaryColor: primaryColorValue,
@@ -610,7 +732,10 @@ class _ContainerState extends State<ContainerScreen> {
                   if (isPremiumUser(currentUser))
                     BlocBuilder<AttentionCubit, AttentionState>(
                       builder: (context, state) {
-                        final badgeCount = state.attentionState?.getCountForModule(AttentionModule.orderRequests) ?? 0;
+                        final badgeCount = state.attentionState
+                                ?.getCountForModule(
+                                    AttentionModule.orderRequests) ??
+                            0;
                         return _drawerTile(
                           title: 'Order Requests'.tr(),
                           icon: Icons.event_note_rounded,
@@ -620,11 +745,20 @@ class _ContainerState extends State<ContainerScreen> {
                                   children: [
                                     Container(
                                       margin: const EdgeInsets.only(right: 8),
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(color: Color(cfg.colorPrimary), borderRadius: BorderRadius.circular(10)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                          color: Color(cfg.colorPrimary),
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
                                       child: Text(
-                                        badgeCount > 99 ? '99+' : badgeCount.toString(),
-                                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                        badgeCount > 99
+                                            ? '99+'
+                                            : badgeCount.toString(),
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold),
                                       ),
                                     ),
                                     _tierBadge('PREMIUM', Colors.purple),
@@ -632,9 +766,13 @@ class _ContainerState extends State<ContainerScreen> {
                                 )
                               : _tierBadge('PREMIUM', Colors.purple),
                           onTap: () {
-                            context.read<AttentionCubit>().markModuleAsSeen(AttentionModule.orderRequests);
+                            context.read<AttentionCubit>().markModuleAsSeen(
+                                AttentionModule.orderRequests);
                             Navigator.pop(context);
-                            push(context, OrdersManagementScreen(currentUser: currentUser));
+                            push(
+                                context,
+                                OrdersManagementScreen(
+                                    currentUser: currentUser));
                           },
                           isDark: isDark,
                           primaryColor: primaryColorValue,
@@ -643,30 +781,45 @@ class _ContainerState extends State<ContainerScreen> {
                     ),
                   BlocBuilder<AttentionCubit, AttentionState>(
                     builder: (context, state) {
-                      final badgeCount = state.attentionState?.getCountForModule(AttentionModule.rentals) ?? 0;
+                      final badgeCount = state.attentionState
+                              ?.getCountForModule(AttentionModule.rentals) ??
+                          0;
                       return _drawerTile(
                         title: 'Rentals'.tr(),
                         icon: Icons.calendar_month_rounded,
-                        isSelected: _drawerSelection == DrawerSelection.rentalOrders,
+                        isSelected:
+                            _drawerSelection == DrawerSelection.rentalOrders,
                         trailing: badgeCount > 0
                             ? Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(color: Color(cfg.colorPrimary), borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                    color: Color(cfg.colorPrimary),
+                                    borderRadius: BorderRadius.circular(10)),
                                 child: Text(
-                                  badgeCount > 99 ? '99+' : badgeCount.toString(),
-                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                  badgeCount > 99
+                                      ? '99+'
+                                      : badgeCount.toString(),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               )
                             : null,
                         onTap: () {
-                          context.read<AttentionCubit>().markModuleAsSeen(AttentionModule.rentals);
+                          context
+                              .read<AttentionCubit>()
+                              .markModuleAsSeen(AttentionModule.rentals);
                           Navigator.pop(context);
                           context.read<ContainerBloc>().add(TabSelectedEvent(
-                            appBarTitle: 'Rentals'.tr(),
-                            currentTabIndex: 4,
-                            drawerSelection: DrawerSelection.rentalOrders,
-                            currentWidget: RentalOrdersHubScreen(currentUser: currentUser, showAppBar: false),
-                          ));
+                                appBarTitle: 'Rentals'.tr(),
+                                currentTabIndex: 4,
+                                drawerSelection: DrawerSelection.rentalOrders,
+                                currentWidget: RentalOrdersHubScreen(
+                                    currentUser: currentUser,
+                                    showAppBar: false),
+                              ));
                         },
                         isDark: isDark,
                         primaryColor: primaryColorValue,
@@ -674,7 +827,9 @@ class _ContainerState extends State<ContainerScreen> {
                     },
                   ),
 
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
+                  const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Divider()),
                   // SELLING SECTION
                   _drawerSectionLabel('Selling'.tr(), isDark),
                   _drawerTile(
@@ -682,7 +837,8 @@ class _ContainerState extends State<ContainerScreen> {
                     icon: Icons.list_alt_rounded,
                     onTap: () {
                       Navigator.pop(context);
-                      push(context, MyListingsWrapperWidget(currentUser: currentUser));
+                      push(context,
+                          MyListingsWrapperWidget(currentUser: currentUser));
                     },
                     isDark: isDark,
                     primaryColor: primaryColorValue,
@@ -690,25 +846,13 @@ class _ContainerState extends State<ContainerScreen> {
                   _drawerTile(
                     title: 'Post Event'.tr(),
                     icon: Icons.event_rounded,
-                    trailing: (currentUser.isAdmin || currentUser.hasBookingServices)
-                        ? _tierBadge('PRO', Colors.blue)
-                        : _lockIcon(),
+                    trailing:
+                        (currentUser.isAdmin || currentUser.hasBookingServices)
+                            ? _tierBadge('PRO', Colors.blue)
+                            : _lockIcon(),
                     onTap: () async {
                       Navigator.pop(context);
-                      if (currentUser.isAdmin || currentUser.hasBookingServices) {
-                        final bool? created = await push(
-                          context,
-                          CreateEventScreen(currentUser: currentUser),
-                        );
-                        if (created == true) {
-                          homeKey.currentState?.refreshFeed();
-                          if (mounted) {
-                            showSnackBar(context, 'Event posted successfully.'.tr());
-                          }
-                        }
-                      } else {
-                        _showUpgradeDialog(context, 'Post Event', 'Professional');
-                      }
+                      await _openCreateEventScreen(currentUser);
                     },
                     isDark: isDark,
                     primaryColor: primaryColorValue,
@@ -725,34 +869,54 @@ class _ContainerState extends State<ContainerScreen> {
                   ),
                   BlocBuilder<AttentionCubit, AttentionState>(
                     builder: (context, state) {
-                      final badgeCount = state.attentionState?.getCountForModule(AttentionModule.myBookings) ?? 0;
+                      final badgeCount = state.attentionState
+                              ?.getCountForModule(AttentionModule.myBookings) ??
+                          0;
                       return _drawerTile(
                         title: 'My Bookings'.tr(),
                         icon: Icons.calendar_today_rounded,
                         trailing: badgeCount > 0
                             ? Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(color: Color(cfg.colorPrimary), borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                    color: Color(cfg.colorPrimary),
+                                    borderRadius: BorderRadius.circular(10)),
                                 child: Text(
-                                  badgeCount > 99 ? '99+' : badgeCount.toString(),
-                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                  badgeCount > 99
+                                      ? '99+'
+                                      : badgeCount.toString(),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               )
                             : null,
                         onTap: () {
-                          context.read<AttentionCubit>().markModuleAsSeen(AttentionModule.myBookings);
+                          context
+                              .read<AttentionCubit>()
+                              .markModuleAsSeen(AttentionModule.myBookings);
                           Navigator.pop(context);
-                          push(context, MyBookingsWrapperWidget(currentUser: currentUser));
+                          push(
+                              context,
+                              MyBookingsWrapperWidget(
+                                  currentUser: currentUser));
                         },
                         isDark: isDark,
                         primaryColor: primaryColorValue,
                       );
                     },
                   ),
-                  if (currentUser.isAdmin || const ['professional', 'premium'].contains(currentUser.subscriptionTier.toLowerCase()))
+                  if (currentUser.isAdmin ||
+                      const ['professional', 'premium']
+                          .contains(currentUser.subscriptionTier.toLowerCase()))
                     BlocBuilder<AttentionCubit, AttentionState>(
                       builder: (context, state) {
-                        final badgeCount = state.attentionState?.getCountForModule(AttentionModule.bookingRequests) ?? 0;
+                        final badgeCount = state.attentionState
+                                ?.getCountForModule(
+                                    AttentionModule.bookingRequests) ??
+                            0;
                         return _drawerTile(
                           title: 'Booking Requests'.tr(),
                           icon: Icons.event_note_rounded,
@@ -762,11 +926,20 @@ class _ContainerState extends State<ContainerScreen> {
                                   children: [
                                     Container(
                                       margin: const EdgeInsets.only(right: 8),
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(color: Color(cfg.colorPrimary), borderRadius: BorderRadius.circular(10)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                          color: Color(cfg.colorPrimary),
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
                                       child: Text(
-                                        badgeCount > 99 ? '99+' : badgeCount.toString(),
-                                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                        badgeCount > 99
+                                            ? '99+'
+                                            : badgeCount.toString(),
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold),
                                       ),
                                     ),
                                     _tierBadge('PRO', Colors.blue),
@@ -774,9 +947,13 @@ class _ContainerState extends State<ContainerScreen> {
                                 )
                               : _tierBadge('PRO', Colors.blue),
                           onTap: () {
-                            context.read<AttentionCubit>().markModuleAsSeen(AttentionModule.bookingRequests);
+                            context.read<AttentionCubit>().markModuleAsSeen(
+                                AttentionModule.bookingRequests);
                             Navigator.pop(context);
-                            push(context, BookingManagementWrapperWidget(currentUser: currentUser));
+                            push(
+                                context,
+                                BookingManagementWrapperWidget(
+                                    currentUser: currentUser));
                           },
                           isDark: isDark,
                           primaryColor: primaryColorValue,
@@ -786,13 +963,16 @@ class _ContainerState extends State<ContainerScreen> {
                   _drawerTile(
                     title: 'Activate Booking'.tr(),
                     icon: Icons.room_service_rounded,
-                    trailing: !currentUser.hasBookingServices ? _lockIcon() : _tierBadge('PRO', Colors.blue),
+                    trailing: !currentUser.hasBookingServices
+                        ? _lockIcon()
+                        : _tierBadge('PRO', Colors.blue),
                     onTap: () {
                       if (currentUser.hasBookingServices) {
                         _navigateToListingServices(context);
                       } else {
                         Navigator.pop(context);
-                        _showUpgradeDialog(context, 'Activate Booking', 'Professional');
+                        _showUpgradeDialog(
+                            context, 'Activate Booking', 'Professional');
                       }
                     },
                     isDark: isDark,
@@ -811,34 +991,44 @@ class _ContainerState extends State<ContainerScreen> {
                   _drawerTile(
                     title: 'Quotes & Invoices'.tr(),
                     icon: Icons.receipt_long_rounded,
-                    trailing: isPremiumUser(currentUser) ? _tierBadge('PREMIUM', Colors.purple) : _lockIcon(),
+                    trailing: isPremiumUser(currentUser)
+                        ? _tierBadge('PREMIUM', Colors.purple)
+                        : _lockIcon(),
                     onTap: () {
                       if (isPremiumUser(currentUser)) {
                         Navigator.pop(context);
-                        push(context, QuoteListScreen(currentUser: currentUser));
+                        push(
+                            context, QuoteListScreen(currentUser: currentUser));
                       } else {
                         Navigator.pop(context);
-                        _showUpgradeDialog(context, 'Quotes & Invoices', 'Premium');
+                        _showUpgradeDialog(
+                            context, 'Quotes & Invoices', 'Premium');
                       }
                     },
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
 
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
+                  const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Divider()),
                   // ANALYTICS SECTION
                   _drawerSectionLabel('Analytics'.tr(), isDark),
                   _drawerTile(
                     title: 'Analytics'.tr(),
                     icon: Icons.bar_chart_rounded,
-                    trailing: !currentUser.hasBookingServices ? _lockIcon() : _tierBadge('PRO', Colors.blue),
+                    trailing: !currentUser.hasBookingServices
+                        ? _lockIcon()
+                        : _tierBadge('PRO', Colors.blue),
                     onTap: () {
                       if (currentUser.hasBookingServices) {
                         Navigator.pop(context);
-                        push(context, AnalyticsScreen(currentUser: currentUser));
+                        push(
+                            context, AnalyticsScreen(currentUser: currentUser));
                       } else {
                         Navigator.pop(context);
-                        _showUpgradeDialog(context, 'Analytics', 'Professional');
+                        _showUpgradeDialog(
+                            context, 'Analytics', 'Professional');
                       }
                     },
                     isDark: isDark,
@@ -847,21 +1037,31 @@ class _ContainerState extends State<ContainerScreen> {
                   _drawerTile(
                     title: 'Advanced Analytics'.tr(),
                     icon: Icons.analytics_rounded,
-                    trailing: (currentUser.isAdmin || ['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase())) ? _tierBadge('PREMIUM', Colors.purple) : _lockIcon(),
+                    trailing: (currentUser.isAdmin ||
+                            ['premium', 'business'].contains(
+                                currentUser.subscriptionTier.toLowerCase()))
+                        ? _tierBadge('PREMIUM', Colors.purple)
+                        : _lockIcon(),
                     onTap: () {
-                      if (currentUser.isAdmin || ['premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase())) {
+                      if (currentUser.isAdmin ||
+                          ['premium', 'business'].contains(
+                              currentUser.subscriptionTier.toLowerCase())) {
                         Navigator.pop(context);
-                        push(context, AdvancedAnalyticsScreen(currentUser: currentUser));
+                        push(context,
+                            AdvancedAnalyticsScreen(currentUser: currentUser));
                       } else {
                         Navigator.pop(context);
-                        _showUpgradeDialog(context, 'Advanced Analytics', 'Premium');
+                        _showUpgradeDialog(
+                            context, 'Advanced Analytics', 'Premium');
                       }
                     },
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
 
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
+                  const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Divider()),
                   // ACCOUNT SECTION
                   _drawerSectionLabel('Account'.tr(), isDark),
                   _drawerTile(
@@ -871,14 +1071,24 @@ class _ContainerState extends State<ContainerScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       context.read<ContainerBloc>().add(TabSelectedEvent(
-                        appBarTitle: 'Profile'.tr(),
-                        currentTabIndex: 3,
-                        drawerSelection: DrawerSelection.profile,
-                        currentWidget: ProfileScreen(
-                          currentUser: currentUser,
-                          showAppBar: false,
-                        ),
-                      ));
+                            appBarTitle: 'Profile'.tr(),
+                            currentTabIndex: 3,
+                            drawerSelection: DrawerSelection.profile,
+                            currentWidget: ProfileScreen(
+                              currentUser: currentUser,
+                              showAppBar: false,
+                            ),
+                          ));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'Help & Tutorials'.tr(),
+                    icon: Icons.menu_book_rounded,
+                    onTap: () {
+                      Navigator.pop(context);
+                      push(context, const TutorialsHubScreen());
                     },
                     isDark: isDark,
                     primaryColor: primaryColorValue,
@@ -886,11 +1096,18 @@ class _ContainerState extends State<ContainerScreen> {
                   _drawerTile(
                     title: 'Activate Chat'.tr(),
                     icon: Icons.chat_rounded,
-                    trailing: !currentUser.hasDirectMessaging ? _lockIcon() : _tierBadge('PREMIUM', Colors.purple),
+                    trailing: !currentUser.hasDirectMessaging
+                        ? _lockIcon()
+                        : _tierBadge('PREMIUM', Colors.purple),
                     onTap: () {
                       Navigator.pop(context);
                       if (currentUser.hasDirectMessaging) {
-                        push(context, ChatSettingsScreen(currentUser: currentUser, listingsRepository: listings_api.listingApiManager));
+                        push(
+                            context,
+                            ChatSettingsScreen(
+                                currentUser: currentUser,
+                                listingsRepository:
+                                    listings_api.listingApiManager));
                       } else {
                         _showUpgradeDialog(context, 'Activate Chat', 'Premium');
                       }
@@ -904,16 +1121,20 @@ class _ContainerState extends State<ContainerScreen> {
                       icon: Icons.card_membership_rounded,
                       onTap: () {
                         Navigator.pop(context);
-                        push(context, ProUpgradeScreen(currentUser: currentUser));
+                        push(context,
+                            ProUpgradeScreen(currentUser: currentUser));
                       },
                       isDark: isDark,
                       primaryColor: primaryColorValue,
                     ),
 
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
+                  const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Divider()),
                   // UPGRADE PLAN CARD
                   if (currentUser.subscriptionTier.toLowerCase() == 'free')
-                    _buildUpgradePlanCard(isDark, primaryColorValue, context, currentUser),
+                    _buildUpgradePlanCard(
+                        isDark, primaryColorValue, context, currentUser),
                 ],
               ),
             ),
@@ -924,7 +1145,9 @@ class _ContainerState extends State<ContainerScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: Text(
                 'Version 1.0.0',
-                style: TextStyle(color: isDark ? Colors.white38 : Colors.black38, fontSize: 10),
+                style: TextStyle(
+                    color: isDark ? Colors.white38 : Colors.black38,
+                    fontSize: 10),
               ),
             ),
           ),
@@ -933,7 +1156,8 @@ class _ContainerState extends State<ContainerScreen> {
     );
   }
 
-  Widget _buildDrawerHeader(ListingsUser user, bool isDark, Color primaryColor) {
+  Widget _buildDrawerHeader(
+      ListingsUser user, bool isDark, Color primaryColor) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
@@ -944,24 +1168,34 @@ class _ContainerState extends State<ContainerScreen> {
           end: Alignment.bottomRight,
           colors: [
             primaryColor,
-            primaryColor.withBlue(primaryColor.blue + 30).withRed(primaryColor.red + 20),
+            primaryColor
+                .withBlue(primaryColor.blue + 30)
+                .withRed(primaryColor.red + 20),
           ],
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+          GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+              push(context, ProfileScreen(currentUser: user));
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border:
+                    Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+              ),
+              child: displayCircleImage(user.profilePictureURL, 64, false),
             ),
-            child: displayCircleImage(user.profilePictureURL, 64, false),
           ),
           const SizedBox(height: 16),
           Text(
             user.fullName(),
-            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -971,21 +1205,28 @@ class _ContainerState extends State<ContainerScreen> {
               Expanded(
                 child: Text(
                   user.email,
-                  style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13),
+                  style: TextStyle(
+                      color: Colors.white.withOpacity(0.8), fontSize: 13),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (user.isAdmin || user.subscriptionTier.toLowerCase() != 'free')
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    user.isAdmin ? 'ADMIN' : user.subscriptionTier.toUpperCase(),
-                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    user.isAdmin
+                        ? 'ADMIN'
+                        : user.subscriptionTier.toUpperCase(),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
             ],
@@ -1035,13 +1276,17 @@ class _ContainerState extends State<ContainerScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         leading: Icon(
           icon,
-          color: isSelected ? primaryColor : (iconColor ?? (isDark ? Colors.white70 : Colors.black54)),
+          color: isSelected
+              ? primaryColor
+              : (iconColor ?? (isDark ? Colors.white70 : Colors.black54)),
           size: 22,
         ),
         title: Text(
           title,
           style: TextStyle(
-            color: isSelected ? primaryColor : (textColor ?? (isDark ? Colors.white : Colors.black87)),
+            color: isSelected
+                ? primaryColor
+                : (textColor ?? (isDark ? Colors.white : Colors.black87)),
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             fontSize: 15,
           ),
@@ -1062,11 +1307,13 @@ class _ContainerState extends State<ContainerScreen> {
       data: Theme.of(context).copyWith(
         unselectedWidgetColor: isDark ? Colors.white : Colors.black54,
         colorScheme: Theme.of(context).colorScheme.copyWith(
-          onSurface: isDark ? Colors.white : Colors.black54,
-        ),
+              onSurface: isDark ? Colors.white : Colors.black54,
+            ),
       ),
       child: ExpansionTile(
-        leading: Icon(icon, color: iconColor ?? (isDark ? Colors.white70 : Colors.black54), size: 22),
+        leading: Icon(icon,
+            color: iconColor ?? (isDark ? Colors.white70 : Colors.black54),
+            size: 22),
         title: Text(
           title,
           style: TextStyle(
@@ -1096,7 +1343,8 @@ class _ContainerState extends State<ContainerScreen> {
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+        style:
+            TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -1105,7 +1353,8 @@ class _ContainerState extends State<ContainerScreen> {
     return const Icon(Icons.lock_outline_rounded, size: 16, color: Colors.grey);
   }
 
-  Widget _buildUpgradePlanCard(bool isDark, Color primaryColor, BuildContext context, ListingsUser currentUser) {
+  Widget _buildUpgradePlanCard(bool isDark, Color primaryColor,
+      BuildContext context, ListingsUser currentUser) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(

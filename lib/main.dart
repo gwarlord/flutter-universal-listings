@@ -315,6 +315,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await _initializeFirebaseApp();
   await _updateBadge(message);
   print('🔔 [BACKGROUND] Handling background message: ${message.messageId}');
+  print('🔔 [BACKGROUND] Message data: ${message.data}');
+  if (message.notification != null) {
+    print('🔔 [BACKGROUND] Message notification: ${message.notification?.title}');
+  }
 }
 
 // Show local notification manually
@@ -404,25 +408,36 @@ Future<String?> _getFcmTokenSafely() async {
   final messaging = FirebaseMessaging.instance;
 
   if (defaultTargetPlatform == TargetPlatform.iOS) {
+    print('🔍 [FCM] Fetching APNs token (Dart)...');
     String? apnsToken = await messaging.getAPNSToken();
     int attempts = 0;
 
     while (apnsToken == null && attempts < 10) {
+      print('🔍 [FCM] APNs token is null, retrying (attempt ${attempts + 1})...');
       await Future.delayed(const Duration(seconds: 1));
       apnsToken = await messaging.getAPNSToken();
       attempts++;
     }
 
     if (apnsToken == null) {
-      print('⚠️ [FCM] APNS token not available yet. Skipping initial FCM token fetch.');
+      print('⚠️ [FCM] CRITICAL: APNS token not available after 10 seconds. FCM will NOT work.');
       return null;
+    } else {
+      print('✅ [FCM] APNS token received (Dart): $apnsToken');
     }
   }
 
   try {
-    return await messaging.getToken();
+    print('🔍 [FCM] Requesting FCM token...');
+    final token = await messaging.getToken();
+    if (token != null) {
+      print('✅ [FCM] FCM Token received: $token');
+    } else {
+      print('⚠️ [FCM] FCM Token is null');
+    }
+    return token;
   } catch (e) {
-    print('⚠️ [FCM] Failed to fetch FCM token at startup: $e');
+    print('⚠️ [FCM] Failed to fetch FCM token: $e');
     return null;
   }
 }
@@ -445,6 +460,38 @@ Future<void> _persistPushTokenIfPossible(String? token) async {
   } catch (e) {
     print('⚠️ [FCM] Failed to persist pushToken: $e');
   }
+}
+
+Future<void> _retryFetchAndPersistFcmToken() async {
+  final messaging = FirebaseMessaging.instance;
+
+  for (int attempt = 1; attempt <= 15; attempt++) {
+    print('🔍 [FCM] Retry attempt $attempt to fetch tokens...');
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final apnsToken = await messaging.getAPNSToken();
+      if (apnsToken == null || apnsToken.isEmpty) {
+        print('🔍 [FCM] APNs token still null at attempt $attempt');
+        await Future.delayed(const Duration(seconds: 2));
+        continue;
+      }
+      print('✅ [FCM] APNs token finally available at attempt $attempt: $apnsToken');
+    }
+
+    try {
+      final token = await messaging.getToken();
+      if (token != null && token.isNotEmpty) {
+        print('✅ [FCM] FCM Token (retry) obtained at attempt $attempt: $token');
+        await _persistPushTokenIfPossible(token);
+        return;
+      }
+    } catch (e) {
+      print('⚠️ [FCM] Retry token fetch failed at attempt $attempt: $e');
+    }
+
+    await Future.delayed(const Duration(seconds: 2));
+  }
+
+  print('⚠️ [FCM] CRITICAL: Retry flow could not obtain token after 30 seconds.');
 }
 
 void _installGlobalCrashLogging() {
@@ -485,12 +532,110 @@ void _installGlobalCrashLogging() {
   };
 }
 
+Future<void> _initializeNotificationsAndMessaging() async {
+  print('🚀 [FCM] Initializing Notifications and Messaging...');
+
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const DarwinInitializationSettings initializationSettingsIOS =
+      DarwinInitializationSettings(
+    requestAlertPermission: true,
+    requestBadgePermission: true,
+    requestSoundPermission: true,
+  );
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+    iOS: initializationSettingsIOS,
+  );
+
+  await flutterLocalNotificationsPlugin.initialize(
+    initializationSettings,
+    onDidReceiveNotificationResponse: (NotificationResponse response) {
+      print('🔔 [LOCAL] Notification tapped: ${response.payload}');
+    },
+  );
+
+  final androidImplementation = flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+  await androidImplementation?.createNotificationChannel(chatChannel);
+  await androidImplementation?.createNotificationChannel(ordersChannel);
+  await androidImplementation?.createNotificationChannel(rentalBookingsChannel);
+  await androidImplementation?.createNotificationChannel(bookingRemindersChannel);
+  await _setStartupStage('local_notifications_ready');
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    print('🔔 [FCM] onMessageOpenedApp triggered');
+    _handleNotificationClick(message);
+  });
+
+  print('🔍 [FCM] Checking for Initial Message...');
+  final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  if (initialMessage != null) {
+    print('🔔 [FCM] Initial Message found: ${initialMessage.messageId}');
+    _handleNotificationClick(initialMessage);
+  } else {
+    print('ℹ️ [FCM] No Initial Message found');
+  }
+
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+    print('🔔 [FOREGROUND] Got a message whilst in the foreground!');
+    print('🔔 [FOREGROUND] Message ID: ${message.messageId}');
+    print('🔔 [FOREGROUND] Data: ${message.data}');
+    await _updateBadge(message);
+    await _showLocalNotification(message);
+  });
+
+  print('🔍 [FCM] Requesting iOS Permissions...');
+  final settings = await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+    provisional: false,
+  );
+  print('🔔 [FCM] iOS authorizationStatus: ${settings.authorizationStatus.name}');
+
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
+  if (defaultTargetPlatform == TargetPlatform.iOS) {
+    final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+    print('🔔 [FCM] APNs token presence in initialization: ${apnsToken != null && apnsToken.isNotEmpty}');
+  }
+
+  FirebaseMessaging.instance.onTokenRefresh.listen((token) {
+    print('🔄 [FCM] Refreshed token: $token');
+    _persistPushTokenIfPossible(token);
+  }, onError: (error) {
+    print('⚠️ [FCM] Token refresh listener error: $error');
+  });
+
+  final fcmToken = await _getFcmTokenSafely();
+  if (fcmToken != null && fcmToken.isNotEmpty) {
+    print('✅ [FCM] Final Token for persistence: $fcmToken');
+    await _persistPushTokenIfPossible(fcmToken);
+  } else {
+    print('⚠️ [FCM] No FCM token available at end of init logic');
+  }
+
+  if ((fcmToken == null || fcmToken.isEmpty) &&
+      defaultTargetPlatform == TargetPlatform.iOS) {
+    print('🔄 [FCM] Starting retry loop for iOS token...');
+    unawaited(_retryFetchAndPersistFcmToken());
+  }
+  await _setStartupStage('fcm_ready');
+}
+
 Future<void> _initializePostLaunchServices() async {
   await _setStartupStage('post_launch_init_start');
 
   final isIosDebug =
       defaultTargetPlatform == TargetPlatform.iOS && kDebugMode;
   if (isIosDebug) {
+    await _initializeNotificationsAndMessaging();
     print('ℹ️ iOS debug lightweight startup enabled: skipping heavy post-launch services.');
     await _setStartupStage('post_launch_init_skipped_ios_debug');
     return;
@@ -543,65 +688,7 @@ Future<void> _initializePostLaunchServices() async {
     print('❌ Error getting initial link: $err');
   }
 
-  const AndroidInitializationSettings initializationSettingsAndroid =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
-  const DarwinInitializationSettings initializationSettingsIOS =
-      DarwinInitializationSettings(
-    requestAlertPermission: true,
-    requestBadgePermission: true,
-    requestSoundPermission: true,
-  );
-  const InitializationSettings initializationSettings = InitializationSettings(
-    android: initializationSettingsAndroid,
-    iOS: initializationSettingsIOS,
-  );
-
-  await flutterLocalNotificationsPlugin.initialize(
-    initializationSettings,
-    onDidReceiveNotificationResponse: (NotificationResponse response) {
-      print('🔔 Notification tapped: ${response.payload}');
-    },
-  );
-
-  final androidImplementation = flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-  await androidImplementation?.createNotificationChannel(chatChannel);
-  await androidImplementation?.createNotificationChannel(ordersChannel);
-  await androidImplementation?.createNotificationChannel(rentalBookingsChannel);
-  await androidImplementation?.createNotificationChannel(bookingRemindersChannel);
-  await _setStartupStage('local_notifications_ready');
-
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationClick);
-
-  final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
-  if (initialMessage != null) {
-    _handleNotificationClick(initialMessage);
-  }
-
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-    print('🔔 [FOREGROUND] Got a message whilst in the foreground!');
-    await _updateBadge(message);
-    await _showLocalNotification(message);
-  });
-
-  await FirebaseMessaging.instance.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
-
-  FirebaseMessaging.instance.onTokenRefresh.listen((token) {
-    print('🔄 [FCM] Refreshed token: $token');
-    _persistPushTokenIfPossible(token);
-  }, onError: (error) {
-    print('⚠️ [FCM] Token refresh listener error: $error');
-  });
-
-  final fcmToken = await _getFcmTokenSafely();
-  print('🔔 [FCM] Token: $fcmToken');
-  await _persistPushTokenIfPossible(fcmToken);
-  await _setStartupStage('fcm_ready');
+  await _initializeNotificationsAndMessaging();
 
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
       overlays: [SystemUiOverlay.bottom, SystemUiOverlay.top]);
@@ -619,18 +706,27 @@ Future<void> _initializePostLaunchServices() async {
 Future<void> _initializeAppCheckEarly() async {
   if (!kIsWeb) {
     try {
+      final forceDebugAppCheck =
+          (dotenv.env['APPCHECK_FORCE_DEBUG_PROVIDER'] ?? '').trim().toLowerCase() == 'true';
+      final isIos = defaultTargetPlatform == TargetPlatform.iOS;
+      // iOS attestation often fails on local/profile builds; use debug provider unless this is a release build.
+      final useDebugProvider =
+          forceDebugAppCheck || kDebugMode || (isIos && !kReleaseMode);
+      print(
+          '🔐 App Check config -> debugMode=$kDebugMode, releaseMode=$kReleaseMode, forceDebug=$forceDebugAppCheck');
+
       await FirebaseAppCheck.instance.activate(
-        androidProvider: kDebugMode
+        androidProvider: useDebugProvider
             ? AndroidProvider.debug
             : AndroidProvider.playIntegrity,
-        appleProvider: kDebugMode
+        appleProvider: useDebugProvider
             ? AppleProvider.debug
-            : AppleProvider.deviceCheck,
+            : AppleProvider.appAttestWithDeviceCheckFallback,
       );
       await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
       final token = await FirebaseAppCheck.instance.getToken(true);
       print('✅ Firebase App Check activated early');
-      if (kDebugMode) {
+      if (useDebugProvider) {
         print('🔐 AppCheck token fetched early (debug): $token');
       } else {
         print('🔐 AppCheck token fetched early');
@@ -642,6 +738,34 @@ Future<void> _initializeAppCheckEarly() async {
     } catch (e) {
       print('⚠️ Firebase App Check early activation error: $e');
       await _setStartupError('FirebaseAppCheck.activate.early', e);
+
+      final errorText = e.toString().toLowerCase();
+      final isIos = defaultTargetPlatform == TargetPlatform.iOS;
+      final isAttestationFailure =
+          errorText.contains('app attestation failed') ||
+          errorText.contains('devicheck') ||
+          errorText.contains('exchangeDeviceCheckToken'.toLowerCase()) ||
+          errorText.contains('permission_denied');
+
+      // Developer fallback: if iOS attestation fails in non-release builds,
+      // retry with debug provider so local testing can continue.
+      if (isIos && !kReleaseMode && isAttestationFailure) {
+        try {
+          print('⚠️ iOS App Check attestation failed; retrying with Apple debug provider for dev build.');
+          await FirebaseAppCheck.instance.activate(
+            androidProvider: AndroidProvider.debug,
+            appleProvider: AppleProvider.debug,
+          );
+          await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
+          final debugToken = await FirebaseAppCheck.instance.getToken(true);
+          print('✅ Firebase App Check fallback to debug provider succeeded.');
+          print('🔐 AppCheck token fetched early (debug fallback): $debugToken');
+          await _setStartupStage('app_check_initialized_debug_fallback');
+        } catch (fallbackError) {
+          print('❌ Firebase App Check debug fallback failed: $fallbackError');
+          await _setStartupError('FirebaseAppCheck.activate.early.debugFallback', fallbackError);
+        }
+      }
     }
     return;
   }

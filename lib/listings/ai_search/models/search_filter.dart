@@ -17,8 +17,19 @@ class LocationFilter extends Equatable {
   });
 
   factory LocationFilter.fromJson(Map<String, dynamic> json) {
+    final placeRaw = json['place'];
+    String? parsedPlace;
+    if (placeRaw is String) {
+      parsedPlace = placeRaw;
+    } else if (placeRaw is Map<String, dynamic>) {
+      parsedPlace =
+          (placeRaw['name'] ?? placeRaw['title'] ?? placeRaw['value'])?.toString();
+    } else if (placeRaw != null) {
+      parsedPlace = placeRaw.toString();
+    }
+
     return LocationFilter(
-      place: json['place'] as String?,
+      place: parsedPlace,
       useUserLocation: json['useUserLocation'] as bool? ?? false,
       radius: (json['radius'] as num?)?.toDouble(),
       latitude: (json['latitude'] as num?)?.toDouble(),
@@ -106,20 +117,59 @@ class SearchFilters extends Equatable {
   });
 
   factory SearchFilters.fromJson(Map<String, dynamic> json) {
+    final categoryRaw = json['category'];
+    String? parsedCategory;
+    List<String>? parsedKeywords =
+        (json['keywords'] as List<dynamic>?)?.map((e) => e.toString()).toList();
+
+    if (categoryRaw is String) {
+      parsedCategory = categoryRaw;
+    } else if (categoryRaw is Map<String, dynamic>) {
+      parsedCategory =
+          (categoryRaw['title'] ?? categoryRaw['name'] ?? categoryRaw['value'])
+              ?.toString();
+      final categoryKeywords = (categoryRaw['keywords'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList();
+      if (categoryKeywords != null && categoryKeywords.isNotEmpty) {
+        parsedKeywords = [...?parsedKeywords, ...categoryKeywords];
+      }
+    }
+
+    final locationRaw = json['location'];
+    LocationFilter parsedLocation;
+    if (locationRaw is String) {
+      parsedLocation = LocationFilter(place: locationRaw);
+    } else if (locationRaw is Map<String, dynamic>) {
+      parsedLocation = LocationFilter.fromJson(locationRaw);
+    } else {
+      parsedLocation = const LocationFilter();
+    }
+
+    final priceRangeRaw = json['priceRange'];
+    PriceRange? parsedPriceRange;
+    if (priceRangeRaw is Map<String, dynamic>) {
+      parsedPriceRange = PriceRange.fromJson(priceRangeRaw);
+    } else {
+      final minRaw = json['priceMin'];
+      final maxRaw = json['priceMax'];
+      final min = (minRaw as num?)?.toDouble();
+      final max = (maxRaw as num?)?.toDouble();
+      if (min != null || max != null) {
+        parsedPriceRange = PriceRange(min: min, max: max);
+      }
+    }
+
     return SearchFilters(
-      category: json['category'] as String?,
-      location: json['location'] != null
-          ? LocationFilter.fromJson(json['location'] as Map<String, dynamic>)
-          : const LocationFilter(),
-      priceRange: json['priceRange'] != null
-          ? PriceRange.fromJson(json['priceRange'] as Map<String, dynamic>)
-          : null,
+      category: parsedCategory,
+      location: parsedLocation,
+      priceRange: parsedPriceRange,
       openNow: json['openNow'] as bool?,
       delivery: json['delivery'] as bool?,
       booking: json['booking'] as bool?,
       verified: json['verified'] as bool?,
       minRating: (json['minRating'] as num?)?.toDouble(),
-      keywords: (json['keywords'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      keywords: parsedKeywords,
     );
   }
 

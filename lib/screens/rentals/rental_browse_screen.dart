@@ -10,6 +10,7 @@ import 'package:caribtap/screens/rentals/rental_item_models.dart';
 import 'package:caribtap/screens/rentals/rental_browse_service.dart';
 import 'package:caribtap/screens/rentals/rental_cart_storage.dart';
 import 'package:caribtap/screens/rentals/rental_checkout_screen.dart';
+import 'package:caribtap/listings/utils/search_utils.dart';
 
 /// Customer-facing rental browsing screen - Browse and select rental items
 class RentalBrowseScreen extends StatefulWidget {
@@ -128,6 +129,15 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
                 hintText: 'Search rentals...'.tr(),
                 hintStyle: TextStyle(color: dark ? Colors.white54 : Colors.black45),
                 prefixIcon: Icon(Icons.search, color: dark ? Colors.white70 : Colors.black54),
+                suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    )
+                  : null,
                 filled: true,
                 fillColor: dark ? Colors.grey.shade900 : Colors.grey.shade100,
                 border: OutlineInputBorder(
@@ -181,22 +191,42 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
                   ? _selectedCategory
                   : 'all';
                 
-                // Filter by search
+                // ✅ Refined Filtering logic using SearchUtils
                 if (_searchQuery.isNotEmpty) {
-                  items = items
-                      .where((item) =>
-                          item.unitName.toLowerCase().contains(_searchQuery.toLowerCase()))
-                      .toList();
+                  items = items.where((item) {
+                    final searchString = '${item.unitName} ${item.description ?? ''} ${item.category}'.toLowerCase();
+                    return SearchUtils.fuzzyMatch(_searchQuery, searchString);
+                  }).toList();
                 }
 
                 // Filter by category
-                    if (effectiveCategory != 'all') {
+                if (effectiveCategory != 'all') {
                   items = items
                       .where((item) => item.category == effectiveCategory)
                       .toList();
                 }
 
                 items.sort((a, b) => a.unitName.compareTo(b.unitName));
+
+                if (items.isEmpty && _searchQuery.isNotEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.search_off, size: 48, color: Colors.grey.shade400),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No results found for "${_searchQuery}"'.tr(),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
 
                 return Column(
                   children: [

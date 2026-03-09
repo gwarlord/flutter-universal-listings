@@ -42,6 +42,12 @@ if (!admin.apps.length) {
     admin.initializeApp();
 }
 const db = admin.firestore();
+const MODEL_FALLBACKS = [
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash-latest",
+    "gemini-1.5-pro-latest",
+];
 const getGenAI = async () => {
     const apiKey = await secrets_1.geminiKeySecret.value();
     if (!apiKey) {
@@ -88,7 +94,6 @@ exports.processSearchQuery = functions
             return;
         }
         const genAI = await getGenAI();
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
         const prompt = `You are searching for businesses in the Caribbean. Interpret this query STRICTLY as a structured JSON object with NO other text.
 
 Query: "${query}"
@@ -97,29 +102,50 @@ Return ONLY this JSON structure (no markdown, no explanation, no text before or 
 {
   "intent": "user's goal (e.g. find, buy, book)",
   "contentType": "listings",
-  "category": {
-    "keywords": ["${query.split(" ").join('", "')}"]
+  "filters": {
+    "category": {
+      "keywords": ["${query.split(" ").join('", "')}"]
+    },
+    "location": {
+      "useUserLocation": true
+    }
   },
-  "location": {
-    "useUserLocation": true
-  },
-  "filters": {},
   "naturalLanguageSummary": "${query}",
   "confidence": 0.7
 }`;
-        const result = await model.generateContent(prompt);
+        let result = null;
+        let lastError = null;
+        for (const modelName of MODEL_FALLBACKS) {
+            try {
+                const model = genAI.getGenerativeModel({ model: modelName }, { apiVersion: "v1" });
+                result = await model.generateContent(prompt);
+                functions.logger.info("AI model selected", { modelName });
+                break;
+            }
+            catch (modelError) {
+                lastError = modelError;
+                const message = modelError?.message || "";
+                functions.logger.warn("AI model attempt failed", {
+                    modelName,
+                    message,
+                });
+                if (!message.includes("404") && !message.includes("not found")) {
+                    throw modelError;
+                }
+            }
+        }
+        if (!result) {
+            throw lastError ?? new Error("No compatible Gemini model available for generateContent.");
+        }
         const responseText = result.response.text();
         let interpretation;
         try {
-            // Try to extract JSON from the response (may be wrapped in markdown or text)
             let jsonText = responseText;
-            // Remove markdown code blocks if present
             const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
             if (jsonMatch) {
                 jsonText = jsonMatch[1];
             }
             else {
-                // Try to find JSON object directly
                 const objectMatch = responseText.match(/\{[\s\S]*\}/);
                 if (objectMatch) {
                     jsonText = objectMatch[0];
@@ -146,15 +172,9 @@ Return ONLY this JSON structure (no markdown, no explanation, no text before or 
             name: error?.name,
             stack: error?.stack,
         });
-        const normalized = message.toLowerCase();
-        if (normalized.includes("authorization") || normalized.includes("authentication")) {
-            res.status(401).json({ error: "Authentication failed." });
-            return;
-        }
-        if (normalized.includes("gemini api key")) {
-            res.status(500).json({ error: "AI service not configured." });
-            return;
-        }
-        res.status(500).json({ error: "An internal error occurred." });
+        res.status(500).json({
+            error: "An internal error occurred.",
+            details: message
+        });
     }
 });

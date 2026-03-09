@@ -54,15 +54,5 @@ export const onDealAdApproved = functions.firestore
           },
         });
       }
-      // Send email if user has email
-      if (user.email) {
-        await admin.firestore().collection('mail').add({
-          to: user.email,
-          message: {
-            subject: title,
-            html: `<p>${body}</p><p><a href="${adUrl}">View Deal in App</a></p>`
-          }
-        });
-      }
     }
   });

@@ -23,7 +23,6 @@
     "two": "Reacties",
     "other": "Reacties"
   },
-  
   "Save": "Opslaan",
   "Cancel": "Annuleren",
   "Close": "Sluiten",
@@ -103,7 +102,6 @@
   "Premium Listing": "Premium vermelding",
   "About": "Over",
   "Where we're located": "Waar we gevestigd zijn",
-  
   "Home": "Home",
   "Explore": "Ontdekken",
   "Listings": "Advertenties",
@@ -190,40 +188,35 @@
   "No Assigned Listings": "Geen toegewezen advertenties",
   "You have not been added as a collaborator to any listings": "Je bent niet als medewerker toegevoegd aan advertenties",
   "x_more": "+{} meer",
-  
-  "Analytics": "Analytics",
-  "Advanced Analytics": "Geavanceerde Analytics",
+  "Analytics": "Analyses",
+  "Advanced Analytics": "Geavanceerde analyses",
   "Account": "Account",
   "Activate Chat": "Chat Activeren",
   "Manage Subscription": "Abonnement Beheren",
   "Log Out": "Uitloggen",
-    "Analytics": "Analyses",
-    "Advanced Analytics": "Geavanceerde analyses",
-    "Professional Feature": "Professionele functie",
-    "Total Views": "Totale weergaven",
-    "Total Favorites": "Totale favorieten",
-    "Avg Rating": "Gem. beoordeling",
-    "Listing Performance": "Prestatie van advertenties",
-    "No listings yet": "Nog geen advertenties",
-    "No ratings": "Geen beoordelingen",
-    "stars_reviews": "{} sterren ({} beoordelingen)",
-    "Last 7 days": "Laatste 7 dagen",
-    "Last 30 days": "Laatste 30 dagen",
-    "Last 90 days": "Laatste 90 dagen",
-    "All Time": "Altijd",
-    "Performance Snapshot": "Prestatieoverzicht",
-    "Engagement Deep Dive": "Diepgaande betrokkenheidsanalyse",
-    "Growth Opportunities": "Groeikansen",
-    "Bookings": "Boekingen",
-    "Avg. Rating": "Gem. beoordeling",
-    "Chat Initiations": "Chatstarts",
-    "Taps / Vouch": "Taps / Aanbevelingen",
-    "vs previous period": "vs vorige periode",
-    "Improve Listing Quality": "Verbeter advertentiekwaliteit",
-    "Become a Top Lister": "Word een topaanbieder",
-    "you_have_listings_to_improve": "Je hebt {} advertenties die verbeterd kunnen worden met meer foto's of een langere beschrijving.",
-    "you_are_bookings_away_for_badge": "Je bent nog {} boekingen verwijderd van de badge \"Door de community aanbevolen\"!",
-  
+  "Professional Feature": "Professionele functie",
+  "Total Views": "Totale weergaven",
+  "Total Favorites": "Totale favorieten",
+  "Avg Rating": "Gem. beoordeling",
+  "Listing Performance": "Prestatie van advertenties",
+  "No listings yet": "Nog geen advertenties",
+  "No ratings": "Geen beoordelingen",
+  "stars_reviews": "{} sterren ({} beoordelingen)",
+  "Last 7 days": "Laatste 7 dagen",
+  "Last 30 days": "Laatste 30 dagen",
+  "Last 90 days": "Laatste 90 dagen",
+  "All Time": "Altijd",
+  "Performance Snapshot": "Prestatieoverzicht",
+  "Engagement Deep Dive": "Diepgaande betrokkenheidsanalyse",
+  "Growth Opportunities": "Groeikansen",
+  "Avg. Rating": "Gem. beoordeling",
+  "Chat Initiations": "Chatstarts",
+  "Taps / Vouch": "Taps / Aanbevelingen",
+  "vs previous period": "vs vorige periode",
+  "Improve Listing Quality": "Verbeter advertentiekwaliteit",
+  "Become a Top Lister": "Word een topaanbieder",
+  "you_have_listings_to_improve": "Je hebt {} advertenties die verbeterd kunnen worden met meer foto's of een langere beschrijving.",
+  "you_are_bookings_away_for_badge": "Je bent nog {} boekingen verwijderd van de badge \"Door de community aanbevolen\"!",
   "Deals & Promotions": "Deals en Promoties",
   "Post your deals, promotions, and ads here!": "Plaats hier je deals, promoties en advertenties!",
   "Upload New Ad": "Nieuwe advertentie uploaden",
@@ -261,7 +254,6 @@
   "Show all": "Toon alles",
   "Show less": "Toon minder",
   "Contact, Hours & Social": "Contact, Openingstijden en Sociaal",
-  
   "Active Orders": "Actieve Bestellingen",
   "Show History": "Toon Geschiedenis",
   "Active Only": "Alleen Actief",
@@ -270,20 +262,17 @@
   "No active orders": "Geen actieve bestellingen",
   "Your waiter": "Uw ober",
   "Your Waiter": "Uw Ober",
-  
   "Popular": "Populair",
   "Spicy": "Pittig",
   "Vegan": "Veganistisch",
   "Vegetarian": "Vegetarisch",
   "Gluten-Free": "Glutenvrij",
-  
   "Ad Approval": "Advertentiegoedkeuring",
   "My Favorites": "Mijn Favorieten",
   "Saved Deals": "Opgeslagen Deals",
   "Account Details": "Accountgegevens",
   "Theme": "Thema",
   "Contact Us": "Neem Contact Op",
-  
   "Filters": "Filters",
   "Clear All": "Alles Wissen",
   "Apply Filters": "Filters Toepassen",
@@ -307,7 +296,6 @@
   "Category": "Categorie",
   "All Categories": "Alle Categorieën",
   "Active filters": "Actieve filters",
-  
   "Sort by": "Sorteren op",
   "Recommended": "Aanbevolen",
   "Most Vouched": "Meest aanbevolen",
@@ -334,7 +322,6 @@
   "Email verified successfully!": "E-mail succesvol geverifieerd!",
   "Verification failed: $e": "Verificatie mislukt: $e",
   "Email Verification": "E-mail verificatie",
-  
   "Country": "Land",
   "Gender": "Geslacht",
   "Age Range": "Leeftijdscategorie",
@@ -350,7 +337,6 @@
   "55-64": "55-64",
   "65+": "65+",
   "Country is required": "Land is verplicht",
-
   "Add Listing": "Advertentie toevoegen",
   "Edit Listing": "Advertentie bewerken",
   "Request Featured": "Uitgelicht aanvragen",
@@ -418,7 +404,6 @@
   "Phone": "Telefoon",
   "Website": "Website",
   "Opening Hours": "Openingstijden",
-  
   "Store": "Winkel",
   "Mini Store": "Mini Winkel",
   "Browse Full Store": "Volledige winkel bekijken",
@@ -524,7 +509,6 @@
   "Menu hidden from customers": "Menu verborgen voor klanten",
   "Maximum 6 menu photos allowed": "Maximaal 6 menufoto's toegestaan",
   "Uploaded {} photo(s)": "{} foto('s) geüpload",
-  
   "Order Details": "Bestellingsdetails",
   "My Orders": "Mijn bestellingen",
   "New Order": "Nieuwe bestelling",
@@ -601,7 +585,6 @@
   "You can only cancel your pending orders": "Je kunt alleen je lopende bestellingen annuleren",
   "Failed to update status": "Status bijwerken mislukt",
   "No listings with tables. Create tables first from Store Settings.": "Geen advertenties met tafels. Maak eerst tafels aan vanuit Winkel instellingen.",
-  
   "Requested": "Aangevraagd",
   "Pending": "In behandeling",
   "Active": "Actief",
@@ -617,7 +600,6 @@
   "Cancelled": "Geannuleerd",
   "Start": "Start",
   "End": "Einde",
-  
   "Table Service": "Tafelservice",
   "Table Mode": "Tafelmodus",
   "Tables & QR Codes": "Tafels en QR-codes",
@@ -634,7 +616,6 @@
   "Started": "Gestart",
   "Activated": "Geactiveerd",
   "Purpose": "Doel",
-  "Payment": "Betaling",
   "Just now": "Zojuist",
   "minutes_ago": "{}m geleden",
   "hours_ago": "{}u geleden",
@@ -648,7 +629,6 @@
   "Cash": "Contant",
   "Card": "Kaart",
   "Digital Payment": "Digitale betaling",
-  
   "Tracking": "Tracking",
   "Order Tracking": "Bestellingstracking",
   "Shipping Tracking": "Verzendingstracking",
@@ -675,17 +655,12 @@
   "In Transit": "Onderweg",
   "Out for Delivery": "Wordt bezorgd",
   "Delivered": "Bezorgd",
-  
   "My Rentals": "Mijn verhuur",
   "Rental Details": "Verhuurdetails",
   "Book Now": "Nu boeken",
-  "Start Date": "Startdatum",
-  "End Date": "Einddatum",
-  "Duration": "Duur",
   "Price per Day": "Prijs per dag",
   "Total Price": "Totale prijs",
   "Rental Period": "Verhuurperiode",
-  
   "My Bookings": "Mijn boekingen",
   "Booking Details": "Boekingsdetails",
   "Booking Information": "Boekingsinformatie",
@@ -719,7 +694,6 @@
   "Date & Time": "Datum en tijd",
   "Party Size": "Groepsgrootte",
   "Special Requests": "Speciale verzoeken",
-  
   "Settings saved successfully": "Instellingen succesvol opgeslagen",
   "Save Changes": "Wijzigingen opslaan",
   "Saving changes...": "Wijzigingen opslaan...",
@@ -734,7 +708,6 @@
   "ACCOUNT SECURITY": "ACCOUNTBEVEILIGING",
   "Password & Security": "Wachtwoord en beveiliging",
   "Privacy Policy": "Privacybeleid",
-  
   "APP LANGUAGE": "APP-TAAL",
   "Language": "Taal",
   "App Language": "App-taal",
@@ -747,7 +720,6 @@
   "Haitian Creole": "Kreyòl Ayisyen",
   "Language updated successfully": "Taal succesvol bijgewerkt",
   "Applies to the app interface. Listings and reviews remain as written.": "Is van toepassing op de app-interface. Advertenties en reviews blijven zoals geschreven.",
-  
   "Customers pick up their order at your location": "Klanten halen hun bestelling op bij jouw locatie",
   "You deliver orders to customer addresses": "Je bezorgt bestellingen op klantenadressen",
   "Customers order for dining in at your location": "Klanten bestellen om ter plaatse te eten",
@@ -761,7 +733,6 @@
   "$_leadTimeHours hours": "$_leadTimeHours uur",
   "Lead Time Help": "Levertijdhulp",
   "For example, 24 hours means customers cannot place orders for same-day fulfillment. They must order at least 24 hours in advance.": "Bijvoorbeeld, 24 uur betekent dat klanten geen bestellingen kunnen plaatsen voor levering op dezelfde dag. Ze moeten minstens 24 uur van tevoren bestellen.",
-  
   "Error saving settings: $e": "Fout bij opslaan instellingen: $e",
   "Something went wrong": "Er is iets misgegaan",
   "Network error": "Netwerkfout",
@@ -822,113 +793,128 @@
   "Invoice link": "Factuurlink",
   "PDF downloaded to": "PDF gedownload naar",
   "Failed to download PDF": "PDF downloaden mislukt",
-  "CaribTap Business": "CaribTap Bedrijf"
-  ,"Item description hint": "bijv. website-ontwerpservice"
-  ,"Quantity hint": "bijv. 1"
-  ,"Unit price hint": "bijv. 120.00"
-  ,"Upload Promotion": "Promotie uploaden"
-  ,"Edit Promotion": "Promotie bewerken"
-  ,"Format Guidance": "Formaatrichtlijnen"
-  ,"Add media": "Media toevoegen"
-  ,"Choose Image from Gallery": "Kies afbeelding uit galerij"
-  ,"Choose Video from Gallery": "Kies video uit galerij"
-  ,"Ad Types": "Advertentietypen"
-  ,"Promotion:": "Promotie:"
-  ,"Advert:": "Advertentie:"
-  ,"Time-limited offers. Requires a specific start and end date (e.g., 20% off for 1 week).": "Tijdgebonden aanbiedingen. Vereist een specifieke start- en einddatum (bijv. 20% korting voor 1 week)."
-  ,"General business awareness. Runs indefinitely without a specific offer period.": "Algemene bedrijfszichtbaarheid. Loopt onbeperkt zonder specifieke aanbiedingsperiode."
-  ,"Promo Period": "Promoperiode"
-  ,"A promo period ensures customers know exactly when your offer begins and ends. It creates urgency and helps them plan their purchase before the deal expires.": "Een promoperiode zorgt dat klanten precies weten wanneer je aanbieding begint en eindigt. Het creëert urgentie en helpt hen hun aankoop te plannen voordat de deal verloopt."
-  ,"About Country Selection": "Over landselectie"
-  ,"This setting controls which countries can see your ad. When you select specific countries, only users from those locations will be able to view your promotion. If you leave it set to \"All Countries\", your ad will be visible to users everywhere.": "Deze instelling bepaalt welke landen je advertentie kunnen zien. Als je specifieke landen kiest, zien alleen gebruikers uit die locaties je promotie. Laat je \"Alle landen\" staan, dan is je advertentie overal zichtbaar."
-  ,"Select Categories": "Selecteer categorieën"
-  ,"Please select a listing for your deal": "Selecteer een advertentie voor je deal"
-  ,"Add Image or Video": "Afbeelding of video toevoegen"
-  ,"High quality media gets more engagement": "Media van hoge kwaliteit levert meer betrokkenheid op"
-  ,"Type": "Type"
-  ,"Promotion": "Promotie"
-  ,"Advert": "Advertentie"
-  ,"Select Listing": "Selecteer advertentie"
-  ,"Choose which listing this deal is for": "Kies voor welke advertentie deze deal is"
-  ,"You need an active listing to post a deal. Please create a listing first.": "Je hebt een actieve advertentie nodig om een deal te plaatsen. Maak eerst een advertentie aan."
-  ,"Select a listing...": "Selecteer een advertentie..."
-  ,"Describe your deal": "Beschrijf je deal"
-  ,"Ex: 20% off all summer items...": "Bijv.: 20% korting op alle zomerartikelen..."
-  ,"Set Promo Period": "Stel promoperiode in"
-  ,"Starts": "Begint"
-  ,"Ends": "Eindigt"
-  ,"Select Date": "Selecteer datum"
-  ,"Targeting Options": "Targetingopties"
-  ,"Choose who can see your ad": "Kies wie je advertentie kan zien"
-  ,"Countries": "Landen"
-  ,"Target Categories": "Doelcategorieën"
-  ,"Select categories": "Selecteer categorieën"
-  ,"x_selected": "{} geselecteerd"
-  ,"Audience Type": "Doelgroeptype"
-  ,"All Users": "Alle gebruikers"
-  ,"Viewed Similar": "Vergelijkbaar bekeken"
-  ,"Favorited": "Gefavoriet"
-  ,"Near Location": "Dichtbij locatie"
-  ,"I accept the": "Ik accepteer de"
-  ,"Continue to Review": "Doorgaan naar beoordeling"
-  ,"users_can_set_max_promo_period": "{}-gebruikers kunnen een maximale promoperiode van {} dagen instellen."
-  ,"Choose Your Plan": "Kies je plan"
-  ,"Unlock Premium Features": "Ontgrendel premiumfuncties"
-  ,"Choose the perfect plan for your business": "Kies het perfecte plan voor je bedrijf"
-  ,"Monthly": "Maandelijks"
-  ,"Yearly (Save 17%)": "Jaarlijks (Bespaar 17%)"
-  ,"MOST POPULAR": "MEEST POPULAIR"
-  ,"Free Forever": "Voor altijd gratis"
-  ,"Current": "Huidig"
-  ,"Current Plan": "Huidig plan"
-  ,"Downgrade": "Downgraden"
-  ,"Subscribe Now": "Nu abonneren"
-  ,"Confirm Downgrade": "Downgrade bevestigen"
-  ,"Are you sure you want to downgrade to the Free plan? You will lose access to premium features.": "Weet je zeker dat je wilt downgraden naar het Gratis-plan? Je verliest toegang tot premiumfuncties."
-  ,"Downgrade feature coming soon!": "Downgradefunctie komt binnenkort!"
-  ,"Failed to refresh subscription": "Abonnement vernieuwen mislukt"
-  ,"Create up to 3 listings": "Maak tot 3 advertenties"
-  ,"Basic listing management": "Basis advertentiebeheer"
-  ,"Standard search visibility": "Standaard zichtbaarheid in zoeken"
-  ,"Community support": "Community-ondersteuning"
-  ,"Booking system with email & reminders": "Boekingssysteem met e-mail en herinneringen"
-  ,"Standard Analytics on listing performance": "Standaard analyses van advertentieprestaties"
-  ,"AI photo enhancements": "AI-fotoverbeteringen"
-  ,"All Professional Services": "Alle professionele diensten"
-  ,"Enable Chat to talk directly with customers": "Schakel chat in om direct met klanten te praten"
-  ,"Enable Quotes & Invoices": "Schakel Offertes en Facturen in"
-  ,"Unlock Advance Analytics": "Ontgrendel geavanceerde analyses"
-  ,"Deal Analytics": "Deal-analyses"
-  ,"No analytics available": "Geen analyses beschikbaar"
-  ,"deal_with_caption": "Deal: {}"
-  ,"Views": "Weergaven"
-  ,"Saves": "Opslagen"
-  ,"Claims": "Claims"
-  ,"Users": "Gebruikers"
-  ,"Redemption Status": "Inwisselstatus"
-  ,"Total Redeemed": "Totaal ingewisseld"
-  ,"Limit": "Limiet"
-  ,"Remaining": "Resterend"
-  ,"Engagement Metrics": "Betrokkenheidsstatistieken"
-  ,"View to Claim Rate": "Weergave-naar-claimratio"
-  ,"of viewers claimed the deal": "van de kijkers claimde de deal"
-  ,"View to Save Rate": "Weergave-naar-opslagratio"
-  ,"of viewers saved the deal": "van de kijkers sloeg de deal op"
-  ,"Save to Claim Rate": "Opslag-naar-claimratio"
-  ,"of savers claimed the deal": "van de opslaanders claimde de deal"
-  ,"Avg Claims per User": "Gem. claims per gebruiker"
-  ,"times each user claimed on average": "keer dat elke gebruiker gemiddeld claimde"
-  ,"Inactive": "Inactief"
-  ,"Sold out": "Uitverkocht"
-  ,"Accepting claims": "Claims worden geaccepteerd"
-  ,"on_free_plan": "Je gebruikt het Gratis plan"
-  ,"pro_premium_plan_limits": "Professional-plan: 10 advertenties/maand\nPremium-plan: 20 advertenties/maand"
-  ,"Deal Details": "Dealgegevens"
-  ,"View Analytics": "Analyses bekijken"
-  ,"Until {}": "Tot {}"
-  ,"Availability": "Beschikbaarheid"
-  ,"redeemed_count": "Ingewisseld: {}/{}"
-  ,"remaining_count": "{} resterend"
-  ,"Promo Code": "Promocode"
-  ,"Claim In-App": "In app claimen"
+  "CaribTap Business": "CaribTap Bedrijf",
+  "Item description hint": "bijv. website-ontwerpservice",
+  "Quantity hint": "bijv. 1",
+  "Unit price hint": "bijv. 120.00",
+  "Upload Promotion": "Promotie uploaden",
+  "Edit Promotion": "Promotie bewerken",
+  "Format Guidance": "Formaatrichtlijnen",
+  "Add media": "Media toevoegen",
+  "Choose Image from Gallery": "Kies afbeelding uit galerij",
+  "Choose Video from Gallery": "Kies video uit galerij",
+  "Ad Types": "Advertentietypen",
+  "Promotion:": "Promotie:",
+  "Advert:": "Advertentie:",
+  "Time-limited offers. Requires a specific start and end date (e.g., 20% off for 1 week).": "Tijdgebonden aanbiedingen. Vereist een specifieke start- en einddatum (bijv. 20% korting voor 1 week).",
+  "General business awareness. Runs indefinitely without a specific offer period.": "Algemene bedrijfszichtbaarheid. Loopt onbeperkt zonder specifieke aanbiedingsperiode.",
+  "Promo Period": "Promoperiode",
+  "A promo period ensures customers know exactly when your offer begins and ends. It creates urgency and helps them plan their purchase before the deal expires.": "Een promoperiode zorgt dat klanten precies weten wanneer je aanbieding begint en eindigt. Het creëert urgentie en helpt hen hun aankoop te plannen voordat de deal verloopt.",
+  "About Country Selection": "Over landselectie",
+  "This setting controls which countries can see your ad. When you select specific countries, only users from those locations will be able to view your promotion. If you leave it set to \"All Countries\", your ad will be visible to users everywhere.": "Deze instelling bepaalt welke landen je advertentie kunnen zien. Als je specifieke landen kiest, zien alleen gebruikers uit die locaties je promotie. Laat je \"Alle landen\" staan, dan is je advertentie overal zichtbaar.",
+  "Select Categories": "Selecteer categorieën",
+  "Please select a listing for your deal": "Selecteer een advertentie voor je deal",
+  "Add Image or Video": "Afbeelding of video toevoegen",
+  "High quality media gets more engagement": "Media van hoge kwaliteit levert meer betrokkenheid op",
+  "Type": "Type",
+  "Promotion": "Promotie",
+  "Advert": "Advertentie",
+  "Select Listing": "Selecteer advertentie",
+  "Choose which listing this deal is for": "Kies voor welke advertentie deze deal is",
+  "You need an active listing to post a deal. Please create a listing first.": "Je hebt een actieve advertentie nodig om een deal te plaatsen. Maak eerst een advertentie aan.",
+  "Select a listing...": "Selecteer een advertentie...",
+  "Describe your deal": "Beschrijf je deal",
+  "Ex: 20% off all summer items...": "Bijv.: 20% korting op alle zomerartikelen...",
+  "Set Promo Period": "Stel promoperiode in",
+  "Starts": "Begint",
+  "Ends": "Eindigt",
+  "Select Date": "Selecteer datum",
+  "Targeting Options": "Targetingopties",
+  "Choose who can see your ad": "Kies wie je advertentie kan zien",
+  "Countries": "Landen",
+  "Target Categories": "Doelcategorieën",
+  "Select categories": "Selecteer categorieën",
+  "x_selected": "{} geselecteerd",
+  "Audience Type": "Doelgroeptype",
+  "All Users": "Alle gebruikers",
+  "Viewed Similar": "Vergelijkbaar bekeken",
+  "Favorited": "Gefavoriet",
+  "Near Location": "Dichtbij locatie",
+  "I accept the": "Ik accepteer de",
+  "Continue to Review": "Doorgaan naar beoordeling",
+  "users_can_set_max_promo_period": "{}-gebruikers kunnen een maximale promoperiode van {} dagen instellen.",
+  "Choose Your Plan": "Kies je plan",
+  "Unlock Premium Features": "Ontgrendel premiumfuncties",
+  "Choose the perfect plan for your business": "Kies het perfecte plan voor je bedrijf",
+  "Monthly": "Maandelijks",
+  "Yearly (Save 17%)": "Jaarlijks (Bespaar 17%)",
+  "MOST POPULAR": "MEEST POPULAIR",
+  "Free Forever": "Voor altijd gratis",
+  "Current": "Huidig",
+  "Current Plan": "Huidig plan",
+  "Downgrade": "Downgraden",
+  "Subscribe Now": "Nu abonneren",
+  "Confirm Downgrade": "Downgrade bevestigen",
+  "Are you sure you want to downgrade to the Free plan? You will lose access to premium features.": "Weet je zeker dat je wilt downgraden naar het Gratis-plan? Je verliest toegang tot premiumfuncties.",
+  "Downgrade feature coming soon!": "Downgradefunctie komt binnenkort!",
+  "Failed to refresh subscription": "Abonnement vernieuwen mislukt",
+  "Create up to 3 listings": "Maak tot 3 advertenties",
+  "Basic listing management": "Basis advertentiebeheer",
+  "Standard search visibility": "Standaard zichtbaarheid in zoeken",
+  "Community support": "Community-ondersteuning",
+  "Booking system with email & reminders": "Boekingssysteem met e-mail en herinneringen",
+  "Standard Analytics on listing performance": "Standaard analyses van advertentieprestaties",
+  "AI photo enhancements": "AI-fotoverbeteringen",
+  "All Professional Services": "Alle professionele diensten",
+  "Enable Chat to talk directly with customers": "Schakel chat in om direct met klanten te praten",
+  "Enable Quotes & Invoices": "Schakel Offertes en Facturen in",
+  "Unlock Advance Analytics": "Ontgrendel geavanceerde analyses",
+  "Deal Analytics": "Deal-analyses",
+  "No analytics available": "Geen analyses beschikbaar",
+  "deal_with_caption": "Deal: {}",
+  "Views": "Weergaven",
+  "Saves": "Opslagen",
+  "Claims": "Claims",
+  "Users": "Gebruikers",
+  "Redemption Status": "Inwisselstatus",
+  "Total Redeemed": "Totaal ingewisseld",
+  "Limit": "Limiet",
+  "Remaining": "Resterend",
+  "Engagement Metrics": "Betrokkenheidsstatistieken",
+  "View to Claim Rate": "Weergave-naar-claimratio",
+  "of viewers claimed the deal": "van de kijkers claimde de deal",
+  "View to Save Rate": "Weergave-naar-opslagratio",
+  "of viewers saved the deal": "van de kijkers sloeg de deal op",
+  "Save to Claim Rate": "Opslag-naar-claimratio",
+  "of savers claimed the deal": "van de opslaanders claimde de deal",
+  "Avg Claims per User": "Gem. claims per gebruiker",
+  "times each user claimed on average": "keer dat elke gebruiker gemiddeld claimde",
+  "Inactive": "Inactief",
+  "Sold out": "Uitverkocht",
+  "Accepting claims": "Claims worden geaccepteerd",
+  "on_free_plan": "Je gebruikt het Gratis plan",
+  "pro_premium_plan_limits": "Professional-plan: 10 advertenties/maand\nPremium-plan: 20 advertenties/maand",
+  "Deal Details": "Dealgegevens",
+  "View Analytics": "Analyses bekijken",
+  "Until {}": "Tot {}",
+  "Availability": "Beschikbaarheid",
+  "redeemed_count": "Ingewisseld: {}/{}",
+  "remaining_count": "{} resterend",
+  "Promo Code": "Promocode",
+  "Claim In-App": "In app claimen",
+  "Help & Tutorials": "Hulp en tutorials",
+  "Search tutorials": "Tutorials zoeken",
+  "No tutorials found": "Geen tutorials gevonden",
+  "What this feature does": "Wat deze functie doet",
+  "Who should use it": "Wie dit moet gebruiken",
+  "Step-by-step instructions": "Stapsgewijze instructies",
+  "Common issues": "Veelvoorkomende problemen",
+  "Getting Started": "Aan de slag",
+  "Buying & Discovering": "Kopen en ontdekken",
+  "Selling on CaribTap": "Verkopen op CaribTap",
+  "Rentals & Bookings": "Verhuur en boekingen",
+  "Business Tools": "Zakelijke tools",
+  "Orders & Payments": "Bestellingen en betalingen",
+  "Advanced Features": "Geavanceerde functies",
+  "Account & Subscriptions": "Account en abonnementen"
 }

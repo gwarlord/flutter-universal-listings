@@ -5,8 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:caribtap/listings/location/location_scope_cubit.dart';
 import 'package:caribtap/listings/location/location_scope_model.dart';
-import 'package:caribtap/listings/ai_search/ui/screens/ai_search_screen.dart';
-import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:caribtap/listings/utils/caribbean_countries.dart';
 
 /// Bottom sheet for selecting location scope mode and settings
@@ -81,8 +79,6 @@ class _LocationScopeSelectorSheetState extends State<LocationScopeSelectorSheet>
                   color: subtextColor,
                 ),
               ),
-              const SizedBox(height: 16),
-              _buildAiSearchEntry(),
               const SizedBox(height: 24),
 
               // Mode selector
@@ -156,66 +152,6 @@ class _LocationScopeSelectorSheetState extends State<LocationScopeSelectorSheet>
           description: 'Show content based on your GPS location',
         ),
       ],
-    );
-  }
-
-  Widget _buildAiSearchEntry() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return InkWell(
-      onTap: _openAiSearch,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark ? Colors.white24 : Theme.of(context).colorScheme.outline.withOpacity(0.3),
-          ),
-          color: isDark
-              ? Colors.white.withOpacity(0.06)
-              : Theme.of(context).colorScheme.primaryContainer.withOpacity(0.15),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.auto_awesome,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Search with AI'.tr(),
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 14,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _openAiSearch() {
-    final userId = context.read<AuthenticationBloc>().user?.userID;
-    if (userId == null || userId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to open AI Search right now'.tr())),
-      );
-      return;
-    }
-
-    Navigator.of(context).pop();
-    Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(
-        builder: (_) => AiSearchScreen(userId: userId),
-      ),
     );
   }
 

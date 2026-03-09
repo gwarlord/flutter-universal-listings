@@ -1,6 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
@@ -42,11 +42,34 @@ class _PaymentDetailsScreenContentState extends State<_PaymentDetailsScreenConte
   bool _isProUser = false;
   bool _isCheckingAccess = true;
   bool _showBankExpanded = false;
+  late final Future<List<_OwnedListingOption>> _ownedListingsFuture;
 
   @override
   void initState() {
     super.initState();
+    _ownedListingsFuture = _loadOwnedListings();
     _checkProAccess();
+  }
+
+  Future<List<_OwnedListingOption>> _loadOwnedListings() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('listings')
+        .where('authorID', isEqualTo: widget.user.userID)
+        .get();
+
+    final listings = snapshot.docs
+        .map(
+          (doc) => _OwnedListingOption(
+            id: doc.id,
+            title: (doc.data()['title'] as String?)?.trim().isNotEmpty == true
+                ? (doc.data()['title'] as String).trim()
+                : 'Untitled Listing'.tr(),
+          ),
+        )
+        .toList();
+
+    listings.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+    return listings;
   }
 
   Future<void> _checkProAccess() async {
@@ -265,7 +288,12 @@ class _PaymentDetailsScreenContentState extends State<_PaymentDetailsScreenConte
                         onChanged: (value) {
                           if (value != null) {
                             context.read<PaymentDetailsCubit>().updateField(
-                                  (p) => p.copyWith(displayMode: value),
+                                  (p) => p.copyWith(
+                                    displayMode: value,
+                                    selectedListingIds: value == PaymentDisplayMode.publicListing
+                                        ? p.selectedListingIds
+                                        : const [],
+                                  ),
                                 );
                           }
                         },
@@ -273,6 +301,17 @@ class _PaymentDetailsScreenContentState extends State<_PaymentDetailsScreenConte
                         contentPadding: EdgeInsets.zero,
                       );
                     }),
+                    if (profile.displayMode == PaymentDisplayMode.publicListing) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Choose which listings should show these payment details.'.tr(),
+                        style: TextStyle(
+                          color: isDark ? Colors.grey[400] : Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildListingSelector(context, profile),
+                    ],
                   ],
                 ),
               ),
@@ -560,7 +599,10 @@ class _PaymentDetailsScreenContentState extends State<_PaymentDetailsScreenConte
                         } else {
                           showSnackBar(
                             context,
-                            'Please fill in all required fields for enabled payment methods'.tr(),
+                            profile.displayMode == PaymentDisplayMode.publicListing &&
+                                    profile.selectedListingIds.isEmpty
+                                ? 'Select at least one listing to show payment details on.'.tr()
+                                : 'Please fill in all required fields for enabled payment methods'.tr(),
                           );
                         }
                       },
@@ -662,6 +704,67 @@ class _PaymentDetailsScreenContentState extends State<_PaymentDetailsScreenConte
     );
   }
 
+  Widget _buildListingSelector(BuildContext context, PaymentDetailsProfile profile) {
+    final isDark = isDarkMode(context);
+
+    return FutureBuilder<List<_OwnedListingOption>>(
+      future: _ownedListingsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Text(
+            'Unable to load your listings right now.'.tr(),
+            style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+          );
+        }
+
+        final listings = snapshot.data ?? const <_OwnedListingOption>[];
+        if (listings.isEmpty) {
+          return Text(
+            'You do not have any listings yet.'.tr(),
+            style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+          );
+        }
+
+        final selectedIds = profile.selectedListingIds.toSet();
+
+        return Column(
+          children: listings.map((listing) {
+            return CheckboxListTile(
+              value: selectedIds.contains(listing.id),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                listing.title,
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+              ),
+              onChanged: (value) {
+                final updatedIds = List<String>.from(profile.selectedListingIds);
+                if (value == true) {
+                  if (!updatedIds.contains(listing.id)) {
+                    updatedIds.add(listing.id);
+                  }
+                } else {
+                  updatedIds.remove(listing.id);
+                }
+
+                context.read<PaymentDetailsCubit>().updateField(
+                      (p) => p.copyWith(selectedListingIds: updatedIds),
+                    );
+              },
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
   void _showAddPaymentAppDialog(BuildContext context, PaymentDetailsProfile profile) {
     final isDark = isDarkMode(context);
     final dialogBgColor = isDark ? Colors.grey[900] : Colors.white;
@@ -747,6 +850,11 @@ class _PaymentDetailsScreenContentState extends State<_PaymentDetailsScreenConte
   bool _validateProfile(PaymentDetailsProfile profile) {
     if (!profile.isEnabled) return true;
 
+    if (profile.displayMode == PaymentDisplayMode.publicListing &&
+        profile.selectedListingIds.isEmpty) {
+      return false;
+    }
+
     if (profile.bankTransfer.enabled) {
       if (profile.bankTransfer.bankName.isEmpty ||
           profile.bankTransfer.accountName.isEmpty ||
@@ -763,4 +871,14 @@ class _PaymentDetailsScreenContentState extends State<_PaymentDetailsScreenConte
 
     return true;
   }
+}
+
+class _OwnedListingOption {
+  final String id;
+  final String title;
+
+  const _OwnedListingOption({
+    required this.id,
+    required this.title,
+  });
 }

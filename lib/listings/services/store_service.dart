@@ -80,16 +80,13 @@ class StoreService {
     }
 
     // Update listing's tier snapshot to reflect current user tier
-    // This ensures the snapshot stays in sync if user upgrades
     final currentTierSnapshot = currentUser.subscriptionTier.toLowerCase();
     try {
       await _firestore.collection('listings').doc(listingId).update({
         'listerTierSnapshot': currentTierSnapshot,
         'updatedAt': Timestamp.now(),
       });
-    } catch (_) {
-      // Silently ignore - non-critical metadata update
-    }
+    } catch (_) {}
 
     // Set timestamps
     final now = Timestamp.now();
@@ -106,18 +103,18 @@ class StoreService {
         .doc(item.id)
         .set(itemData.toJson());
 
-    // Update store updated timestamp (non-critical - may fail due to rules)
+    // ✅ Update search keywords on parent listing
+    await _updateListingSearchKeywords(listingId);
+
+    // Update store updated timestamp
     try {
       await _firestore.collection('listings').doc(listingId).update({
         'storeUpdatedAt': now,
       });
-    } catch (_) {
-      // Silently ignore - non-critical metadata update
-    }
+    } catch (_) {}
   }
 
   /// Delete catalog item
-  /// REQUIRES: current user is Premium tier
   Future<void> deleteCatalogItem({
     required String listingId,
     required String itemId,
@@ -146,18 +143,61 @@ class StoreService {
         .doc(itemId)
         .delete();
 
-    // Update store updated timestamp (non-critical - may fail due to rules)
+    // ✅ Update search keywords on parent listing
+    await _updateListingSearchKeywords(listingId);
+
     try {
       await _firestore.collection('listings').doc(listingId).update({
         'storeUpdatedAt': Timestamp.now(),
       });
-    } catch (_) {
-      // Silently ignore - non-critical metadata update
+    } catch (_) {}
+  }
+
+  /// Re-aggregates all catalog item names and categories into the parent listing's searchKeywords
+  Future<void> _updateListingSearchKeywords(String listingId) async {
+    try {
+      // Fetch catalog items
+      final catalogSnap = await _firestore
+          .collection('listings')
+          .doc(listingId)
+          .collection('catalog_items')
+          .get();
+
+      // Fetch rental items
+      final rentalSnap = await _firestore
+          .collection('listings')
+          .doc(listingId)
+          .collection('rental_catalog')
+          .get();
+
+      final Set<String> keywords = {};
+
+      // Process Catalog Items
+      for (var doc in catalogSnap.docs) {
+        final data = doc.data();
+        if (data['name'] != null) keywords.addAll(data['name'].toString().toLowerCase().split(RegExp(r'\s+')));
+        if (data['category'] != null) keywords.addAll(data['category'].toString().toLowerCase().split(RegExp(r'\s+')));
+      }
+
+      // Process Rental Items
+      for (var doc in rentalSnap.docs) {
+        final data = doc.data();
+        if (data['name'] != null) keywords.addAll(data['name'].toString().toLowerCase().split(RegExp(r'\s+')));
+        if (data['category'] != null) keywords.addAll(data['category'].toString().toLowerCase().split(RegExp(r'\s+')));
+      }
+
+      // Filter out short/irrelevant keywords
+      final finalKeywords = keywords.where((k) => k.length > 2).toList();
+
+      await _firestore.collection('listings').doc(listingId).update({
+        'searchKeywords': finalKeywords,
+      });
+    } catch (e) {
+      print('Error updating store search keywords: $e');
     }
   }
 
   /// Upload catalog media (photo or video)
-  /// Returns the download URL
   Future<String> uploadCatalogMedia({
     required String listingId,
     required String itemId,
@@ -174,12 +214,10 @@ class StoreService {
   }
 
   /// Create order request
-  /// REQUIRES: listing must be from Premium user
   Future<String> createOrderRequest({
     required OrderRequest orderRequest,
     required ListingsUser customer,
   }) async {
-    // Verify listing exists and is Premium
     final listing = await _firestore
         .collection('listings')
         .doc(orderRequest.listingId)
@@ -191,7 +229,6 @@ class StoreService {
 
     final listingData = ListingModel.fromJson(listing.data()!);
     
-    // CRITICAL: Verify lister is Premium
     if (listingData.listerTierSnapshot != 'premium') {
       throw Exception('🔒 This store is not available');
     }
@@ -200,7 +237,6 @@ class StoreService {
       throw Exception('Store is not enabled for this listing');
     }
 
-    // Create order request
     final now = Timestamp.now();
     final orderId = _uuid.v4();
     final orderData = orderRequest.copyWith(
@@ -219,14 +255,12 @@ class StoreService {
   }
 
   /// Update order status
-  /// REQUIRES: current user is the lister (Premium)
   Future<void> updateOrderStatus({
     required String requestId,
     required OrderStatus status,
     required ListingsUser currentUser,
     String? listerNotes,
   }) async {
-    // Get order request
     final orderDoc = await _firestore.collection('order_requests').doc(requestId).get();
     if (!orderDoc.exists) {
       throw Exception('Order not found');
@@ -234,17 +268,14 @@ class StoreService {
 
     final order = OrderRequest.fromJson(orderDoc.data()!);
 
-    // Verify user is the lister
     if (order.listerId != currentUser.userID) {
       throw Exception('You do not have permission to update this order');
     }
 
-    // CRITICAL: Verify Premium tier
     if (!isPremiumUser(currentUser)) {
       throw Exception('🔒 Premium subscription required to manage orders');
     }
 
-    // Update status
     final updateData = <String, dynamic>{
       'status': status.value,
       'updatedAt': Timestamp.now(),
@@ -254,12 +285,10 @@ class StoreService {
     }
     await _firestore.collection('order_requests').doc(requestId).update(updateData);
 
-    // If confirmed, decrement inventory
     if (status == OrderStatus.confirmed) {
       await _decrementInventoryOnConfirm(order);
     }
 
-    // Dine-in orders can be fulfilled directly from requested
     if (status == OrderStatus.fulfilled &&
         order.fulfillment.method == FulfillmentMethod.dineIn &&
         order.status == OrderStatus.requested) {
@@ -267,7 +296,6 @@ class StoreService {
     }
   }
 
-  /// Decrement inventory when order is confirmed
   Future<void> _decrementInventoryOnConfirm(OrderRequest order) async {
     final batch = _firestore.batch();
 
@@ -284,7 +312,6 @@ class StoreService {
       final catalogItem = CatalogItem.fromJson(itemDoc.data()!);
       
       if (catalogItem.trackStock) {
-        // Handle variants
         if (item.variant != null && catalogItem.variants.isNotEmpty) {
           final sku = item.variant!['sku'] as String?;
           if (sku != null) {
@@ -307,7 +334,6 @@ class StoreService {
             });
           }
         } else {
-          // Regular item stock
           final newStock = (catalogItem.stockQty - item.qty).clamp(0, 999999);
           batch.update(itemRef, {
             'stockQty': newStock,
@@ -321,7 +347,6 @@ class StoreService {
     await batch.commit();
   }
 
-  /// Get order requests for a lister (Premium only)
   Stream<List<OrderRequest>> getOrderRequestsForLister({
     required String listerId,
     OrderStatus? statusFilter,
@@ -342,7 +367,6 @@ class StoreService {
     });
   }
 
-  /// Get order requests for a customer
   Stream<List<OrderRequest>> getOrderRequestsForCustomer({
     required String customerId,
   }) {
@@ -358,14 +382,12 @@ class StoreService {
     });
   }
 
-  /// Get single order request
   Future<OrderRequest?> getOrderRequest(String requestId) async {
     final doc = await _firestore.collection('order_requests').doc(requestId).get();
     if (!doc.exists) return null;
     return OrderRequest.fromJson(doc.data()!);
   }
 
-  /// Cancel order (customer can cancel if status is 'requested')
   Future<void> cancelOrder({
     required String requestId,
     required ListingsUser currentUser,
@@ -377,7 +399,6 @@ class StoreService {
 
     final order = OrderRequest.fromJson(orderDoc.data()!);
 
-    // Only customer can cancel, and only if status is requested
     if (order.customerId != currentUser.userID) {
       throw Exception('You do not have permission to cancel this order');
     }
@@ -392,21 +413,16 @@ class StoreService {
     });
   }
 
-  /// Migrate existing listings to set listerTierSnapshot from author's tier
-  /// Call this once when Premium user first accesses their store features
   Future<Map<String, dynamic>> migrateListingTierSnapshots() async {
     try {
       final HttpsCallable callable = _functions.httpsCallable('migrateListingTierSnapshots');
       final result = await callable.call();
       return result.data as Map<String, dynamic>? ?? {};
     } catch (e) {
-      // Silently fail - migration is not critical for functionality
-      // listerTierSnapshot defaults to 'free' which won't break queries
       return {'success': false, 'error': e.toString()};
     }
   }
 
-  /// Update store fulfillment settings
   Future<void> updateListingStoreSettings({
     required String listingId,
     required bool pickupEnabled,
@@ -427,9 +443,6 @@ class StoreService {
     });
   }
 
-  /// Set or update order tracking information
-  /// Verifies user has CaribTap Pro entitlement server-side
-  /// Sends email notification to customer
   Future<Map<String, dynamic>> setOrderTracking({
     required String orderId,
     required String trackingNumber,
@@ -453,7 +466,6 @@ class StoreService {
     }
   }
 
-  /// Resend tracking email to customer
   Future<void> sendTrackingEmail(String orderId) async {
     try {
       final callable = _functions.httpsCallable('sendTrackingEmail');

@@ -34,7 +34,39 @@ class SubscriptionService {
     if (response.notFoundIDs.isNotEmpty) {
       debugPrint('🛒 Not found product IDs: ${response.notFoundIDs}');
     }
+    _logStoreDiagnostics(response);
     return response.productDetails;
+  }
+
+  void _logStoreDiagnostics(ProductDetailsResponse response) {
+    if (!Platform.isIOS) {
+      return;
+    }
+
+    final error = response.error;
+    final code = error?.code ?? '';
+    final foundNone = response.productDetails.isEmpty;
+
+    if (!foundNone && code.isEmpty) {
+      return;
+    }
+
+    debugPrint('🍎 iOS IAP diagnostics:');
+    if (error != null) {
+      debugPrint('🍎 Error code: ${error.code}');
+      debugPrint('🍎 Error message: ${error.message}');
+    }
+    debugPrint('🍎 Bundle ID expected in App Store Connect: com.caribtap.ios');
+
+    if (code == 'storekit_no_response' || foundNone) {
+      debugPrint('🍎 Check 1: Test on a physical iPhone (not simulator).');
+      debugPrint('🍎 Check 2: App Store Connect app uses bundle ID com.caribtap.ios.');
+      debugPrint('🍎 Check 3: Subscription products exist with exact IDs from app code.');
+      debugPrint('🍎 Check 4: Products are in Ready to Submit/Approved state.');
+      debugPrint('🍎 Check 5: Paid Apps agreement, tax, and banking are active.');
+      debugPrint('🍎 Check 6: Device is signed in with a Sandbox tester account.');
+      debugPrint('🍎 Check 7: In-App Purchase capability is enabled for the iOS target.');
+    }
   }
 
   void startListening({required String userId}) {
@@ -58,7 +90,10 @@ class SubscriptionService {
   }
 
   Future<void> purchase(ProductDetails product) async {
-    final purchaseParam = PurchaseParam(productDetails: product);
+    final purchaseParam = PurchaseParam(
+      productDetails: product,
+      applicationUserName: _currentUserId,
+    );
     await _iap.buyNonConsumable(purchaseParam: purchaseParam);
   }
 

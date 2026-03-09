@@ -32,11 +32,21 @@ class AuthFirebaseUtils extends AuthenticationRepository {
   Reference storage = FirebaseStorage.instance.ref();
 
   bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-  bool get _isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  bool get _isAndroid =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   Future<String> _resolvePushToken() async {
     if (_isIOS) {
-      return await firebaseMessaging.getAPNSToken() ?? '';
+      // On iOS we store the FCM token (not APNs token) to keep push token format
+      // consistent across platforms and compatible with FCM send APIs.
+      int attempts = 0;
+      String? apnsToken = await firebaseMessaging.getAPNSToken();
+      while ((apnsToken == null || apnsToken.isEmpty) && attempts < 10) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        apnsToken = await firebaseMessaging.getAPNSToken();
+        attempts++;
+      }
+      return await firebaseMessaging.getToken() ?? '';
     }
     if (_isAndroid) {
       return await firebaseMessaging.getToken() ?? '';
@@ -61,6 +71,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       return null;
     }
   }
+
   @override
   Future<void> setupPushNotification() async {
     await [
@@ -73,6 +84,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       sound: true,
     );
   }
+
   @override
   Future<dynamic> loginWithEmailAndPassword(
       String email, String password) async {
@@ -86,7 +98,8 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       }
       if (currentUser != null && !currentUser.emailVerified) {
         await auth.FirebaseAuth.instance.signOut();
-        return 'Email not verified. Please request a verification code in the app.'.tr();
+        return 'Email not verified. Please request a verification code in the app.'
+            .tr();
       }
       DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await firestore
           .collection(usersCollection)
@@ -98,7 +111,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
         user.active = true;
         user.pushToken = await _resolvePushToken();
         await _updateCurrentUser(user);
-        
+
         // Start entitlement listener for this user
         EntitlementService().startListening(user.userID);
       }
@@ -115,11 +128,13 @@ class AuthFirebaseUtils extends AuthenticationRepository {
         case 'user-disabled':
           return 'This user has been disabled.'.tr();
         case 'too-many-requests':
-          return 'Too many attempts to sign in as this user. Please try again later.'.tr();
+          return 'Too many attempts to sign in as this user. Please try again later.'
+              .tr();
         case 'invalid-credential':
           return 'Invalid email or password.'.tr();
       }
-      return 'Authentication failed. Please check your credentials and try again.'.tr();
+      return 'Authentication failed. Please check your credentials and try again.'
+          .tr();
     } catch (e, s) {
       debugPrint('apiManager.loginWithEmailAndPassword $e $s');
       return 'Login failed, Please try again.'.tr();
@@ -132,8 +147,10 @@ class AuthFirebaseUtils extends AuthenticationRepository {
     // Note: This method is deprecated. Email verification now uses code-based system.
     // Users should use the "Send verification code" button in the Verify Email screen,
     // which calls the Cloud Function sendVerificationCode instead.
-    debugPrint('⚠️ resendEmailVerification called - this is deprecated, use code-based system');
-    return 'Please use the "Send verification code" button to receive a verification code.'.tr();
+    debugPrint(
+        '⚠️ resendEmailVerification called - this is deprecated, use code-based system');
+    return 'Please use the "Send verification code" button to receive a verification code.'
+        .tr();
   }
 
   @override
@@ -183,9 +200,11 @@ class AuthFirebaseUtils extends AuthenticationRepository {
 
       return 'Couldn\'t login with apple.'.tr();
     } on auth.FirebaseAuthException catch (e, s) {
-      debugPrint('loginWithApple FirebaseAuthException: ${e.code} ${e.message} $s');
+      debugPrint(
+          'loginWithApple FirebaseAuthException: ${e.code} ${e.message} $s');
       if (e.code == 'operation-not-allowed') {
-        return 'Apple Sign-In is not enabled in Firebase Authentication for this app.'.tr();
+        return 'Apple Sign-In is not enabled in Firebase Authentication for this app.'
+            .tr();
       }
       if (e.code == 'invalid-credential') {
         return 'Apple Sign-In credentials are invalid. Please try again.'.tr();
@@ -203,13 +222,13 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       final webClientId = (dotenv.env['GOOGLE_WEB_CLIENT_ID'] ?? '').trim();
       debugPrint(
           '🔐 [GoogleSignIn] Starting login. isWeb=$kIsWeb, hasWebClientId=${webClientId.isNotEmpty}');
-      final GoogleSignIn googleSignIn =
-          kIsWeb && webClientId.isNotEmpty
-              ? GoogleSignIn(clientId: webClientId)
-              : GoogleSignIn();
+      final GoogleSignIn googleSignIn = kIsWeb && webClientId.isNotEmpty
+          ? GoogleSignIn(clientId: webClientId)
+          : GoogleSignIn();
 
       if (kIsWeb && webClientId.isEmpty) {
-        debugPrint('⚠️ GOOGLE_WEB_CLIENT_ID is missing; web Google sign-in may fail.');
+        debugPrint(
+            '⚠️ GOOGLE_WEB_CLIENT_ID is missing; web Google sign-in may fail.');
       }
 
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
@@ -218,7 +237,8 @@ class AuthFirebaseUtils extends AuthenticationRepository {
         return 'Google sign in cancelled.'.tr();
       }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final auth.AuthCredential credential = auth.GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -229,18 +249,21 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       debugPrint('loginWithGoogle error: $e $s');
       final errorText = e.toString();
       if (kIsWeb && e.toString().contains('ClientID not set')) {
-        return 'Google Web Client ID is not configured. Please contact support.'.tr();
+        return 'Google Web Client ID is not configured. Please contact support.'
+            .tr();
       }
       if (kIsWeb &&
           (errorText.contains('people.googleapis.com') ||
               errorText.contains('SERVICE_DISABLED'))) {
-        return 'Google login is blocked: People API is disabled in Google Cloud for this project.'.tr();
+        return 'Google login is blocked: People API is disabled in Google Cloud for this project.'
+            .tr();
       }
       if (kIsWeb &&
           (errorText.contains('SignInWithIdp are blocked') ||
               errorText.contains('API_KEY_SERVICE_BLOCKED') ||
               errorText.contains('identitytoolkit'))) {
-        return 'Google login is blocked: your Web API key is restricted from Firebase Auth (Identity Toolkit SignInWithIdp).'.tr();
+        return 'Google login is blocked: your Web API key is restricted from Firebase Auth (Identity Toolkit SignInWithIdp).'
+            .tr();
       }
       return 'Google login failed, Please try again.'.tr();
     }
@@ -257,7 +280,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
     try {
       debugPrint(
           '[AuthFirebase] Starting phone verification for: $phoneNumber');
-      
+
       await auth.FirebaseAuth.instance.verifyPhoneNumber(
         timeout: const Duration(seconds: 30),
         phoneNumber: phoneNumber,
@@ -346,7 +369,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           lastName: (lastName?.trim().isNotEmpty ?? false)
               ? lastName!.trim()
               : 'User',
-            pushToken: await _resolvePushToken(),
+          pushToken: await _resolvePushToken(),
           phoneNumber: phoneNumber,
           active: true,
           lastOnlineTimestamp: Timestamp.now(),
@@ -380,7 +403,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           .createUserWithEmailAndPassword(
               email: emailAddress, password: password);
       debugPrint('✅ Firebase Auth user created: ${result.user?.uid}');
-      
+
       String profilePicUrl = '';
       if (image != null) {
         updateProgress('Uploading image, Please wait...'.tr());
@@ -389,9 +412,9 @@ class AuthFirebaseUtils extends AuthenticationRepository {
             await _uploadUserImageToServer(image, result.user?.uid ?? '');
         debugPrint('✅ Image uploaded: $profilePicUrl');
       }
-      
+
       debugPrint('👤 Creating user object...');
-      
+
       // Ensure user is fully authenticated before proceeding
       await Future.delayed(const Duration(milliseconds: 500));
       final currentUser = auth.FirebaseAuth.instance.currentUser;
@@ -400,11 +423,11 @@ class AuthFirebaseUtils extends AuthenticationRepository {
         return 'Authentication failed. Please try again.'.tr();
       }
       debugPrint('✅ User authenticated: ${currentUser.uid}');
-      
+
       // Get auth token to check if it\'s valid
       String? idToken = await currentUser.getIdToken();
       debugPrint('✅ Auth token obtained: ${idToken?.substring(0, 20)}...');
-      
+
       ListingsUser user = ListingsUser(
           active: true,
           lastOnlineTimestamp: Timestamp.now(),
@@ -413,12 +436,12 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           firstName: firstName,
           userID: result.user?.uid ?? '',
           lastName: lastName,
-            countryCode: countryCode,
-            gender: gender,
-            ageRange: ageRange,
+          countryCode: countryCode,
+          gender: gender,
+          ageRange: ageRange,
           pushToken: await _resolvePushToken(),
           profilePictureURL: profilePicUrl);
-      
+
       debugPrint('💾 Saving user to Firestore...');
       debugPrint('User ID: ${user.userID}, Email: ${user.email}');
       String? errorMessage = await _createNewUser(user);
@@ -427,7 +450,8 @@ class AuthFirebaseUtils extends AuthenticationRepository {
         try {
           final currentUser = auth.FirebaseAuth.instance.currentUser;
           if (currentUser != null && !currentUser.emailVerified) {
-            debugPrint('📧 Sending verification email to ${currentUser.email}...');
+            debugPrint(
+                '📧 Sending verification email to ${currentUser.email}...');
             await currentUser.sendEmailVerification();
             debugPrint('✅ Verification email sent successfully');
           }
@@ -436,7 +460,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           // Don't fail signup just because email couldn't be sent
           // User can request verification from login screen
         }
-        
+
         // Note: Email verification now uses code-based system via Cloud Function
         // Keep user signed in so they can call Cloud Functions
         // They will be signed out if they try to access the app without verifying
@@ -454,20 +478,24 @@ class AuthFirebaseUtils extends AuthenticationRepository {
         case 'email-already-in-use':
           // Check if the existing account is unverified
           try {
-            debugPrint('⚠️ Email already registered. Checking verification status...');
+            debugPrint(
+                '⚠️ Email already registered. Checking verification status...');
             auth.UserCredential loginResult = await auth.FirebaseAuth.instance
-                .signInWithEmailAndPassword(email: emailAddress, password: password);
-            
+                .signInWithEmailAndPassword(
+                    email: emailAddress, password: password);
+
             if (loginResult.user != null && !loginResult.user!.emailVerified) {
               await auth.FirebaseAuth.instance.signOut();
-              return 'This email is registered but not verified. Please resend verification from login.'.tr();
+              return 'This email is registered but not verified. Please resend verification from login.'
+                  .tr();
             } else {
               await auth.FirebaseAuth.instance.signOut();
               return 'Email already in use, Please pick another email!'.tr();
             }
           } catch (e) {
             debugPrint('❌ Failed to check existing account: $e');
-            return 'Email already in use. If you forgot your password, use the reset option.'.tr();
+            return 'Email already in use. If you forgot your password, use the reset option.'
+                .tr();
           }
         case 'invalid-email':
           message = 'Enter valid e-mail'.tr();
@@ -509,7 +537,8 @@ class AuthFirebaseUtils extends AuthenticationRepository {
             smsCode: smsCode!, verificationId: verificationId!);
         break;
       case AuthProviders.facebook:
-        credential = auth.FacebookAuthProvider.credential(accessToken!.tokenString);
+        credential =
+            auth.FacebookAuthProvider.credential(accessToken!.tokenString);
         break;
       case AuthProviders.apple:
         credential = auth.OAuthProvider('apple.com').credential(
@@ -659,7 +688,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           lastOnlineTimestamp: Timestamp.now(),
           lastName: lastName,
           active: true,
-            pushToken: await _resolvePushToken(),
+          pushToken: await _resolvePushToken(),
           phoneNumber: '',
           settings: UserSettings());
       String? errorMessage = await _createNewUser(user);
@@ -692,7 +721,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           lastOnlineTimestamp: Timestamp.now(),
           lastName: appleIdCredential.fullName?.familyName ?? '',
           active: true,
-            pushToken: await _resolvePushToken(),
+          pushToken: await _resolvePushToken(),
           phoneNumber: '',
           settings: UserSettings());
       String? errorMessage = await _createNewUser(user);
@@ -725,7 +754,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           lastOnlineTimestamp: Timestamp.now(),
           lastName: googleUser.displayName?.split(' ').skip(1).join(' ') ?? '',
           active: true,
-            pushToken: await _resolvePushToken(),
+          pushToken: await _resolvePushToken(),
           phoneNumber: '',
           settings: UserSettings());
       String? errorMessage = await _createNewUser(user);
@@ -741,7 +770,8 @@ class AuthFirebaseUtils extends AuthenticationRepository {
   /// returns an error message on failure or null on success
   Future<String?> _createNewUser(ListingsUser user) async {
     try {
-      debugPrint('📝 _createNewUser: Attempting to save user ${user.userID} to Firestore...');
+      debugPrint(
+          '📝 _createNewUser: Attempting to save user ${user.userID} to Firestore...');
       debugPrint('📝 User data to save: ${user.toJson()}');
       await firestore
           .collection(usersCollection)
@@ -750,9 +780,10 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       debugPrint('✅ _createNewUser: User saved successfully to Firestore');
       return null;
     } on FirebaseException catch (e, s) {
-      debugPrint('❌ _createNewUser FIREBASE ERROR: Code=${e.code}, Message=${e.message}');
+      debugPrint(
+          '❌ _createNewUser FIREBASE ERROR: Code=${e.code}, Message=${e.message}');
       debugPrint('Stack trace: $s');
-      
+
       // Handle specific Firebase errors
       if (e.code == 'permission-denied') {
         return 'Permission denied. App Check or authentication issue.'.tr();
@@ -768,7 +799,8 @@ class AuthFirebaseUtils extends AuthenticationRepository {
   }
 
   _updateEmail(String newEmail) async =>
-      await auth.FirebaseAuth.instance.currentUser?.verifyBeforeUpdateEmail(newEmail);
+      await auth.FirebaseAuth.instance.currentUser
+          ?.verifyBeforeUpdateEmail(newEmail);
 
   _deleteUser() async {
     try {
@@ -796,5 +828,4 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       return 'An unexpected error occurred during email verification.';
     }
   }
-
 }

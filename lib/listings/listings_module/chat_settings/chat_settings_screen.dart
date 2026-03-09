@@ -6,6 +6,7 @@ import 'package:caribtap/listings/listings_module/api/listings_repository.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/utils/opening_hours_editor.dart';
 
 class ChatSettingsScreen extends StatefulWidget {
   final ListingsUser currentUser;
@@ -69,6 +70,11 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
       await widget.listingsRepository.postListing(
         newListing: updatedListing,
       );
+      setState(() {
+        _myListings = _myListings
+            .map((item) => item.id == listing.id ? updatedListing : item)
+            .toList();
+      });
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -93,6 +99,49 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
         showAlertDialog(context, 'Error'.tr(), 'Failed to update chat settings: $e');
       }
     }
+  }
+
+  Future<void> _editChatHours(ListingModel listing) async {
+    final result = await OpeningHoursEditorSheet.show(
+      context,
+      initialValue: listing.chatAvailabilityHours,
+    );
+    if (result == null) return;
+
+    final updatedListing =
+        listing.copyWith(chatAvailabilityHours: result.trim());
+
+    try {
+      await widget.listingsRepository.postListing(
+        newListing: updatedListing,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _myListings = _myListings
+            .map((item) => item.id == listing.id ? updatedListing : item)
+            .toList();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Chat hours updated'.tr())),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      showAlertDialog(context, 'Error'.tr(), 'Failed to update chat hours: $e');
+    }
+  }
+
+  String _hoursSummary(String chatAvailabilityHours) {
+    final trimmed = chatAvailabilityHours.trim();
+    if (trimmed.isEmpty) return 'Always available'.tr();
+    final lines = trimmed
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
+    if (lines.isEmpty) return 'Always available'.tr();
+    if (lines.length <= 2) return lines.join('\n');
+    return '${lines[0]}\n${lines[1]}\n...';
   }
 
   @override
@@ -149,7 +198,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: Text(
-                          'Manage chat availability for your listings',
+                          'Manage chat availability and hours for each listing',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
@@ -165,6 +214,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
 
   Widget _buildListingCard(ListingModel listing, bool dark) {
     final isEnabled = _chatEnabledStates[listing.id] ?? listing.chatEnabled;
+    final hoursSummary = _hoursSummary(listing.chatAvailabilityHours);
     
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -220,6 +270,28 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                         : (dark ? Colors.grey.shade400 : Colors.grey),
                       fontWeight: FontWeight.w500,
                     ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    hoursSummary,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () => _editChatHours(listing),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 0),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      alignment: Alignment.centerLeft,
+                    ),
+                    icon: const Icon(Icons.schedule, size: 16),
+                    label: Text('Edit Chat Hours'.tr()),
                   ),
                 ],
               ),
