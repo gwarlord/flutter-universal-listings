@@ -957,66 +957,27 @@ class TutorialContentService {
     ];
 
     final overrides = _localizedTitleSummary(languageCode);
-    final isSpanish = languageCode == 'es';
 
-    if (overrides.isEmpty && !isSpanish) {
+    if (overrides.isEmpty) {
       return articles;
     }
 
     return articles.map((article) {
       final override = overrides[article.id];
-      final spanishFallback =
-          isSpanish ? _spanishBodyFallback(article, override) : null;
-
-      if (override == null && spanishFallback == null) {
+      if (override == null) {
         return article;
       }
 
       return article.copyWith(
         title: override?.title ?? article.title,
         summary: override?.summary ?? article.summary,
-        whatThisDoes: override?.whatThisDoes ??
-            spanishFallback?.whatThisDoes ??
-            article.whatThisDoes,
-        whoShouldUseIt: override?.whoShouldUseIt ??
-            spanishFallback?.whoShouldUseIt ??
-            article.whoShouldUseIt,
-        steps: override?.steps ?? spanishFallback?.steps ?? article.steps,
-        tips: override?.tips ?? spanishFallback?.tips ?? article.tips,
-        commonIssues: override?.commonIssues ??
-            spanishFallback?.commonIssues ??
-            article.commonIssues,
+        whatThisDoes: override?.whatThisDoes ?? article.whatThisDoes,
+        whoShouldUseIt: override?.whoShouldUseIt ?? article.whoShouldUseIt,
+        steps: override?.steps ?? article.steps,
+        tips: override?.tips ?? article.tips,
+        commonIssues: override?.commonIssues ?? article.commonIssues,
       );
     }).toList();
-  }
-
-  static _LocalizedArticleOverride _spanishBodyFallback(
-    TutorialArticle article,
-    _LocalizedArticleOverride? override,
-  ) {
-    final localizedTitle = override?.title ?? article.title;
-
-    return _LocalizedArticleOverride(
-      title: localizedTitle,
-      summary: override?.summary ?? article.summary,
-      whatThisDoes:
-          'Esta guia explica como usar "$localizedTitle" dentro de CaribTap para lograr mejores resultados.',
-      whoShouldUseIt:
-          'Es ideal para usuarios y negocios que quieren aplicar "$localizedTitle" correctamente.',
-      steps: [
-        'Abre la seccion relacionada con "$localizedTitle" en la app.',
-        'Revisa los detalles y configura la opcion segun tu caso.',
-        'Confirma los cambios y verifica el resultado final.',
-      ],
-      tips: [
-        'Mantiene la informacion clara y actualizada para evitar errores.',
-        'Si tienes dudas, usa el chat para confirmar detalles antes de continuar.',
-      ],
-      commonIssues: [
-        'Datos incompletos o desactualizados pueden afectar el resultado.',
-        'Si no ves cambios, revisa tu conexion y actualiza la app.',
-      ],
-    );
   }
 
   static TutorialArticle _article({
@@ -1046,6 +1007,208 @@ class TutorialContentService {
   static Map<String, _LocalizedArticleOverride> _localizedTitleSummary(
       String languageCode) {
     switch (languageCode) {
+      case 'fr':
+        return {
+          'getting_started_what_is_caribtap': const _LocalizedArticleOverride(
+            title: 'Qu\'est-ce que CaribTap',
+            summary:
+                'Comprenez ce qu\'est CaribTap et comment les utilisateurs l\'emploient pour acheter, vendre et decouvrir des services.',
+          ),
+          'getting_started_search_businesses': const _LocalizedArticleOverride(
+            title: 'Comment rechercher des entreprises',
+            summary:
+                'Utilisez des filtres et des termes de recherche pour trouver rapidement la bonne entreprise.',
+          ),
+          'getting_started_contact_seller': const _LocalizedArticleOverride(
+            title: 'Comment contacter un vendeur',
+            summary:
+                'Envoyez des messages clairs aux vendeurs et obtenez des reponses plus rapides.',
+          ),
+          'getting_started_favourites_deals': const _LocalizedArticleOverride(
+            title: 'Comment enregistrer favoris et offres',
+            summary:
+                'Suivez les annonces et promotions que vous souhaitez revoir plus tard.',
+          ),
+          'getting_started_keywords': const _LocalizedArticleOverride(
+            title: 'Comment utiliser les mots-cles en recherche',
+            summary:
+                'Ameliorez la qualite de recherche avec de meilleurs mots-cles et formulations.',
+          ),
+          'buying_browse_listings': const _LocalizedArticleOverride(
+            title: 'Comment parcourir les annonces',
+            summary:
+                'Parcourez les flux et categories pour decouvrir des options utiles.',
+          ),
+          'buying_deals_mini_stores': const _LocalizedArticleOverride(
+            title: 'Comment trouver offres et mini-boutiques',
+            summary:
+                'Trouvez des promotions et parcourez les mini-boutiques vendeurs au meme endroit.',
+          ),
+          'buying_rentals_work': const _LocalizedArticleOverride(
+            title: 'Comment fonctionnent les locations',
+            summary: 'Comprenez le parcours location de la demande au retour.',
+          ),
+          'buying_bookings_work': const _LocalizedArticleOverride(
+            title: 'Comment fonctionnent les reservations',
+            summary:
+                'Reservez des services avec des dates et attentes claires.',
+          ),
+          'buying_verify_businesses': const _LocalizedArticleOverride(
+            title: 'Comment verifier les entreprises',
+            summary:
+                'Utilisez les signaux de profil et d\'annonce pour des decisions plus sures.',
+          ),
+          'selling_create_listing': const _LocalizedArticleOverride(
+            title: 'Comment creer une annonce',
+            summary:
+                'Publiez une annonce que les clients peuvent trouver et contacter.',
+          ),
+          'selling_strong_listing': const _LocalizedArticleOverride(
+            title: 'Comment rediger une annonce efficace',
+            summary:
+                'Structurez votre annonce pour repondre vite aux questions des acheteurs.',
+          ),
+          'selling_keywords': const _LocalizedArticleOverride(
+            title: 'Comment les mots-cles aident les clients a vous trouver',
+            summary:
+                'Utilisez les mots-cles de facon strategique pour apparaitre dans les recherches pertinentes.',
+          ),
+          'selling_good_photos': const _LocalizedArticleOverride(
+            title: 'Comment televerser de bonnes photos',
+            summary:
+                'Capturez et televersez des photos qui inspirent confiance et ameliorent la conversion.',
+          ),
+          'selling_manage_listings': const _LocalizedArticleOverride(
+            title: 'Comment gerer vos annonces',
+            summary:
+                'Gardez vos annonces a jour pour rester visible et precis.',
+          ),
+          'rentals_how_listings_work': const _LocalizedArticleOverride(
+            title: 'Comment fonctionnent les annonces de location',
+            summary:
+                'Configurez des annonces de location avec conditions et tarifs clairs.',
+          ),
+          'rentals_customer_requests': const _LocalizedArticleOverride(
+            title: 'Comment les clients demandent une location',
+            summary:
+                'Voyez comment les clients soumettent des dates et demandent une approbation.',
+          ),
+          'rentals_approve_requests': const _LocalizedArticleOverride(
+            title: 'Comment approuver les demandes de location',
+            summary:
+                'Approuvez les demandes avec confirmation et conditions claires.',
+          ),
+          'rentals_handover_returns': const _LocalizedArticleOverride(
+            title: 'Comment fonctionnent remise et retours',
+            summary:
+                'Gerez remise et retour sans friction avec des traces claires.',
+          ),
+          'rentals_manage_availability': const _LocalizedArticleOverride(
+            title: 'Gerer la disponibilite',
+            summary:
+                'Controlez la disponibilite pour que les clients demandent seulement les dates ouvertes.',
+          ),
+          'business_ai_photo_enhancement': const _LocalizedArticleOverride(
+            title: 'Amelioration photo par IA',
+            summary:
+                'Ameliorez rapidement les images d\'annonces avec les outils IA integres.',
+          ),
+          'business_quotes_invoices': const _LocalizedArticleOverride(
+            title: 'Devis et factures',
+            summary:
+                'Creez des devis et factures professionnels pour vos clients.',
+          ),
+          'business_multi_location_brands': const _LocalizedArticleOverride(
+            title: 'Marques multi-sites',
+            summary:
+                'Gerez plusieurs succursales sous une seule identite commerciale.',
+          ),
+          'business_assign_team_listings': const _LocalizedArticleOverride(
+            title: 'Assigner des annonces aux membres de l\'equipe',
+            summary:
+                'Utilisez la collaboration pour deleguer les taches d\'annonces au personnel.',
+          ),
+          'business_table_mode': const _LocalizedArticleOverride(
+            title: 'Utiliser le mode table',
+            summary:
+                'Executez les flux de commande a table avec les outils du mode table.',
+          ),
+          'business_catalog_store_management': const _LocalizedArticleOverride(
+            title: 'Gestion du catalogue et de la boutique',
+            summary:
+                'Organisez les produits de mini-boutique et gardez le catalogue exact.',
+          ),
+          'orders_proof_of_payment': const _LocalizedArticleOverride(
+            title: 'Preuve de paiement',
+            summary:
+                'Utilisez la preuve de paiement pour confirmer les paiements envoyes.',
+          ),
+          'orders_manage_orders': const _LocalizedArticleOverride(
+            title: 'Gestion des commandes',
+            summary:
+                'Suivez le statut des commandes de la demande a la finalisation.',
+          ),
+          'orders_payment_verification': const _LocalizedArticleOverride(
+            title: 'Verification des paiements',
+            summary:
+                'Verifiez les paiements entrants en toute securite avant de liberer les articles.',
+          ),
+          'orders_refunds_cancellations': const _LocalizedArticleOverride(
+            title: 'Remboursements et annulations',
+            summary:
+                'Gerez annulations et remboursements avec une communication client claire.',
+          ),
+          'advanced_vouches_taps': const _LocalizedArticleOverride(
+            title: 'Que sont les Vouches / Taps',
+            summary:
+                'Comprenez comment fonctionnent les signaux de confiance et d\'engagement dans CaribTap.',
+          ),
+          'advanced_freshness_ranking': const _LocalizedArticleOverride(
+            title: 'Fraicheur des annonces et classement',
+            summary:
+                'Comprenez comment la fraicheur des annonces influence la visibilite.',
+          ),
+          'advanced_barcode_scanning': const _LocalizedArticleOverride(
+            title: 'Scan de code-barres',
+            summary:
+                'Utilisez les outils code-barres quand disponibles pour des flux plus rapides.',
+          ),
+          'advanced_shipping_tracking': const _LocalizedArticleOverride(
+            title: 'Expedition et suivi',
+            summary:
+                'Partagez clairement la progression d\'expedition avec les clients.',
+          ),
+          'advanced_notifications': const _LocalizedArticleOverride(
+            title: 'Notifications',
+            summary:
+                'Gerez vos notifications pour rester informe sans surcharge.',
+          ),
+          'account_subscription_plans': const _LocalizedArticleOverride(
+            title: 'Plans d\'abonnement expliques',
+            summary:
+                'Comprenez les plans disponibles et ce qu\'ils debloquent.',
+          ),
+          'account_professional_vs_premium': const _LocalizedArticleOverride(
+            title: 'Fonctions Professional vs Premium',
+            summary:
+                'Comparez les outils Professional et Premium avant de passer au niveau superieur.',
+          ),
+          'account_manage_subscription': const _LocalizedArticleOverride(
+            title: 'Gerer votre abonnement',
+            summary:
+                'Mettez a jour cycle de facturation ou plan avec les controles integres.',
+          ),
+          'account_restore_purchases': const _LocalizedArticleOverride(
+            title: 'Restaurer les achats',
+            summary:
+                'Restaurez vos achats apres reinstallation ou changement d\'appareil.',
+          ),
+          'account_settings': const _LocalizedArticleOverride(
+            title: 'Parametres du compte',
+            summary:
+                'Gerez les preferences du compte et les options principales du profil.',
+          ),
+        };
       case 'es':
         return {
           'getting_started_what_is_caribtap': const _LocalizedArticleOverride(
@@ -1246,6 +1409,565 @@ class TutorialContentService {
             title: 'Configuracion de cuenta',
             summary:
                 'Gestiona preferencias de cuenta y opciones principales de perfil.',
+          ),
+        };
+      case 'ht':
+        return {
+          'getting_started_what_is_caribtap': const _LocalizedArticleOverride(
+            title: 'Kisa CaribTap ye',
+            summary:
+                'Konprann kisa CaribTap ye ak kijan moun itilize li pou achte, vann, ak dekouvri sevis.',
+          ),
+          'getting_started_search_businesses': const _LocalizedArticleOverride(
+            title: 'Kijan pou chache biznis',
+            summary:
+                'Itilize filtre ak mo rechech pou jwenn bon biznis la byen vit.',
+          ),
+          'getting_started_contact_seller': const _LocalizedArticleOverride(
+            title: 'Kijan pou kontakte yon vandè',
+            summary: 'Voye mesaj klè bay vandè yo pou jwenn repons pi vit.',
+          ),
+          'getting_started_favourites_deals': const _LocalizedArticleOverride(
+            title: 'Kijan pou sove favori ak promosyon',
+            summary: 'Kenbe lis ak promosyon ou vle tounen gade pita yo.',
+          ),
+          'getting_started_keywords': const _LocalizedArticleOverride(
+            title: 'Kijan pou itilize mo kle nan rechech',
+            summary:
+                'Amelyore kalite rechech la ak pi bon mo kle ak fason ou ekri yo.',
+          ),
+          'buying_browse_listings': const _LocalizedArticleOverride(
+            title: 'Kijan pou navige lis yo',
+            summary: 'Navige feed ak kategori pou dekouvri opsyon ki itil.',
+          ),
+          'buying_deals_mini_stores': const _LocalizedArticleOverride(
+            title: 'Kijan pou jwenn promosyon ak mini boutik',
+            summary:
+                'Jwenn promosyon epi navige mini boutik vandè yo nan menm plas la.',
+          ),
+          'buying_rentals_work': const _LocalizedArticleOverride(
+            title: 'Kijan lokasyon mache',
+            summary: 'Konprann koule lokasyon an depi demann rive jouk retou.',
+          ),
+          'buying_bookings_work': const _LocalizedArticleOverride(
+            title: 'Kijan rezèvasyon mache',
+            summary: 'Rezève sevis ak dat ak atant ki klè.',
+          ),
+          'buying_verify_businesses': const _LocalizedArticleOverride(
+            title: 'Kijan pou verifye biznis',
+            summary:
+                'Sèvi ak siyal pwofil ak lis pou pran desizyon pi an sekirite.',
+          ),
+          'selling_create_listing': const _LocalizedArticleOverride(
+            title: 'Kijan pou kreye yon lis',
+            summary: 'Pibliye yon lis kliyan ka dekouvri epi kontakte.',
+          ),
+          'selling_strong_listing': const _LocalizedArticleOverride(
+            title: 'Kijan pou ekri yon lis solid',
+            summary: 'Estriktire lis ou pou reponn kestyon achtè yo pi vit.',
+          ),
+          'selling_keywords': const _LocalizedArticleOverride(
+            title: 'Kijan mo kle ede kliyan jwenn ou',
+            summary:
+                'Itilize mo kle estratejikman pou parèt nan rechech ki enpòtan.',
+          ),
+          'selling_good_photos': const _LocalizedArticleOverride(
+            title: 'Kijan pou telechaje bon foto',
+            summary:
+                'Pran epi telechaje foto ki bati konfyans epi amelyore konvèsyon.',
+          ),
+          'selling_manage_listings': const _LocalizedArticleOverride(
+            title: 'Kijan pou jere lis ou yo',
+            summary: 'Kenbe lis yo ajou pou rete vizib ak presi.',
+          ),
+          'rentals_how_listings_work': const _LocalizedArticleOverride(
+            title: 'Kijan lis lokasyon yo mache',
+            summary: 'Mete lis lokasyon yo ak kondisyon ak tarif ki klè.',
+          ),
+          'rentals_customer_requests': const _LocalizedArticleOverride(
+            title: 'Kijan kliyan mande lokasyon',
+            summary: 'Gade kijan kliyan voye dat ak demann pou apwobasyon.',
+          ),
+          'rentals_approve_requests': const _LocalizedArticleOverride(
+            title: 'Kijan pou apwouve demann lokasyon',
+            summary: 'Apwouve demann ak konfimasyon ak kondisyon ki klè.',
+          ),
+          'rentals_handover_returns': const _LocalizedArticleOverride(
+            title: 'Kijan remiz ak retou mache',
+            summary: 'Jere ranmasaj ak retou fasil ak dosye ki klè.',
+          ),
+          'rentals_manage_availability': const _LocalizedArticleOverride(
+            title: 'Jere disponiblite',
+            summary:
+                'Kontwole disponiblite pou kliyan yo mande selman dat ki ouvè.',
+          ),
+          'business_ai_photo_enhancement': const _LocalizedArticleOverride(
+            title: 'Amelyorasyon foto ak IA',
+            summary: 'Amelyore imaj lis yo rapid ak zouti IA entegre.',
+          ),
+          'business_quotes_invoices': const _LocalizedArticleOverride(
+            title: 'Devi ak fakti',
+            summary: 'Kreye devi ak fakti pwofesyonel pou travay kliyan yo.',
+          ),
+          'business_multi_location_brands': const _LocalizedArticleOverride(
+            title: 'Mak ak plizyè lokal',
+            summary: 'Jere plizyè branch anba yon sèl idantite biznis.',
+          ),
+          'business_assign_team_listings': const _LocalizedArticleOverride(
+            title: 'Asiyen lis bay manm ekip yo',
+            summary: 'Sèvi ak kolaborasyon pou delege travay lis yo bay staf.',
+          ),
+          'business_table_mode': const _LocalizedArticleOverride(
+            title: 'Itilize mòd tab',
+            summary: 'Kouri workflows lòd bò tab ak zouti mòd tab la.',
+          ),
+          'business_catalog_store_management': const _LocalizedArticleOverride(
+            title: 'Jesyon katalòg ak boutik',
+            summary:
+                'Òganize pwodwi mini boutik yo epi kenbe katalòg ou presi.',
+          ),
+          'orders_proof_of_payment': const _LocalizedArticleOverride(
+            title: 'Prèv peman',
+            summary: 'Sèvi ak prèv peman pou konfime peman kliyan yo voye.',
+          ),
+          'orders_manage_orders': const _LocalizedArticleOverride(
+            title: 'Jesyon lòd',
+            summary: 'Swiv eta lòd depi demann rive jouk fini.',
+          ),
+          'orders_payment_verification': const _LocalizedArticleOverride(
+            title: 'Verifikasyon peman',
+            summary:
+                'Verifye peman k ap antre an sekirite anvan ou lage atik yo.',
+          ),
+          'orders_refunds_cancellations': const _LocalizedArticleOverride(
+            title: 'Ranbousman ak anilasyon',
+            summary:
+                'Jere anilasyon ak ranbousman ak kominikasyon klè ak kliyan.',
+          ),
+          'advanced_vouches_taps': const _LocalizedArticleOverride(
+            title: 'Kisa Vouches / Taps ye',
+            summary:
+                'Aprann kijan siyal konfyans ak angajman yo mache nan CaribTap.',
+          ),
+          'advanced_freshness_ranking': const _LocalizedArticleOverride(
+            title: 'Frechè lis ak classement',
+            summary: 'Konprann kijan frechè lis la afekte vizibilite.',
+          ),
+          'advanced_barcode_scanning': const _LocalizedArticleOverride(
+            title: 'Eskanè kòd bar',
+            summary: 'Sèvi ak zouti kòd bar pou workflows pwodwi pi rapid.',
+          ),
+          'advanced_shipping_tracking': const _LocalizedArticleOverride(
+            title: 'Livansezon ak swivi',
+            summary: 'Pataje pwogrè livrezon an klèman ak kliyan yo.',
+          ),
+          'advanced_notifications': const _LocalizedArticleOverride(
+            title: 'Notifikasyon',
+            summary: 'Jere notifikasyon pou rete enfòme san twòp chaj.',
+          ),
+          'account_subscription_plans': const _LocalizedArticleOverride(
+            title: 'Plan abonnman eksplike',
+            summary: 'Konprann plan abonnman ki disponib ak sa yo deblozay.',
+          ),
+          'account_professional_vs_premium': const _LocalizedArticleOverride(
+            title: 'Fonksyon Professional vs Premium',
+            summary:
+                'Konpare zouti Professional ak Premium anvan ou monte nivo.',
+          ),
+          'account_manage_subscription': const _LocalizedArticleOverride(
+            title: 'Jere abonnman ou',
+            summary: 'Mete ajou sik fakti oswa plan ak kontwòl abonnman yo.',
+          ),
+          'account_restore_purchases': const _LocalizedArticleOverride(
+            title: 'Retabli acha yo',
+            summary:
+                'Retabli acha anvan yo apre reinstalasyon oswa chanjman aparèy.',
+          ),
+          'account_settings': const _LocalizedArticleOverride(
+            title: 'Paramet kont',
+            summary: 'Jere preferans kont ak opsyon prensipal pwofil.',
+          ),
+        };
+      case 'nl':
+        return {
+          'getting_started_what_is_caribtap': const _LocalizedArticleOverride(
+            title: 'Wat is CaribTap',
+            summary:
+                'Begrijp wat CaribTap is en hoe mensen het gebruiken om te kopen, verkopen en diensten te ontdekken.',
+          ),
+          'getting_started_search_businesses': const _LocalizedArticleOverride(
+            title: 'Hoe bedrijven zoeken',
+            summary:
+                'Gebruik filters en zoektermen om snel het juiste bedrijf te vinden.',
+          ),
+          'getting_started_contact_seller': const _LocalizedArticleOverride(
+            title: 'Hoe je een verkoper contacteert',
+            summary:
+                'Stuur duidelijke berichten naar verkopers en krijg sneller antwoord.',
+          ),
+          'getting_started_favourites_deals': const _LocalizedArticleOverride(
+            title: 'Hoe favorieten en deals opslaan',
+            summary:
+                'Houd advertenties en promoties bij die je later opnieuw wilt bekijken.',
+          ),
+          'getting_started_keywords': const _LocalizedArticleOverride(
+            title: 'Hoe trefwoorden gebruiken bij zoeken',
+            summary:
+                'Verbeter de zoekkwaliteit met betere trefwoorden en formuleringen.',
+          ),
+          'buying_browse_listings': const _LocalizedArticleOverride(
+            title: 'Hoe listings bekijken',
+            summary:
+                'Navigeer door feeds en categorieen om nuttige opties te ontdekken.',
+          ),
+          'buying_deals_mini_stores': const _LocalizedArticleOverride(
+            title: 'Hoe deals en mini stores vinden',
+            summary:
+                'Vind promoties en bekijk mini stores van verkopers op een plek.',
+          ),
+          'buying_rentals_work': const _LocalizedArticleOverride(
+            title: 'Hoe verhuur werkt',
+            summary: 'Begrijp de verhuurflow van aanvraag tot teruggave.',
+          ),
+          'buying_bookings_work': const _LocalizedArticleOverride(
+            title: 'Hoe boekingen werken',
+            summary: 'Boek diensten met duidelijke datums en verwachtingen.',
+          ),
+          'buying_verify_businesses': const _LocalizedArticleOverride(
+            title: 'Hoe bedrijven verifieren',
+            summary:
+                'Gebruik profiel- en listing-signalen om veiligere keuzes te maken.',
+          ),
+          'selling_create_listing': const _LocalizedArticleOverride(
+            title: 'Hoe een listing maken',
+            summary:
+                'Publiceer een listing die klanten kunnen vinden en contacteren.',
+          ),
+          'selling_strong_listing': const _LocalizedArticleOverride(
+            title: 'Hoe een sterke listing schrijven',
+            summary:
+                'Structureer je listing om kopersvragen sneller te beantwoorden.',
+          ),
+          'selling_keywords': const _LocalizedArticleOverride(
+            title: 'Hoe trefwoorden klanten helpen je te vinden',
+            summary:
+                'Gebruik trefwoorden strategisch zodat je listing in relevante zoekopdrachten verschijnt.',
+          ),
+          'selling_good_photos': const _LocalizedArticleOverride(
+            title: 'Hoe goede foto\'s uploaden',
+            summary:
+                'Maak en upload foto\'s die vertrouwen opbouwen en conversie verbeteren.',
+          ),
+          'selling_manage_listings': const _LocalizedArticleOverride(
+            title: 'Hoe je listings beheren',
+            summary:
+                'Houd listings actueel om zichtbaar en nauwkeurig te blijven.',
+          ),
+          'rentals_how_listings_work': const _LocalizedArticleOverride(
+            title: 'Hoe verhuurlistings werken',
+            summary:
+                'Stel verhuurlistings in met duidelijke voorwaarden en tarieven.',
+          ),
+          'rentals_customer_requests': const _LocalizedArticleOverride(
+            title: 'Hoe klanten verhuur aanvragen',
+            summary:
+                'Zie hoe klanten datums indienen en goedkeuring aanvragen.',
+          ),
+          'rentals_approve_requests': const _LocalizedArticleOverride(
+            title: 'Hoe verhuuraanvragen goedkeuren',
+            summary:
+                'Keur aanvragen goed met duidelijke bevestiging en voorwaarden.',
+          ),
+          'rentals_handover_returns': const _LocalizedArticleOverride(
+            title: 'Hoe overdracht en retour werken',
+            summary:
+                'Beheer afhalen en terugbrengen soepel met duidelijke registraties.',
+          ),
+          'rentals_manage_availability': const _LocalizedArticleOverride(
+            title: 'Beschikbaarheid beheren',
+            summary:
+                'Beheer beschikbaarheid zodat klanten alleen open datums kunnen aanvragen.',
+          ),
+          'business_ai_photo_enhancement': const _LocalizedArticleOverride(
+            title: 'AI-fotoverbetering',
+            summary:
+                'Verbeter listingbeelden snel met ingebouwde AI-fototools.',
+          ),
+          'business_quotes_invoices': const _LocalizedArticleOverride(
+            title: 'Offertes en facturen',
+            summary:
+                'Maak professionele offertes en facturen voor klantopdrachten.',
+          ),
+          'business_multi_location_brands': const _LocalizedArticleOverride(
+            title: 'Merken met meerdere locaties',
+            summary:
+                'Beheer meerdere vestigingen onder een zakelijke identiteit.',
+          ),
+          'business_assign_team_listings': const _LocalizedArticleOverride(
+            title: 'Listings toewijzen aan teamleden',
+            summary:
+                'Gebruik samenwerkingstools om listingtaken aan medewerkers te delegeren.',
+          ),
+          'business_table_mode': const _LocalizedArticleOverride(
+            title: 'Tafelmodus gebruiken',
+            summary:
+                'Voer tafelbestelprocessen uit met tafelmodushulpmiddelen.',
+          ),
+          'business_catalog_store_management': const _LocalizedArticleOverride(
+            title: 'Catalogus- en winkelbeheer',
+            summary:
+                'Organiseer mini-storeproducten en houd je catalogus nauwkeurig.',
+          ),
+          'orders_proof_of_payment': const _LocalizedArticleOverride(
+            title: 'Betalingsbewijs',
+            summary:
+                'Gebruik betalingsbewijs om ingestuurde klantbetalingen te bevestigen.',
+          ),
+          'orders_manage_orders': const _LocalizedArticleOverride(
+            title: 'Bestellingen beheren',
+            summary: 'Volg bestelstatus van aanvraag tot afronding.',
+          ),
+          'orders_payment_verification': const _LocalizedArticleOverride(
+            title: 'Betalingsverificatie',
+            summary:
+                'Controleer inkomende betalingen veilig voordat je artikelen vrijgeeft.',
+          ),
+          'orders_refunds_cancellations': const _LocalizedArticleOverride(
+            title: 'Terugbetalingen en annuleringen',
+            summary:
+                'Behandel annuleringen en terugbetalingen met duidelijke klantcommunicatie.',
+          ),
+          'advanced_vouches_taps': const _LocalizedArticleOverride(
+            title: 'Wat zijn Vouches / Taps',
+            summary:
+                'Leer hoe vertrouwens- en betrokkenheidssignalen werken binnen CaribTap.',
+          ),
+          'advanced_freshness_ranking': const _LocalizedArticleOverride(
+            title: 'Listingversheid en ranking',
+            summary: 'Begrijp hoe listingversheid zichtbaarheid beinvloedt.',
+          ),
+          'advanced_barcode_scanning': const _LocalizedArticleOverride(
+            title: 'Barcodes scannen',
+            summary:
+                'Gebruik barcodetools waar ondersteund voor snellere productflows.',
+          ),
+          'advanced_shipping_tracking': const _LocalizedArticleOverride(
+            title: 'Verzending en tracking',
+            summary: 'Deel verzendvoortgang duidelijk met klanten.',
+          ),
+          'advanced_notifications': const _LocalizedArticleOverride(
+            title: 'Meldingen',
+            summary:
+                'Beheer meldingen zodat je op de hoogte blijft zonder overload.',
+          ),
+          'account_subscription_plans': const _LocalizedArticleOverride(
+            title: 'Abonnementsplannen uitgelegd',
+            summary:
+                'Begrijp beschikbare abonnementsplannen en wat ze ontgrendelen.',
+          ),
+          'account_professional_vs_premium': const _LocalizedArticleOverride(
+            title: 'Professional vs Premium functies',
+            summary:
+                'Vergelijk Professional- en Premium-tools voordat je upgrade.',
+          ),
+          'account_manage_subscription': const _LocalizedArticleOverride(
+            title: 'Je abonnement beheren',
+            summary:
+                'Werk facturatiecyclus of plan bij met ingebouwde abonnementscontroles.',
+          ),
+          'account_restore_purchases': const _LocalizedArticleOverride(
+            title: 'Aankopen herstellen',
+            summary:
+                'Herstel eerdere aankopen na herinstallatie of apparaatwissel.',
+          ),
+          'account_settings': const _LocalizedArticleOverride(
+            title: 'Accountinstellingen',
+            summary: 'Beheer accountvoorkeuren en kernopties van je profiel.',
+          ),
+        };
+      case 'ar':
+        return {
+          'getting_started_what_is_caribtap': const _LocalizedArticleOverride(
+            title: 'Ma huwa CaribTap',
+            summary:
+                'Irf ma CaribTap wa kayfa yastakhdimuhu alnas lilshira walbay wa iktishaf alkhadamat.',
+          ),
+          'getting_started_search_businesses': const _LocalizedArticleOverride(
+            title: 'Kayfa tabhath an al-aamal',
+            summary:
+                'Istakhdim alfiltrat wa kalimat albahth liijad alamal almunaasib bisur3a.',
+          ),
+          'getting_started_contact_seller': const _LocalizedArticleOverride(
+            title: 'Kayfa tatasil bibaye',
+            summary: 'Arsil rasayil wadha ila albayein wa احصل ala rudud asra.',
+          ),
+          'getting_started_favourites_deals': const _LocalizedArticleOverride(
+            title: 'Kayfa tahfaz almufaddalat wal3urud',
+            summary:
+                'Taba3 alqa2imat wal3urud allati turid muraja3ataha lahiqan.',
+          ),
+          'getting_started_keywords': const _LocalizedArticleOverride(
+            title: 'Kayfa tastakhdim kalimat mifta7iya fi albahth',
+            summary: 'Hassin jawdat albahth bikalimat afdal wa صياغة adaq.',
+          ),
+          'buying_browse_listings': const _LocalizedArticleOverride(
+            title: 'Kayfa tastعرض alqa2imat',
+            summary:
+                'Tanaqqal bayn altadfuqat walfiyat liiktishaf khiyarat mufida.',
+          ),
+          'buying_deals_mini_stores': const _LocalizedArticleOverride(
+            title: 'Kayfa tajid al3urud walmatاجر alsaghira',
+            summary:
+                'Iththur ala tarwijat wa tasaffah matاجر albayein alsaghira fi makan wahid.',
+          ),
+          'buying_rentals_work': const _LocalizedArticleOverride(
+            title: 'Kayfa ta3mal alijarat',
+            summary: 'Ifham masar alijar min altalab hatta alirja3.',
+          ),
+          'buying_bookings_work': const _LocalizedArticleOverride(
+            title: 'Kayfa ta3mal alhujuzat',
+            summary: 'Ihجز khadamat bima3id wa tawakku3at wadha.',
+          ),
+          'buying_verify_businesses': const _LocalizedArticleOverride(
+            title: 'Kayfa tutuqqiq min al-aamal',
+            summary:
+                'Istakhdim isharaat alprofil walqa2ima liqararat akthar amanan.',
+          ),
+          'selling_create_listing': const _LocalizedArticleOverride(
+            title: 'Kayfa tunshi2 qa2ima',
+            summary:
+                'Unshur qa2ima yumkin lilzabayn iktishafuha wa altawasul ma3ak.',
+          ),
+          'selling_strong_listing': const _LocalizedArticleOverride(
+            title: 'Kayfa taktub qa2ima qawiya',
+            summary:
+                'Nazim qa2imatak litashel alijaba 3an as2ilat almushtarin bisur3a.',
+          ),
+          'selling_keywords': const _LocalizedArticleOverride(
+            title: 'Kayfa tusa3id kalimat albahth alzabayn ala ijadak',
+            summary:
+                'Istakhdim kalimat mifta7iya bishakl istratiji liltuhur fi bahthat murtabita.',
+          ),
+          'selling_good_photos': const _LocalizedArticleOverride(
+            title: 'Kayfa turfi3 suwar jayyida',
+            summary: 'Iltakit warfa3 suwar tabni thiqa watu7assin alتحويل.',
+          ),
+          'selling_manage_listings': const _LocalizedArticleOverride(
+            title: 'Kayfa tudir qa2imatak',
+            summary: 'Abqi qa2imatak muhaddatha litabqa zahira wadaqiqa.',
+          ),
+          'rentals_how_listings_work': const _LocalizedArticleOverride(
+            title: 'Kayfa ta3mal qa2imat alijar',
+            summary: 'A3did qa2imat ijar bishurut wa as3ar wadha.',
+          ),
+          'rentals_customer_requests': const _LocalizedArticleOverride(
+            title: 'Kayfa yuqaddim alzabayn talabat ijar',
+            summary:
+                'Ara kayfa yuqaddim alzabayn altawarikh wayatlubun almuwafaqa.',
+          ),
+          'rentals_approve_requests': const _LocalizedArticleOverride(
+            title: 'Kayfa tuwafiq ala talabat alijar',
+            summary: 'Wafiq ala altalabat bita2kid washurut wadha.',
+          ),
+          'rentals_handover_returns': const _LocalizedArticleOverride(
+            title: 'Kayfa ya3mal altaslim walirja3',
+            summary: 'Adir alistilam walirja3 بسلاسة ma3 sijillat wadha.',
+          ),
+          'rentals_manage_availability': const _LocalizedArticleOverride(
+            title: 'Idarat alitaha',
+            summary:
+                'Tahakkam fi alitaha liyatlub alzabayn altawarikh almaftuha faqat.',
+          ),
+          'business_ai_photo_enhancement': const _LocalizedArticleOverride(
+            title: 'Tahsin alsuwar bilthaka alistina3i',
+            summary:
+                'Hassin suwar alqa2imat bisur3a biadawat thaka istina3i mudmajah.',
+          ),
+          'business_quotes_invoices': const _LocalizedArticleOverride(
+            title: 'Al3urud walfawatir',
+            summary: 'Anshi2 3urud wa fawatir mi3haniya lia3mal alzabayn.',
+          ),
+          'business_multi_location_brands': const _LocalizedArticleOverride(
+            title: 'Al3alamat dhat mawqi3at muta3addida',
+            summary: 'Adir 3idda furu3 tahta huwiyya tijariya wahida.',
+          ),
+          'business_assign_team_listings': const _LocalizedArticleOverride(
+            title: 'Isnad alqa2imat li2a3da2 alfariq',
+            summary:
+                'Istakhdim adawat alta3awun lifawdh mahamm alqa2imat lilfariq.',
+          ),
+          'business_table_mode': const _LocalizedArticleOverride(
+            title: 'Istikhdam wad3 altawila',
+            summary: 'Shaghil tadfuqat talab altawila biadawat wad3 altawila.',
+          ),
+          'business_catalog_store_management': const _LocalizedArticleOverride(
+            title: 'Idarat alkataluj walmatjar',
+            summary:
+                'Nazim muntajat almatjar alsaghir wahafiz 3ala diqqat alkataluj.',
+          ),
+          'orders_proof_of_payment': const _LocalizedArticleOverride(
+            title: 'Ithbat aldfa3',
+            summary:
+                'Istakhdim ithbat aldfa3 lita2kid madfou3at alzabayn almarfou3a.',
+          ),
+          'orders_manage_orders': const _LocalizedArticleOverride(
+            title: 'Idarat altalabat',
+            summary: 'Taba3 halat altalab min altaqadim hatta alikmal.',
+          ),
+          'orders_payment_verification': const _LocalizedArticleOverride(
+            title: 'Tahaqquq aldfa3',
+            summary:
+                'Haqiq almadfou3at alwarida bishakl amin qabl taslim al2ashya.',
+          ),
+          'orders_refunds_cancellations': const _LocalizedArticleOverride(
+            title: 'Alistirja3at walilghaa2at',
+            summary: 'Adir alilghaa walistirja3 bitaواصل wadih ma3 alzabayn.',
+          ),
+          'advanced_vouches_taps': const _LocalizedArticleOverride(
+            title: 'Ma hiya Vouches / Taps',
+            summary:
+                'Ta3allam kayfa ta3mal isharaat althiqa waltafa3ul dakhil CaribTap.',
+          ),
+          'advanced_freshness_ranking': const _LocalizedArticleOverride(
+            title: 'Hadathat alqa2ima waltertib',
+            summary: 'Ifham kayfa tuaththir hadathat alqa2ima fi alzuhur.',
+          ),
+          'advanced_barcode_scanning': const _LocalizedArticleOverride(
+            title: 'Mas7 barcode',
+            summary:
+                'Istakhdim adawat albarcode inda altad3im litadfuqat muntaj asra.',
+          ),
+          'advanced_shipping_tracking': const _LocalizedArticleOverride(
+            title: 'Alshahn walmutaba3a',
+            summary: 'Sharik taqaddum alshahn b wuduuh ma3 alzabayn.',
+          ),
+          'advanced_notifications': const _LocalizedArticleOverride(
+            title: 'Alish3arat',
+            summary: 'Adir alish3arat litabqa mutali3an bidun izdi7am.',
+          ),
+          'account_subscription_plans': const _LocalizedArticleOverride(
+            title: 'Sharh khutut alishtirak',
+            summary:
+                'Ifham khutut alishtirak almutaha wama alladhi tufattihuh.',
+          ),
+          'account_professional_vs_premium': const _LocalizedArticleOverride(
+            title: 'Muzaya Professional muqabil Premium',
+            summary:
+                'Qarin bayn adawat Professional wa Premium qabl altarqiya.',
+          ),
+          'account_manage_subscription': const _LocalizedArticleOverride(
+            title: 'Idarat ishtirakak',
+            summary:
+                'Haddith dawrat alfawatir aw alkhatta biadawat alishtirak almadmujah.',
+          ),
+          'account_restore_purchases': const _LocalizedArticleOverride(
+            title: 'Istirja3 alshira2at',
+            summary:
+                'A3id istirja3 alshira2at alsabiqa ba3d i3adat altathbit aw taghyir aljihaz.',
+          ),
+          'account_settings': const _LocalizedArticleOverride(
+            title: 'I3dadat alhisab',
+            summary: 'Adir tafdilat alhisab wa khiyarat alprofil alasasiyya.',
           ),
         };
       default:

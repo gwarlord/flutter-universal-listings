@@ -171,7 +171,7 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
                           children: [
                             const Text('Sponsored', style: TextStyle(color: Colors.grey, fontSize: 12)),
                             const SizedBox(height: 10),
-                            AdsUtils.adsContainer(),
+                            AdsUtils.dealsFeedAd(),
                           ],
                         ),
                       ),

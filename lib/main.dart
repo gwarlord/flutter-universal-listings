@@ -695,7 +695,15 @@ Future<void> _initializePostLaunchServices() async {
 
   EasyLocalization.logger.enableBuildModes = [];
   if (!kIsWeb) {
+    await MobileAds.instance.updateRequestConfiguration(
+      RequestConfiguration(
+        testDeviceIds: <String>[
+          // Add Android/iOS test device IDs here after first run.
+        ],
+      ),
+    );
     await MobileAds.instance.initialize();
+    debugPrint('Mobile Ads initialized.');
     await _setStartupStage('mobile_ads_initialized');
   } else {
     await _setStartupStage('mobile_ads_skipped_web');

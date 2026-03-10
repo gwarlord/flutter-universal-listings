@@ -35,6 +35,7 @@ import 'package:caribtap/listings/ui/pro_docs/public_invoice_view_screen.dart';
 import 'package:caribtap/listings/ui/pro_docs/public_quote_view_screen.dart';
 import 'package:caribtap/listings/ui/pro_docs/quote_list_screen.dart';
 import 'package:caribtap/listings/ui/help/tutorials_hub_screen.dart';
+import 'package:caribtap/listings/ui/legal/legal_center_screen.dart';
 import 'package:caribtap/screens/brand/my_brands_screen.dart';
 import 'package:caribtap/main.dart' as main_entry;
 import 'package:caribtap/listings/ui/widgets/attention_badge.dart'; // Import the new widget
@@ -1084,16 +1085,6 @@ class _ContainerState extends State<ContainerScreen> {
                     primaryColor: primaryColorValue,
                   ),
                   _drawerTile(
-                    title: 'Help & Tutorials'.tr(),
-                    icon: Icons.menu_book_rounded,
-                    onTap: () {
-                      Navigator.pop(context);
-                      push(context, const TutorialsHubScreen());
-                    },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
-                  ),
-                  _drawerTile(
                     title: 'Activate Chat'.tr(),
                     icon: Icons.chat_rounded,
                     trailing: !currentUser.hasDirectMessaging
@@ -1111,6 +1102,26 @@ class _ContainerState extends State<ContainerScreen> {
                       } else {
                         _showUpgradeDialog(context, 'Activate Chat', 'Premium');
                       }
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'Help & Tutorials'.tr(),
+                    icon: Icons.menu_book_rounded,
+                    onTap: () {
+                      Navigator.pop(context);
+                      push(context, const TutorialsHubScreen());
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'Legal'.tr(),
+                    icon: Icons.gavel_rounded,
+                    onTap: () {
+                      Navigator.pop(context);
+                      push(context, const LegalCenterScreen());
                     },
                     isDark: isDark,
                     primaryColor: primaryColorValue,

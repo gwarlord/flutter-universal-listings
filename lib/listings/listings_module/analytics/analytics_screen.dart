@@ -107,6 +107,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       appBar: AppBar(
@@ -118,7 +119,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               onRefresh: _loadAnalytics,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 24 + bottomInset),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -250,6 +251,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           );
                         },
                       ),
+                    const SizedBox(height: 32),
+                    Text(
+                      'Visibility Opportunities'.tr(),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ..._buildKeywordOpportunityCards(dark),
                   ],
                 ),
               ),
@@ -369,7 +380,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'Listing'.tr(),
+                      '${listing.viewCount} ${'views'.tr()}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -396,6 +407,117 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       ),
                     ),
                   ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildKeywordOpportunityCards(bool dark) {
+    final missingKeywordListings =
+        _userListings.where((listing) => listing.searchKeywords.isEmpty).toList();
+    final weakKeywordListings = _userListings
+        .where((listing) =>
+            listing.searchKeywords.isNotEmpty &&
+            listing.searchKeywords.length < 3)
+        .toList();
+
+    if (missingKeywordListings.isEmpty && weakKeywordListings.isEmpty) {
+      return [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: dark ? Colors.grey[850] : Colors.grey[100],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: dark ? Colors.grey[700]! : Colors.grey[300]!,
+            ),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            'Your listings have keyword coverage. Search visibility looks healthy.'.tr(),
+            style: TextStyle(
+              color: dark ? Colors.white : Colors.black87,
+            ),
+          ),
+        ),
+      ];
+    }
+
+    final widgets = <Widget>[];
+    if (missingKeywordListings.isNotEmpty) {
+      widgets.add(
+        _buildOpportunityCard(
+          dark: dark,
+          icon: Icons.visibility_off_outlined,
+          iconColor: Colors.redAccent,
+          title: 'Major Issue: Missing Keywords'.tr(),
+          message:
+              'Listings without keywords are significantly harder to find in search. ${missingKeywordListings.length} listing(s) need keywords.'
+                  .tr(args: [missingKeywordListings.length.toString()]),
+        ),
+      );
+    }
+    if (weakKeywordListings.isNotEmpty) {
+      widgets.add(
+        _buildOpportunityCard(
+          dark: dark,
+          icon: Icons.low_priority_rounded,
+          iconColor: Colors.orange,
+          title: 'Needs Improvement: Fewer Than 3 Keywords'.tr(),
+          message:
+              '${weakKeywordListings.length} listing(s) have some keywords, but fewer than 3. Add more for better search visibility.'
+                  .tr(args: [weakKeywordListings.length.toString()]),
+        ),
+      );
+    }
+    return widgets;
+  }
+
+  Widget _buildOpportunityCard({
+    required bool dark,
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String message,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: dark ? Colors.grey[850] : Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: dark ? Colors.grey[700]! : Colors.grey[300]!,
+        ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: iconColor, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: dark ? Colors.white : Colors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  message,
+                  style: TextStyle(
+                    color: dark ? Colors.grey[300] : Colors.grey[700],
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),

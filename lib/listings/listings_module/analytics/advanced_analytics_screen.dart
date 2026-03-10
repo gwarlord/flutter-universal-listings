@@ -139,15 +139,12 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
       final bookingsPrevious = await _fetchReceivedBookingsCountInDateRange(
           listingIds, previousStartTime, startTime);
 
-      final chatsLast =
-          await _fetchChatsCountInDateRange(listingIds, startTime, now);
-      final chatsPrevious = await _fetchChatsCountInDateRange(
-          listingIds, previousStartTime, startTime);
-
       final activityLast =
           await _fetchActivityCountsInDateRange(listingIds, startTime, now);
       final activityPrevious = await _fetchActivityCountsInDateRange(
           listingIds, previousStartTime, startTime);
+      final chatsLast = activityLast.messages;
+      final chatsPrevious = activityPrevious.messages;
       final favoritesLast = activityLast.saves;
       final favoritesPrevious = activityPrevious.saves;
       final totalFavorites = await _fetchTotalFavorites(listingIds);
@@ -245,38 +242,6 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
       debugPrint('⚠️ Failed to fetch bookings count: $e');
       return 0;
     }
-  }
-
-  Future<int> _fetchChatsCountInDateRange(
-      List<String> listingIds, DateTime start, DateTime end) async {
-    if (listingIds.isEmpty) return 0;
-    int count = 0;
-    Future<void> processCollection(String collectionId) async {
-      final snapshot = await _firestore
-          .collection(socialFeedsCollection)
-          .doc(widget.currentUser.userID)
-          .collection(collectionId)
-          .get();
-
-      for (final doc in snapshot.docs) {
-        final data = doc.data();
-        final listingId = (data['listingId'] ?? '').toString();
-        if (!listingIds.contains(listingId)) continue;
-        final createdAt =
-            _parseDate(data['createdAt'] ?? data['lastMessageDate']);
-        if (_isInRange(createdAt, start, end)) {
-          count++;
-        }
-      }
-    }
-
-    try {
-      await processCollection(chatFeedLiveCollection);
-      await processCollection('chat_feed');
-    } catch (e) {
-      debugPrint('⚠️ Failed to fetch chats count: $e');
-    }
-    return count;
   }
 
   Future<List<ListingReviewModel>> _fetchReviewsForListings(
@@ -433,7 +398,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
     required int viewsPrevious,
     required List<FlSpot> sparklineData,
   }) {
-    int totalViews = listings.fold(0, (acc, l) => acc + l.viewCount);
+    final int totalViews = viewsLast;
     double avgRating = reviews.isEmpty
         ? 0
         : reviews.map((r) => r.starCount).reduce((a, b) => a + b) /
@@ -446,6 +411,13 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
 
     final lowQualityListings = listings
         .where((l) => l.photos.length < 3 || l.description.trim().length < 100)
+        .toList();
+    final missingKeywordListings = listings
+        .where((l) => l.searchKeywords.isEmpty)
+        .toList();
+    final weakKeywordListings = listings
+        .where((l) =>
+            l.searchKeywords.isNotEmpty && l.searchKeywords.length < 3)
         .toList();
     const targetBookingsForTopLister = 10;
     final bookingsNeeded = (targetBookingsForTopLister - bookingsLast)
@@ -468,6 +440,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
         'tapsTrend': calculateTrend(tapsLast, tapsPrevious),
         'viewsTrend': calculateTrend(viewsLast, viewsPrevious),
         'lowQualityListings': lowQualityListings,
+        'missingKeywordListings': missingKeywordListings,
+        'weakKeywordListings': weakKeywordListings,
         'bookingsForBadge': bookingsNeeded,
       };
     });
@@ -813,9 +787,29 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
   Widget _buildInsights() {
     final lowQualityListings =
         _advancedMetrics['lowQualityListings'] as List<ListingModel>? ?? [];
+    final missingKeywordListings =
+        _advancedMetrics['missingKeywordListings'] as List<ListingModel>? ?? [];
+    final weakKeywordListings =
+        _advancedMetrics['weakKeywordListings'] as List<ListingModel>? ?? [];
 
     return Column(
       children: [
+        if (missingKeywordListings.isNotEmpty)
+          _buildInsightCard(
+            Icons.visibility_off_outlined,
+            Colors.redAccent,
+            'Critical Keyword Issue'.tr(),
+            'Listings without keywords are much harder to discover in search. Add keywords to ${missingKeywordListings.length} listing(s).'
+                .tr(args: [missingKeywordListings.length.toString()]),
+          ),
+        if (weakKeywordListings.isNotEmpty)
+          _buildInsightCard(
+            Icons.low_priority_rounded,
+            Colors.orange,
+            'Weak Keyword Coverage'.tr(),
+            'Listings with fewer than 3 keywords have reduced search visibility. Improve ${weakKeywordListings.length} listing(s).'
+                .tr(args: [weakKeywordListings.length.toString()]),
+          ),
         if (lowQualityListings.isNotEmpty)
           _buildInsightCard(
             Icons.lightbulb_outline,

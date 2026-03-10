@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 class AdTermsAndConditionsScreen extends StatefulWidget {
@@ -41,7 +42,7 @@ class _AdTermsAndConditionsScreenState extends State<AdTermsAndConditionsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Ad Terms & Conditions')),
+      appBar: AppBar(title: Text('ad_terms_title'.tr())),
       body: Column(
         children: [
           Expanded(
@@ -60,9 +61,8 @@ class _AdTermsAndConditionsScreenState extends State<AdTermsAndConditionsScreen>
                   controller: _scrollController,
                   child: ListView(
                     controller: _scrollController,
-                    children: const [
-                      Text('''\
-1. All ads must comply with CaribTap community guidelines.\n\n2. No illegal, offensive, or misleading content.\n\n3. Ads are subject to approval and may be rejected without refund if they violate terms.\n\n4. Payment is required before ad review.\n\n5. CaribTap reserves the right to remove ads at any time.\n\n6. By posting, you agree to all terms and conditions.\n'''),
+                    children: [
+                      Text('caribtap_ad_terms'.tr()),
                     ],
                   ),
                 ),
@@ -74,7 +74,7 @@ class _AdTermsAndConditionsScreenState extends State<AdTermsAndConditionsScreen>
             child: SafeArea(
               child: ElevatedButton(
                 onPressed: _scrolledToEnd ? widget.onAccepted : null,
-                child: const Text('Accept & Continue'),
+                child: Text('ad_terms_accept'.tr()),
               ),
             ),
           ),

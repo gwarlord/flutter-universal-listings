@@ -57,14 +57,18 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                _showHistory ? 'All Orders'.tr() : 'Active Orders'.tr(),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: dark ? Colors.white : Colors.black,
+              Expanded(
+                child: Text(
+                  _showHistory ? 'All Orders'.tr() : 'Active Orders'.tr(),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: dark ? Colors.white : Colors.black,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
               TextButton.icon(
                 onPressed: () {
                   setState(() {

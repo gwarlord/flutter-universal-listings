@@ -1284,7 +1284,7 @@ class HomeScreenState extends State<HomeScreen> {
                             (context, index) {
                               final item = filteredListingsWithAds[index];
                               if (item == null) {
-                                return AdsUtils.adsContainer();
+                                return AdsUtils.listingsInlineAd();
                               }
 
                               switch (item.type) {
@@ -1980,7 +1980,7 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
   Widget build(BuildContext context) {
     final listing = widget.listing;
     if (listing == null) {
-      return AdsUtils.adsContainer();
+      return AdsUtils.listingsInlineAd();
     }
 
     final bool dark = isDarkMode(context);

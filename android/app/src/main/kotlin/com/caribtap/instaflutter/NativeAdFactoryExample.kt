@@ -5,7 +5,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
-import android.widget.RatingBar
 import android.widget.TextView
 import com.google.android.gms.ads.nativead.MediaView
 import com.google.android.gms.ads.nativead.NativeAd
@@ -36,7 +35,6 @@ class NativeAdFactoryExample(private val layoutInflater: LayoutInflater) :
         adView.callToActionView = adView.findViewById(R.id.ad_call_to_action)
         adView.iconView = adView.findViewById(R.id.ad_app_icon)
         adView.priceView = adView.findViewById(R.id.ad_price)
-        adView.starRatingView = adView.findViewById(R.id.ad_stars)
         adView.storeView = adView.findViewById(R.id.ad_store)
         adView.advertiserView = adView.findViewById(R.id.ad_advertiser)
 
@@ -86,16 +84,8 @@ class NativeAdFactoryExample(private val layoutInflater: LayoutInflater) :
             (adView.storeView as TextView).text = nativeAd.store
         }
 
-        if (nativeAd.starRating == null) {
-            adView.starRatingView?.visibility = View.INVISIBLE
-        } else {
-            (adView.starRatingView as RatingBar).rating =
-                nativeAd.starRating?.toFloat() ?: 1.0f
-            adView.starRatingView?.visibility = View.VISIBLE
-        }
-
         if (nativeAd.advertiser == null) {
-            adView.advertiserView?.visibility = View.INVISIBLE
+            adView.advertiserView?.visibility = View.GONE
         } else {
             adView.advertiserView?.visibility = View.VISIBLE
             (adView.advertiserView as TextView).text = nativeAd.advertiser

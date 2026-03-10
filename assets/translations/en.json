@@ -884,6 +884,10 @@
   "Promo Code": "Promo Code",
   "Claim In-App": "Claim In-App",
   "Help & Tutorials": "Help & Tutorials",
+  "Legal": "Legal",
+  "Review CaribTap’s policies, terms, and platform rules.": "Review CaribTap’s policies, terms, and platform rules.",
+  "Search legal documents": "Search legal documents",
+  "No legal documents found": "No legal documents found",
   "Search tutorials": "Search tutorials",
   "No tutorials found": "No tutorials found",
   "What this feature does": "What this feature does",
@@ -897,5 +901,8 @@
   "Business Tools": "Business Tools",
   "Orders & Payments": "Orders & Payments",
   "Advanced Features": "Advanced Features",
-  "Account & Subscriptions": "Account & Subscriptions"
+  "Account & Subscriptions": "Account & Subscriptions",
+  "ad_terms_title": "Ad Terms & Conditions",
+  "ad_terms_accept": "Accept & Continue",
+  "caribtap_ad_terms": "CARIBTAP AD TERMS & CONDITIONS\n\nEffective Date: March 10, 2026\n\nThese Ad Terms & Conditions govern the posting and display of promotional ads on the CaribTap platform.\n\nBy submitting or publishing an ad on CaribTap, you agree to these terms.\n\n1. ELIGIBILITY\nOnly users on eligible CaribTap subscription plans may post ads. Ad posting availability is based on the user’s active subscription tier and the ad quota included with that plan.\n\n2. MONTHLY AD ALLOWANCE\nProfessional and Premium subscriptions include a fixed number of ad postings per monthly subscription cycle. The number of ads available to a user depends on the subscription plan currently active on their account.\n\n3. QUOTA USAGE\nAn ad slot is consumed when an advertisement is approved and published on the platform. Draft ads or incomplete submissions do not consume quota unless otherwise stated in the app.\n\n4. REJECTED ADS\nIf an ad is rejected before publication for failing to meet CaribTap policies, the corresponding ad slot will not be consumed, or will be restored where applicable. CaribTap reserves the right to determine whether a submission qualifies for quota restoration.\n\n5. UNUSED ALLOWANCES\nUnused ad allowances do not roll over to the next billing cycle and have no cash value. Monthly ad quotas reset according to the user’s active subscription cycle.\n\n6. AD CONTENT REQUIREMENTS\nAll ads must be accurate, lawful, and compliant with CaribTap policies. Ads must not contain:\n- illegal products or services\n- misleading or deceptive claims\n- offensive, abusive, or discriminatory material\n- counterfeit goods\n- scams, fraudulent offers, or impersonation\n\n7. REVIEW AND APPROVAL\nAll ads are subject to review before publication. CaribTap may approve, reject, request edits, pause, or remove any ad at its sole discretion.\n\n8. AD DURATION AND VISIBILITY\nAds may run for the display period defined by the platform. CaribTap does not guarantee any specific level of impressions, visibility, clicks, enquiries, or sales unless explicitly stated.\n\n9. REMOVAL OF ADS\nCaribTap may remove ads that:\n- violate platform rules\n- contain false or outdated information\n- generate repeated complaints\n- create safety, legal, or reputational risk for the platform\n\n10. ADVERTISER RESPONSIBILITY\nAdvertisers are solely responsible for the content of their ads, including pricing, descriptions, images, and claims. Advertisers must have the rights to use all text, images, logos, and trademarks included in an ad.\n\n11. NO REFUND OR CASH VALUE\nAd allowances provided through a subscription plan are non-transferable, non-refundable, and cannot be exchanged for cash, credit, or compensation.\n\n12. LIMITATION OF LIABILITY\nCaribTap is not responsible for business outcomes arising from ad use, including low engagement, poor performance, customer disputes, or lost sales opportunities.\n\n13. POLICY CHANGES\nCaribTap may update these Ad Terms & Conditions at any time. Continued use of the ad system constitutes acceptance of the updated terms."
 }

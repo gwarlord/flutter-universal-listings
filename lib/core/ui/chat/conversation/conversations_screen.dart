@@ -238,6 +238,8 @@ class _ConversationItem extends StatefulWidget {
 class _ConversationItemState extends State<_ConversationItem> {
   User? _otherUser;
   StreamSubscription? _userSub;
+  String _hoursString = '';
+  bool _isHoursLoaded = false;
 
   String _formatHoursSummary(String hours) {
     final trimmed = hours.trim();
@@ -252,8 +254,16 @@ class _ConversationItemState extends State<_ConversationItem> {
     final listingId = widget.conversation.listingId.trim();
     if (listingId.isEmpty) return '';
     try {
-      final doc = await FirebaseFirestore.instance.collection(listingsCollection).doc(listingId).get();
-      return doc.data()?['chatAvailabilityHours']?.toString() ?? '';
+      final doc = await FirebaseFirestore.instance
+          .collection(listingsCollection)
+          .doc(listingId)
+          .get();
+      final data = doc.data() ?? const <String, dynamic>{};
+      final chatHours = data['chatAvailabilityHours']?.toString() ?? '';
+      if (chatHours.trim().isNotEmpty) return chatHours;
+
+      // Legacy fallback for listings that still only have opening hours stored.
+      return data['openingHours']?.toString() ?? '';
     } catch (_) {
       return '';
     }
@@ -363,6 +373,16 @@ class _ConversationItemState extends State<_ConversationItem> {
   void initState() {
     super.initState();
     _initUserListener();
+    _loadHoursState();
+  }
+
+  Future<void> _loadHoursState() async {
+    final hours = await _fetchListingHours();
+    if (!mounted) return;
+    setState(() {
+      _hoursString = hours;
+      _isHoursLoaded = true;
+    });
   }
 
   void _initUserListener() {
@@ -411,6 +431,11 @@ class _ConversationItemState extends State<_ConversationItem> {
     final isActive = _otherUser?.active ?? false;
     final profilePic = _otherUser?.profilePictureURL ?? '';
     final listingLogo = widget.conversation.listingImage;
+    final isChatOpenNow =
+        !_isHoursLoaded || _isChatAvailableNow(_hoursString);
+    final disabledTextColor =
+        isDark ? Colors.grey[500] : Colors.grey[500];
+    final contentOpacity = isChatOpenNow ? 1.0 : 0.45;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -425,171 +450,176 @@ class _ConversationItemState extends State<_ConversationItem> {
       child: Row(
         children: [
           Expanded(
-            child: InkWell(
-              onTap: () async {
-                final hoursString = await _fetchListingHours();
-                if (!mounted) return;
-                
-                if (!_isChatAvailableNow(hoursString)) {
-                  await _showClosedDialog();
-                  return;
-                }
-                
-                push(
-                  context,
-                  ChatWrapperWidget(
-                    channelDataModel: ChannelDataModel(
-                      id: widget.conversation.id,
-                      participants: widget.conversation.participants,
-                      participantProfilePictureURLs: widget.conversation.chatFeedContent.participantProfilePictureURLs,
-                      name: widget.conversation.title,
-                      channelID: widget.conversation.id,
-                      lastMessage: widget.conversation.chatFeedContent,
-                      lastMessageDate: widget.conversation.chatFeedContent.createdAt,
-                      lastThreadMessageId: widget.conversation.chatFeedContent.id,
-                      listingId: widget.conversation.listingId,
-                      listingTitle: widget.conversation.listingTitle,
-                      listingImage: widget.conversation.listingImage,
-                    ),
-                    currentUser: ListingsUser(userID: widget.currentUserId),
-                    colorPrimary: Color(colorPrimary),
-                    colorAccent: Color(colorAccent),
-                  ),
-                );
-              },
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 60,
-                    height: 60,
-                    child: Stack(
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 54,
-                            height: 54,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isUnread ? Color(colorPrimary).withOpacity(0.5) : Colors.transparent,
-                                width: 2
-                              ),
-                              color: Colors.white,
+            child: Opacity(
+              opacity: contentOpacity,
+              child: InkWell(
+                onTap: isChatOpenNow
+                    ? () {
+                        push(
+                          context,
+                          ChatWrapperWidget(
+                            channelDataModel: ChannelDataModel(
+                              id: widget.conversation.id,
+                              participants: widget.conversation.participants,
+                              participantProfilePictureURLs: widget.conversation.chatFeedContent.participantProfilePictureURLs,
+                              name: widget.conversation.title,
+                              channelID: widget.conversation.id,
+                              lastMessage: widget.conversation.chatFeedContent,
+                              lastMessageDate: widget.conversation.chatFeedContent.createdAt,
+                              lastThreadMessageId: widget.conversation.chatFeedContent.id,
+                              listingId: widget.conversation.listingId,
+                              listingTitle: widget.conversation.listingTitle,
+                              listingImage: widget.conversation.listingImage,
                             ),
-                            child: listingLogo.isNotEmpty
-                                ? ClipOval(
-                                    child: Image.network(
-                                      listingLogo,
-                                      width: 50,
-                                      height: 50,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-                                    ),
-                                  )
-                                : Icon(Icons.store, size: 32, color: Colors.grey[400]),
+                            currentUser: ListingsUser(userID: widget.currentUserId),
+                            colorPrimary: Color(colorPrimary),
+                            colorAccent: Color(colorAccent),
                           ),
-                        ),
-                        if (profilePic.isNotEmpty)
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
+                        );
+                      }
+                    : () => _showClosedDialog(),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: Stack(
+                        children: [
+                          Center(
                             child: Container(
-                              width: 22,
-                              height: 22,
+                              width: 54,
+                              height: 54,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2),
-                                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))],
-                              ),
-                              child: ClipOval(
-                                child: displayCircleImage(profilePic, 22, false),
-                              ),
-                            ),
-                          ),
-                        if (isActive)
-                          Positioned(
-                            right: 4,
-                            top: 4,
-                            child: Container(
-                              width: 14,
-                              height: 14,
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: isDark ? Colors.black : Colors.white, width: 2.5),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                displayName,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: isUnread ? FontWeight.w900 : FontWeight.w600,
-                                  color: isDark ? Colors.white : Colors.black87,
+                                border: Border.all(
+                                  color: isUnread ? Color(colorPrimary).withOpacity(0.5) : Colors.transparent,
+                                  width: 2
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                color: Colors.white,
                               ),
-                            ),
-                            Text(
-                              timeStr,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isUnread ? Color(colorPrimary) : Colors.grey,
-                                fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 3),
-                        if (widget.conversation.listingTitle.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 2),
-                            child: Text(
-                              widget.conversation.listingTitle,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Color(colorPrimary).withOpacity(0.9),
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              child: listingLogo.isNotEmpty
+                                  ? ClipOval(
+                                      child: Image.network(
+                                        listingLogo,
+                                        width: 50,
+                                        height: 50,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                                      ),
+                                    )
+                                  : Icon(Icons.store, size: 32, color: Colors.grey[400]),
                             ),
                           ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                lastMsg,
+                          if (profilePic.isNotEmpty)
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
+                              child: Container(
+                                width: 22,
+                                height: 22,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 2),
+                                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))],
+                                ),
+                                child: ClipOval(
+                                  child: displayCircleImage(profilePic, 22, false),
+                                ),
+                              ),
+                            ),
+                          if (isActive)
+                            Positioned(
+                              right: 4,
+                              top: 4,
+                              child: Container(
+                                width: 14,
+                                height: 14,
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: isDark ? Colors.black : Colors.white, width: 2.5),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  displayName,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: isUnread ? FontWeight.w900 : FontWeight.w600,
+                                    color: isChatOpenNow
+                                        ? (isDark ? Colors.white : Colors.black87)
+                                        : disabledTextColor,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Text(
+                                timeStr,
                                 style: TextStyle(
-                                  fontSize: 14,
-                                  color: isUnread 
-                                      ? (isDark ? Colors.white : Colors.black87) 
-                                      : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                                  fontSize: 11,
+                                  color: isChatOpenNow
+                                      ? (isUnread ? Color(colorPrimary) : Colors.grey)
+                                      : disabledTextColor,
                                   fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
                                 ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          if (widget.conversation.listingTitle.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 2),
+                              child: Text(
+                                widget.conversation.listingTitle,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isChatOpenNow
+                                      ? Color(colorPrimary).withOpacity(0.9)
+                                      : disabledTextColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                          ],
-                        ),
-                      ],
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  isChatOpenNow ? lastMsg : 'Unavailable until chat hours'.tr(),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: isChatOpenNow
+                                        ? (isUnread
+                                            ? (isDark ? Colors.white : Colors.black87)
+                                            : (isDark ? Colors.grey[400] : Colors.grey[600]))
+                                        : disabledTextColor,
+                                    fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

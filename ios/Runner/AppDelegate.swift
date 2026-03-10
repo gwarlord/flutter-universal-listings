@@ -28,18 +28,22 @@ class NativeAdFactoryExample: NSObject, FLTNativeAdFactory {
 
         guard let nibObjects = Bundle.main.loadNibNamed("NativeAdView", owner: nil, options: nil),
               let adView = nibObjects.first as? NativeAdView else {
+            NSLog("[Runner] Failed to load NativeAdView from NativeAdView.xib.")
             return nil
         }
 
-        adView.nativeAd = nativeAd
-
+        
         (adView.headlineView as? UILabel)?.text = nativeAd.headline
+        adView.headlineView?.isHidden = nativeAd.headline == nil
 
         (adView.bodyView as? UILabel)?.text = nativeAd.body
         adView.bodyView?.isHidden = nativeAd.body == nil
 
         (adView.callToActionView as? UIButton)?.setTitle(nativeAd.callToAction, for: .normal)
         adView.callToActionView?.isHidden = nativeAd.callToAction == nil
+
+        (adView.mediaView as? MediaView)?.mediaContent = nativeAd.mediaContent
+        adView.mediaView?.isHidden = nativeAd.mediaContent.aspectRatio <= 0
 
         (adView.iconView as? UIImageView)?.image = nativeAd.icon?.image
         adView.iconView?.isHidden = nativeAd.icon == nil
@@ -54,6 +58,7 @@ class NativeAdFactoryExample: NSObject, FLTNativeAdFactory {
         adView.advertiserView?.isHidden = nativeAd.advertiser == nil
 
         adView.callToActionView?.isUserInteractionEnabled = false
+        adView.nativeAd = nativeAd
 
         return adView
     }

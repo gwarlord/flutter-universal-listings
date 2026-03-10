@@ -1,130 +1,86 @@
-import 'dart:async';
-
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:uuid/uuid.dart';
-import 'package:visibility_detector/visibility_detector.dart';
+
+import 'package:caribtap/core/ui/ads/native_ad_widget.dart';
 
 class AdsUtils {
-  static Widget adsContainer() {
+  // Keep useTestAds=true until test devices are confirmed.
+  // Do not click live ads during development.
+  static const bool useTestAds = true;
+  static const double _listingsNativeAdHeight = 280;
+  static const double _dealsNativeAdHeight = 330;
+
+  static const String _androidTestNativeUnitId =
+      'ca-app-pub-3940256099942544/2247696110';
+  static const String _iosTestNativeUnitId =
+      'ca-app-pub-3940256099942544/3986624511';
+
+  static const String _androidListingsNativeUnitId =
+      'ca-app-pub-4460203900531587/3631679974';
+  static const String _iosListingsNativeUnitId =
+      'ca-app-pub-4460203900531587/3413168069';
+
+  static const String _androidDealsNativeUnitId =
+      'ca-app-pub-4460203900531587/8070927945';
+  static const String _iosDealsNativeUnitId =
+      'ca-app-pub-4460203900531587/2100086392';
+
+  static String _testNativeUnitId() {
+    return defaultTargetPlatform == TargetPlatform.iOS
+        ? _iosTestNativeUnitId
+        : _androidTestNativeUnitId;
+  }
+
+  static String listingsNativeUnitId() {
+    final adUnitId = useTestAds
+        ? _testNativeUnitId()
+        : defaultTargetPlatform == TargetPlatform.iOS
+            ? _iosListingsNativeUnitId
+            : _androidListingsNativeUnitId;
+    debugPrint('AdsUtils selected listings ad unit: $adUnitId');
+    return adUnitId;
+  }
+
+  static String dealsNativeUnitId() {
+    final adUnitId = useTestAds
+        ? _testNativeUnitId()
+        : defaultTargetPlatform == TargetPlatform.iOS
+            ? _iosDealsNativeUnitId
+            : _androidDealsNativeUnitId;
+    debugPrint('AdsUtils selected deals ad unit: $adUnitId');
+    return adUnitId;
+  }
+
+  static Widget adsContainer({
+    String? adUnitId,
+    double height = _dealsNativeAdHeight,
+  }) {
     if (kIsWeb) {
       return const SizedBox.shrink();
     }
-    return const SizedBox(
-      //You Can Set Container Height
-      height: 350,
-      child: NativeAdWidget(),
-    );
-  }
-}
-
-class NativeAdWidget extends StatefulWidget {
-  const NativeAdWidget({super.key});
-
-  @override
-  State<StatefulWidget> createState() => NativeAdState();
-}
-
-class NativeAdState extends State<NativeAdWidget> {
-  NativeAd? _nativeAd;
-  final Completer<NativeAd> nativeAdCompleter = Completer<NativeAd>();
-
-  late final Key key;
-  bool visible = false;
-
-  @override
-  void initState() {
-    super.initState();
-    key = Key(const Uuid().v4());
-
-    if (kIsWeb) {
-      nativeAdCompleter.completeError(
-        Exception('Native ads are not supported on web.'),
-      );
-      return;
-    }
-
-    MobileAds.instance.updateRequestConfiguration(RequestConfiguration(
-        testDeviceIds: ['A667B3D01D8435D19CD3D433B706F7D0']));
-    _nativeAd = NativeAd(
-      adUnitId: defaultTargetPlatform == TargetPlatform.iOS
-          ? 'ca-app-pub-3940256099942544/3986624511' // iOS AdMob Test ID
-          : 'ca-app-pub-3940256099942544/2247696110', // Android AdMob Test ID
-      request: const AdRequest(),
-      factoryId: 'adFactoryExample',
-      customOptions: {},
-      listener: NativeAdListener(
-        onAdLoaded: (Ad ad) {
-          debugPrint('$NativeAd loaded.');
-          nativeAdCompleter.complete(ad as NativeAd);
-        },
-        onAdFailedToLoad: (Ad ad, LoadAdError error) {
-          ad.dispose();
-          debugPrint('$NativeAd failedToLoad: $error');
-          nativeAdCompleter.completeError(error);
-        },
-        onAdOpened: (Ad ad) => debugPrint('$NativeAd onAdOpened.'),
-        onAdClosed: (Ad ad) => debugPrint('$NativeAd onAdClosed.'),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      width: double.infinity,
+      height: height,
+      alignment: Alignment.center,
+      child: NativeAdWidget(
+        adUnitId: adUnitId ?? listingsNativeUnitId(),
+        height: height,
       ),
     );
-    Future<void>.delayed(const Duration(seconds: 1), () {
-      try {
-        _nativeAd?.load();
-      } catch (e) {
-        if (!nativeAdCompleter.isCompleted) {
-          nativeAdCompleter.completeError(e);
-        }
-      }
-    });
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-    _nativeAd?.dispose();
+  static Widget listingsInlineAd() {
+    return adsContainer(
+      adUnitId: listingsNativeUnitId(),
+      height: _listingsNativeAdHeight,
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return VisibilityDetector(
-      key: key,
-      onVisibilityChanged: (info) {
-        if (info.visibleFraction >= 1.0) {
-          if (!visible) {
-            setState(() {
-              visible = true;
-            });
-          }
-        }
-      },
-      child: Visibility(
-        visible: visible,
-        child: FutureBuilder<NativeAd>(
-          future: nativeAdCompleter.future,
-          builder: (BuildContext context, AsyncSnapshot<NativeAd> snapshot) {
-            Widget child;
-            switch (snapshot.connectionState) {
-              case ConnectionState.none:
-              case ConnectionState.waiting:
-              case ConnectionState.active:
-                child = Container();
-                break;
-              case ConnectionState.done:
-                if (snapshot.hasData) {
-                  child = AdWidget(ad: _nativeAd!);
-                } else {
-                  child = Center(child: Text('Error loading $NativeAd'.tr()));
-                }
-            }
-            return SizedBox(
-              height: 350,
-              child: child,
-            );
-          },
-        ),
-      ),
+  static Widget dealsFeedAd() {
+    return adsContainer(
+      adUnitId: dealsNativeUnitId(),
+      height: _dealsNativeAdHeight,
     );
   }
 }

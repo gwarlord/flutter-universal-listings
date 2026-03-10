@@ -38,6 +38,7 @@ import 'package:caribtap/listings/ui/widgets/location_photos_display.dart';
 import 'package:caribtap/listings/ui/widgets/payment_methods_stream_widget.dart';
 import 'package:caribtap/listings/services/tap_service.dart';
 import 'package:caribtap/listings/services/featured_service.dart';
+import 'package:caribtap/listings/services/listing_activity_service.dart';
 import 'package:caribtap/listings/listings_module/api/firebase/tap_firebase.dart';
 import 'package:caribtap/listings/ui/collaboration/collaborators_management_screen.dart';
 import 'package:caribtap/listings/ui/collaboration/chat_scope_integration.dart';
@@ -2238,7 +2239,14 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
   Future<void> _incrementViewCount() async {
     try {
-      await FirebaseFirestore.instance.collection(cfg.listingsCollection).doc(listing.id).update({'viewCount': FieldValue.increment(1)});
+      await FirebaseFirestore.instance
+          .collection(cfg.listingsCollection)
+          .doc(listing.id)
+          .update({'viewCount': FieldValue.increment(1)});
+      await ListingActivityService().recordView(
+        listing.id,
+        currentUser.userID.isNotEmpty ? currentUser.userID : null,
+      );
     } catch (e) { print(e); }
   }
 
