@@ -31,8 +31,9 @@ class RentalBrowseService {
               pricingUnit: _pricingUnitToString(catalogItem.pricingUnit),
               currencyCode: 'USD', // Default, will be overridden by listing currency
               photos: catalogItem.photos,
-              isAvailable: true, // Availability is determined by stock
+              isAvailable: catalogItem.isAvailable && catalogItem.stockQty > 0,
               stockQty: catalogItem.stockQty,
+              depositAmount: catalogItem.depositAmount,
               vehicleDetails: catalogItem.isVehicle ? {
                 'make': catalogItem.make,
                 'model': catalogItem.model,
@@ -86,8 +87,9 @@ class RentalBrowseService {
         pricingUnit: _pricingUnitToString(catalogItem.pricingUnit),
         currencyCode: 'USD',
         photos: catalogItem.photos,
-        isAvailable: true,
+        isAvailable: catalogItem.isAvailable && catalogItem.stockQty > 0,
         stockQty: catalogItem.stockQty,
+        depositAmount: catalogItem.depositAmount,
         vehicleDetails: catalogItem.isVehicle ? {
           'make': catalogItem.make,
           'model': catalogItem.model,
@@ -113,12 +115,30 @@ class RentalBrowseService {
     DateTime endDate,
   ) async {
     try {
+      final itemDoc = await _firestore
+          .collection('listings')
+          .doc(listingId)
+          .collection('rental_catalog')
+          .doc(rentalUnitId)
+          .get();
+
+      if (!itemDoc.exists) {
+        return false;
+      }
+
+      final itemData = itemDoc.data() as Map<String, dynamic>;
+      final isAvailable = itemData['isAvailable'] != false;
+      final stockQty = (itemData['stockQty'] as num?)?.toInt() ?? 0;
+      if (!isAvailable || stockQty <= 0) {
+        return false;
+      }
+
       // Query for overlapping bookings
       final bookings = await _firestore
           .collection('rental_bookings')
           .where('listingId', isEqualTo: listingId)
           .where('rentalUnitId', isEqualTo: rentalUnitId)
-          .where('status', whereIn: ['pending', 'confirmed', 'active'])
+          .where('status', whereIn: ['confirmed', 'active'])
           .get();
 
       for (var booking in bookings.docs) {
@@ -135,6 +155,39 @@ class RentalBrowseService {
     } catch (e) {
       debugPrint('Error checking availability: $e');
       return false;
+    }
+  }
+
+  /// Returns the soonest known availability date based on active/confirmed bookings.
+  Future<DateTime?> getNextAvailableDate({
+    required String listingId,
+    required String rentalUnitId,
+  }) async {
+    try {
+      final now = DateTime.now();
+      final snapshot = await _firestore
+          .collection('rental_bookings')
+          .where('listingId', isEqualTo: listingId)
+          .where('rentalUnitId', isEqualTo: rentalUnitId)
+          .where('status', whereIn: ['confirmed', 'active'])
+          .where('endTime', isGreaterThanOrEqualTo: Timestamp.fromDate(now))
+          .orderBy('endTime')
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        return null;
+      }
+
+      final endTime = snapshot.docs.first.data()['endTime'];
+      if (endTime is Timestamp) {
+        return endTime.toDate();
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching next available date: $e');
+      return null;
     }
   }
 
@@ -170,17 +223,63 @@ class RentalBrowseService {
     required double? depositAmount,
     required String? customerNotes,
   }) async {
-    try {
-      if (cartItems.isEmpty) return [];
+    if (cartItems.isEmpty) return [];
       
-      final List<String> bookingIds = [];
-      
-      // Calculate per-item deposit if applicable
-      final perItemDeposit = depositAmount != null ? (depositAmount / cartItems.length) : 0.0;
+    final List<String> bookingIds = [];
+    final requestedByUnit = <String, int>{};
+    final processedByUnit = <String, int>{};
 
-      for (var item in cartItems) {
-        final bookingId = _firestore.collection('rental_bookings').doc().id;
+    for (final item in cartItems) {
+      requestedByUnit.update(item.rentalUnitId, (value) => value + 1,
+          ifAbsent: () => 1);
+    }
+      
+    // If item-level deposits exist in cart details, prefer those over listing-level split.
+    final hasItemLevelDeposits = cartItems.any(
+      (item) =>
+        ((item.details?['securityDeposit'] as num?)?.toDouble() ?? 0.0) > 0,
+    );
+    final perItemDeposit =
+      depositAmount != null ? (depositAmount / cartItems.length) : 0.0;
+
+    try {
+      for (final entry in requestedByUnit.entries) {
+        final catalogDoc = await _firestore
+            .collection('listings')
+            .doc(listingId)
+            .collection('rental_catalog')
+            .doc(entry.key)
+            .get();
+
+        if (!catalogDoc.exists) {
+          throw Exception('One or more rental items are no longer available.');
+        }
+
+        final catalogData = catalogDoc.data() as Map<String, dynamic>;
+        final isCatalogAvailable = catalogData['isAvailable'] != false;
+        final stockQty = (catalogData['stockQty'] as num?)?.toInt() ?? 0;
+
+        if (!isCatalogAvailable || stockQty <= 0) {
+          throw Exception(
+            'One or more items were just rented and are no longer available.',
+          );
+        }
+
+        if (entry.value > stockQty) {
+          throw Exception(
+            'Requested quantity exceeds availability for one or more items.',
+          );
+        }
+      }
+
+      for (final item in cartItems) {
+        final bookingRef = _firestore.collection('rental_bookings').doc();
+        final bookingId = bookingRef.id;
+        final alreadyProcessedForUnit = processedByUnit[item.rentalUnitId] ?? 0;
         final durationDays = item.endDate.difference(item.startDate).inDays + 1;
+        final itemDeposit =
+          ((item.details?['securityDeposit'] as num?)?.toDouble() ??
+            (hasItemLevelDeposits ? 0.0 : perItemDeposit));
 
         final booking = RentalBooking(
           id: bookingId,
@@ -194,39 +293,72 @@ class RentalBrowseService {
           unitPrice: item.pricePerDay,
           quantity: durationDays,
           subtotal: item.totalPrice,
-          depositAmount: perItemDeposit,
-          totalAmount: item.totalPrice + perItemDeposit,
+          depositAmount: itemDeposit,
+          totalAmount: item.totalPrice + itemDeposit,
           status: RentalBookingStatus.pending,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         );
 
-        await _firestore
-            .collection('rental_bookings')
-            .doc(bookingId)
-            .set({
-              ...booking.toJson(),
-              // Save snapshot of item details including photo
-              'cartItems': [{
-                'rentalUnitId': item.rentalUnitId,
-                'unitName': item.unitName,
-                'startDate': item.startDate.millisecondsSinceEpoch,
-                'endDate': item.endDate.millisecondsSinceEpoch,
-                'pricePerDay': item.pricePerDay,
-                'totalPrice': item.totalPrice,
-                'photoUrl': item.photoUrl,
-              }],
-              'depositAmount': perItemDeposit,
-              'customerNotes': customerNotes,
-            });
+        final bookingPayload = {
+          ...booking.toJson(),
+          // Save snapshot of item details including photo
+          'cartItems': [
+            {
+              'rentalUnitId': item.rentalUnitId,
+              'unitName': item.unitName,
+              'startDate': item.startDate.millisecondsSinceEpoch,
+              'endDate': item.endDate.millisecondsSinceEpoch,
+              'pricePerDay': item.pricePerDay,
+              'totalPrice': item.totalPrice,
+              'securityDeposit': itemDeposit,
+              'photoUrl': item.photoUrl,
+            }
+          ],
+          'depositAmount': itemDeposit,
+          'customerNotes': customerNotes,
+          'inventoryReserved': false,
+        };
+
+        final catalogRef = _firestore
+            .collection('listings')
+            .doc(listingId)
+            .collection('rental_catalog')
+            .doc(item.rentalUnitId);
+
+        await _firestore.runTransaction((transaction) async {
+          final catalogDoc = await transaction.get(catalogRef);
+          if (!catalogDoc.exists) {
+            throw Exception('This rental item is no longer available.');
+          }
+
+          final catalogData = catalogDoc.data() as Map<String, dynamic>;
+          final isCatalogAvailable = catalogData['isAvailable'] != false;
+          final stockQty = (catalogData['stockQty'] as num?)?.toInt() ?? 0;
+
+          if (!isCatalogAvailable || stockQty <= 0) {
+            throw Exception(
+              'One or more items were just rented and are no longer available.',
+            );
+          }
+
+          if (alreadyProcessedForUnit >= stockQty) {
+            throw Exception(
+              'Requested quantity exceeds availability for one or more items.',
+            );
+          }
+
+          transaction.set(bookingRef, bookingPayload);
+        });
 
         bookingIds.add(bookingId);
+        processedByUnit[item.rentalUnitId] = alreadyProcessedForUnit + 1;
       }
 
       return bookingIds;
     } catch (e) {
       debugPrint('Error creating rental booking: $e');
-      return [];
+      rethrow;
     }
   }
 

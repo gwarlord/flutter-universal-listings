@@ -42,30 +42,32 @@ String get googlePlacesApiKey => dotenv.env['GOOGLE_PLACES_API_KEY'] ?? '';
 
 String get placesApiKey {
 	if (googlePlacesApiKey.trim().isNotEmpty) return googlePlacesApiKey.trim();
+	if (googleApiKey.trim().isNotEmpty) return googleApiKey.trim();
+	// Places autocomplete/details use HTTP APIs, so platform-restricted SDK
+	// keys are only safe as a last resort fallback.
 	if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS &&
 		googleIosApiKey.trim().isNotEmpty) {
 		return googleIosApiKey.trim();
 	}
-	if (kIsWeb) return googleApiKey;
 	if (defaultTargetPlatform == TargetPlatform.android &&
 		googleAndroidApiKey.trim().isNotEmpty) {
 		return googleAndroidApiKey.trim();
 	}
-	return googleApiKey;
+	return '';
 }
 
 String get placesApiKeySource {
 	if (googlePlacesApiKey.trim().isNotEmpty) return 'GOOGLE_PLACES_API_KEY';
+	if (googleApiKey.trim().isNotEmpty) return 'GOOGLE_API_KEY/GOOGLE_MAPS_API_KEY';
 	if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS &&
 		googleIosApiKey.trim().isNotEmpty) {
-		return 'GOOGLE_IOS_API_KEY/GOOGLE_MAPS_API_KEY';
+		return 'GOOGLE_IOS_API_KEY fallback';
 	}
-	if (kIsWeb) return 'GOOGLE_API_KEY/GOOGLE_MAPS_API_KEY';
 	if (defaultTargetPlatform == TargetPlatform.android &&
 		googleAndroidApiKey.trim().isNotEmpty) {
-		return 'GOOGLE_ANDROID_API_KEY';
+		return 'GOOGLE_ANDROID_API_KEY fallback';
 	}
-	return 'GOOGLE_API_KEY/GOOGLE_MAPS_API_KEY';
+	return '<missing>';
 }
 
 String maskApiKey(String key) {

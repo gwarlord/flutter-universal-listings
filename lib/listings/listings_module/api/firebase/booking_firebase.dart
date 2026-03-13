@@ -171,9 +171,9 @@ class BookingFirebase extends BookingRepository {
     required String bookingId,
     required String status,
   }) async {
+    final now = DateTime.now();
+
     try {
-      final now = DateTime.now();
-      
       // Update in listing's bookings
       await _firestore
           .collection('listings')
@@ -184,7 +184,11 @@ class BookingFirebase extends BookingRepository {
         'status': status,
         'updatedAt': now.toIso8601String(),
       });
+    } catch (e) {
+      throw Exception('Failed to update booking status: $e');
+    }
 
+    try {
       // Get the booking to update user's collections
       final bookingDoc = await _firestore
           .collection('listings')
@@ -196,33 +200,45 @@ class BookingFirebase extends BookingRepository {
       if (bookingDoc.exists) {
         final booking = BookingModel.fromJson(bookingDoc.data()!);
 
-        // Update in customer's myBookings
-        await _firestore
-            .collection('users')
-            .doc(booking.customerId)
-            .collection('myBookings')
-            .doc(bookingId)
-            .update({
-          'status': status,
-          'updatedAt': now.toIso8601String(),
-        });
+        // Best-effort mirror updates. A permission error here should not mask
+        // a successful primary status update on listings/{listingId}/bookings.
+        try {
+          await _firestore
+              .collection('users')
+              .doc(booking.customerId)
+              .collection('myBookings')
+              .doc(bookingId)
+              .update({
+            'status': status,
+            'updatedAt': now.toIso8601String(),
+          });
+        } catch (e) {
+          debugPrint('⚠️ Mirror update skipped for myBookings ($bookingId): $e');
+        }
 
-        // Update in lister's receivedBookings
-        await _firestore
-            .collection('users')
-            .doc(booking.listersUserId)
-            .collection('receivedBookings')
-            .doc(bookingId)
-            .update({
-          'status': status,
-          'updatedAt': now.toIso8601String(),
-        });
+        try {
+          await _firestore
+              .collection('users')
+              .doc(booking.listersUserId)
+              .collection('receivedBookings')
+              .doc(bookingId)
+              .update({
+            'status': status,
+            'updatedAt': now.toIso8601String(),
+          });
+        } catch (e) {
+          debugPrint('⚠️ Mirror update skipped for receivedBookings ($bookingId): $e');
+        }
 
-        // ✅ Trigger Status Change Email
-        await _triggerBookingEmail(booking, status);
+        // Best-effort email trigger.
+        try {
+          await _triggerBookingEmail(booking, status);
+        } catch (e) {
+          debugPrint('⚠️ Email trigger skipped for booking status change ($bookingId): $e');
+        }
       }
     } catch (e) {
-      throw Exception('Failed to update booking status: $e');
+      debugPrint('⚠️ Post-update sync error for booking ($bookingId): $e');
     }
   }
 

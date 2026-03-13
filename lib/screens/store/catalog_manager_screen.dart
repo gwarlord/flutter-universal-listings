@@ -10,6 +10,7 @@ import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/services/store_service.dart';
 import 'package:caribtap/listings/services/entitlement_service.dart';
 import 'package:caribtap/listings/services/pro_gate.dart';
+import 'package:caribtap/listings/utils/category_localization.dart';
 import 'package:caribtap/screens/store/catalog_item_editor_screen.dart';
 import 'package:caribtap/screens/store/store_settings_screen.dart';
 
@@ -38,7 +39,7 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
   @override
   void initState() {
     super.initState();
-    
+
     // Sync subscription status and verify Premium access
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAndSyncPremiumAccess();
@@ -92,7 +93,8 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
     try {
       final result = await _storeService.migrateListingTierSnapshots();
       if (result['success'] == true) {
-        print('✅ Migration successful: ${result['processedCount']} listings updated');
+        print(
+            '✅ Migration successful: ${result['processedCount']} listings updated');
       }
     } catch (e) {
       print('⚠️ Migration skipped: $e');
@@ -141,10 +143,11 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
                 }
               }
               final categoryList = categories.toList();
-              
+
               return Container(
                 height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: categoryList.length,
@@ -154,7 +157,7 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: FilterChip(
-                        label: Text(category.tr()),
+                        label: Text(localizeCategoryLabel(category, context)),
                         selected: isSelected,
                         onSelected: (selected) {
                           if (selected) {
@@ -163,7 +166,9 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
                         },
                         selectedColor: Color(cfg.colorPrimary),
                         labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : (dark ? Colors.white70 : Colors.black87),
+                          color: isSelected
+                              ? Colors.white
+                              : (dark ? Colors.white70 : Colors.black87),
                         ),
                       ),
                     );
@@ -186,17 +191,20 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
                   return Center(
                     child: Text(
                       'Error loading catalog: ${snapshot.error}',
-                      style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                      style: TextStyle(
+                          color: dark ? Colors.white70 : Colors.black54),
                     ),
                   );
                 }
 
                 final items = snapshot.data ?? [];
-                
+
                 // Filter by category (using custom category field)
                 final filteredItems = _selectedCategory == 'All'
                     ? items
-                    : items.where((item) => item.category == _selectedCategory).toList();
+                    : items
+                        .where((item) => item.category == _selectedCategory)
+                        .toList();
 
                 if (filteredItems.isEmpty) {
                   return Center(
@@ -206,7 +214,9 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
                         Icon(
                           Icons.inventory_2_outlined,
                           size: 64,
-                          color: dark ? Colors.grey.shade700 : Colors.grey.shade400,
+                          color: dark
+                              ? Colors.grey.shade700
+                              : Colors.grey.shade400,
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -220,7 +230,9 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
                         Text(
                           'Tap + to add your first item'.tr(),
                           style: TextStyle(
-                            color: dark ? Colors.grey.shade600 : Colors.grey.shade500,
+                            color: dark
+                                ? Colors.grey.shade600
+                                : Colors.grey.shade500,
                           ),
                         ),
                       ],
@@ -307,7 +319,9 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          item.isAvailable ? 'Available'.tr() : 'Unavailable'.tr(),
+                          item.isAvailable
+                              ? 'Available'.tr()
+                              : 'Unavailable'.tr(),
                           style: TextStyle(
                             fontSize: 12,
                             color: dark ? Colors.white70 : Colors.black54,
@@ -381,13 +395,17 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
                     child: Row(
                       children: [
                         Icon(
-                          item.isAvailable ? Icons.visibility_off : Icons.visibility,
+                          item.isAvailable
+                              ? Icons.visibility_off
+                              : Icons.visibility,
                           size: 20,
                           color: dark ? Colors.white70 : Colors.black87,
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          item.isAvailable ? 'Mark Unavailable'.tr() : 'Mark Available'.tr(),
+                          item.isAvailable
+                              ? 'Mark Unavailable'.tr()
+                              : 'Mark Available'.tr(),
                           style: TextStyle(
                             color: dark ? Colors.white : Colors.black87,
                           ),

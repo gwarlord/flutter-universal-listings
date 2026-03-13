@@ -7,6 +7,7 @@ import 'package:caribtap/listings/model/catalog_item.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/services/store_service.dart';
+import 'package:caribtap/listings/utils/category_localization.dart';
 import 'package:caribtap/screens/store/cart_models.dart';
 import 'package:caribtap/screens/store/cart_screen.dart';
 import 'package:caribtap/screens/store/store_cart_storage.dart';
@@ -30,7 +31,7 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
   final StoreService _storeService = StoreService();
   final TextEditingController _searchController = TextEditingController();
   final List<CartItem> _cart = [];
-  
+
   String _selectedCategory = 'All';
   String _searchQuery = '';
   String _sortBy = 'new'; // 'new', 'price_low', 'price_high'
@@ -63,15 +64,17 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
 
   bool get _isStoreAvailable {
     final available = widget.listing.storeEnabled &&
-           (widget.listing.storeMode == 'internal_catalog' || widget.listing.storeMode == 'both') &&
-           widget.listing.listerTierSnapshot == 'premium';
-    
+        (widget.listing.storeMode == 'internal_catalog' ||
+            widget.listing.storeMode == 'both') &&
+        widget.listing.listerTierSnapshot == 'premium';
+
     if (!available) {
-      print('❌ Store unavailable - storeEnabled: ${widget.listing.storeEnabled}, '
-            'storeMode: ${widget.listing.storeMode}, '
-            'listerTierSnapshot: ${widget.listing.listerTierSnapshot}');
+      print(
+          '❌ Store unavailable - storeEnabled: ${widget.listing.storeEnabled}, '
+          'storeMode: ${widget.listing.storeMode}, '
+          'listerTierSnapshot: ${widget.listing.listerTierSnapshot}');
     }
-    
+
     return available;
   }
 
@@ -173,8 +176,10 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
               style: TextStyle(color: dark ? Colors.white : Colors.black),
               decoration: InputDecoration(
                 hintText: 'Search items...'.tr(),
-                hintStyle: TextStyle(color: dark ? Colors.white54 : Colors.black45),
-                prefixIcon: Icon(Icons.search, color: dark ? Colors.white70 : Colors.black54),
+                hintStyle:
+                    TextStyle(color: dark ? Colors.white54 : Colors.black45),
+                prefixIcon: Icon(Icons.search,
+                    color: dark ? Colors.white70 : Colors.black54),
                 filled: true,
                 fillColor: dark ? Colors.grey.shade900 : Colors.grey.shade100,
                 border: OutlineInputBorder(
@@ -193,9 +198,12 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
             stream: _storeService.getCatalogItems(widget.listing.id),
             builder: (context, snapshot) {
               final items = snapshot.data ?? [];
-              final categories = <String>{'All', ...items.map((e) => e.category).where((c) => c.isNotEmpty)};
+              final categories = <String>{
+                'All',
+                ...items.map((e) => e.category).where((c) => c.isNotEmpty)
+              };
               final categoryList = categories.toList();
-              
+
               return SizedBox(
                 height: 50,
                 child: ListView.builder(
@@ -215,7 +223,9 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                Text('Sort:'.tr(), style: TextStyle(color: dark ? Colors.white70 : Colors.black54)),
+                Text('Sort:'.tr(),
+                    style: TextStyle(
+                        color: dark ? Colors.white70 : Colors.black54)),
                 const SizedBox(width: 8),
                 DropdownButton<String>(
                   value: _sortBy,
@@ -224,8 +234,12 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
                   underline: Container(),
                   items: [
                     DropdownMenuItem(value: 'new', child: Text('Newest'.tr())),
-                    DropdownMenuItem(value: 'price_low', child: Text('Price: Low to High'.tr())),
-                    DropdownMenuItem(value: 'price_high', child: Text('Price: High to Low'.tr())),
+                    DropdownMenuItem(
+                        value: 'price_low',
+                        child: Text('Price: Low to High'.tr())),
+                    DropdownMenuItem(
+                        value: 'price_high',
+                        child: Text('Price: High to Low'.tr())),
                   ],
                   onChanged: (value) {
                     if (value != null) setState(() => _sortBy = value);
@@ -240,26 +254,53 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
             child: StreamBuilder<List<CatalogItem>>(
               stream: _storeService.getCatalogItems(widget.listing.id),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-                if (snapshot.hasError) return Center(child: Text('Error loading items'.tr(), style: TextStyle(color: dark ? Colors.white70 : Colors.black54)));
+                if (snapshot.connectionState == ConnectionState.waiting)
+                  return const Center(child: CircularProgressIndicator());
+                if (snapshot.hasError)
+                  return Center(
+                      child: Text('Error loading items'.tr(),
+                          style: TextStyle(
+                              color: dark ? Colors.white70 : Colors.black54)));
 
                 var items = snapshot.data ?? [];
-                if (_selectedCategory != 'All') items = items.where((item) => item.category == _selectedCategory).toList();
-                if (_searchQuery.isNotEmpty) items = items.where((item) => item.name.toLowerCase().contains(_searchQuery) || (item.description?.toLowerCase().contains(_searchQuery) ?? false)).toList();
-                
+                if (_selectedCategory != 'All')
+                  items = items
+                      .where((item) => item.category == _selectedCategory)
+                      .toList();
+                if (_searchQuery.isNotEmpty)
+                  items = items
+                      .where((item) =>
+                          item.name.toLowerCase().contains(_searchQuery) ||
+                          (item.description
+                                  ?.toLowerCase()
+                                  .contains(_searchQuery) ??
+                              false))
+                      .toList();
+
                 items.sort((a, b) {
                   if (_sortBy == 'price_low') return a.price.compareTo(b.price);
-                  if (_sortBy == 'price_high') return b.price.compareTo(a.price);
-                  return (b.createdAt?.seconds ?? 0).compareTo(a.createdAt?.seconds ?? 0);
+                  if (_sortBy == 'price_high')
+                    return b.price.compareTo(a.price);
+                  return (b.createdAt?.seconds ?? 0)
+                      .compareTo(a.createdAt?.seconds ?? 0);
                 });
 
-                if (items.isEmpty) return Center(child: Text('No items found'.tr(), style: TextStyle(color: dark ? Colors.white70 : Colors.black54)));
+                if (items.isEmpty)
+                  return Center(
+                      child: Text('No items found'.tr(),
+                          style: TextStyle(
+                              color: dark ? Colors.white70 : Colors.black54)));
 
                 return GridView.builder(
                   padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.75, crossAxisSpacing: 12, mainAxisSpacing: 12),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.75,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12),
                   itemCount: items.length,
-                  itemBuilder: (context, index) => _buildItemCard(items[index], dark),
+                  itemBuilder: (context, index) =>
+                      _buildItemCard(items[index], dark),
                 );
               },
             ),
@@ -271,7 +312,8 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
               onPressed: _viewCart,
               backgroundColor: Color(cfg.colorPrimary),
               icon: const Icon(Icons.shopping_cart, color: Colors.white),
-              label: Text('${'View Cart'.tr()} ($_cartItemCount)', style: const TextStyle(color: Colors.white)),
+              label: Text('${'View Cart'.tr()} ($_cartItemCount)',
+                  style: const TextStyle(color: Colors.white)),
             )
           : null,
     );
@@ -282,13 +324,16 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
-        label: Text(category.tr()),
+        label: Text(localizeCategoryLabel(category, context)),
         selected: isSelected,
         onSelected: (selected) {
           if (selected) setState(() => _selectedCategory = category);
         },
         selectedColor: Color(cfg.colorPrimary),
-        labelStyle: TextStyle(color: isSelected ? Colors.white : (dark ? Colors.white70 : Colors.black87)),
+        labelStyle: TextStyle(
+            color: isSelected
+                ? Colors.white
+                : (dark ? Colors.white70 : Colors.black87)),
       ),
     );
   }
@@ -304,8 +349,15 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-              child: item.photos.isNotEmpty ? Image.network(item.photos.first, height: 120, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _placeholderImage()) : _placeholderImage(),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
+              child: item.photos.isNotEmpty
+                  ? Image.network(item.photos.first,
+                      height: 120,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _placeholderImage())
+                  : _placeholderImage(),
             ),
             Expanded(
               child: Padding(
@@ -314,12 +366,25 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(item.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black87), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text(item.name,
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: dark ? Colors.white : Colors.black87),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_formatCurrency(item.price, item.currencyCode), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(cfg.colorPrimary))),
-                        if (!item.isAvailable) Text('Unavailable'.tr(), style: const TextStyle(fontSize: 12, color: Colors.red)),
+                        Text(_formatCurrency(item.price, item.currencyCode),
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Color(cfg.colorPrimary))),
+                        if (!item.isAvailable)
+                          Text('Unavailable'.tr(),
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.red)),
                       ],
                     ),
                   ],
@@ -332,14 +397,25 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
     );
   }
 
-  Widget _placeholderImage() => Container(height: 120, width: double.infinity, color: Colors.grey.shade300, child: const Icon(Icons.image, size: 40, color: Colors.grey));
-  String _formatCurrency(double amount, String currencyCode) => '${_getCurrencySymbol(currencyCode)}${amount.toStringAsFixed(2)}';
+  Widget _placeholderImage() => Container(
+      height: 120,
+      width: double.infinity,
+      color: Colors.grey.shade300,
+      child: const Icon(Icons.image, size: 40, color: Colors.grey));
+  String _formatCurrency(double amount, String currencyCode) =>
+      '${_getCurrencySymbol(currencyCode)}${amount.toStringAsFixed(2)}';
   String _getCurrencySymbol(String code) {
     switch (code.toUpperCase()) {
-      case 'USD': case 'TTD': case 'JMD': return '\$';
-      case 'EUR': return '€';
-      case 'GBP': return '£';
-      default: return '\$';
+      case 'USD':
+      case 'TTD':
+      case 'JMD':
+        return '\$';
+      case 'EUR':
+        return '€';
+      case 'GBP':
+        return '£';
+      default:
+        return '\$';
     }
   }
 
@@ -352,7 +428,9 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
         item: item,
         onAddToCart: (cartItem) {
           setState(() {
-            final existingIndex = _cart.indexWhere((c) => c.itemId == cartItem.itemId && c.variant?['sku'] == cartItem.variant?['sku']);
+            final existingIndex = _cart.indexWhere((c) =>
+                c.itemId == cartItem.itemId &&
+                c.variant?['sku'] == cartItem.variant?['sku']);
             if (existingIndex >= 0) {
               _cart[existingIndex].qty += cartItem.qty;
             } else {
@@ -422,14 +500,16 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
       (_variantsByColor[colorKey] ??= []).add(variant);
     }
     // Sort sizes for consistency
-    _variantsByColor.forEach((_, variants) => variants.sort((a, b) => (a.size ?? '').compareTo(b.size ?? '')));
+    _variantsByColor.forEach((_, variants) =>
+        variants.sort((a, b) => (a.size ?? '').compareTo(b.size ?? '')));
   }
-  
+
   void _onVariantSelected(String? color, String? size) {
     setState(() {
       _selectedColor = color;
       _selectedSize = size;
-      _selectedVariant = widget.item.variants.firstWhere((v) => v.color == color && v.size == size);
+      _selectedVariant = widget.item.variants
+          .firstWhere((v) => v.color == color && v.size == size);
     });
   }
 
@@ -442,41 +522,93 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
       maxChildSize: 0.95,
       builder: (context, scrollController) {
         return Container(
-          decoration: BoxDecoration(color: dark ? Colors.grey.shade900 : Colors.white, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+          decoration: BoxDecoration(
+              color: dark ? Colors.grey.shade900 : Colors.white,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20))),
           child: ListView(
             controller: scrollController,
             padding: const EdgeInsets.all(16),
             children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2)))),
+              Center(
+                  child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                          color: Colors.grey.shade400,
+                          borderRadius: BorderRadius.circular(2)))),
               const SizedBox(height: 16),
               if (widget.item.photos.isNotEmpty)
                 SizedBox(
                   height: 300,
                   child: PageView.builder(
                     itemCount: widget.item.photos.length,
-                    itemBuilder: (context, index) => ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(widget.item.photos[index], fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade300, child: const Icon(Icons.image, size: 60)))),
+                    itemBuilder: (context, index) => ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(widget.item.photos[index],
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                                color: Colors.grey.shade300,
+                                child: const Icon(Icons.image, size: 60)))),
                   ),
                 ),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(child: Text(widget.item.name, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black))),
-                  Text(_formatCurrency(_selectedVariant?.price ?? widget.item.price, widget.item.currencyCode), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(cfg.colorPrimary))),
+                  Expanded(
+                      child: Text(widget.item.name,
+                          style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: dark ? Colors.white : Colors.black))),
+                  Text(
+                      _formatCurrency(
+                          _selectedVariant?.price ?? widget.item.price,
+                          widget.item.currencyCode),
+                      style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(cfg.colorPrimary))),
                 ],
               ),
               const SizedBox(height: 8),
-              if (widget.item.description != null && widget.item.description!.isNotEmpty) Text(widget.item.description!, style: TextStyle(fontSize: 16, color: dark ? Colors.white70 : Colors.black54)),
+              if (widget.item.description != null &&
+                  widget.item.description!.isNotEmpty)
+                Text(widget.item.description!,
+                    style: TextStyle(
+                        fontSize: 16,
+                        color: dark ? Colors.white70 : Colors.black54)),
               const SizedBox(height: 16),
               if (widget.item.variants.isNotEmpty) _buildVariantSelectors(dark),
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Text('Quantity'.tr(), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black)),
+                  Text('Quantity'.tr(),
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: dark ? Colors.white : Colors.black)),
                   const Spacer(),
-                  IconButton(onPressed: _quantity > 1 ? () => setState(() => _quantity--) : null, icon: Icon(Icons.remove_circle_outline, color: _quantity > 1 ? Color(cfg.colorPrimary) : (dark ? Colors.grey.shade600 : Colors.grey.shade400))),
-                  Text(_quantity.toString(), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black)),
-                  IconButton(onPressed: () => setState(() => _quantity++), icon: Icon(Icons.add_circle_outline, color: Color(cfg.colorPrimary))),
+                  IconButton(
+                      onPressed: _quantity > 1
+                          ? () => setState(() => _quantity--)
+                          : null,
+                      icon: Icon(Icons.remove_circle_outline,
+                          color: _quantity > 1
+                              ? Color(cfg.colorPrimary)
+                              : (dark
+                                  ? Colors.grey.shade600
+                                  : Colors.grey.shade400))),
+                  Text(_quantity.toString(),
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: dark ? Colors.white : Colors.black)),
+                  IconButton(
+                      onPressed: () => setState(() => _quantity++),
+                      icon: Icon(Icons.add_circle_outline,
+                          color: Color(cfg.colorPrimary))),
                 ],
               ),
               const SizedBox(height: 24),
@@ -484,9 +616,20 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: widget.item.isAvailable && (widget.item.variants.isEmpty || _selectedVariant != null) ? _addToCart : null,
-                  style: ElevatedButton.styleFrom(backgroundColor: Color(cfg.colorPrimary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                  child: Text('Add to Cart'.tr(), style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+                  onPressed: widget.item.isAvailable &&
+                          (widget.item.variants.isEmpty ||
+                              _selectedVariant != null)
+                      ? _addToCart
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(cfg.colorPrimary),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12))),
+                  child: Text('Add to Cart'.tr(),
+                      style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -495,37 +638,49 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
       },
     );
   }
-  
+
   Widget _buildVariantSelectors(bool dark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: _variantsByColor.entries.map((entry) {
         final color = entry.key;
         final variantsForColor = entry.value;
-        
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (color != 'Default')
               Padding(
                 padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
-                child: Text('Color: $color'.tr(), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black)),
+                child: Text('Color: $color'.tr(),
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: dark ? Colors.white : Colors.black)),
               ),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: variantsForColor.map((variant) {
-                final isSelected = _selectedSize == variant.size && _selectedColor == variant.color;
-                final isAvailable = !widget.item.trackStock || variant.stockQty > 0;
-                
+                final isSelected = _selectedSize == variant.size &&
+                    _selectedColor == variant.color;
+                final isAvailable =
+                    !widget.item.trackStock || variant.stockQty > 0;
+
                 return ChoiceChip(
                   label: Text(variant.size ?? 'Default'),
                   selected: isSelected,
-                  onSelected: isAvailable ? (selected) {
-                    if (selected) _onVariantSelected(variant.color, variant.size);
-                  } : null,
+                  onSelected: isAvailable
+                      ? (selected) {
+                          if (selected)
+                            _onVariantSelected(variant.color, variant.size);
+                        }
+                      : null,
                   selectedColor: Color(cfg.colorPrimary),
-                  labelStyle: TextStyle(color: isSelected ? Colors.white : (dark ? Colors.white70 : Colors.black87)),
+                  labelStyle: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : (dark ? Colors.white70 : Colors.black87)),
                 );
               }).toList(),
             ),
@@ -535,13 +690,20 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
     );
   }
 
-  String _formatCurrency(double amount, String currencyCode) => '${_getCurrencySymbol(currencyCode)}${amount.toStringAsFixed(2)}';
+  String _formatCurrency(double amount, String currencyCode) =>
+      '${_getCurrencySymbol(currencyCode)}${amount.toStringAsFixed(2)}';
   String _getCurrencySymbol(String code) {
     switch (code.toUpperCase()) {
-      case 'USD': case 'TTD': case 'JMD': return '\$';
-      case 'EUR': return '€';
-      case 'GBP': return '£';
-      default: return '\$';
+      case 'USD':
+      case 'TTD':
+      case 'JMD':
+        return '\$';
+      case 'EUR':
+        return '€';
+      case 'GBP':
+        return '£';
+      default:
+        return '\$';
     }
   }
 
@@ -553,8 +715,18 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
       unitPrice: _selectedVariant?.price ?? widget.item.price,
       currencyCode: widget.item.currencyCode,
       photoUrl: widget.item.photos.isNotEmpty ? widget.item.photos.first : null,
-      variant: _selectedVariant != null ? {'sku': _selectedVariant!.sku, 'size': _selectedVariant!.size, 'color': _selectedVariant!.color, 'price': _selectedVariant!.price, 'stockQty': _selectedVariant!.stockQty} : null,
-      variantLabel: _selectedVariant != null ? '${_selectedVariant!.size ?? ''}${_selectedVariant!.size != null && _selectedVariant!.color != null ? ', ' : ''}${_selectedVariant!.color ?? ''}' : null,
+      variant: _selectedVariant != null
+          ? {
+              'sku': _selectedVariant!.sku,
+              'size': _selectedVariant!.size,
+              'color': _selectedVariant!.color,
+              'price': _selectedVariant!.price,
+              'stockQty': _selectedVariant!.stockQty
+            }
+          : null,
+      variantLabel: _selectedVariant != null
+          ? '${_selectedVariant!.size ?? ''}${_selectedVariant!.size != null && _selectedVariant!.color != null ? ', ' : ''}${_selectedVariant!.color ?? ''}'
+          : null,
     ));
     Navigator.pop(context);
   }

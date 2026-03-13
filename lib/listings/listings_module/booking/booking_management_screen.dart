@@ -1,4 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:caribtap/constants.dart';
@@ -40,6 +41,69 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
     context.read<BookingBloc>().add(
           GetReceivedBookingsEvent(listersUserId: widget.currentUser.userID),
         );
+  }
+
+  Future<_CustomerPreview> _fetchCustomerPreview(dynamic booking) async {
+    final customerId = (booking.customerId ?? '').toString();
+    final fallbackName = (booking.customerName ?? '').toString().trim().isNotEmpty
+        ? booking.customerName.toString().trim()
+        : 'Customer'.tr();
+    final fallbackPhone = (booking.customerPhone ?? '').toString().trim();
+    final fallbackEmail = (booking.customerEmail ?? '').toString().trim();
+
+    if (customerId.isEmpty) {
+      return _CustomerPreview(
+        name: fallbackName,
+        phone: fallbackPhone.isNotEmpty ? fallbackPhone : null,
+        email: fallbackEmail.isNotEmpty ? fallbackEmail : null,
+      );
+    }
+
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(customerId)
+          .get();
+
+      if (!userDoc.exists) {
+        return _CustomerPreview(
+          name: fallbackName,
+          phone: fallbackPhone.isNotEmpty ? fallbackPhone : null,
+          email: fallbackEmail.isNotEmpty ? fallbackEmail : null,
+        );
+      }
+
+      final data = userDoc.data();
+      final firstName = (data?['firstName'] as String?)?.trim() ?? '';
+      final lastName = (data?['lastName'] as String?)?.trim() ?? '';
+      final displayName = (data?['displayName'] as String?)?.trim() ?? '';
+      final fullName = (data?['name'] as String?)?.trim() ?? '';
+      final email = (data?['email'] as String?)?.trim() ?? '';
+      final phone = (data?['phoneNumber'] as String?)?.trim() ??
+          (data?['phone'] as String?)?.trim() ?? '';
+      final profilePictureURL =
+          (data?['profilePictureURL'] as String?)?.trim() ?? '';
+
+      final combinedName = '$firstName $lastName'.trim();
+      final resolvedName = combinedName.isNotEmpty
+          ? combinedName
+          : (displayName.isNotEmpty
+              ? displayName
+              : (fullName.isNotEmpty ? fullName : fallbackName));
+
+      return _CustomerPreview(
+        name: resolvedName,
+        phone: phone.isNotEmpty ? phone : (fallbackPhone.isNotEmpty ? fallbackPhone : null),
+        email: email.isNotEmpty ? email : (fallbackEmail.isNotEmpty ? fallbackEmail : null),
+        profilePictureURL: profilePictureURL,
+      );
+    } catch (_) {
+      return _CustomerPreview(
+        name: fallbackName,
+        phone: fallbackPhone.isNotEmpty ? fallbackPhone : null,
+        email: fallbackEmail.isNotEmpty ? fallbackEmail : null,
+      );
+    }
   }
 
   @override
@@ -529,14 +593,6 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        booking.customerName,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: dark ? Colors.white70 : Colors.black87,
-                        ),
-                      ),
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -556,15 +612,102 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
                     ],
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Order Chat'.tr(),
-                  icon: Icon(
-                    Icons.chat_bubble_outline,
-                    color: dark ? Colors.white70 : Colors.black54,
-                  ),
-                  onPressed: () => _openOrderChat(booking),
-                ),
               ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: dark ? Colors.grey.shade800 : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: FutureBuilder<_CustomerPreview>(
+                future: _fetchCustomerPreview(booking),
+                builder: (context, snapshot) {
+                  final preview = snapshot.data ?? _CustomerPreview(
+                    name: (booking.customerName ?? '').toString().trim().isNotEmpty
+                        ? booking.customerName.toString().trim()
+                        : 'Customer'.tr(),
+                    phone: (booking.customerPhone ?? '').toString().trim().isNotEmpty
+                        ? booking.customerPhone.toString().trim()
+                        : null,
+                    email: (booking.customerEmail ?? '').toString().trim().isNotEmpty
+                        ? booking.customerEmail.toString().trim()
+                        : null,
+                  );
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundImage: preview.profilePictureURL.isNotEmpty
+                            ? NetworkImage(preview.profilePictureURL)
+                            : null,
+                        backgroundColor: Colors.grey[300],
+                        child: preview.profilePictureURL.isEmpty
+                            ? Icon(Icons.person, size: 16, color: Colors.grey[700])
+                            : null,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Customer'.tr(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: dark ? Colors.white54 : Colors.black54,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              preview.name,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: dark ? Colors.white70 : Colors.black87,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (preview.phone != null && preview.phone!.isNotEmpty)
+                              Text(
+                                preview.phone!,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: dark ? Colors.white54 : Colors.black54,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              )
+                            else if (preview.email != null && preview.email!.isNotEmpty)
+                              Text(
+                                preview.email!,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: dark ? Colors.white54 : Colors.black54,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Message customer'.tr(),
+                        icon: Icon(
+                          Icons.chat_bubble_outline,
+                          color: dark ? Colors.white70 : Colors.black54,
+                        ),
+                        onPressed: () => _openOrderChat(booking),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
             const SizedBox(height: 12),
             Text(
@@ -861,4 +1004,18 @@ class BookingManagementWrapperWidget extends StatelessWidget {
       child: BookingManagementScreen(currentUser: currentUser),
     );
   }
+}
+
+class _CustomerPreview {
+  final String name;
+  final String? phone;
+  final String? email;
+  final String profilePictureURL;
+
+  const _CustomerPreview({
+    required this.name,
+    this.phone,
+    this.email,
+    this.profilePictureURL = '',
+  });
 }

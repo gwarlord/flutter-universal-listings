@@ -496,12 +496,14 @@ class _RentalEvidenceScreenState extends State<RentalEvidenceScreen> {
           evidence: evidence,
           rentalConfig: widget.rentalConfig,
         );
-        // Update booking status to completed (or disputed if damage)
+        // Returned rentals are treated as completed; issue details are tracked separately.
         await _rentalService.updateBookingStatus(
           bookingId: widget.booking.id,
-          newStatus: _damageReported
-              ? RentalBookingStatus.disputed
-              : RentalBookingStatus.completed,
+          newStatus: RentalBookingStatus.completed,
+          returnedInGoodCondition: !_damageReported,
+          returnIssueNote: _damageReported
+              ? _damageDescriptionController.text.trim()
+              : null,
         );
       }
 

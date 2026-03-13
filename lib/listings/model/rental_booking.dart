@@ -36,6 +36,14 @@ class RentalBooking {
   // Evidence
   final RentalEvidence? checkoutEvidence;
   final RentalEvidence? checkinEvidence;
+
+  // Lifecycle tracking
+  final DateTime? collectedAt;
+  final String? collectedBy;
+  final DateTime? returnedAt;
+  final String? returnedBy;
+  final bool? returnedInGoodCondition;
+  final String? returnIssueNote;
   
   // Vehicle-specific
   final int? startOdometer;
@@ -65,6 +73,12 @@ class RentalBooking {
     required this.status,
     this.checkoutEvidence,
     this.checkinEvidence,
+    this.collectedAt,
+    this.collectedBy,
+    this.returnedAt,
+    this.returnedBy,
+    this.returnedInGoodCondition,
+    this.returnIssueNote,
     this.startOdometer,
     this.endOdometer,
     this.mileageOverageCharge,
@@ -102,6 +116,12 @@ class RentalBooking {
       checkinEvidence: json['checkinEvidence'] != null
           ? RentalEvidence.fromJson(json['checkinEvidence'] as Map<String, dynamic>)
           : null,
+        collectedAt: (json['collectedAt'] as Timestamp?)?.toDate(),
+        collectedBy: json['collectedBy'],
+        returnedAt: (json['returnedAt'] as Timestamp?)?.toDate(),
+        returnedBy: json['returnedBy'],
+        returnedInGoodCondition: json['returnedInGoodCondition'],
+        returnIssueNote: json['returnIssueNote'],
       startOdometer: json['startOdometer'],
       endOdometer: json['endOdometer'],
       mileageOverageCharge: json['mileageOverageCharge']?.toDouble(),
@@ -129,6 +149,12 @@ class RentalBooking {
       'status': status.toString().split('.').last,
       'checkoutEvidence': checkoutEvidence?.toJson(),
       'checkinEvidence': checkinEvidence?.toJson(),
+      'collectedAt': collectedAt != null ? Timestamp.fromDate(collectedAt!) : null,
+      'collectedBy': collectedBy,
+      'returnedAt': returnedAt != null ? Timestamp.fromDate(returnedAt!) : null,
+      'returnedBy': returnedBy,
+      'returnedInGoodCondition': returnedInGoodCondition,
+      'returnIssueNote': returnIssueNote,
       'startOdometer': startOdometer,
       'endOdometer': endOdometer,
       'mileageOverageCharge': mileageOverageCharge,
@@ -156,6 +182,12 @@ class RentalBooking {
     RentalBookingStatus? status,
     RentalEvidence? checkoutEvidence,
     RentalEvidence? checkinEvidence,
+    DateTime? collectedAt,
+    String? collectedBy,
+    DateTime? returnedAt,
+    String? returnedBy,
+    bool? returnedInGoodCondition,
+    String? returnIssueNote,
     int? startOdometer,
     int? endOdometer,
     double? mileageOverageCharge,
@@ -181,6 +213,13 @@ class RentalBooking {
       status: status ?? this.status,
       checkoutEvidence: checkoutEvidence ?? this.checkoutEvidence,
       checkinEvidence: checkinEvidence ?? this.checkinEvidence,
+        collectedAt: collectedAt ?? this.collectedAt,
+        collectedBy: collectedBy ?? this.collectedBy,
+        returnedAt: returnedAt ?? this.returnedAt,
+        returnedBy: returnedBy ?? this.returnedBy,
+        returnedInGoodCondition:
+          returnedInGoodCondition ?? this.returnedInGoodCondition,
+        returnIssueNote: returnIssueNote ?? this.returnIssueNote,
       startOdometer: startOdometer ?? this.startOdometer,
       endOdometer: endOdometer ?? this.endOdometer,
       mileageOverageCharge: mileageOverageCharge ?? this.mileageOverageCharge,

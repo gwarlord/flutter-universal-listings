@@ -63,6 +63,10 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
     super.dispose();
   }
 
+  int _cartCountForRentalUnit(String rentalUnitId) {
+    return _cart.where((item) => item.rentalUnitId == rentalUnitId).length;
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
@@ -297,8 +301,13 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
     bool dark,
     Color primaryColor,
   ) {
+    final isRented = !item.isAvailable || item.stockQty <= 0;
+    final inCartCount = _cartCountForRentalUnit(item.id);
+    final atCartLimit = item.stockQty > 0 && inCartCount >= item.stockQty;
+    final canBook = !isRented && !atCartLimit;
+
     return GestureDetector(
-      onTap: () => _showRentalItemDetail(context, item),
+      onTap: canBook ? () => _showRentalItemDetail(context, item) : null,
       child: Card(
         color: dark ? Colors.grey.shade900 : Colors.white,
         elevation: 2,
@@ -355,17 +364,63 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
                   ),
                   const SizedBox(height: 8),
                   ElevatedButton(
-                    onPressed: () => _showRentalItemDetail(context, item),
+                    onPressed: canBook ? () => _showRentalItemDetail(context, item) : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
+                      backgroundColor: (isRented || atCartLimit)
+                          ? (dark ? Colors.grey.shade700 : Colors.grey.shade400)
+                          : primaryColor,
                       foregroundColor: Colors.white,
                       minimumSize: const Size(double.infinity, 32),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: Text('Book Now'.tr(), style: const TextStyle(fontSize: 12)),
+                    child: Text(
+                      isRented
+                          ? 'Rented'.tr()
+                          : (atCartLimit ? 'Max in Cart'.tr() : 'Book Now'.tr()),
+                      style: const TextStyle(fontSize: 12),
+                    ),
                   ),
+                  if (isRented)
+                    FutureBuilder<DateTime?>(
+                      future: _rentalService.getNextAvailableDate(
+                        listingId: item.listingId,
+                        rentalUnitId: item.id,
+                      ),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              'Currently rented'.tr(),
+                              style: TextStyle(
+                                color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                fontSize: 11,
+                              ),
+                            ),
+                          );
+                        }
+
+                        final nextDate = snapshot.data;
+                        final label = nextDate == null
+                            ? 'Currently rented'.tr()
+                            : '${'Available again'.tr()}: ${DateFormat('MMM dd').format(nextDate)}';
+
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            label,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                              fontSize: 11,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
@@ -376,6 +431,19 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
   }
 
   void _showRentalItemDetail(BuildContext context, RentalItemBrowse item) {
+    final inCartCount = _cartCountForRentalUnit(item.id);
+    if (item.stockQty > 0 && inCartCount >= item.stockQty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'You already have the maximum available quantity for this item in your cart.'.tr(),
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -384,6 +452,20 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
         item: item,
         rentalConfig: widget.rentalConfig,
         onAddToCart: (cartItem) {
+          final latestCount = _cartCountForRentalUnit(item.id);
+          if (item.stockQty > 0 && latestCount >= item.stockQty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'You already have the maximum available quantity for this item in your cart.'.tr(),
+                ),
+                backgroundColor: Colors.orange,
+              ),
+            );
+            Navigator.pop(context);
+            return;
+          }
+
           setState(() {
             _cart.add(cartItem);
           });
@@ -663,7 +745,7 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
                             ),
                           ),
                           Text(
-                            '\$${_calculateTotal().toStringAsFixed(2)}',
+                            '\$${_calculateRentalSubtotal().toStringAsFixed(2)}',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -672,6 +754,43 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
                           ),
                         ],
                       ),
+                      if (_securityDeposit() > 0) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Security Deposit'.tr(),
+                              style: TextStyle(color: dark ? Colors.white : Colors.black),
+                            ),
+                            Text(
+                              '\$${_securityDeposit().toStringAsFixed(2)}',
+                              style: TextStyle(color: dark ? Colors.white : Colors.black),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Total (incl. deposit)'.tr(),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: dark ? Colors.white : Colors.black,
+                              ),
+                            ),
+                            Text(
+                              '\$${_calculateTotalWithDeposit().toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: dark ? Colors.white : Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -715,13 +834,21 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
     return _endDate.difference(_startDate).inDays + 1;
   }
 
-  double _calculateTotal() {
+  double _calculateRentalSubtotal() {
     return _rentalService.calculatePrice(
       widget.item.basePrice,
       widget.rentalConfig.defaultPricingUnit,
       _startDate,
       _endDate,
     );
+  }
+
+  double _securityDeposit() {
+    return widget.item.depositAmount ?? widget.rentalConfig.depositAmount ?? 0.0;
+  }
+
+  double _calculateTotalWithDeposit() {
+    return _calculateRentalSubtotal() + _securityDeposit();
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
@@ -752,7 +879,7 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
     setState(() => _isChecking = true);
 
     final available = await _rentalService.isAvailableForDates(
-      widget.rentalConfig.isRentalEnabled ? 'listingId' : '',
+      widget.item.listingId,
       widget.item.id,
       _startDate,
       _endDate,
@@ -778,9 +905,12 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
       startDate: _startDate,
       endDate: _endDate,
       pricePerDay: widget.item.basePrice,
-      totalPrice: _calculateTotal(),
+      totalPrice: _calculateRentalSubtotal(),
       currencyCode: widget.item.currencyCode,
       photoUrl: widget.item.photos.isNotEmpty ? widget.item.photos.first : null,
+      details: {
+        'securityDeposit': _securityDeposit(),
+      },
     );
 
     widget.onAddToCart(cartItem);

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../model/rental_unit.dart';
 import '../model/rental_booking.dart';
@@ -15,6 +16,9 @@ class RentalService {
 
   CollectionReference _rentalUnitsRef(String listingId) =>
       _firestore.collection('listings').doc(listingId).collection('rental_units');
+
+    DocumentReference _rentalCatalogItemRef(String listingId, String rentalUnitId) =>
+      _firestore.collection('listings').doc(listingId).collection('rental_catalog').doc(rentalUnitId);
 
   // ============= RENTAL UNITS =============
 
@@ -144,6 +148,19 @@ class RentalService {
 
   /// Create a new rental booking
   Future<String> createRentalBooking(RentalBooking booking) async {
+    final catalogRef = _rentalCatalogItemRef(booking.listingId, booking.rentalUnitId);
+    final catalogDoc = await catalogRef.get();
+    if (!catalogDoc.exists) {
+      throw Exception('This rental item is no longer available.');
+    }
+
+    final catalogData = catalogDoc.data() as Map<String, dynamic>;
+    final isCatalogAvailable = catalogData['isAvailable'] != false;
+    final stockQty = (catalogData['stockQty'] as num?)?.toInt() ?? 0;
+    if (!isCatalogAvailable || stockQty <= 0) {
+      throw Exception('This item is currently rented and not available.');
+    }
+
     // Verify availability before creating
     final isAvailable = await checkAvailability(
       listingId: booking.listingId,
@@ -157,8 +174,27 @@ class RentalService {
       throw Exception('Rental unit is not available for the selected time range');
     }
 
-    final docRef = await _rentalBookingsRef.add(booking.toJson());
-    return docRef.id;
+    final bookingRef = _rentalBookingsRef.doc();
+    final bookingData = booking.toJson()
+      ..putIfAbsent('inventoryReserved', () => false);
+
+    await _firestore.runTransaction((transaction) async {
+      final latestCatalogDoc = await transaction.get(catalogRef);
+      if (!latestCatalogDoc.exists) {
+        throw Exception('This rental item is no longer available.');
+      }
+
+      final latestCatalogData = latestCatalogDoc.data() as Map<String, dynamic>;
+      final latestAvailable = latestCatalogData['isAvailable'] != false;
+      final latestStockQty = (latestCatalogData['stockQty'] as num?)?.toInt() ?? 0;
+      if (!latestAvailable || latestStockQty <= 0) {
+        throw Exception('This item was just rented and is no longer available.');
+      }
+
+      transaction.set(bookingRef, bookingData);
+    });
+
+    return bookingRef.id;
   }
 
   /// Update booking status
@@ -166,21 +202,155 @@ class RentalService {
     required String bookingId,
     required RentalBookingStatus newStatus,
     String? reason, // For cancellations or disputes
+    bool? returnedInGoodCondition,
+    String? returnIssueNote,
   }) async {
-    final updateData = {
+    final bookingDoc = await _rentalBookingsRef.doc(bookingId).get();
+    if (!bookingDoc.exists) {
+      throw Exception('Booking not found');
+    }
+
+    final currentBooking = RentalBooking.fromJson(
+      bookingDoc.data() as Map<String, dynamic>,
+      bookingDoc.id,
+    );
+    final bookingData = bookingDoc.data() as Map<String, dynamic>;
+    final inventoryReserved = bookingData['inventoryReserved'] == true;
+
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    final isCustomer =
+        currentUserId != null && currentUserId == currentBooking.customerId;
+    final isLister =
+      currentUserId != null && currentUserId == currentBooking.listerId;
+
+    if (newStatus == RentalBookingStatus.cancelled) {
+      final alreadyCollected = currentBooking.collectedAt != null;
+      final alreadyNonCancellable =
+          currentBooking.status == RentalBookingStatus.active ||
+              currentBooking.status == RentalBookingStatus.completed ||
+              currentBooking.status == RentalBookingStatus.disputed ||
+              currentBooking.status == RentalBookingStatus.cancelled;
+
+      if (alreadyCollected || alreadyNonCancellable) {
+        throw Exception(
+          isCustomer
+              ? 'This booking can no longer be cancelled because the item was already collected.'
+              : 'Cannot cancel a booking that has already been collected or completed.',
+        );
+      }
+    }
+
+    // Prevent stale updates from reactivating cancelled bookings.
+    if (currentBooking.status == RentalBookingStatus.cancelled &&
+        (newStatus == RentalBookingStatus.active ||
+            newStatus == RentalBookingStatus.completed ||
+            newStatus == RentalBookingStatus.disputed)) {
+      throw Exception('Cannot change a cancelled booking to an active/completed state.');
+    }
+
+    final updateData = <String, dynamic>{
       'status': newStatus.toString().split('.').last,
       'updatedAt': Timestamp.now(),
     };
 
-    if (reason != null) {
-      if (newStatus == RentalBookingStatus.cancelled) {
-        updateData['cancellationReason'] = reason;
-      } else if (newStatus == RentalBookingStatus.disputed) {
-        updateData['disputeReason'] = reason;
+    final shouldReserveInventory =
+      newStatus == RentalBookingStatus.confirmed ||
+      newStatus == RentalBookingStatus.active;
+    final shouldReleaseInventory =
+      newStatus == RentalBookingStatus.cancelled ||
+      newStatus == RentalBookingStatus.completed ||
+      newStatus == RentalBookingStatus.disputed;
+
+    final reserveInventoryNow = shouldReserveInventory && !inventoryReserved;
+    final releaseInventoryNow = shouldReleaseInventory && inventoryReserved;
+
+    // Keep explicit collection/return lifecycle fields in sync with status changes.
+    if (newStatus == RentalBookingStatus.active) {
+      updateData['collectedAt'] = FieldValue.serverTimestamp();
+    }
+    if (newStatus == RentalBookingStatus.completed ||
+        newStatus == RentalBookingStatus.disputed) {
+      updateData['returnedAt'] = FieldValue.serverTimestamp();
+      updateData['returnedInGoodCondition'] =
+          returnedInGoodCondition ?? (newStatus == RentalBookingStatus.completed);
+
+      if (returnIssueNote != null) {
+        final trimmed = returnIssueNote.trim();
+        updateData['returnIssueNote'] = trimmed.isEmpty ? null : trimmed;
+      } else if (returnedInGoodCondition == true) {
+        // Clear any previous issue note when marking return as good.
+        updateData['returnIssueNote'] = null;
       }
     }
 
-    await _rentalBookingsRef.doc(bookingId).update(updateData);
+    if (reason != null) {
+      final trimmedReason = reason.trim();
+      if (newStatus == RentalBookingStatus.cancelled) {
+        updateData['cancellationReason'] = trimmedReason;
+      } else if (newStatus == RentalBookingStatus.disputed) {
+        updateData['disputeReason'] = trimmedReason;
+      }
+    }
+
+    if (newStatus == RentalBookingStatus.cancelled) {
+      if (isLister) {
+        updateData['cancelledByRole'] = 'lister';
+      } else if (isCustomer) {
+        updateData['cancelledByRole'] = 'customer';
+      } else {
+        updateData['cancelledByRole'] = 'system';
+      }
+      if (currentUserId != null && currentUserId.isNotEmpty) {
+        updateData['cancelledByUserId'] = currentUserId;
+      }
+    }
+
+    final bookingRef = _rentalBookingsRef.doc(bookingId);
+    final catalogRef = _rentalCatalogItemRef(
+      currentBooking.listingId,
+      currentBooking.rentalUnitId,
+    );
+
+    await _firestore.runTransaction((transaction) async {
+      final txUpdateData = Map<String, dynamic>.from(updateData);
+
+      if (reserveInventoryNow || releaseInventoryNow) {
+        final catalogSnap = await transaction.get(catalogRef);
+
+        if (catalogSnap.exists) {
+          final catalogData = catalogSnap.data() as Map<String, dynamic>;
+          final currentStockQty = (catalogData['stockQty'] as num?)?.toInt() ?? 0;
+
+          if (reserveInventoryNow) {
+            if (currentStockQty <= 0) {
+              throw Exception('This item is currently rented and not available.');
+            }
+
+            final nextStockQty = currentStockQty - 1;
+            transaction.update(catalogRef, {
+              'stockQty': nextStockQty,
+              'isAvailable': nextStockQty > 0,
+              'updatedAt': Timestamp.now(),
+            });
+
+            txUpdateData['inventoryReserved'] = true;
+          }
+
+          if (releaseInventoryNow) {
+            final nextStockQty = currentStockQty + 1;
+            transaction.update(catalogRef, {
+              'stockQty': nextStockQty,
+              'isAvailable': true,
+              'updatedAt': Timestamp.now(),
+            });
+
+            txUpdateData['inventoryReserved'] = false;
+          }
+        }
+      }
+
+      transaction.update(bookingRef, txUpdateData);
+    });
   }
 
   /// Add checkout evidence
@@ -191,6 +361,8 @@ class RentalService {
     await _rentalBookingsRef.doc(bookingId).update({
       'checkoutEvidence': evidence.toJson(),
       'startOdometer': evidence.odometerReading,
+      'collectedAt': FieldValue.serverTimestamp(),
+      'collectedBy': evidence.capturedBy,
       'updatedAt': Timestamp.now(),
     });
   }
@@ -204,6 +376,14 @@ class RentalService {
     final updateData = <String, dynamic>{
       'checkinEvidence': evidence.toJson(),
       'endOdometer': evidence.odometerReading,
+      'returnedAt': FieldValue.serverTimestamp(),
+      'returnedBy': evidence.capturedBy,
+      'returnedInGoodCondition': !evidence.damageReported,
+        'returnIssueNote': evidence.damageReported
+          ? (evidence.damageDescription?.trim().isNotEmpty == true
+            ? evidence.damageDescription!.trim()
+            : null)
+          : null,
       'updatedAt': Timestamp.now(),
     };
 

@@ -18,6 +18,7 @@ import 'package:caribtap/listings/listings_module/listing_details/listing_detail
 import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
 import 'package:caribtap/listings/services/review_removal_request_service.dart';
 import 'package:caribtap/listings/services/featured_service.dart';
+import 'package:caribtap/listings/utils/category_localization.dart';
 import 'package:caribtap/core/ui/loading/loading_cubit.dart';
 import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -78,7 +79,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   String listingSearchQuery = '';
   bool showOnlySuspendedUsers = false;
   bool showOnlySuspendedListings = false;
-  
+
   // Verification tab filters
   String verificationSearchQuery = '';
   bool vHasPhone = false;
@@ -96,7 +97,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   void initState() {
     super.initState();
     final safeInitialIndex = widget.initialTabIndex.clamp(0, 5);
-    _tabController = TabController(length: 6, vsync: this, initialIndex: safeInitialIndex);
+    _tabController =
+        TabController(length: 6, vsync: this, initialIndex: safeInitialIndex);
     currentUser = widget.currentUser;
     _loadAllData();
     _loadPendingRequestsCount();
@@ -146,14 +148,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   List<ListingsUser> get filteredUsers {
-    List<ListingsUser> list = showOnlySuspendedUsers ? suspendedUsers : allUsers;
+    List<ListingsUser> list =
+        showOnlySuspendedUsers ? suspendedUsers : allUsers;
     if (userSearchQuery.isEmpty) return list;
-    
-    return list.where((user) =>
-        user.firstName.toLowerCase().contains(userSearchQuery.toLowerCase()) ||
-        user.lastName.toLowerCase().contains(userSearchQuery.toLowerCase()) ||
-        user.email.toLowerCase().contains(userSearchQuery.toLowerCase())
-    ).toList();
+
+    return list
+        .where((user) =>
+            user.firstName
+                .toLowerCase()
+                .contains(userSearchQuery.toLowerCase()) ||
+            user.lastName
+                .toLowerCase()
+                .contains(userSearchQuery.toLowerCase()) ||
+            user.email.toLowerCase().contains(userSearchQuery.toLowerCase()))
+        .toList();
   }
 
   @override
@@ -165,10 +173,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = isDarkMode(context);
-    
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Admin Console'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Admin Console'.tr(),
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           // Review Removal Requests Button with Badge
@@ -313,17 +322,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           );
         }
 
-        final grouped = <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
+        final grouped =
+            <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
         for (final doc in docs) {
           final data = doc.data();
           final rawCategory = (data['category'] as String?)?.trim();
-          final category = (rawCategory == null || rawCategory.isEmpty) ? 'Other' : rawCategory;
+          final category = (rawCategory == null || rawCategory.isEmpty)
+              ? 'Other'
+              : rawCategory;
           grouped.putIfAbsent(category, () => []).add(doc);
         }
 
         final orderedCategories = [
           ...categoryOrder.where(grouped.containsKey),
-          ...grouped.keys.where((c) => !categoryOrder.contains(c)).toList()..sort(),
+          ...grouped.keys.where((c) => !categoryOrder.contains(c)).toList()
+            ..sort(),
         ];
 
         return ListView(
@@ -375,7 +388,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         collapsedIconColor: isDark ? Colors.white70 : Colors.black54,
         iconColor: Color(colorPrimary),
         title: Text(
-          category.tr(),
+          localizeCategoryLabel(category, context),
           style: TextStyle(
             fontWeight: FontWeight.w700,
             color: isDark ? Colors.white : Colors.black87,
@@ -390,8 +403,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           final suggestion = (data['suggestion'] as String?) ?? '';
           final userName = (data['userName'] as String?) ?? 'Unknown user';
           final userEmail = (data['userEmail'] as String?) ?? '';
-          final relatedListingId = (data['relatedListingId'] as String?)?.trim() ?? '';
-          final relatedListingTitle = (data['relatedListingTitle'] as String?)?.trim() ?? '';
+          final relatedListingId =
+              (data['relatedListingId'] as String?)?.trim() ?? '';
+          final relatedListingTitle =
+              (data['relatedListingTitle'] as String?)?.trim() ?? '';
           final createdAt = data['createdAt'];
           String timeLabel = '';
           if (createdAt is Timestamp) {
@@ -444,8 +459,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         alignment: Alignment.centerLeft,
                         child: TextButton.icon(
                           style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                            visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 8),
+                            visualDensity: const VisualDensity(
+                                horizontal: -2, vertical: -2),
                           ),
                           onPressed: () => _openSuggestionListing(
                             relatedListingId,
@@ -465,7 +482,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     children: [
                       Checkbox(
                         value: false,
-                        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                        visualDensity:
+                            const VisualDensity(horizontal: -4, vertical: -4),
                         onChanged: (checked) async {
                           if (checked != true) return;
                           await FirebaseFirestore.instance
@@ -496,7 +514,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
-  Future<void> _openSuggestionListing(String listingId, String listingTitle) async {
+  Future<void> _openSuggestionListing(
+      String listingId, String listingTitle) async {
     context.read<LoadingCubit>().showLoading(
           context,
           'Loading listing...'.tr(),
@@ -520,7 +539,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
       await push(
         context,
-        ListingDetailsWrappingWidget(listing: listing, currentUser: currentUser),
+        ListingDetailsWrappingWidget(
+            listing: listing, currentUser: currentUser),
       );
     } catch (e) {
       if (!mounted) return;
@@ -544,9 +564,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
+          Text(title,
+              style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87)),
           const SizedBox(height: 4),
-          Text(subtitle, style: TextStyle(fontSize: 14, color: isDark ? Colors.grey[400] : Colors.grey[600])),
+          Text(subtitle,
+              style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600])),
           const SizedBox(height: 20),
           Row(
             children: [
@@ -558,11 +585,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   ),
                   child: TextField(
                     onChanged: onChanged,
-                    style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                    style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87),
                     decoration: InputDecoration(
                       hintText: 'Search...'.tr(),
-                      hintStyle: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[400]),
-                      prefixIcon: Icon(Icons.search, size: 20, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                      hintStyle: TextStyle(
+                          color: isDark ? Colors.grey[500] : Colors.grey[400]),
+                      prefixIcon: Icon(Icons.search,
+                          size: 20,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600]),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     ),
@@ -573,17 +604,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               FilterChip(
                 label: Text(filterLabel),
                 labelStyle: TextStyle(
-                  color: filterActive 
-                    ? Colors.white 
-                    : (isDark ? Colors.white : Colors.black87),
-                  fontWeight: filterActive ? FontWeight.bold : FontWeight.normal,
+                  color: filterActive
+                      ? Colors.white
+                      : (isDark ? Colors.white : Colors.black87),
+                  fontWeight:
+                      filterActive ? FontWeight.bold : FontWeight.normal,
                 ),
                 selected: filterActive,
                 onSelected: onFilterChanged,
                 selectedColor: Colors.red,
                 backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
                 checkmarkColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
             ],
           ),
@@ -612,7 +645,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             child: isLoading
                 ? const Center(child: CircularProgressIndicator.adaptive())
                 : filteredUsers.isEmpty
-                    ? showEmptyState('No Users Found'.tr(), 'Try a different search query.'.tr())
+                    ? showEmptyState('No Users Found'.tr(),
+                        'Try a different search query.'.tr())
                     : ListView.builder(
                         padding: const EdgeInsets.only(bottom: 24),
                         itemCount: filteredUsers.length,
@@ -621,7 +655,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           return ModernUserCard(
                             user: user,
                             onSuspend: () => _showSuspendUserConfirmation(user),
-                            onUnsuspend: () => _showUnsuspendUserConfirmation(user),
+                            onUnsuspend: () =>
+                                _showUnsuspendUserConfirmation(user),
                             onToggleFreshnessExempt: (value) =>
                                 _toggleUserFreshnessExempt(user, value),
                           );
@@ -639,9 +674,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         .where((l) => l.suspensionInfo?.unsuspensionRequested == true)
         .length;
     final subtitleText = unsuspensionRequestCount > 0
-        ? '${allListings.length} total listings • $unsuspensionRequestCount unsuspension ${unsuspensionRequestCount == 1 ? 'request' : 'requests'}'.tr()
+        ? '${allListings.length} total listings • $unsuspensionRequestCount unsuspension ${unsuspensionRequestCount == 1 ? 'request' : 'requests'}'
+            .tr()
         : '${allListings.length} total listings available'.tr();
-        
+
     return RefreshIndicator(
       onRefresh: () async {
         _loadAllData();
@@ -654,14 +690,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             controller: TextEditingController(),
             onChanged: (v) => setState(() => listingSearchQuery = v),
             filterActive: showOnlySuspendedListings,
-            onFilterChanged: (v) => setState(() => showOnlySuspendedListings = v),
+            onFilterChanged: (v) =>
+                setState(() => showOnlySuspendedListings = v),
             filterLabel: 'Suspended'.tr(),
           ),
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator.adaptive())
                 : listings.isEmpty
-                    ? showEmptyState('No Listings Found'.tr(), 'Try a different search query.'.tr())
+                    ? showEmptyState('No Listings Found'.tr(),
+                        'Try a different search query.'.tr())
                     : ListView.builder(
                         padding: const EdgeInsets.only(bottom: 24),
                         itemCount: listings.length,
@@ -669,8 +707,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           final listing = listings[index];
                           return ModernListingCard(
                             listing: listing,
-                            onSuspend: () => _showSuspendListingConfirmation(listing),
-                            onUnsuspend: () => _showUnsuspendListingConfirmation(listing),
+                            onSuspend: () =>
+                                _showSuspendListingConfirmation(listing),
+                            onUnsuspend: () =>
+                                _showUnsuspendListingConfirmation(listing),
                             onFeature: () => _featureListing(listing),
                             onUnfeature: () => _unfeatureListing(listing),
                             onToggleFreshnessExempt: (value) =>
@@ -710,7 +750,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   'Review listings reported by users.'.tr(),
                   style: TextStyle(
                     fontSize: 14,
-                    color: isDarkMode(context) ? Colors.grey[400] : Colors.grey[600],
+                    color: isDarkMode(context)
+                        ? Colors.grey[400]
+                        : Colors.grey[600],
                   ),
                 ),
               ],
@@ -720,7 +762,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             child: isLoading
                 ? const Center(child: CircularProgressIndicator.adaptive())
                 : reportedListings.isEmpty
-                    ? showEmptyState('No Reports Found'.tr(), 'All caught up!'.tr())
+                    ? showEmptyState(
+                        'No Reports Found'.tr(), 'All caught up!'.tr())
                     : Builder(
                         builder: (context) {
                           // Group reports by listingId to avoid duplicates
@@ -731,7 +774,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             }
                           }
                           final uniqueReports = uniqueListings.values.toList();
-                          
+
                           return ListView.builder(
                             padding: const EdgeInsets.only(bottom: 24),
                             itemCount: uniqueReports.length,
@@ -762,8 +805,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         decoration: BoxDecoration(
           color: isDark ? Colors.grey[900] : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
-          boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+          border:
+              Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+          boxShadow: isDark
+              ? []
+              : [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4))
+                ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -790,7 +841,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           decoration: BoxDecoration(
                             color: Colors.red,
                             shape: BoxShape.circle,
-                            border: Border.all(color: isDark ? Colors.grey[900]! : Colors.white, width: 2),
+                            border: Border.all(
+                                color:
+                                    isDark ? Colors.grey[900]! : Colors.white,
+                                width: 2),
                           ),
                           constraints: const BoxConstraints(
                             minWidth: 20,
@@ -826,9 +880,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        reportCount > 1 
-                          ? '$reportCount reports • Latest by ${report.reporterName}'
-                          : 'Reported by ${report.reporterName}',
+                        reportCount > 1
+                            ? '$reportCount reports • Latest by ${report.reporterName}'
+                            : 'Reported by ${report.reporterName}',
                         style: TextStyle(
                           fontSize: 12,
                           color: isDark ? Colors.grey[400] : Colors.grey[600],
@@ -837,7 +891,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right, color: isDark ? Colors.grey[600] : Colors.grey[400]),
+                Icon(Icons.chevron_right,
+                    color: isDark ? Colors.grey[600] : Colors.grey[400]),
               ],
             ),
             const SizedBox(height: 12),
@@ -880,9 +935,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   icon: Icon(Icons.check, size: 18),
                   label: Text('Dismiss'.tr()),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark ? Colors.grey[300] : Colors.grey[700],
-                    side: BorderSide(color: isDark ? Colors.grey[600]! : Colors.grey[400]!),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    foregroundColor:
+                        isDark ? Colors.grey[300] : Colors.grey[700],
+                    side: BorderSide(
+                        color: isDark ? Colors.grey[600]! : Colors.grey[400]!),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -893,7 +951,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ],
@@ -905,15 +964,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   void _viewReportedListing(ReportedListing report) async {
-    context.read<LoadingCubit>().showLoading(context, 'Loading...'.tr(), false, Color(colorPrimary));
+    context
+        .read<LoadingCubit>()
+        .showLoading(context, 'Loading...'.tr(), false, Color(colorPrimary));
     try {
-      final listing = await listingApiManager.getListing(listingID: report.listingId);
+      final listing =
+          await listingApiManager.getListing(listingID: report.listingId);
       context.read<LoadingCubit>().hideLoading();
-      
+
       if (listing != null && mounted) {
         await push(
           context,
-          ListingDetailsWrappingWidget(listing: listing, currentUser: currentUser),
+          ListingDetailsWrappingWidget(
+              listing: listing, currentUser: currentUser),
         );
         // Refresh reports after returning in case listing was suspended
         if (mounted) {
@@ -934,40 +997,41 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
   void _dismissReport(ReportedListing report) async {
     // Get all reports for this listing
-    final allReportsForListing = reportedListings
-        .where((r) => r.listingId == report.listingId)
-        .toList();
-    
+    final allReportsForListing =
+        reportedListings.where((r) => r.listingId == report.listingId).toList();
+
     final count = allReportsForListing.length;
-    final message = count > 1 
-        ? 'Dismissing $count reports...'.tr()
-        : 'Dismissing...'.tr();
-    
-    context.read<LoadingCubit>().showLoading(context, message, false, Color(colorPrimary));
-    
+    final message =
+        count > 1 ? 'Dismissing $count reports...'.tr() : 'Dismissing...'.tr();
+
+    context
+        .read<LoadingCubit>()
+        .showLoading(context, message, false, Color(colorPrimary));
+
     // Dismiss all reports for this listing
     for (final r in allReportsForListing) {
       await listingApiManager.dismissReport(r.id);
     }
-    
+
     context.read<LoadingCubit>().hideLoading();
     context.read<AdminBloc>().add(GetReportedListingsEvent());
   }
 
   void _suspendListingFromReport(ReportedListing report) async {
-    final listing = await listingApiManager.getListing(listingID: report.listingId);
+    final listing =
+        await listingApiManager.getListing(listingID: report.listingId);
     if (listing != null) {
       _showSuspendListingConfirmation(listing);
-      
+
       // Dismiss all reports for this listing after suspension
       final allReportsForListing = reportedListings
           .where((r) => r.listingId == report.listingId)
           .toList();
-      
+
       for (final r in allReportsForListing) {
         await listingApiManager.dismissReport(r.id);
       }
-      
+
       context.read<AdminBloc>().add(GetReportedListingsEvent());
     }
   }
@@ -975,17 +1039,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   List<ListingModel> _getFilteredListings() {
     final list = showOnlySuspendedListings ? suspendedListings : allListings;
     if (listingSearchQuery.isEmpty) return list;
-    
-    return list.where((l) =>
-        l.title.toLowerCase().contains(listingSearchQuery.toLowerCase()) ||
-        l.place.toLowerCase().contains(listingSearchQuery.toLowerCase()) ||
-        l.authorName.toLowerCase().contains(listingSearchQuery.toLowerCase())
-    ).toList();
+
+    return list
+        .where((l) =>
+            l.title.toLowerCase().contains(listingSearchQuery.toLowerCase()) ||
+            l.place.toLowerCase().contains(listingSearchQuery.toLowerCase()) ||
+            l.authorName
+                .toLowerCase()
+                .contains(listingSearchQuery.toLowerCase()))
+        .toList();
   }
 
   Future<void> _loadUnverifiedListings() async {
     try {
-      final snap = await context.read<AdminBloc>().listingsRepository.getUnverifiedListings();
+      final snap = await context
+          .read<AdminBloc>()
+          .listingsRepository
+          .getUnverifiedListings();
       setState(() {
         unverifiedListings = snap;
       });
@@ -995,7 +1065,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   Widget _buildVerificationTab() {
     final list = _getFilteredUnverifiedListings();
     final isDark = isDarkMode(context);
-    
+
     return RefreshIndicator(
       onRefresh: () async {
         await _loadUnverifiedListings();
@@ -1007,9 +1077,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Verification Queue'.tr(), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
+                Text('Verification Queue'.tr(),
+                    style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87)),
                 const SizedBox(height: 4),
-                Text('${unverifiedListings.length} listings pending review'.tr(), style: TextStyle(fontSize: 14, color: isDark ? Colors.grey[400] : Colors.grey[600])),
+                Text(
+                    '${unverifiedListings.length} listings pending review'.tr(),
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? Colors.grey[400] : Colors.grey[600])),
                 const SizedBox(height: 16),
                 Container(
                   decoration: BoxDecoration(
@@ -1017,12 +1095,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: TextField(
-                    onChanged: (v) => setState(() => verificationSearchQuery = v),
-                    style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                    onChanged: (v) =>
+                        setState(() => verificationSearchQuery = v),
+                    style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87),
                     decoration: InputDecoration(
                       hintText: 'Search queue...'.tr(),
-                      hintStyle: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[400]),
-                      prefixIcon: Icon(Icons.search, size: 20, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                      hintStyle: TextStyle(
+                          color: isDark ? Colors.grey[500] : Colors.grey[400]),
+                      prefixIcon: Icon(Icons.search,
+                          size: 20,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600]),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     ),
@@ -1037,19 +1120,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
-                _buildFilterChip('Phone'.tr(), vHasPhone, (v) => setState(() => vHasPhone = v)),
+                _buildFilterChip('Phone'.tr(), vHasPhone,
+                    (v) => setState(() => vHasPhone = v)),
                 const SizedBox(width: 8),
-                _buildFilterChip('Email'.tr(), vHasEmail, (v) => setState(() => vHasEmail = v)),
+                _buildFilterChip('Email'.tr(), vHasEmail,
+                    (v) => setState(() => vHasEmail = v)),
                 const SizedBox(width: 8),
-                _buildFilterChip('Video'.tr(), vHasVideo, (v) => setState(() => vHasVideo = v)),
+                _buildFilterChip('Video'.tr(), vHasVideo,
+                    (v) => setState(() => vHasVideo = v)),
                 const SizedBox(width: 8),
-                _buildFilterChip('4+ Star'.tr(), vHighRating, (v) => setState(() => vHighRating = v)),
+                _buildFilterChip('4+ Star'.tr(), vHighRating,
+                    (v) => setState(() => vHighRating = v)),
               ],
             ),
           ),
           Expanded(
             child: list.isEmpty
-                ? Center(child: Text('All caught up! No pending verifications.'.tr(), style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)))
+                ? Center(
+                    child: Text('All caught up! No pending verifications.'.tr(),
+                        style: TextStyle(
+                            color: isDark ? Colors.white70 : Colors.black54)))
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     itemCount: list.length,
@@ -1068,14 +1158,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
-  Widget _buildFilterChip(String label, bool selected, Function(bool) onSelected) {
+  Widget _buildFilterChip(
+      String label, bool selected, Function(bool) onSelected) {
     final isDark = isDarkMode(context);
     return FilterChip(
       label: Text(label),
       labelStyle: TextStyle(
-        color: selected 
-          ? Colors.white 
-          : (isDark ? Colors.white70 : Colors.black87),
+        color: selected
+            ? Colors.white
+            : (isDark ? Colors.white70 : Colors.black87),
         fontSize: 12,
         fontWeight: selected ? FontWeight.bold : FontWeight.normal,
       ),
@@ -1092,13 +1183,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     List<ListingModel> list = List<ListingModel>.from(unverifiedListings);
     if (verificationSearchQuery.isNotEmpty) {
       final q = verificationSearchQuery.toLowerCase();
-      list = list.where((l) => l.title.toLowerCase().contains(q) || l.authorName.toLowerCase().contains(q)).toList();
+      list = list
+          .where((l) =>
+              l.title.toLowerCase().contains(q) ||
+              l.authorName.toLowerCase().contains(q))
+          .toList();
     }
     if (vHasPhone) list = list.where((l) => l.phone.isNotEmpty).toList();
     if (vHasEmail) list = list.where((l) => l.email.isNotEmpty).toList();
     if (vHasVideo) list = list.where((l) => l.videos.isNotEmpty).toList();
     if (vHighRating) {
-      list = list.where((l) => (l.reviewsSum / (l.reviewsCount > 0 ? l.reviewsCount : 1)) >= 4.0).toList();
+      list = list
+          .where((l) =>
+              (l.reviewsSum / (l.reviewsCount > 0 ? l.reviewsCount : 1)) >= 4.0)
+          .toList();
     }
     return list;
   }
@@ -1110,14 +1208,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       context: context,
       builder: (_) => SuspensionReasonDialog(subjectName: user.fullName()),
     );
-    
+
     if (suspensionInfo != null && mounted) {
       context.read<AdminBloc>().add(
-        SuspendUserEvent(
-          user: user,
-          suspensionInfo: suspensionInfo,
-        ),
-      );
+            SuspendUserEvent(
+              user: user,
+              suspensionInfo: suspensionInfo,
+            ),
+          );
     }
   }
 
@@ -1136,13 +1234,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   void _showSuspendListingConfirmation(ListingModel listing) async {
-    debugPrint('[Admin] Suspend listing tapped: ${listing.id} (${listing.title})');
+    debugPrint(
+        '[Admin] Suspend listing tapped: ${listing.id} (${listing.title})');
     final suspensionInfo = await showDialog(
       context: context,
       builder: (_) => SuspensionReasonDialog(
         subjectName: listing.title,
         title: 'Suspend Listing',
-        warningText: 'This listing will be hidden from all users and the lister will be notified.',
+        warningText:
+            'This listing will be hidden from all users and the lister will be notified.',
       ),
     );
 
@@ -1152,11 +1252,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     if (suspensionInfo != null && mounted) {
       debugPrint('[Admin] Dispatching SuspendListingEvent for ${listing.id}');
       context.read<AdminBloc>().add(
-        SuspendListingEvent(
-          listing: listing,
-          suspensionInfo: suspensionInfo,
-        ),
-      );
+            SuspendListingEvent(
+              listing: listing,
+              suspensionInfo: suspensionInfo,
+            ),
+          );
     }
   }
 
@@ -1174,22 +1274,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     }
   }
 
-  Future<bool?> _showModernActionDialog(BuildContext context, {required String title, required String content, required bool isDestructive, required String actionLabel}) {
+  Future<bool?> _showModernActionDialog(BuildContext context,
+      {required String title,
+      required String content,
+      required bool isDestructive,
+      required String actionLabel}) {
     final isDark = isDarkMode(context);
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: isDark ? Colors.grey[900] : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
-        content: Text(content, style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
+        title: Text(title,
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87)),
+        content: Text(content,
+            style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Cancel'.tr(), style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]))),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancel'.tr(),
+                  style: TextStyle(
+                      color: isDark ? Colors.grey[400] : Colors.grey[600]))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: isDestructive ? Colors.red : Colors.green,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () => Navigator.pop(context, true),
             child: Text(actionLabel),
@@ -1207,7 +1320,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       builder: (ctx) => AlertDialog(
         title: const Text('Verify Listing'),
         content: TextField(
-          decoration: const InputDecoration(hintText: 'Verification reason (optional)'),
+          decoration:
+              const InputDecoration(hintText: 'Verification reason (optional)'),
         ),
         actions: [
           TextButton(
@@ -1228,22 +1342,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         setState(() {
           unverifiedListings.removeWhere((l) => l.id == listing.id);
         });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing verified')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Listing verified')));
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
 
   Future<void> _rejectListing(ListingModel listing) async {
     try {
-      await context.read<AdminBloc>().listingsRepository.rejectListing(listing.id);
+      await context
+          .read<AdminBloc>()
+          .listingsRepository
+          .rejectListing(listing.id);
       setState(() {
         unverifiedListings.removeWhere((l) => l.id == listing.id);
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing rejected')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Listing rejected')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -1260,15 +1381,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                TextButton(onPressed: () => Navigator.pop(ctx, 7), child: const Text('7 days')),
-                TextButton(onPressed: () => Navigator.pop(ctx, 14), child: const Text('14 days')),
-                TextButton(onPressed: () => Navigator.pop(ctx, 30), child: const Text('30 days')),
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, 7),
+                    child: const Text('7 days')),
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, 14),
+                    child: const Text('14 days')),
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, 30),
+                    child: const Text('30 days')),
               ],
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
         ],
       ),
     );
@@ -1289,16 +1417,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             allListings[idx].featuredBy = currentUser.userID;
           }
         });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Featured for $duration days')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Featured for $duration days')));
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
 
   Future<void> _unfeatureListing(ListingModel listing) async {
     try {
-      await context.read<AdminBloc>().listingsRepository.unfeatureListing(listing.id);
+      await context
+          .read<AdminBloc>()
+          .listingsRepository
+          .unfeatureListing(listing.id);
       setState(() {
         final idx = allListings.indexWhere((l) => l.id == listing.id);
         if (idx >= 0) {
@@ -1307,9 +1440,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           allListings[idx].featuredBy = null;
         }
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unfeatured')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Unfeatured')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -1359,10 +1494,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           .collection(listingsCollection)
           .doc(listing.id)
           .set({
-            'freshness': {
-              'exempt': value,
-            }
-          }, SetOptions(merge: true));
+        'freshness': {
+          'exempt': value,
+        }
+      }, SetOptions(merge: true));
       setState(() {
         final idx = allListings.indexWhere((l) => l.id == listing.id);
         if (idx >= 0) {
@@ -1467,7 +1602,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
     try {
       if (mounted) {
-        context.read<LoadingCubit>().showLoading(context, 'Approving...', false, Color(colorPrimary));
+        context
+            .read<LoadingCubit>()
+            .showLoading(context, 'Approving...', false, Color(colorPrimary));
       }
 
       final service = FeaturedService();
@@ -1569,11 +1706,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                       ],
                     ),
                     const Divider(),
-                    _buildFeaturedInfoRow('Listing ID', request.listingId.substring(0, 12) + '...', isDark),
-                    _buildFeaturedInfoRow('Owner UID', request.ownerUid.substring(0, 12) + '...', isDark),
-                    _buildFeaturedInfoRow('Country', request.country ?? 'N/A', isDark),
-                    _buildFeaturedInfoRow('Category', request.category ?? 'N/A', isDark),
-                    _buildFeaturedInfoRow('Requested', DateFormat.yMMMd().add_jm().format(request.createdAt), isDark),
+                    _buildFeaturedInfoRow('Listing ID',
+                        request.listingId.substring(0, 12) + '...', isDark),
+                    _buildFeaturedInfoRow('Owner UID',
+                        request.ownerUid.substring(0, 12) + '...', isDark),
+                    _buildFeaturedInfoRow(
+                        'Country', request.country ?? 'N/A', isDark),
+                    _buildFeaturedInfoRow(
+                        'Category', request.category ?? 'N/A', isDark),
+                    _buildFeaturedInfoRow(
+                        'Requested',
+                        DateFormat.yMMMd().add_jm().format(request.createdAt),
+                        isDark),
                     const SizedBox(height: 8),
                     Text(
                       'Eligibility:',
@@ -1586,22 +1730,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     if (request.eligibilityPassed)
                       Row(
                         children: [
-                          Icon(Icons.check_circle, color: Colors.green, size: 16),
+                          Icon(Icons.check_circle,
+                              color: Colors.green, size: 16),
                           const SizedBox(width: 4),
-                          Text('Passed all checks', style: TextStyle(color: Colors.green)),
+                          Text('Passed all checks',
+                              style: TextStyle(color: Colors.green)),
                         ],
                       )
                     else
                       ...request.eligibilityReasons.map((reason) => Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Row(
-                          children: [
-                            Icon(Icons.cancel, color: Colors.red, size: 16),
-                            const SizedBox(width: 4),
-                            Expanded(child: Text(reason, style: TextStyle(color: Colors.red))),
-                          ],
-                        ),
-                      )),
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Row(
+                              children: [
+                                Icon(Icons.cancel, color: Colors.red, size: 16),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                    child: Text(reason,
+                                        style: TextStyle(color: Colors.red))),
+                              ],
+                            ),
+                          )),
                     const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -1693,30 +1841,49 @@ class ModernUserCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = isDarkMode(context);
     final isSuspended = user.suspended;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark ? Colors.grey[900] : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
-        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        border:
+            Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4))
+              ],
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 24,
-            backgroundImage: user.profilePictureURL.isNotEmpty ? NetworkImage(user.profilePictureURL) : null,
-            child: user.profilePictureURL.isEmpty ? const Icon(Icons.person) : null,
+            backgroundImage: user.profilePictureURL.isNotEmpty
+                ? NetworkImage(user.profilePictureURL)
+                : null,
+            child: user.profilePictureURL.isEmpty
+                ? const Icon(Icons.person)
+                : null,
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(user.fullName(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : Colors.black87)),
-                Text(user.email, style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600], fontSize: 13)),
+                Text(user.fullName(),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: isDark ? Colors.white : Colors.black87)),
+                Text(user.email,
+                    style: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        fontSize: 13)),
                 const SizedBox(height: 4),
                 Row(
                   children: [
@@ -1725,7 +1892,8 @@ class ModernUserCard extends StatelessWidget {
                     if (isSuspended)
                       _buildBadge('SUSPENDED', Colors.red, isDark),
                     if (!user.isAdmin && !isSuspended)
-                      _buildBadge(user.subscriptionTier.toUpperCase(), Color(colorPrimary), isDark),
+                      _buildBadge(user.subscriptionTier.toUpperCase(),
+                          Color(colorPrimary), isDark),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -1764,13 +1932,18 @@ class ModernUserCard extends StatelessWidget {
                         if (user.suspensionInfo!.reason != null)
                           Text(
                             'Reason: ${user.suspensionInfo!.reason!.displayName}',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.red),
+                            style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.red),
                           ),
-                        if (user.suspensionInfo!.reasonText != null && user.suspensionInfo!.reasonText!.isNotEmpty) ...[
+                        if (user.suspensionInfo!.reasonText != null &&
+                            user.suspensionInfo!.reasonText!.isNotEmpty) ...[
                           const SizedBox(height: 4),
                           Text(
                             user.suspensionInfo!.reasonText!,
-                            style: TextStyle(fontSize: 11, color: Colors.red.shade700),
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.red.shade700),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1783,7 +1956,8 @@ class ModernUserCard extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: Icon(isSuspended ? Icons.check_circle_outline : Icons.block, color: isSuspended ? Colors.green : Colors.red),
+            icon: Icon(isSuspended ? Icons.check_circle_outline : Icons.block,
+                color: isSuspended ? Colors.green : Colors.red),
             onPressed: isSuspended ? onUnsuspend : onSuspend,
           ),
         ],
@@ -1795,8 +1969,12 @@ class ModernUserCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(right: 6),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-      child: Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+      decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(4)),
+      child: Text(label,
+          style: TextStyle(
+              color: color, fontSize: 10, fontWeight: FontWeight.bold)),
     );
   }
 }
@@ -1823,13 +2001,14 @@ class ModernListingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = isDarkMode(context);
     final isSuspended = listing.suspended;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: isDark ? Colors.grey[900] : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+        border:
+            Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
       ),
       child: Column(
         children: [
@@ -1837,14 +2016,24 @@ class ModernListingCard extends StatelessWidget {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             child: Stack(
               children: [
-                Image.network(listing.photo, height: 120, width: double.infinity, fit: BoxFit.cover),
+                Image.network(listing.photo,
+                    height: 120, width: double.infinity, fit: BoxFit.cover),
                 if (isSuspended)
-                  Positioned.fill(child: Container(color: Colors.black.withOpacity(0.6), child: const Center(child: Text('SUSPENDED', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))))),
+                  Positioned.fill(
+                      child: Container(
+                          color: Colors.black.withOpacity(0.6),
+                          child: const Center(
+                              child: Text('SUSPENDED',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold))))),
                 Positioned(
                   top: 8,
                   right: 8,
                   child: IconButton(
-                    icon: Icon(listing.isFeatured ? Icons.star : Icons.star_border, color: Colors.amber),
+                    icon: Icon(
+                        listing.isFeatured ? Icons.star : Icons.star_border,
+                        color: Colors.amber),
                     onPressed: listing.isFeatured ? onUnfeature : onFeature,
                   ),
                 ),
@@ -1859,13 +2048,25 @@ class ModernListingCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(listing.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : Colors.black87), maxLines: 1, overflow: TextOverflow.ellipsis),
-                      Text('by ${listing.authorName} • ${listing.place}', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600], fontSize: 13)),
+                      Text(listing.title,
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: isDark ? Colors.white : Colors.black87),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                      Text('by ${listing.authorName} • ${listing.place}',
+                          style: TextStyle(
+                              color:
+                                  isDark ? Colors.grey[400] : Colors.grey[600],
+                              fontSize: 13)),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: Icon(isSuspended ? Icons.check_circle_outline : Icons.block, color: isSuspended ? Colors.green : Colors.red),
+                  icon: Icon(
+                      isSuspended ? Icons.check_circle_outline : Icons.block,
+                      color: isSuspended ? Colors.green : Colors.red),
                   onPressed: isSuspended ? onUnsuspend : onSuspend,
                 ),
               ],
@@ -1912,13 +2113,18 @@ class ModernListingCard extends StatelessWidget {
                         if (listing.suspensionInfo!.reason != null)
                           Text(
                             'Reason: ${listing.suspensionInfo!.reason!.displayName}',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.red),
+                            style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.red),
                           ),
-                        if (listing.suspensionInfo!.reasonText != null && listing.suspensionInfo!.reasonText!.isNotEmpty) ...[
+                        if (listing.suspensionInfo!.reasonText != null &&
+                            listing.suspensionInfo!.reasonText!.isNotEmpty) ...[
                           const SizedBox(height: 4),
                           Text(
                             listing.suspensionInfo!.reasonText!,
-                            style: TextStyle(fontSize: 11, color: Colors.red.shade700),
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.red.shade700),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1941,31 +2147,50 @@ class ModernListingCard extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.feedback, size: 16, color: Colors.orange),
+                              Icon(Icons.feedback,
+                                  size: 16, color: Colors.orange),
                               const SizedBox(width: 6),
                               Text(
                                 'Unsuspension Request Pending'.tr(),
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange),
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange),
                               ),
                             ],
                           ),
-                          if (listing.suspensionInfo!.unsuspensionRequestText != null && listing.suspensionInfo!.unsuspensionRequestText!.isNotEmpty) ...[
+                          if (listing.suspensionInfo!.unsuspensionRequestText !=
+                                  null &&
+                              listing.suspensionInfo!.unsuspensionRequestText!
+                                  .isNotEmpty) ...[
                             const SizedBox(height: 6),
                             Text(
                               'Response:'.tr(),
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.orange),
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.orange),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               listing.suspensionInfo!.unsuspensionRequestText!,
-                              style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[300] : Colors.grey[800]),
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark
+                                      ? Colors.grey[300]
+                                      : Colors.grey[800]),
                             ),
                           ],
-                          if (listing.suspensionInfo!.unsuspensionRequestedAt != null) ...[
+                          if (listing.suspensionInfo!.unsuspensionRequestedAt !=
+                              null) ...[
                             const SizedBox(height: 4),
                             Text(
                               'Requested: ${DateFormat('MMM d, y h:mm a').format(listing.suspensionInfo!.unsuspensionRequestedAt!)}',
-                              style: TextStyle(fontSize: 10, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  color: isDark
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600]),
                             ),
                           ],
                         ],
@@ -1986,12 +2211,18 @@ class ModernVerificationCard extends StatelessWidget {
   final VoidCallback onVerify;
   final VoidCallback onReject;
 
-  const ModernVerificationCard({super.key, required this.listing, required this.onVerify, required this.onReject});
+  const ModernVerificationCard(
+      {super.key,
+      required this.listing,
+      required this.onVerify,
+      required this.onReject});
 
   @override
   Widget build(BuildContext context) {
     final isDark = isDarkMode(context);
-    final avgRating = (listing.reviewsCount > 0) ? (listing.reviewsSum / listing.reviewsCount) : 0.0;
+    final avgRating = (listing.reviewsCount > 0)
+        ? (listing.reviewsSum / listing.reviewsCount)
+        : 0.0;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1999,28 +2230,50 @@ class ModernVerificationCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? Colors.grey[900] : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+        border:
+            Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(listing.photo, height: 60, width: 60, fit: BoxFit.cover)),
+              ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(listing.photo,
+                      height: 60, width: 60, fit: BoxFit.cover)),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(listing.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : Colors.black87), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    Text('by ${listing.authorName}', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600], fontSize: 13)),
+                    Text(listing.title,
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: isDark ? Colors.white : Colors.black87),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                    Text('by ${listing.authorName}',
+                        style: TextStyle(
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            fontSize: 13)),
                     Row(
                       children: [
                         const Icon(Icons.star, size: 14, color: Colors.amber),
                         const SizedBox(width: 4),
-                        Text(avgRating.toStringAsFixed(1), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
+                        Text(avgRating.toStringAsFixed(1),
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : Colors.black87)),
                         const SizedBox(width: 8),
-                        Text('(${listing.reviewsCount.toInt()} reviews)', style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey[600])),
+                        Text('(${listing.reviewsCount.toInt()} reviews)',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: isDark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600])),
                       ],
                     ),
                   ],
@@ -2036,7 +2289,11 @@ class ModernVerificationCard extends StatelessWidget {
                   onPressed: onReject,
                   icon: const Icon(Icons.cancel_outlined, size: 18),
                   label: const Text('Reject'),
-                  style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                  style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8))),
                 ),
               ),
               const SizedBox(width: 12),
@@ -2045,7 +2302,11 @@ class ModernVerificationCard extends StatelessWidget {
                   onPressed: onVerify,
                   icon: const Icon(Icons.check_circle_outline, size: 18),
                   label: const Text('Verify'),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8))),
                 ),
               ),
             ],

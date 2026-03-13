@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../model/rental_booking.dart';
 import '../../model/rental_unit.dart';
@@ -22,8 +23,76 @@ class RentalBookingDetailScreen extends StatefulWidget {
 class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
   final RentalService _rentalService = RentalService();
   final RentalCatalogService _catalogService = RentalCatalogService();
+  double? _catalogDepositAmount;
 
   RentalBooking get booking => widget.booking;
+
+  bool get _isListerView =>
+      FirebaseAuth.instance.currentUser?.uid == booking.listerId;
+
+    bool get _isCustomerView =>
+      FirebaseAuth.instance.currentUser?.uid == booking.customerId;
+
+    bool get _canCustomerCancel =>
+      booking.status == RentalBookingStatus.pending ||
+        (booking.status == RentalBookingStatus.confirmed &&
+          booking.collectedAt == null);
+
+    bool get _canListerCancel =>
+        (booking.status == RentalBookingStatus.pending ||
+            booking.status == RentalBookingStatus.confirmed) &&
+        booking.collectedAt == null;
+
+    @override
+    void initState() {
+      super.initState();
+      _loadCatalogDepositFallback();
+    }
+
+    Future<void> _loadCatalogDepositFallback() async {
+      if (booking.depositAmount > 0 ||
+          booking.listingId.isEmpty ||
+          booking.rentalUnitId.isEmpty ||
+          booking.rentalUnitId == 'multiple') {
+        return;
+      }
+
+      try {
+        final catalogDoc = await FirebaseFirestore.instance
+            .collection('listings')
+            .doc(booking.listingId)
+            .collection('rental_catalog')
+            .doc(booking.rentalUnitId)
+            .get();
+        final fallback = (catalogDoc.data()?['depositAmount'] as num?)?.toDouble();
+        if (!mounted || fallback == null || fallback <= 0) {
+          return;
+        }
+        setState(() {
+          _catalogDepositAmount = fallback;
+        });
+      } catch (_) {
+        // Non-blocking fallback only.
+      }
+    }
+
+    double get _displaySecurityDeposit {
+      if (booking.depositAmount > 0) {
+        return booking.depositAmount;
+      }
+      if ((_catalogDepositAmount ?? 0) > 0) {
+        return _catalogDepositAmount!;
+      }
+
+      final overage = booking.mileageOverageCharge ?? 0.0;
+      final derived = booking.totalAmount - booking.subtotal - overage;
+      return derived > 0 ? derived : 0.0;
+    }
+
+    double get _displayTotal {
+      final overage = booking.mileageOverageCharge ?? 0.0;
+      return booking.subtotal + _displaySecurityDeposit + overage;
+    }
 
   Future<Map<String, dynamic>> _fetchItemData() async {
     debugPrint('🔍 DEBUG: _fetchItemData START for booking ${booking.id}');
@@ -246,7 +315,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Booking Details'.tr()),
+        title: Text('Rental Booking Details'.tr()),
       ),
       body: ListView(
         padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 80),
@@ -408,6 +477,46 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
 
           _buildSection(
             context,
+            title: 'Rental Lifecycle'.tr(),
+            children: [
+              _buildInfoRow(
+                context,
+                'Collected'.tr(),
+                booking.collectedAt != null
+                    ? _formatDateTime(context, booking.collectedAt!)
+                    : 'Not yet collected'.tr(),
+              ),
+              _buildInfoRow(
+                context,
+                'Returned'.tr(),
+                booking.returnedAt != null
+                    ? _formatDateTime(context, booking.returnedAt!)
+                    : 'Not yet returned'.tr(),
+              ),
+              _buildInfoRow(
+                context,
+                'Return Condition'.tr(),
+                booking.returnedInGoodCondition == null
+                    ? 'Pending inspection'.tr()
+                    : (booking.returnedInGoodCondition!
+                        ? 'Returned in good condition'.tr()
+                        : 'Returned with reported issues'.tr()),
+              ),
+              if (booking.returnedInGoodCondition == false &&
+                  booking.returnIssueNote != null &&
+                  booking.returnIssueNote!.trim().isNotEmpty)
+                _buildInfoRowWithIcon(
+                  context,
+                  Icons.warning_amber_rounded,
+                  'Issue Note',
+                  booking.returnIssueNote!.trim(),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          _buildSection(
+            context,
             title: 'Customer'.tr(),
             children: [
               FutureBuilder<_CustomerPreview>(
@@ -524,9 +633,9 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
                   '\$${booking.unitPrice.toStringAsFixed(2)}'),
               _buildInfoRow(context, 'Subtotal'.tr(),
                   '\$${booking.subtotal.toStringAsFixed(2)}'),
-              if (booking.depositAmount > 0)
-                _buildInfoRow(context, 'Deposit'.tr(),
-                    '\$${booking.depositAmount.toStringAsFixed(2)}'),
+                if (_displaySecurityDeposit > 0)
+                _buildInfoRow(context, 'Security Deposit'.tr(),
+                  '\$${_displaySecurityDeposit.toStringAsFixed(2)}'),
               if (booking.mileageOverageCharge != null &&
                   booking.mileageOverageCharge! > 0)
                 _buildInfoRow(
@@ -538,8 +647,10 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
               const Divider(),
               _buildInfoRow(
                 context,
-                'Total'.tr(),
-                '\$${booking.totalAmount.toStringAsFixed(2)}',
+                _displaySecurityDeposit > 0
+                    ? 'Total (incl. deposit)'.tr()
+                    : 'Total'.tr(),
+                '\$${_displayTotal.toStringAsFixed(2)}',
                 valueStyle: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -589,7 +700,362 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
           ],
         ],
       ),
+      bottomNavigationBar: _buildLifecycleActions(),
     );
+  }
+
+  Widget? _buildLifecycleActions() {
+    if (_isCustomerView && _canCustomerCancel) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _confirmCancelBooking,
+              icon: const Icon(Icons.cancel),
+              label: Text('Cancel Booking'.tr()),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (!_isListerView) return null;
+
+    if (_canListerCancel && booking.status == RentalBookingStatus.pending) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _confirmCancelBooking,
+              icon: const Icon(Icons.cancel),
+              label: Text('Cancel Booking'.tr()),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (booking.status == RentalBookingStatus.confirmed) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _updateLifecycleStatus(RentalBookingStatus.active),
+                  icon: const Icon(Icons.inventory_2),
+                  label: Text('Mark as Collected'.tr()),
+                ),
+              ),
+              if (_canListerCancel) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _confirmCancelBooking,
+                    icon: const Icon(Icons.cancel),
+                    label: Text('Cancel Booking'.tr()),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_canListerCancel) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _confirmCancelBooking,
+              icon: const Icon(Icons.cancel),
+              label: Text('Cancel Booking'.tr()),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (booking.status == RentalBookingStatus.active) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _updateLifecycleStatusWithDetails(
+                    RentalBookingStatus.completed,
+                    returnedInGoodCondition: true,
+                    returnIssueNote: '',
+                  ),
+                  icon: const Icon(Icons.check_circle),
+                  label: Text('Returned OK'.tr()),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _confirmReturnedWithIssues,
+                  icon: const Icon(Icons.report_problem),
+                  label: Text('Returned Issues'.tr()),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return null;
+  }
+
+  Future<void> _confirmCancelBooking() async {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final isDark = theme.brightness == Brightness.dark;
+    final fillColor = isDark ? Colors.grey[850] : Colors.grey[100];
+    final reasonController = TextEditingController();
+    bool showError = false;
+
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: theme.colorScheme.surface,
+          title: Text(
+            'Cancel booking?'.tr(),
+            style: TextStyle(color: onSurface),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Please share a brief reason for cancellation.'.tr(),
+                style: TextStyle(color: onSurface.withOpacity(0.8)),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: reasonController,
+                style: TextStyle(color: onSurface),
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'e.g., Schedule change'.tr(),
+                  hintStyle: TextStyle(color: onSurface.withOpacity(0.6)),
+                  filled: true,
+                  fillColor: fillColor,
+                  border: const OutlineInputBorder(),
+                  errorText: showError ? 'Reason is required'.tr() : null,
+                ),
+                onChanged: (_) {
+                  if (showError) {
+                    setState(() => showError = false);
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Keep'.tr(),
+                style: TextStyle(color: onSurface.withOpacity(0.8)),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final reason = reasonController.text.trim();
+                if (reason.isEmpty) {
+                  setState(() => showError = true);
+                  return;
+                }
+                Navigator.pop(context, reason);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Cancel Booking'.tr()),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (reason == null || reason.trim().isEmpty) {
+      return;
+    }
+
+    try {
+      await _rentalService.updateBookingStatus(
+        bookingId: booking.id,
+        newStatus: RentalBookingStatus.cancelled,
+        reason: reason.trim(),
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Status updated'.tr())),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_friendlyRentalErrorMessage(e, isCancellation: true))),
+      );
+    }
+  }
+
+  String _friendlyRentalErrorMessage(Object error, {bool isCancellation = false}) {
+    final raw = error.toString().toLowerCase();
+
+    if (isCancellation &&
+        (raw.contains('can no longer be cancelled') ||
+            raw.contains('already been collected') ||
+            raw.contains('cannot cancel'))) {
+      return 'This booking can no longer be cancelled because the item was already collected.';
+    }
+
+    if (isCancellation && raw.contains('permission-denied')) {
+      return 'This booking can no longer be cancelled because it was already collected.';
+    }
+
+    return 'Error: $error';
+  }
+
+  Future<void> _updateLifecycleStatus(RentalBookingStatus newStatus) async {
+    await _updateLifecycleStatusWithDetails(newStatus);
+  }
+
+  Future<void> _confirmReturnedWithIssues() async {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final isDark = theme.brightness == Brightness.dark;
+    final fillColor = isDark ? Colors.grey[850] : Colors.grey[100];
+    final noteController = TextEditingController();
+    bool showError = false;
+
+    final note = await showDialog<String>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: theme.colorScheme.surface,
+          title: Text(
+            'Returned with issues'.tr(),
+            style: TextStyle(color: onSurface),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Please add a note describing the issue.'.tr(),
+                style: TextStyle(color: onSurface.withOpacity(0.8)),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: noteController,
+                style: TextStyle(color: onSurface),
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'e.g., Scratch on side panel'.tr(),
+                  hintStyle: TextStyle(color: onSurface.withOpacity(0.6)),
+                  filled: true,
+                  fillColor: fillColor,
+                  border: const OutlineInputBorder(),
+                  errorText: showError ? 'Issue note is required'.tr() : null,
+                ),
+                onChanged: (_) {
+                  if (showError) {
+                    setState(() => showError = false);
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel'.tr(),
+                style: TextStyle(color: onSurface.withOpacity(0.8)),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final note = noteController.text.trim();
+                if (note.isEmpty) {
+                  setState(() => showError = true);
+                  return;
+                }
+                Navigator.pop(context, note);
+              },
+              child: Text('Save'.tr()),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (note == null || note.trim().isEmpty) return;
+
+    await _updateLifecycleStatusWithDetails(
+      RentalBookingStatus.completed,
+      returnedInGoodCondition: false,
+      returnIssueNote: note.trim(),
+    );
+  }
+
+  Future<void> _updateLifecycleStatusWithDetails(
+    RentalBookingStatus newStatus, {
+    bool? returnedInGoodCondition,
+    String? returnIssueNote,
+  }) async {
+    try {
+      await _rentalService.updateBookingStatus(
+        bookingId: booking.id,
+        newStatus: newStatus,
+        returnedInGoodCondition: returnedInGoodCondition,
+        returnIssueNote: returnIssueNote,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Status updated'.tr())),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
   }
 
   Widget _buildStatusCard(BuildContext context) {
@@ -654,6 +1120,19 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                  if (booking.status == RentalBookingStatus.cancelled &&
+                      booking.cancellationReason != null &&
+                      booking.cancellationReason!.trim().isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      '${'Cancellation Reason'.tr()}: ${booking.cancellationReason!.trim()}',
+                      style: TextStyle(
+                        color: isDark ? Colors.red[200] : Colors.red[900],
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -702,26 +1181,122 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
     final theme = Theme.of(context);
     final onSurface = theme.colorScheme.onSurface;
     final onSurfaceMuted = onSurface.withOpacity(0.7);
+    final labelWidget = Text(
+      label,
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: onSurfaceMuted,
+          ),
+    );
+    final valueWidget = Text(
+      value,
+      textAlign: TextAlign.end,
+      softWrap: true,
+      overflow: TextOverflow.visible,
+      style: valueStyle ??
+          Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: valueColor ?? onSurface,
+              ),
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: onSurfaceMuted,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 360) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                labelWidget,
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: valueWidget,
                 ),
-          ),
-          Text(
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: labelWidget),
+              const SizedBox(width: 12),
+              Flexible(child: valueWidget),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildInfoRowWithIcon(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value,
+  ) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final onSurfaceMuted = onSurface.withOpacity(0.7);
+    final warningColor = theme.brightness == Brightness.dark
+        ? Colors.amber[300]
+        : Colors.orange[800];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final labelWidget = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: warningColor),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: onSurfaceMuted,
+                  ),
+                ),
+              ),
+            ],
+          );
+
+          final valueWidget = Text(
             value,
-            style: valueStyle ??
-                Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: valueColor ?? onSurface,
-                    ),
-          ),
-        ],
+            textAlign: TextAlign.end,
+            softWrap: true,
+            overflow: TextOverflow.visible,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: onSurface,
+            ),
+          );
+
+          if (constraints.maxWidth < 360) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                labelWidget,
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: valueWidget,
+                ),
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: labelWidget),
+              const SizedBox(width: 12),
+              Flexible(child: valueWidget),
+            ],
+          );
+        },
       ),
     );
   }

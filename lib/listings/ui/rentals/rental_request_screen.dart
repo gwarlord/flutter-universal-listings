@@ -329,7 +329,7 @@ class _RentalRequestScreenState extends State<RentalRequestScreen> {
             ),
             _buildPriceRow('Subtotal', '\$${subtotal.toStringAsFixed(2)}'),
             if (widget.rentalConfig.requiresDeposit)
-              _buildPriceRow('Deposit', '\$${deposit.toStringAsFixed(2)}'),
+              _buildPriceRow('Security Deposit', '\$${deposit.toStringAsFixed(2)}'),
             const Divider(),
             _buildPriceRow(
               'Total',

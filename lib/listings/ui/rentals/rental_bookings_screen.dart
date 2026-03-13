@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:caribtap/listings/model/rental_booking.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/services/rental_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:caribtap/core/utils/helper.dart';
 
@@ -21,6 +22,7 @@ class RentalBookingsScreen extends StatefulWidget {
 }
 
 class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
+  final RentalService _rentalService = RentalService();
   String _selectedTab = 'pending'; // pending, confirmed, completed, cancelled
 
   @override
@@ -255,18 +257,45 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                 color: primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
                 children: [
-                  const Text('Total Price', style: TextStyle(fontWeight: FontWeight.w600)),
-                  Text(
-                    '\$${booking.totalAmount.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: primaryColor,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Total Price', style: TextStyle(fontWeight: FontWeight.w600)),
+                      Text(
+                        '\$${booking.totalAmount.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ],
                   ),
+                  if (booking.depositAmount > 0) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Security Deposit',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        Text(
+                          '\$${booking.depositAmount.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -320,24 +349,40 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                     backgroundColor: primaryColor,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: const Text('Mark as Active'),
+                  child: const Text('Mark as Collected'),
                 ),
               ),
             ] else if (booking.status == RentalBookingStatus.active) ...[
               const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => _updateBookingStatus(
-                    booking,
-                    RentalBookingStatus.completed,
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => _updateBookingStatus(
+                        booking,
+                        RentalBookingStatus.completed,
+                        returnedInGoodCondition: true,
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('Returned OK'),
+                    ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _promptReturnedIssues(booking),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.orange,
+                        side: const BorderSide(color: Colors.orange),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('Returned Issues'),
+                    ),
                   ),
-                  child: const Text('Mark as Completed'),
-                ),
+                ],
               ),
             ],
           ],
@@ -417,20 +462,24 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
   Future<void> _updateBookingStatus(
     RentalBooking booking,
     RentalBookingStatus newStatus,
+    {bool? returnedInGoodCondition, String? returnIssueNote}
   ) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('rental_bookings')
-          .doc(booking.id)
-          .update({
-        'status': newStatus.toString().split('.').last,
-        'updatedAt': Timestamp.now(),
-      });
+      final effectiveStatus = newStatus == RentalBookingStatus.disputed
+          ? RentalBookingStatus.completed
+          : newStatus;
+
+      await _rentalService.updateBookingStatus(
+        bookingId: booking.id,
+        newStatus: effectiveStatus,
+        returnedInGoodCondition: returnedInGoodCondition,
+        returnIssueNote: returnIssueNote,
+      );
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Booking ${newStatus.toString().split('.').last}'),
+            content: Text('Booking ${effectiveStatus.toString().split('.').last}'),
             backgroundColor: Colors.green,
           ),
         );
@@ -445,5 +494,59 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
         );
       }
     }
+  }
+
+  Future<void> _promptReturnedIssues(RentalBooking booking) async {
+    final controller = TextEditingController();
+    bool showError = false;
+
+    final note = await showDialog<String>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Returned with issues'),
+          content: TextField(
+            controller: controller,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Describe the issue',
+              border: const OutlineInputBorder(),
+              errorText: showError ? 'Issue note is required' : null,
+            ),
+            onChanged: (_) {
+              if (showError) {
+                setState(() => showError = false);
+              }
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final value = controller.text.trim();
+                if (value.isEmpty) {
+                  setState(() => showError = true);
+                  return;
+                }
+                Navigator.pop(context, value);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (note == null || note.trim().isEmpty) return;
+
+    await _updateBookingStatus(
+      booking,
+      RentalBookingStatus.completed,
+      returnedInGoodCondition: false,
+      returnIssueNote: note.trim(),
+    );
   }
 }

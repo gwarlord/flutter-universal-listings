@@ -9,6 +9,7 @@ import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/services/rental_catalog_service.dart';
 import 'package:caribtap/listings/services/entitlement_service.dart';
 import 'package:caribtap/listings/services/pro_gate.dart';
+import 'package:caribtap/listings/utils/category_localization.dart';
 import 'package:caribtap/screens/rentals/rental_item_editor_screen.dart';
 
 /// Rental Catalog Manager Screen - Premium Only
@@ -24,10 +25,12 @@ class RentalCatalogManagerScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<RentalCatalogManagerScreen> createState() => _RentalCatalogManagerScreenState();
+  State<RentalCatalogManagerScreen> createState() =>
+      _RentalCatalogManagerScreenState();
 }
 
-class _RentalCatalogManagerScreenState extends State<RentalCatalogManagerScreen> {
+class _RentalCatalogManagerScreenState
+    extends State<RentalCatalogManagerScreen> {
   final RentalCatalogService _rentalService = RentalCatalogService();
   final EntitlementService _entitlementService = EntitlementService();
   String _selectedCategory = 'All';
@@ -35,7 +38,7 @@ class _RentalCatalogManagerScreenState extends State<RentalCatalogManagerScreen>
   @override
   void initState() {
     super.initState();
-    
+
     // CRITICAL: Verify Premium access
     _ensurePremiumAccess();
   }
@@ -90,10 +93,11 @@ class _RentalCatalogManagerScreenState extends State<RentalCatalogManagerScreen>
                 }
               }
               final categoryList = categories.toList();
-              
+
               return Container(
                 height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: categoryList.length,
@@ -103,7 +107,7 @@ class _RentalCatalogManagerScreenState extends State<RentalCatalogManagerScreen>
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: FilterChip(
-                        label: Text(category.tr()),
+                        label: Text(localizeCategoryLabel(category, context)),
                         selected: isSelected,
                         onSelected: (selected) {
                           if (selected) {
@@ -112,7 +116,9 @@ class _RentalCatalogManagerScreenState extends State<RentalCatalogManagerScreen>
                         },
                         selectedColor: Color(cfg.colorPrimary),
                         labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : (dark ? Colors.white70 : Colors.black87),
+                          color: isSelected
+                              ? Colors.white
+                              : (dark ? Colors.white70 : Colors.black87),
                         ),
                       ),
                     );
@@ -139,21 +145,27 @@ class _RentalCatalogManagerScreenState extends State<RentalCatalogManagerScreen>
                         Icon(
                           Icons.inventory_2_outlined,
                           size: 64,
-                          color: dark ? Colors.grey.shade700 : Colors.grey.shade400,
+                          color: dark
+                              ? Colors.grey.shade700
+                              : Colors.grey.shade400,
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'No rental items yet'.tr(),
                           style: TextStyle(
                             fontSize: 18,
-                            color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                            color: dark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Tap + to add your first rental item'.tr(),
                           style: TextStyle(
-                            color: dark ? Colors.grey.shade500 : Colors.grey.shade500,
+                            color: dark
+                                ? Colors.grey.shade500
+                                : Colors.grey.shade500,
                           ),
                         ),
                       ],
@@ -162,10 +174,12 @@ class _RentalCatalogManagerScreenState extends State<RentalCatalogManagerScreen>
                 }
 
                 var items = snapshot.data!;
-                
+
                 // Filter by category
                 if (_selectedCategory != 'All') {
-                  items = items.where((item) => item.category == _selectedCategory).toList();
+                  items = items
+                      .where((item) => item.category == _selectedCategory)
+                      .toList();
                 }
 
                 return ListView.builder(
@@ -211,7 +225,7 @@ class _RentalCatalogManagerScreenState extends State<RentalCatalogManagerScreen>
                     : _placeholderImage(),
               ),
               const SizedBox(width: 12),
-              
+
               // Item details
               Expanded(
                 child: Column(
@@ -233,7 +247,9 @@ class _RentalCatalogManagerScreenState extends State<RentalCatalogManagerScreen>
                         item.category,
                         style: TextStyle(
                           fontSize: 12,
-                          color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          color: dark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
                         ),
                       ),
                     const SizedBox(height: 8),
@@ -251,19 +267,26 @@ class _RentalCatalogManagerScreenState extends State<RentalCatalogManagerScreen>
                           ' / ${item.pricingUnit.toString().split('.').last}',
                           style: TextStyle(
                             fontSize: 12,
-                            color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                            color: dark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
                           ),
                         ),
                         const Spacer(),
                         if (item.stockQty > 0)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: item.isAvailable ? Colors.green : Colors.orange,
+                              color: item.isAvailable
+                                  ? Colors.green
+                                  : Colors.orange,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              item.isAvailable ? 'Available (${item.stockQty})' : 'Unavailable',
+                              item.isAvailable
+                                  ? 'Available (${item.stockQty})'
+                                  : 'Unavailable',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
@@ -276,10 +299,11 @@ class _RentalCatalogManagerScreenState extends State<RentalCatalogManagerScreen>
                   ],
                 ),
               ),
-              
+
               // Actions
               PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert, color: dark ? Colors.white70 : Colors.black54),
+                icon: Icon(Icons.more_vert,
+                    color: dark ? Colors.white70 : Colors.black54),
                 onSelected: (value) {
                   if (value == 'edit') {
                     _editItem(item);
@@ -304,7 +328,8 @@ class _RentalCatalogManagerScreenState extends State<RentalCatalogManagerScreen>
                       children: [
                         const Icon(Icons.delete, size: 20, color: Colors.red),
                         const SizedBox(width: 8),
-                        Text('Delete'.tr(), style: const TextStyle(color: Colors.red)),
+                        Text('Delete'.tr(),
+                            style: const TextStyle(color: Colors.red)),
                       ],
                     ),
                   ),

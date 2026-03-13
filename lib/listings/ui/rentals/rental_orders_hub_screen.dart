@@ -33,7 +33,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
   final TextEditingController _listerSearchController = TextEditingController();
   late TabController _tabController;
   late VoidCallback _entitlementListener;
-  String _selectedStatus = 'all';
+  String _selectedStatus = 'pending';
   String _customerSearchQuery = '';
   String _listerSearchQuery = '';
   bool _showHistory = false; // Toggle between active orders and all orders
@@ -333,10 +333,24 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
               final hasSearch = _listerSearchQuery.trim().isNotEmpty;
 
               if (_selectedStatus != 'all') {
-                bookings = bookings
-                    .where((b) => b.status.toString().split('.').last == _selectedStatus)
-                    .toList();
+                if (_selectedStatus == 'completed') {
+                  bookings = bookings.where((b) {
+                    final slug = b.status.toString().split('.').last;
+                    return slug == 'completed' || slug == 'disputed';
+                  }).toList();
+                } else {
+                  bookings = bookings
+                      .where((b) => b.status.toString().split('.').last == _selectedStatus)
+                      .toList();
+                }
               }
+
+              // Oldest request first so listers see requests in FIFO order.
+              bookings.sort((a, b) {
+                final byCreatedAt = a.createdAt.compareTo(b.createdAt);
+                if (byCreatedAt != 0) return byCreatedAt;
+                return a.id.compareTo(b.id);
+              });
 
               if (bookings.isEmpty) {
                 return _buildEmptyState(
@@ -347,11 +361,19 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
               }
 
               if (!hasSearch) {
+                final customerIssueBookingIds =
+                    _buildCustomerIssueBookingIds(snapshot.data ?? const <RentalBooking>[]);
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: bookings.length,
                   itemBuilder: (context, index) {
-                    return _buildListerBookingCard(context, bookings[index]);
+                    final booking = bookings[index];
+                    return _buildListerBookingCard(
+                      context,
+                      booking,
+                      hasPriorIssueHistory:
+                          _hasPriorIssueHistory(booking, customerIssueBookingIds),
+                    );
                   },
                 );
               }
@@ -372,11 +394,26 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                     );
                   }
 
+                  filtered.sort((a, b) {
+                    final byCreatedAt = a.createdAt.compareTo(b.createdAt);
+                    if (byCreatedAt != 0) return byCreatedAt;
+                    return a.id.compareTo(b.id);
+                  });
+
+                  final customerIssueBookingIds =
+                      _buildCustomerIssueBookingIds(snapshot.data ?? const <RentalBooking>[]);
+
                   return ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: filtered.length,
                     itemBuilder: (context, index) {
-                      return _buildListerBookingCard(context, filtered[index]);
+                      final booking = filtered[index];
+                      return _buildListerBookingCard(
+                        context,
+                        booking,
+                        hasPriorIssueHistory:
+                            _hasPriorIssueHistory(booking, customerIssueBookingIds),
+                      );
                     },
                   );
                 },
@@ -490,9 +527,9 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     final primary = theme.colorScheme.primary;
     final options = <String>[
       'all',
+      'active',
       'pending',
       'confirmed',
-      'active',
       'completed',
       'cancelled',
     ];
@@ -575,8 +612,8 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     final onSurface = theme.colorScheme.onSurface;
     final statusStyle = _statusStyle(booking.status);
     final canCancel = booking.status == RentalBookingStatus.pending ||
-        booking.status == RentalBookingStatus.confirmed ||
-        booking.status == RentalBookingStatus.active;
+      (booking.status == RentalBookingStatus.confirmed &&
+        booking.collectedAt == null);
 
     return FutureBuilder<_RentalItemPreview>(
       future: _fetchRentalItemPreview(booking),
@@ -618,6 +655,16 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                       ),
                     ],
                   ),
+                  if (booking.depositAmount > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '${'Security Deposit'.tr()}: ${_formatCurrency(booking.depositAmount, currencyCode)}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: onSurface.withOpacity(0.75),
+                            ),
+                      ),
+                    ),
                   const Divider(height: 24),
                   Row(
                     children: [
@@ -660,6 +707,12 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                     '${'End'.tr()}: ${_formatDateTime(context, booking.endTime)}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
+                  Text(
+                    '${'Requested'.tr()}: ${_formatDateTime(context, booking.createdAt)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: onSurface.withOpacity(0.7),
+                        ),
+                  ),
                   if (canCancel) ...[
                     const SizedBox(height: 12),
                     SizedBox(
@@ -697,7 +750,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
         builder: (context, setState) => AlertDialog(
           backgroundColor: theme.colorScheme.surface,
           title: Text(
-            'Cancel booking?'.tr(),
+            'Cancel this booking?'.tr(),
             style: TextStyle(color: onSurface),
           ),
           content: Column(
@@ -705,7 +758,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Please share a brief reason for cancellation.'.tr(),
+                'Please share a brief reason so the renter understands what happened.'.tr(),
                 style: TextStyle(color: onSurface.withOpacity(0.8)),
               ),
               const SizedBox(height: 12),
@@ -719,7 +772,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                   filled: true,
                   fillColor: fillColor,
                   border: const OutlineInputBorder(),
-                  errorText: showError ? 'Reason is required'.tr() : null,
+                  errorText: showError ? 'Please add a reason before continuing.'.tr() : null,
                 ),
                 onChanged: (_) {
                   if (showError) {
@@ -733,7 +786,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
-                'Keep'.tr(),
+                'Go Back'.tr(),
                 style: TextStyle(color: onSurface.withOpacity(0.8)),
               ),
             ),
@@ -750,7 +803,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
-              child: Text('Cancel Booking'.tr()),
+              child: Text('Confirm Cancellation'.tr()),
             ),
           ],
         ),
@@ -772,7 +825,10 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     final isDark = theme.brightness == Brightness.dark;
     final fillColor = isDark ? Colors.grey[850] : Colors.grey[100];
     final reasonController = TextEditingController();
+    const alreadyRentedReason =
+      'This item is no longer available because it has already been rented.';
     bool showError = false;
+    bool itemAlreadyRented = false;
 
     final reason = await showDialog<String>(
       context: context,
@@ -780,7 +836,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
         builder: (context, setState) => AlertDialog(
           backgroundColor: theme.colorScheme.surface,
           title: Text(
-            'Decline booking?'.tr(),
+            'Decline this booking request?'.tr(),
             style: TextStyle(color: onSurface),
           ),
           content: Column(
@@ -788,8 +844,33 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Please share a brief reason for declining.'.tr(),
+                'Please share a brief reason so the renter has a clear update.'.tr(),
                 style: TextStyle(color: onSurface.withOpacity(0.8)),
+              ),
+              const SizedBox(height: 8),
+              CheckboxListTile(
+                value: itemAlreadyRented,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: Text(
+                  'Item is no longer available (already rented)'.tr(),
+                  style: TextStyle(color: onSurface),
+                ),
+                controlAffinity: ListTileControlAffinity.leading,
+                onChanged: (value) {
+                  final selected = value ?? false;
+                  setState(() {
+                    itemAlreadyRented = selected;
+                    if (selected) {
+                      reasonController.text = alreadyRentedReason;
+                    } else if (reasonController.text.trim() == alreadyRentedReason) {
+                      reasonController.clear();
+                    }
+                    if (showError && reasonController.text.trim().isNotEmpty) {
+                      showError = false;
+                    }
+                  });
+                },
               ),
               const SizedBox(height: 12),
               TextField(
@@ -802,7 +883,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                   filled: true,
                   fillColor: fillColor,
                   border: const OutlineInputBorder(),
-                  errorText: showError ? 'Reason is required'.tr() : null,
+                  errorText: showError ? 'Please add a reason before continuing.'.tr() : null,
                 ),
                 onChanged: (_) {
                   if (showError) {
@@ -816,7 +897,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
-                'Keep'.tr(),
+                'Go Back'.tr(),
                 style: TextStyle(color: onSurface.withOpacity(0.8)),
               ),
             ),
@@ -833,7 +914,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
-              child: Text('Decline Booking'.tr()),
+              child: Text('Send Decline'.tr()),
             ),
           ],
         ),
@@ -849,7 +930,11 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     }
   }
 
-  Widget _buildListerBookingCard(BuildContext context, RentalBooking booking) {
+  Widget _buildListerBookingCard(
+    BuildContext context,
+    RentalBooking booking, {
+    bool hasPriorIssueHistory = false,
+  }) {
     final theme = Theme.of(context);
     final surface = theme.colorScheme.surface;
     final surfaceVariant = theme.colorScheme.surfaceVariant;
@@ -897,6 +982,16 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                       ),
                     ],
                   ),
+                  if (booking.depositAmount > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '${'Security Deposit'.tr()}: ${_formatCurrency(booking.depositAmount, currencyCode)}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: onSurface.withOpacity(0.75),
+                            ),
+                      ),
+                    ),
                   const Divider(height: 24),
                   Row(
                     children: [
@@ -935,45 +1030,87 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                     future: _fetchCustomerPreview(booking.customerId),
                     builder: (context, snapshot) {
                       final preview = snapshot.data ?? const _CustomerPreview(name: 'Customer');
-                      return Row(
+                      return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CircleAvatar(
-                            radius: 16,
-                            backgroundImage: preview.profilePictureURL.isNotEmpty
-                                ? NetworkImage(preview.profilePictureURL)
-                                : null,
-                            backgroundColor: Colors.grey[300],
-                            child: preview.profilePictureURL.isEmpty
-                                ? Icon(Icons.person, size: 16, color: Colors.grey[700])
-                                : null,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  preview.name,
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 16,
+                                backgroundImage: preview.profilePictureURL.isNotEmpty
+                                    ? NetworkImage(preview.profilePictureURL)
+                                    : null,
+                                backgroundColor: Colors.grey[300],
+                                child: preview.profilePictureURL.isEmpty
+                                    ? Icon(Icons.person, size: 16, color: Colors.grey[700])
+                                    : null,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      preview.name,
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    if (preview.contact != null && preview.contact!.isNotEmpty)
+                                      Text(
+                                        preview.contact!,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(color: onSurfaceMuted),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  ],
                                 ),
-                                if (preview.contact != null && preview.contact!.isNotEmpty)
-                                  Text(
-                                    preview.contact!,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(color: onSurfaceMuted),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${'Requested'.tr()}: ${_formatDateTime(context, booking.createdAt)}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: onSurfaceMuted,
+                                ),
+                          ),
+                          if (hasPriorIssueHistory)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.warning_amber_rounded,
+                                    size: 18,
+                                    color: Colors.orange,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Prior rental issues noted'.tr(),
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: Colors.orange,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  IconButton(
+                                    icon: const Icon(Icons.info_outline, size: 18),
+                                    color: Colors.orange,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    tooltip: 'Info'.tr(),
+                                    onPressed: _showIssueHistoryInfo,
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       );
                     },
@@ -1077,10 +1214,34 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text(
+              _friendlyRentalErrorMessage(
+                e,
+                isCancellation: status == RentalBookingStatus.cancelled,
+              ),
+            ),
+          ),
         );
       }
     }
+  }
+
+  String _friendlyRentalErrorMessage(Object error, {bool isCancellation = false}) {
+    final raw = error.toString().toLowerCase();
+
+    if (isCancellation &&
+        (raw.contains('can no longer be cancelled') ||
+            raw.contains('already been collected') ||
+            raw.contains('cannot cancel'))) {
+      return 'This booking can no longer be cancelled because the item was already collected.';
+    }
+
+    if (isCancellation && raw.contains('permission-denied')) {
+      return 'This booking can no longer be cancelled because it was already collected.';
+    }
+
+    return 'Error: $error';
   }
 
   void _showSuccessDialog(String message) {
@@ -1147,6 +1308,62 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Map<String, Set<String>> _buildCustomerIssueBookingIds(List<RentalBooking> bookings) {
+    final map = <String, Set<String>>{};
+
+    for (final booking in bookings) {
+      final note = booking.returnIssueNote?.trim() ?? '';
+      if (note.isEmpty || booking.customerId.isEmpty) {
+        continue;
+      }
+
+      map.putIfAbsent(booking.customerId, () => <String>{}).add(booking.id);
+    }
+
+    return map;
+  }
+
+  bool _hasPriorIssueHistory(
+    RentalBooking booking,
+    Map<String, Set<String>> customerIssueBookingIds,
+  ) {
+    final issueBookingIds = customerIssueBookingIds[booking.customerId];
+    if (issueBookingIds == null || issueBookingIds.isEmpty) {
+      return false;
+    }
+
+    if (issueBookingIds.length > 1) {
+      return true;
+    }
+
+    return !issueBookingIds.contains(booking.id);
+  }
+
+  void _showIssueHistoryInfo() {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Issue History'.tr(),
+          style: TextStyle(color: onSurface),
+        ),
+        content: Text(
+          'This customer has previous rentals with issues noted. Search this user in Manage Rentals to review those past bookings.'.tr(),
+          style: TextStyle(color: onSurface.withOpacity(0.85)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK'.tr()),
+          ),
+        ],
       ),
     );
   }

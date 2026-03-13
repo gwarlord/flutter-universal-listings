@@ -294,7 +294,7 @@ export const onRentalBookingCreatedUpdateAttention = functions.firestore
  * Update attention for bookings (new booking or status change)
  */
 export const onBookingStatusChangedUpdateAttention = functions.firestore
-  .document("bookings/{bookingId}")
+  .document("listings/{listingId}/bookings/{bookingId}")
   .onUpdate(async (change, context) => {
     const before = change.before.data();
     const after = change.after.data();
@@ -339,7 +339,7 @@ export const onBookingStatusChangedUpdateAttention = functions.firestore
  * Update attention when new booking is created
  */
 export const onBookingCreatedUpdateAttention = functions.firestore
-  .document("bookings/{bookingId}")
+  .document("listings/{listingId}/bookings/{bookingId}")
   .onCreate(async (snap, context) => {
     const booking = snap.data();
     if (!booking) return null;

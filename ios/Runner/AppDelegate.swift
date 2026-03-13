@@ -66,7 +66,7 @@ class NativeAdFactoryExample: NSObject, FLTNativeAdFactory {
 #endif
 
 @main
-@objc class AppDelegate: FlutterAppDelegate {
+@objc class AppDelegate: FlutterAppDelegate, MessagingDelegate {
     #if canImport(GoogleMobileAds) && canImport(google_mobile_ads)
     private let nativeAdFactory = NativeAdFactoryExample()
     #endif
@@ -77,7 +77,6 @@ class NativeAdFactoryExample: NSObject, FLTNativeAdFactory {
     ) -> Bool {
 
         // App Check provider factory must be configured before FirebaseApp.configure().
-        // Use debug provider in debug builds or when a debug token is passed via scheme env.
         let env = ProcessInfo.processInfo.environment
         let appCheckDebugToken = env["FIRAAppCheckDebugToken"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let forceDebugAppCheck = (env["APPCHECK_FORCE_DEBUG_PROVIDER"] ?? "").lowercased() == "true"
@@ -92,10 +91,10 @@ class NativeAdFactoryExample: NSObject, FLTNativeAdFactory {
         }
         #endif
 
-        // Initialize Firebase first if proxy is disabled
-        if FirebaseApp.app() == nil {
-            FirebaseApp.configure()
-        }
+        FirebaseApp.configure()
+        UNUserNotificationCenter.current().delegate = self
+        Messaging.messaging().delegate = self
+        application.registerForRemoteNotifications()
 
 #if canImport(GoogleMaps)
         if let mapsAPIKey = Bundle.main.object(forInfoDictionaryKey: "GMSApiKey") as? String,
@@ -104,14 +103,6 @@ class NativeAdFactoryExample: NSObject, FLTNativeAdFactory {
             GMSServices.provideAPIKey(normalizedKey)
         }
 #endif
-
-        if #available(iOS 10.0, *) {
-            UNUserNotificationCenter.current().delegate = self as UNUserNotificationCenterDelegate
-        }
-
-        // Manual setup for Messaging
-        Messaging.messaging().delegate = self
-        application.registerForRemoteNotifications()
 
         GeneratedPluginRegistrant.register(with: self)
 
@@ -130,20 +121,7 @@ class NativeAdFactoryExample: NSObject, FLTNativeAdFactory {
         _ application: UIApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
-        let apnsToken = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
-        NSLog("DEBUG_IOS: APNs Device Token: %@", apnsToken)
-
-        // MANUAL FORWARDING (Required when Proxy is disabled)
         Messaging.messaging().apnsToken = deviceToken
-
-        #if DEBUG
-        Messaging.messaging().setAPNSToken(deviceToken, type: .sandbox)
-        NSLog("DEBUG_IOS: Firebase APNs token type: sandbox")
-        #else
-        Messaging.messaging().setAPNSToken(deviceToken, type: .prod)
-        NSLog("DEBUG_IOS: Firebase APNs token type: prod")
-        #endif
-
         super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
     }
 
@@ -151,55 +129,11 @@ class NativeAdFactoryExample: NSObject, FLTNativeAdFactory {
         _ application: UIApplication,
         didFailToRegisterForRemoteNotificationsWithError error: Error
     ) {
-        NSLog("DEBUG_IOS: CRITICAL: Failed to register for APNs: %@", error.localizedDescription)
+        NSLog("DEBUG_IOS: Failed to register for remote notifications: \(error.localizedDescription)")
         super.application(application, didFailToRegisterForRemoteNotificationsWithError: error)
     }
 
-    override func application(
-        _ application: UIApplication,
-        didReceiveRemoteNotification userInfo: [AnyHashable : Any],
-        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
-    ) {
-        NSLog("DEBUG_IOS: didReceiveRemoteNotification: %@", userInfo as NSDictionary)
-
-        // MANUAL FORWARDING
-        Messaging.messaging().appDidReceiveMessage(userInfo)
-
-        super.application(application, didReceiveRemoteNotification: userInfo, fetchCompletionHandler: completionHandler)
-    }
-
-    override func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification,
-        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-    ) {
-        let userInfo = notification.request.content.userInfo
-        NSLog("DEBUG_IOS: willPresent notification userInfo: %@", userInfo as NSDictionary)
-        completionHandler([.banner, .sound, .badge])
-    }
-
-    override func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse,
-        withCompletionHandler completionHandler: @escaping () -> Void
-    ) {
-        let userInfo = response.notification.request.content.userInfo
-        NSLog("DEBUG_IOS: didReceive notification response userInfo: %@", userInfo as NSDictionary)
-        completionHandler()
-    }
-}
-
-extension AppDelegate: MessagingDelegate {
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-        if let fcmToken = fcmToken {
-            NSLog("DEBUG_IOS: FCM Token from MessagingDelegate: %@", fcmToken)
-            // Notify Flutter/Native listeners if needed
-            let dataDict: [String: String] = ["token": fcmToken]
-            NotificationCenter.default.post(
-                name: Notification.Name("FCMToken"),
-                object: nil,
-                userInfo: dataDict
-            )
-        }
+        NSLog("DEBUG_IOS: Firebase registration token refreshed: \(fcmToken ?? "nil")")
     }
 }

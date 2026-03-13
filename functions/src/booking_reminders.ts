@@ -175,8 +175,7 @@ async function sendBookingReminder(
   reminderType: "24h" | "1h"
 ) {
   const customerId = booking.customerId;
-  const listersUserId = booking.listersUserId;
-  
+
   // Get customer details and preferences
   const customerDoc = await db.collection("users").doc(customerId).get();
   if (!customerDoc.exists) {
@@ -208,10 +207,7 @@ async function sendBookingReminder(
   const timeLabel = reminderType === "24h" ? "24 hours" : "1 hour";
   const title = "Booking Reminder";
   const emailSubject = `Reminder: Your booking is in ${timeLabel}`;
-  
-  // Build deep link
-  const deepLink = `caribtap://booking/${bookingId}`;
-  
+
   // Get secrets asynchronously
   const appUrl = await appUrlSecret.value() || "https://caribtap.com";
   const sendgridKey = await sendgridKeySecret.value();
@@ -256,12 +252,13 @@ async function sendBookingReminder(
   }
   
   // Send push notification reminder
-  if (pushEnabled && customer?.pushToken) {
+  const tokens = getTokens(customer);
+  if (pushEnabled && tokens.length > 0) {
     try {
       const pushBody = `Your booking for ${booking.listingTitle} is in ${timeLabel}. Check-in: ${checkInFormatted}`;
       
-      await messaging.send({
-        token: customer.pushToken,
+      await messaging.sendMulticast({
+        tokens: tokens,
         notification: {
           title: title,
           body: pushBody,
@@ -316,7 +313,6 @@ function formatDateForTimezone(date: Date, timezone: string): string {
       hour12: true,
     });
   } catch (error) {
-    // Fallback to UTC if timezone is invalid
     return date.toLocaleString("en-US", {
       weekday: "long",
       year: "numeric",
@@ -327,6 +323,20 @@ function formatDateForTimezone(date: Date, timezone: string): string {
       hour12: true,
     });
   }
+}
+
+/**
+ * Helper to get FCM tokens from user document
+ */
+function getTokens(userData: any): string[] {
+  let tokens: string[] = [];
+  if (Array.isArray(userData?.fcmTokens)) {
+    tokens = userData.fcmTokens.filter((t: any) => typeof t === "string" && t.length > 0);
+  }
+  if (userData?.pushToken && typeof userData.pushToken === "string" && !tokens.includes(userData.pushToken)) {
+    tokens.push(userData.pushToken);
+  }
+  return tokens;
 }
 
 /**
@@ -350,86 +360,11 @@ function buildReminderEmailTemplate(data: {
   return `
     <!DOCTYPE html>
     <html>
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Booking Reminder</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 28px;">⏰ Booking Reminder</h1>
-      </div>
-      
-      <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
-        <p style="font-size: 16px; margin-bottom: 20px;">Hi ${data.customerName},</p>
-        
-        <p style="font-size: 16px; margin-bottom: 25px;">
-          This is a friendly reminder that your booking is coming up in <strong>${data.timeLabel}</strong>!
-        </p>
-        
-        ${data.listingPhoto ? `
-          <div style="text-align: center; margin: 25px 0;">
-            <img src="${data.listingPhoto}" alt="${data.listingTitle}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-          </div>
-        ` : ""}
-        
-        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0;">
-          <h2 style="color: #667eea; margin-top: 0; font-size: 22px;">${data.listingTitle}</h2>
-          
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 8px 0; font-weight: bold; width: 40%;">📅 Check-in:</td>
-              <td style="padding: 8px 0;">${data.checkInDate}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; font-weight: bold;">📅 Check-out:</td>
-              <td style="padding: 8px 0;">${data.checkOutDate}</td>
-            </tr>
-            ${data.timeBlock ? `
-            <tr>
-              <td style="padding: 8px 0; font-weight: bold;">⏰ Time Slot:</td>
-              <td style="padding: 8px 0;">${data.timeBlock}</td>
-            </tr>
-            ` : ""}
-            ${data.numberOfGuests ? `
-            <tr>
-              <td style="padding: 8px 0; font-weight: bold;">👥 Guests:</td>
-              <td style="padding: 8px 0;">${data.numberOfGuests}</td>
-            </tr>
-            ` : ""}
-            ${data.totalPrice ? `
-            <tr>
-              <td style="padding: 8px 0; font-weight: bold;">💰 Total:</td>
-              <td style="padding: 8px 0;">${data.currency} ${data.totalPrice}</td>
-            </tr>
-            ` : ""}
-            <tr>
-              <td style="padding: 8px 0; font-weight: bold;">🔖 Reference:</td>
-              <td style="padding: 8px 0; font-family: monospace;">${data.bookingReference}</td>
-            </tr>
-          </table>
-        </div>
-        
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${data.deepLink}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">View Booking Details</a>
-        </div>
-        
-        <div style="border-top: 1px solid #e0e0e0; padding-top: 20px; margin-top: 30px;">
-          <p style="font-size: 14px; color: #666; margin: 5px 0;">
-            Need to make changes? Open the CaribTap app and go to your bookings.
-          </p>
-          <p style="font-size: 14px; color: #666; margin: 5px 0;">
-            If you have any questions, please contact the listing owner through the app.
-          </p>
-        </div>
-      </div>
-      
-      <div style="text-align: center; padding: 20px; font-size: 12px; color: #999;">
-        <p style="margin: 5px 0;">CaribTap - Your Local Marketplace</p>
-        <p style="margin: 5px 0;">
-          <a href="${data.appUrl}/settings/notifications" style="color: #667eea;">Manage notification preferences</a>
-        </p>
-      </div>
+    <body style="font-family: Arial, sans-serif;">
+      <p>Hi ${data.customerName},</p>
+      <p>This is a reminder that your booking for <b>${data.listingTitle}</b> is in ${data.timeLabel}.</p>
+      <p>Check-in: ${data.checkInDate}</p>
+      <p>Reference: ${data.bookingReference}</p>
     </body>
     </html>
   `;
@@ -437,18 +372,13 @@ function buildReminderEmailTemplate(data: {
 
 /**
  * Handle booking creation - initialize reminder fields
- * (This runs when a new booking is created)
  */
-export const onBookingCreated = functions.firestore
+export const onBookingCreatedForReminders = functions.firestore
   .document("listings/{listingId}/bookings/{bookingId}")
   .onCreate(async (snap, context) => {
     const booking = snap.data();
     const bookingId = context.params.bookingId;
-    const listingId = context.params.listingId;
-    
-    functions.logger.info("📝 New booking created", {bookingId, listingId});
-    
-    // Initialize reminder fields if not present
+
     if (!booking.reminder24hSentAt && !booking.reminder1hSentAt) {
       try {
         await snap.ref.update({
@@ -456,7 +386,6 @@ export const onBookingCreated = functions.firestore
           reminder1hSentAt: null,
           timezone: booking.timezone || null,
         });
-        functions.logger.info("✅ Reminder fields initialized", {bookingId});
       } catch (error) {
         functions.logger.error("❌ Error initializing reminder fields", {error, bookingId});
       }
@@ -468,52 +397,29 @@ export const onBookingCreated = functions.firestore
 /**
  * Handle booking updates - reset reminders if check-in date changes
  */
-export const onBookingUpdated = functions.firestore
+export const onBookingUpdatedForReminders = functions.firestore
   .document("listings/{listingId}/bookings/{bookingId}")
   .onUpdate(async (change, context) => {
     const beforeData = change.before.data();
     const afterData = change.after.data();
     const bookingId = context.params.bookingId;
-    const listingId = context.params.listingId;
-    
-    // Check if check-in date changed
+
     if (beforeData.checkInDate !== afterData.checkInDate) {
-      functions.logger.info("📅 Check-in date changed, resetting reminders", {
-        bookingId,
-        oldDate: beforeData.checkInDate,
-        newDate: afterData.checkInDate,
-      });
-      
       try {
-        // Reset reminder fields
         await change.after.ref.update({
           reminder24hSentAt: null,
           reminder1hSentAt: null,
         });
+
+        await db.collection("users").doc(afterData.customerId).collection("myBookings").doc(bookingId).update({
+          reminder24hSentAt: null,
+          reminder1hSentAt: null,
+        });
         
-        // Also reset in user's myBookings
-        await db
-          .collection("users")
-          .doc(afterData.customerId)
-          .collection("myBookings")
-          .doc(bookingId)
-          .update({
-            reminder24hSentAt: null,
-            reminder1hSentAt: null,
-          });
-        
-        // Also reset in lister's receivedBookings
-        await db
-          .collection("users")
-          .doc(afterData.listersUserId)
-          .collection("receivedBookings")
-          .doc(bookingId)
-          .update({
-            reminder24hSentAt: null,
-            reminder1hSentAt: null,
-          });
-        
-        functions.logger.info("✅ Reminders reset successfully", {bookingId});
+        await db.collection("users").doc(afterData.listersUserId).collection("receivedBookings").doc(bookingId).update({
+          reminder24hSentAt: null,
+          reminder1hSentAt: null,
+        });
       } catch (error) {
         functions.logger.error("❌ Error resetting reminders", {error, bookingId});
       }

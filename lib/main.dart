@@ -115,6 +115,13 @@ const AndroidNotificationChannel ordersChannel = AndroidNotificationChannel(
   importance: Importance.max,
 );
 
+const AndroidNotificationChannel bookingsChannel = AndroidNotificationChannel(
+  'bookings',
+  'Bookings',
+  description: 'Notifications for booking updates.',
+  importance: Importance.max,
+);
+
 const AndroidNotificationChannel rentalBookingsChannel = AndroidNotificationChannel(
   'rental_bookings',
   'Rental Bookings',
@@ -337,6 +344,10 @@ Future<void> _showLocalNotification(RemoteMessage message) async {
     channelId = 'orders';
     channelName = 'Orders';
     channelDescription = 'Notifications for order updates';
+  } else if (notificationType == 'new_booking' || notificationType == 'booking_status') {
+    channelId = 'bookings';
+    channelName = 'Bookings';
+    channelDescription = 'Notifications for booking updates';
   } else if (notificationType.contains('rental')) {
     channelId = 'rental_bookings';
     channelName = 'Rental Bookings';
@@ -455,8 +466,11 @@ Future<void> _persistPushTokenIfPossible(String? token) async {
     await FirebaseFirestore.instance
         .collection('users')
         .doc(currentUser.uid)
-        .set({'pushToken': token}, SetOptions(merge: true));
-    print('✅ [FCM] pushToken saved for user: ${currentUser.uid}');
+        .set({
+      'pushToken': token,
+      'fcmTokens': FieldValue.arrayUnion([token]),
+    }, SetOptions(merge: true));
+    print('✅ [FCM] pushToken + fcmTokens saved for user: ${currentUser.uid}');
   } catch (e) {
     print('⚠️ [FCM] Failed to persist pushToken: $e');
   }
@@ -559,6 +573,7 @@ Future<void> _initializeNotificationsAndMessaging() async {
       .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
   await androidImplementation?.createNotificationChannel(chatChannel);
   await androidImplementation?.createNotificationChannel(ordersChannel);
+  await androidImplementation?.createNotificationChannel(bookingsChannel);
   await androidImplementation?.createNotificationChannel(rentalBookingsChannel);
   await androidImplementation?.createNotificationChannel(bookingRemindersChannel);
   await _setStartupStage('local_notifications_ready');
@@ -583,6 +598,13 @@ Future<void> _initializeNotificationsAndMessaging() async {
     print('🔔 [FOREGROUND] Message ID: ${message.messageId}');
     print('🔔 [FOREGROUND] Data: ${message.data}');
     await _updateBadge(message);
+
+    // iOS already shows alert/sound in foreground via presentation options.
+    // Avoid showing a second local notification for the same push payload.
+    if (defaultTargetPlatform == TargetPlatform.iOS && message.notification != null) {
+      return;
+    }
+
     await _showLocalNotification(message);
   });
 

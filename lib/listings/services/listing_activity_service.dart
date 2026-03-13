@@ -25,11 +25,6 @@ class ListingActivityService {
           .doc(listingId)
           .collection('activities')
           .add(activity.toJson());
-
-      // Update aggregate immediately for high-value activities
-      if (activity.value >= 5) {
-        await _updateActivityScoreImmediate(listingId);
-      }
     } catch (e) {
       print('Error recording activity: $e');
     }

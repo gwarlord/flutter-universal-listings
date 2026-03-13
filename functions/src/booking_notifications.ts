@@ -1,161 +1,170 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
+async function resolveBookingListerId(
+  db: FirebaseFirestore.Firestore,
+  booking: FirebaseFirestore.DocumentData,
+  listingIdFromPath?: string
+): Promise<string> {
+  const bookingListerId =
+    typeof booking?.listersUserId === "string" && booking.listersUserId.trim().length > 0
+      ? booking.listersUserId.trim()
+      : "";
+
+  if (bookingListerId) {
+    return bookingListerId;
+  }
+
+  const listingId =
+    typeof booking?.listingId === "string" && booking.listingId.trim().length > 0
+      ? booking.listingId.trim()
+      : (listingIdFromPath || "").trim();
+
+  if (!listingId) {
+    return "";
+  }
+
+  const listingDoc = await db.collection("listings").doc(listingId).get();
+  if (!listingDoc.exists) {
+    return "";
+  }
+
+  const listingData = listingDoc.data();
+  if (typeof listingData?.authorID === "string" && listingData.authorID.trim().length > 0) {
+    return listingData.authorID.trim();
+  }
+
+  return "";
+}
+
+function asNonEmptyString(value: unknown, fallback = ""): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? fallback : trimmed;
+}
+
+async function sendToTokensIndividually(
+  messaging: admin.messaging.Messaging,
+  tokens: string[],
+  payload: Omit<admin.messaging.TokenMessage, "token">
+): Promise<{ successCount: number; failureCount: number }> {
+  let successCount = 0;
+  let failureCount = 0;
+
+  for (const token of tokens) {
+    try {
+      await messaging.send({
+        token,
+        ...payload,
+      });
+      successCount += 1;
+    } catch (error) {
+      failureCount += 1;
+      functions.logger.warn("Booking notification token failure", {
+        tokenSuffix: token.slice(-8),
+        error: (error as any)?.message || String(error),
+      });
+    }
+  }
+
+  return { successCount, failureCount };
+}
+
 /**
  * Send notification when a new booking is created
- * Notifies: Lister and collaborators with canManageBookings permission
+ * Watches: listings/{listingId}/bookings/{bookingId}
  */
 export const onBookingCreated = functions.firestore
-  .document("bookings/{bookingId}")
+  .document("listings/{listingId}/bookings/{bookingId}")
   .onCreate(async (snap, context) => {
     const booking = snap.data();
     const bookingId = context.params.bookingId;
-    const bookingNumber = bookingId.slice(0, 8).toUpperCase();
 
     try {
       const db = admin.firestore();
       const messaging = admin.messaging();
+      const listerId = await resolveBookingListerId(
+        db,
+        booking,
+        context.params.listingId
+      );
 
-      // Get lister's user document to fetch FCM token
-      const listerDoc = await db
-        .collection("users")
-        .doc(booking.listersUserId)
-        .get();
+      if (!listerId) {
+        functions.logger.warn("Booking created without a resolvable lister", {
+          bookingId,
+          listingId: context.params.listingId,
+          bookingListerId: booking?.listersUserId,
+        });
+        return null;
+      }
 
+      const listerDoc = await db.collection("users").doc(listerId).get();
       if (!listerDoc.exists) {
-        console.log("Lister not found:", booking.listersUserId);
+        functions.logger.warn("Lister document not found for booking notification", {
+          bookingId,
+          listingId: context.params.listingId,
+          listerId,
+        });
         return null;
       }
 
-      const lister = listerDoc.data();
-      const listerTokens = getListerTokens(lister);
+      const listerData = listerDoc.data();
+      if (listerData?.settings?.allowPushNotifications === false) {
+        functions.logger.info("Lister has push notifications disabled", {
+          bookingId,
+          listingId: context.params.listingId,
+          listerId,
+        });
+        return null;
+      }
 
+      const listerTokens = getTokens(listerData);
       if (listerTokens.length === 0) {
-        console.log("Lister has no FCM token:", booking.listersUserId);
+        functions.logger.warn("Lister has no push tokens for booking notification", {
+          bookingId,
+          listingId: context.params.listingId,
+          listerId,
+          hasPushToken: !!listerData?.pushToken,
+          hasFcmTokens: Array.isArray(listerData?.fcmTokens) && listerData.fcmTokens.length > 0,
+        });
         return null;
       }
 
-      // Get listing details for notification
-      const listingDoc = await db
-        .collection("listings")
-        .doc(booking.listingId)
-        .get();
-
-      const listingTitle = listingDoc.exists
-        ? listingDoc.data()?.title
-        : "Your listing";
-
-      // Get customer name if available
+      const listingTitle = booking.listingTitle || "Your listing";
       const customerName = booking.customerName || "Guest";
+      const dataListingId = asNonEmptyString(booking?.listingId, context.params.listingId);
 
-      // Build notification
-      const checkInDate = booking.checkInDate
-        ? new Date(booking.checkInDate).toLocaleDateString()
-        : "TBD";
-      const checkOutDate = booking.checkOutDate
-        ? new Date(booking.checkOutDate).toLocaleDateString()
-        : "TBD";
+      const messagePayload: Omit<admin.messaging.TokenMessage, "token"> = {
+        notification: {
+          title: "📅 New Booking Request",
+          body: `${customerName} requested to book "${listingTitle}"`,
+        },
+        data: {
+          type: "new_booking",
+          bookingId: bookingId,
+          listingId: dataListingId,
+          status: "pending",
+          click_action: "FLUTTER_NOTIFICATION_CLICK",
+        },
+        android: { priority: "high", notification: { sound: "default", channelId: "bookings" } },
+        apns: { payload: { aps: { sound: "default", badge: 1 } } },
+      };
 
-      const notificationTitle = "📅 New Booking Request";
-      const notificationBody = `${customerName} booked "${listingTitle}" (${checkInDate} - ${checkOutDate})`;
-
-      // Send notification to lister
-      for (const token of listerTokens) {
-        try {
-          await messaging.send({
-            token: token,
-            notification: {
-              title: notificationTitle,
-              body: notificationBody,
-            },
-            data: {
-              type: "new_booking",
-              bookingId: bookingId,
-              bookingNumber: bookingNumber,
-              listingId: booking.listingId,
-              status: booking.status || "pending",
-              click_action: "FLUTTER_NOTIFICATION_CLICK",
-            },
-            android: {
-              priority: "high" as const,
-              notification: {
-                sound: "default",
-                channelId: "bookings",
-              },
-            },
-            apns: {
-              payload: {
-                aps: {
-                  sound: "default",
-                  badge: 1,
-                },
-              },
-            },
-          });
-          console.log("✅ Booking notification sent to lister:", booking.listersUserId);
-        } catch (e) {
-          console.error("❌ Error sending booking notification to lister:", e);
-        }
-      }
-
-      // Send notification to collaborators with canManageBookings permission
-      if (listingDoc.exists) {
-        const listingData = listingDoc.data();
-        const collaborators = listingData?.collaborators || [];
-
-        for (const collab of collaborators) {
-          if (collab.canManageBookings === true) {
-            const collabDoc = await db
-              .collection("users")
-              .doc(collab.userId)
-              .get();
-
-            if (!collabDoc.exists) continue;
-
-            const collaborator = collabDoc.data();
-            const collabTokens = getTokens(collaborator);
-
-            for (const token of collabTokens) {
-              try {
-                await messaging.send({
-                  token: token,
-                  notification: {
-                    title: notificationTitle,
-                    body: notificationBody,
-                  },
-                  data: {
-                    type: "new_booking",
-                    bookingId: bookingId,
-                    bookingNumber: bookingNumber,
-                    listingId: booking.listingId,
-                    status: booking.status || "pending",
-                    click_action: "FLUTTER_NOTIFICATION_CLICK",
-                  },
-                  android: {
-                    priority: "high" as const,
-                    notification: {
-                      sound: "default",
-                      channelId: "bookings",
-                    },
-                  },
-                  apns: {
-                    payload: {
-                      aps: {
-                        sound: "default",
-                        badge: 1,
-                      },
-                    },
-                  },
-                });
-                console.log("✅ Booking notification sent to collaborator:", collab.userId);
-              } catch (e) {
-                console.error("❌ Error sending booking notification to collaborator:", e);
-              }
-            }
-          }
-        }
-      }
-
+      const response = await sendToTokensIndividually(
+        messaging,
+        listerTokens,
+        messagePayload
+      );
+      functions.logger.info("Standard booking notification sent to lister", {
+        bookingId,
+        listingId: context.params.listingId,
+        listerId,
+        tokenCount: listerTokens.length,
+        successCount: response.successCount,
+        failureCount: response.failureCount,
+      });
       return null;
     } catch (error) {
       console.error("Error in onBookingCreated:", error);
@@ -165,162 +174,151 @@ export const onBookingCreated = functions.firestore
 
 /**
  * Send notification when booking status changes
- * Notifies: Customer for status changes
+ * Watches: listings/{listingId}/bookings/{bookingId}
  */
-export const onBookingStatusChanged = functions.firestore
-  .document("bookings/{bookingId}")
+export const onBookingUpdated = functions.firestore
+  .document("listings/{listingId}/bookings/{bookingId}")
   .onUpdate(async (change, context) => {
     const before = change.before.data();
     const after = change.after.data();
     const bookingId = context.params.bookingId;
-    const bookingNumber = bookingId.slice(0, 8).toUpperCase();
 
-    // Check if status changed
-    if (before.status === after.status) {
+    if (!before || !after || before.status === after.status) {
       return null;
     }
 
     try {
       const db = admin.firestore();
       const messaging = admin.messaging();
+      const nextStatus = (after.status || "").toLowerCase();
+      const listingTitle = after.listingTitle || "your booking";
+      const customerId = asNonEmptyString(after.customerId);
+      const listerId = asNonEmptyString(after.listersUserId);
 
-      // Get listing details for notification
-      const listingDoc = await db
-        .collection("listings")
-        .doc(after.listingId)
-        .get();
+      let customerTitle = "";
+      let customerBody = "";
+      let listerTitle = "";
+      let listerBody = "";
 
-      const listingTitle = listingDoc.exists
-        ? listingDoc.data()?.title
-        : "your booking";
-
-      // Create notification based on status
-      let title = "";
-      let body = "";
-      let emoji = "";
-      let recipientId = after.customerId; // Default: notify customer
-
-      switch (after.status) {
+      switch (nextStatus) {
         case "confirmed":
         case "approved":
-          emoji = "✅";
-          title = "Booking Confirmed";
-          body = `Your booking #${bookingNumber} for "${listingTitle}" has been confirmed!`;
-          recipientId = after.customerId;
+          customerTitle = "✅ Booking Confirmed";
+          customerBody = `Your booking for "${listingTitle}" has been confirmed!`;
           break;
         case "rejected":
         case "declined":
-          emoji = "❌";
-          title = "Booking Rejected";
-          body = `Your booking #${bookingNumber} for "${listingTitle}" was rejected.`;
-          recipientId = after.customerId;
+          customerTitle = "❌ Booking Rejected";
+          customerBody = `Your booking request for "${listingTitle}" was not accepted.`;
           break;
         case "cancelled":
-          emoji = "🚫";
-          title = "Booking Cancelled";
-          body = `Your booking #${bookingNumber} for "${listingTitle}" has been cancelled.`;
-          recipientId = after.customerId;
-          break;
-        case "completed":
-          emoji = "🎉";
-          title = "Booking Completed";
-          body = `Your booking #${bookingNumber} for "${listingTitle}" is complete!`;
-          recipientId = after.customerId;
+          // When cancelled, we notify BOTH so they are both aware.
+          customerTitle = "🚫 Booking Cancelled";
+          customerBody = `The booking for "${listingTitle}" has been cancelled.`;
+          listerTitle = "🚫 Booking Cancelled";
+          listerBody = `The booking for "${listingTitle}" by ${after.customerName} was cancelled.`;
           break;
         default:
-          // For any other status changes, notify customer
-          title = "Booking Update";
-          body = `Your booking #${bookingNumber} status has changed.`;
-          recipientId = after.customerId;
+          customerTitle = "Booking Update";
+          customerBody = `Your booking for "${listingTitle}" was updated to ${nextStatus || "a new"} status.`;
+          break;
       }
 
-      // Get the recipient's FCM token(s)
-      const recipientDoc = await db
-        .collection("users")
-        .doc(recipientId)
-        .get();
-
-      if (!recipientDoc.exists) {
-        console.log("Recipient not found:", recipientId);
-        return null;
-      }
-
-      const recipient = recipientDoc.data();
-      const recipientTokens = getTokens(recipient);
-
-      if (recipientTokens.length === 0) {
-        console.log("Recipient has no FCM token:", recipientId);
-        return null;
-      }
-
-      // Send notification
-      for (const token of recipientTokens) {
-        try {
-          await messaging.send({
-            token: token,
-            notification: {
-              title: `${emoji} ${title}`,
-              body: body,
-            },
-            data: {
-              type: "booking_status_changed",
-              bookingId: bookingId,
-              bookingNumber: bookingNumber,
-              status: after.status,
-              listingId: after.listingId,
-              click_action: "FLUTTER_NOTIFICATION_CLICK",
-            },
-            android: {
-              priority: "high" as const,
-              notification: {
-                sound: "default",
-                channelId: "bookings",
-              },
-            },
-            apns: {
-              payload: {
-                aps: {
-                  sound: "default",
-                  badge: 1,
-                },
-              },
-            },
+      // Notify Customer
+      if (customerTitle) {
+        if (!customerId) {
+          functions.logger.warn("Missing customerId for booking status notification", {
+            bookingId,
+            listingId: context.params.listingId,
+            nextStatus,
           });
-          console.log("✅ Booking status notification sent to customer:", recipientId);
-        } catch (e) {
-          console.error("❌ Error sending booking status notification:", e);
+        } else {
+          const customerDoc = await db.collection("users").doc(customerId).get();
+          if (customerDoc.exists) {
+            const tokens = getTokens(customerDoc.data());
+            if (tokens.length > 0) {
+              const customerResponse = await sendToTokensIndividually(
+                messaging,
+                tokens,
+                {
+                notification: { title: customerTitle, body: customerBody },
+                data: { type: "booking_status", bookingId, status: nextStatus, click_action: "FLUTTER_NOTIFICATION_CLICK" },
+                android: { priority: "high", notification: { sound: "default", channelId: "bookings" } },
+                apns: { payload: { aps: { sound: "default", badge: 1 } } },
+                }
+              );
+
+              functions.logger.info("Booking status notification sent to customer", {
+                bookingId,
+                customerId,
+                nextStatus,
+                tokenCount: tokens.length,
+                successCount: customerResponse.successCount,
+                failureCount: customerResponse.failureCount,
+              });
+
+            }
+          }
+        }
+      }
+
+      // Notify Lister (specifically for cancellations)
+      if (listerTitle) {
+        if (!listerId) {
+          functions.logger.warn("Missing listersUserId for lister booking notification", {
+            bookingId,
+            listingId: context.params.listingId,
+            nextStatus,
+          });
+        } else {
+          const listerDoc = await db.collection("users").doc(listerId).get();
+          if (listerDoc.exists) {
+            const tokens = getTokens(listerDoc.data());
+            if (tokens.length > 0) {
+              const listerResponse = await sendToTokensIndividually(
+                messaging,
+                tokens,
+                {
+                notification: { title: listerTitle, body: listerBody },
+                data: { type: "booking_status", bookingId, status: nextStatus, click_action: "FLUTTER_NOTIFICATION_CLICK" },
+                android: { priority: "high", notification: { sound: "default", channelId: "bookings" } },
+                apns: { payload: { aps: { sound: "default", badge: 1 } } },
+                }
+              );
+
+              functions.logger.info("Booking status notification sent to lister", {
+                bookingId,
+                listerId,
+                nextStatus,
+                tokenCount: tokens.length,
+                successCount: listerResponse.successCount,
+                failureCount: listerResponse.failureCount,
+              });
+
+            }
+          }
         }
       }
 
       return null;
     } catch (error) {
-      console.error("Error in onBookingStatusChanged:", error);
+      console.error("Error in onBookingUpdated:", error);
       return null;
     }
   });
 
-/**
- * Helper function to get FCM tokens from user document
- * Supports both new (fcmTokens array) and legacy (pushToken string) formats
- */
 function getTokens(userData: any): string[] {
   let tokens: string[] = [];
-
-  // New format: array of FCM tokens
-  if (Array.isArray(userData?.fcmTokens) && userData.fcmTokens.length > 0) {
-    tokens = userData.fcmTokens;
+  if (Array.isArray(userData?.fcmTokens)) {
+    tokens = userData.fcmTokens
+      .filter((t: any) => typeof t === "string" && t.trim().length > 0)
+      .map((t: string) => t.trim());
   }
-  // Legacy format: single pushToken string
-  else if (userData?.pushToken && typeof userData.pushToken === "string" && userData.pushToken.trim().length > 0) {
-    tokens = [userData.pushToken];
+  if (userData?.pushToken && typeof userData.pushToken === "string") {
+    const pushToken = userData.pushToken.trim();
+    if (pushToken && !tokens.includes(pushToken)) {
+      tokens.push(pushToken);
+    }
   }
-
-  return tokens;
-}
-
-/**
- * Helper to get lister specific tokens (alias for getTokens)
- */
-function getListerTokens(userData: any): string[] {
-  return getTokens(userData);
+  return Array.from(new Set(tokens));
 }

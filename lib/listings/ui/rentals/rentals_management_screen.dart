@@ -84,7 +84,9 @@ class _RentalsManagementScreenState extends State<RentalsManagementScreen>
               ),
               _buildBookingsList(
                 allBookings
-                    .where((b) => b.status == RentalBookingStatus.completed)
+                    .where((b) =>
+                        b.status == RentalBookingStatus.completed ||
+                        b.status == RentalBookingStatus.disputed)
                     .toList(),
               ),
               _buildBookingsList(

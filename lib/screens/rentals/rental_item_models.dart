@@ -101,6 +101,7 @@ class RentalItemBrowse {
   final List<String> photos;
   final bool isAvailable;
   final int stockQty; // Number of units available
+  final double? depositAmount;
   final Map<String, dynamic>? vehicleDetails; // {licensePlate, make, model, year, color}
   final Timestamp? createdAt;
   final Timestamp? updatedAt;
@@ -118,6 +119,7 @@ class RentalItemBrowse {
     this.photos = const [],
     this.isAvailable = true,
     this.stockQty = 1,
+    this.depositAmount,
     this.vehicleDetails,
     this.createdAt,
     this.updatedAt,
@@ -137,6 +139,7 @@ class RentalItemBrowse {
       photos: List<String>.from(json['photos'] ?? []),
       isAvailable: json['isAvailable'] ?? true,
       stockQty: json['stockQty'] ?? 1,
+      depositAmount: (json['depositAmount'] as num?)?.toDouble(),
       vehicleDetails: json['vehicleDetails'],
       createdAt: json['createdAt'],
       updatedAt: json['updatedAt'],
@@ -157,6 +160,7 @@ class RentalItemBrowse {
       'photos': photos,
       'isAvailable': isAvailable,
       'stockQty': stockQty,
+      'depositAmount': depositAmount,
       'vehicleDetails': vehicleDetails,
       'createdAt': createdAt,
       'updatedAt': updatedAt,

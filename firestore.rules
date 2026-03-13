@@ -648,6 +648,24 @@ service cloud.firestore {
         request.auth.uid == get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.authorID ||
         request.auth.uid == resource.data.customerId ||
         isAdmin()
+      ) &&
+      // Do not allow cancellation after collection/active lifecycle.
+      !(
+        request.resource.data.status == 'cancelled' && (
+          resource.data.collectedAt != null ||
+          resource.data.status == 'active' ||
+          resource.data.status == 'completed' ||
+          resource.data.status == 'disputed' ||
+          resource.data.status == 'cancelled'
+        )
+      ) &&
+      // Do not allow cancelled bookings to move back to active lifecycle states.
+      !(
+        resource.data.status == 'cancelled' && (
+          request.resource.data.status == 'active' ||
+          request.resource.data.status == 'completed' ||
+          request.resource.data.status == 'disputed'
+        )
       );
       
       // Allow delete by listing owner or admin

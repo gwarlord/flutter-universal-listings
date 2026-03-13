@@ -37,6 +37,14 @@ class _RentalBookingDialogState extends State<RentalBookingDialog> {
   
   final TextEditingController _notesController = TextEditingController();
 
+  double get _securityDeposit {
+    return widget.rentalConfig.depositAmount ?? 0.0;
+  }
+
+  double get _totalWithDeposit {
+    return _totalPrice + _securityDeposit;
+  }
+
   @override
   void dispose() {
     _notesController.dispose();
@@ -484,7 +492,7 @@ class _RentalBookingDialogState extends State<RentalBookingDialog> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('Total Price:', style: TextStyle(fontSize: 16)),
+                                const Text('Rental Total:', style: TextStyle(fontSize: 16)),
                                 Text(
                                   '\$${_totalPrice.toStringAsFixed(2)}',
                                   style: TextStyle(
@@ -495,15 +503,33 @@ class _RentalBookingDialogState extends State<RentalBookingDialog> {
                                 ),
                               ],
                             ),
-                            if (widget.rentalConfig.requiresDeposit) ...[
+                            if (_securityDeposit > 0 || widget.rentalConfig.requiresDeposit) ...[
                               const SizedBox(height: 8),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('Deposit:', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                                  const Text('Security Deposit:', style: TextStyle(fontSize: 14, color: Colors.grey)),
                                   Text(
-                                    '\$${widget.rentalConfig.depositAmount?.toStringAsFixed(2) ?? '0.00'}',
+                                    '\$${_securityDeposit.toStringAsFixed(2)}',
                                     style: const TextStyle(fontSize: 14, color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                              const Divider(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'Total (incl. deposit):',
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    '\$${_totalWithDeposit.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: primaryColor,
+                                    ),
                                   ),
                                 ],
                               ),

@@ -31,6 +31,7 @@ import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/ui/widgets/location_photos_editor.dart';
 import 'package:caribtap/listings/utils/opening_hours_editor.dart';
+import 'package:caribtap/listings/utils/category_localization.dart';
 import 'package:caribtap/listings/utils/subscription_helper.dart';
 import 'package:caribtap/screens/store/catalog_manager_screen.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
@@ -141,7 +142,8 @@ class AddListingScreen extends StatefulWidget {
 }
 
 class _AddListingScreenState extends State<AddListingScreen> {
-    final TextEditingController _serviceDescriptionController = TextEditingController();
+  final TextEditingController _serviceDescriptionController =
+      TextEditingController();
   // Supported currencies for Caribbean markets
   final List<Map<String, String>> _currencies = [
     {'code': 'USD', 'symbol': r'$'},
@@ -168,7 +170,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _websiteController = TextEditingController();
-  final TextEditingController _companyRegistrationController = TextEditingController();
+  final TextEditingController _companyRegistrationController =
+      TextEditingController();
   final TextEditingController _vatNumberController = TextEditingController();
 
   final TextEditingController _instagramController = TextEditingController();
@@ -199,7 +202,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
   // Service Menu Controllers
   final TextEditingController _serviceNameController = TextEditingController();
   final TextEditingController _servicePriceController = TextEditingController();
-  final TextEditingController _serviceDurationController = TextEditingController();
+  final TextEditingController _serviceDurationController =
+      TextEditingController();
   final TextEditingController _keywordController = TextEditingController();
 
   Map<String, String>? _filters = {};
@@ -213,16 +217,16 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final List<String> _existingVideoUrls = [];
   List<File> _newImages = [];
   List<File> _newVideos = [];
-  
+
   // Location Photos (Optional)
   String? _exteriorImageUrl;
   String? _interiorImageUrl;
   String? _locationInstructions;
-  
+
   // Logo state
   String? _existingLogoUrl;
   File? _newLogo;
-  
+
   // ✅ Service Menu State
   final List<ServiceItem> _services = [];
   final List<String> _searchKeywords = [];
@@ -248,9 +252,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
   // Store/Ecommerce
   bool _storeEnabled = false;
   final TextEditingController _storeUrlController = TextEditingController();
-  String _storeMode = 'external_url'; // "external_url" | "internal_catalog" | "both"
+  String _storeMode =
+      'external_url'; // "external_url" | "internal_catalog" | "both"
   int _storeLeadTimeHours = 24;
-  
+
   // Payments settings
   bool _acceptProofOfPayment = false;
 
@@ -258,66 +263,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   RentalConfig? _rentalConfig;
 
   String _localizedCategoryName(String value) {
-    final trimmed = value.trim();
-    if (trimmed.isEmpty) return value;
-
-    final normalized = trimmed.replaceAll(RegExp(r'[_-]+'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
-    final titleCase = normalized
-        .split(RegExp(r'\s+'))
-        .where((word) => word.isNotEmpty)
-        .map(
-          (word) =>
-              word.substring(0, 1).toUpperCase() + word.substring(1).toLowerCase(),
-        )
-        .join(' ');
-
-    final normalizedLower = normalized.toLowerCase();
-    const aliases = <String, String>{
-      'food drink': 'Food & Drink',
-      'food drinks': 'Food & Drink',
-      'food beverage': 'Food & Drink',
-      'food beverages': 'Food & Drink',
-      'restaurants': 'Restaurants',
-      'restaurant': 'Restaurant',
-      'realestate': 'Real Estate',
-      'real estate': 'Real Estate',
-      'automobile': 'Automotive',
-      'auto': 'Auto',
-      'automotive': 'Automotive',
-      'health beauty': 'Health & Beauty',
-      'health and beauty': 'Health & Beauty',
-      'beauty spa': 'Beauty & Spa',
-      'beauty and spa': 'Beauty & Spa',
-      'home service': 'Home Services',
-      'home services': 'Home Services',
-      'professional service': 'Professional Service',
-      'professional services': 'Professional Services',
-      'travel tourism': 'Travel & Tourism',
-      'travel and tourism': 'Travel & Tourism',
-      'home garden': 'Home & Garden',
-      'home and garden': 'Home & Garden',
-    };
-
-    final aliasKey = aliases[normalizedLower];
-    if (aliasKey != null) {
-      final aliasTranslated = aliasKey.tr();
-      if (aliasTranslated != aliasKey) return aliasTranslated;
-    }
-
-    final candidates = <String>[
-      trimmed,
-      normalized,
-      titleCase,
-      normalizedLower,
-      normalized.toUpperCase(),
-    ];
-
-    for (final key in candidates) {
-      final translated = key.tr();
-      if (translated != key) return translated;
-    }
-
-    return normalized;
+    return localizeCategoryLabel(value, context);
   }
 
   @override
@@ -345,7 +291,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _placeManuallySelected = false;
     try {
       // Reload listing from Firestore to ensure we have latest changes (e.g., from booking services)
-      final freshListing = await listingApiManager.getListing(listingID: widget.listingToEdit!.id);
+      final freshListing = await listingApiManager.getListing(
+          listingID: widget.listingToEdit!.id);
       if (freshListing != null) {
         _populateListingData(freshListing);
       } else {
@@ -376,9 +323,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _existingVideoUrls.addAll(
       List<String>.from(l.videos ?? []).where((e) => e.trim().isNotEmpty),
     );
-    _exteriorImageUrl = (l.exteriorImageUrl ?? '').trim().isEmpty ? null : l.exteriorImageUrl;
-    _interiorImageUrl = (l.interiorImageUrl ?? '').trim().isEmpty ? null : l.interiorImageUrl;
-    _locationInstructions = (l.locationInstructions ?? '').trim().isEmpty ? null : l.locationInstructions;
+    _exteriorImageUrl =
+        (l.exteriorImageUrl ?? '').trim().isEmpty ? null : l.exteriorImageUrl;
+    _interiorImageUrl =
+        (l.interiorImageUrl ?? '').trim().isEmpty ? null : l.interiorImageUrl;
+    _locationInstructions = (l.locationInstructions ?? '').trim().isEmpty
+        ? null
+        : l.locationInstructions;
     _existingLogoUrl = (l.logo ?? '').trim().isEmpty ? null : l.logo;
 
     _phoneController.text = (l.phone ?? '').trim();
@@ -432,7 +383,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
     // ✅ Load existing blocked dates
     _blockedDates.clear();
-    _blockedDates.addAll(l.blockedDates.map((ms) => DateTime.fromMillisecondsSinceEpoch(ms)));
+    _blockedDates.addAll(
+        l.blockedDates.map((ms) => DateTime.fromMillisecondsSinceEpoch(ms)));
 
     if (!_placeManuallySelected) {
       _placeDetail = _fakePlaceDetailsFromExisting(
@@ -447,7 +399,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _storeUrlController.text = l.storeUrl ?? '';
     _storeMode = l.storeMode ?? 'external_url';
     _storeLeadTimeHours = l.storeLeadTimeHours;
-    
+
     // Payments settings
     _acceptProofOfPayment = l.payments['acceptProofOfPayment'] ?? false;
   }
@@ -458,7 +410,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
           .collection('users')
           .doc(currentUser.userID)
           .get();
-      
+
       if (doc.exists && mounted) {
         final data = doc.data();
         if (data != null && data['subscriptionTier'] != null) {
@@ -491,18 +443,21 @@ class _AddListingScreenState extends State<AddListingScreen> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: dark ? Colors.grey[800]! : Colors.grey[300]!),
+        borderSide:
+            BorderSide(color: dark ? Colors.grey[800]! : Colors.grey[300]!),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: dark ? Colors.grey[800]! : Colors.grey[300]!),
+        borderSide:
+            BorderSide(color: dark ? Colors.grey[800]! : Colors.grey[300]!),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Color(colorPrimary), width: 2),
       ),
-      floatingLabelBehavior:
-          alwaysFloatLabel ? FloatingLabelBehavior.always : FloatingLabelBehavior.auto,
+      floatingLabelBehavior: alwaysFloatLabel
+          ? FloatingLabelBehavior.always
+          : FloatingLabelBehavior.auto,
     );
   }
 
@@ -556,10 +511,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
         ),
         initiallyExpanded: isExpanded,
         onExpansionChanged: onExpansionChanged,
-        collapsedBackgroundColor: dark ? Colors.grey.shade800 : Colors.grey.shade50,
+        collapsedBackgroundColor:
+            dark ? Colors.grey.shade800 : Colors.grey.shade50,
         backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        collapsedShape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
@@ -581,7 +538,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
         decoration: BoxDecoration(
           color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
+          border: Border.all(
+              color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -595,7 +553,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Upgrade your subscription to enable booking for this listing.'.tr(),
+              'Upgrade your subscription to enable booking for this listing.'
+                  .tr(),
               style: TextStyle(
                 color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
               ),
@@ -612,13 +571,15 @@ class _AddListingScreenState extends State<AddListingScreen> {
         decoration: BoxDecoration(
           color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
+          border: Border.all(
+              color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Turn on "Booking Services" from the Activate Booking screen.'.tr(),
+              'Turn on "Booking Services" from the Activate Booking screen.'
+                  .tr(),
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 color: dark ? Colors.white : Colors.black,
@@ -626,7 +587,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Booking options are disabled here to avoid conflicting settings.'.tr(),
+              'Booking options are disabled here to avoid conflicting settings.'
+                  .tr(),
               style: TextStyle(
                 color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
               ),
@@ -678,13 +640,16 @@ class _AddListingScreenState extends State<AddListingScreen> {
           ),
           activeColor: Color(colorPrimary),
           activeTrackColor: Color(colorPrimary).withOpacity(0.5),
-          inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
-          inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
+          inactiveThumbColor:
+              dark ? Colors.grey.shade600 : Colors.grey.shade400,
+          inactiveTrackColor:
+              dark ? Colors.grey.shade800 : Colors.grey.shade300,
         ),
         if (_bookingEnabled)
           SwitchListTile(
             value: _allowQuantitySelection,
-            onChanged: (value) => setState(() => _allowQuantitySelection = value),
+            onChanged: (value) =>
+                setState(() => _allowQuantitySelection = value),
             title: Text(
               'Allow quantity selection'.tr(),
               style: TextStyle(
@@ -699,8 +664,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
             ),
             activeColor: Color(colorPrimary),
             activeTrackColor: Color(colorPrimary).withOpacity(0.5),
-            inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
-            inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
+            inactiveThumbColor:
+                dark ? Colors.grey.shade600 : Colors.grey.shade400,
+            inactiveTrackColor:
+                dark ? Colors.grey.shade800 : Colors.grey.shade300,
           ),
         if (_bookingEnabled)
           SwitchListTile(
@@ -713,20 +680,24 @@ class _AddListingScreenState extends State<AddListingScreen> {
               ),
             ),
             subtitle: Text(
-              'Enable hourly time slot bookings instead of full day bookings.'.tr(),
+              'Enable hourly time slot bookings instead of full day bookings.'
+                  .tr(),
               style: TextStyle(
                 color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
               ),
             ),
             activeColor: Color(colorPrimary),
             activeTrackColor: Color(colorPrimary).withOpacity(0.5),
-            inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
-            inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
+            inactiveThumbColor:
+                dark ? Colors.grey.shade600 : Colors.grey.shade400,
+            inactiveTrackColor:
+                dark ? Colors.grey.shade800 : Colors.grey.shade300,
           ),
         if (_bookingEnabled && _useTimeBlocks)
           SwitchListTile(
             value: _allowMultipleBookingsPerDay,
-            onChanged: (value) => setState(() => _allowMultipleBookingsPerDay = value),
+            onChanged: (value) =>
+                setState(() => _allowMultipleBookingsPerDay = value),
             title: Text(
               'Allow multiple bookings per day'.tr(),
               style: TextStyle(
@@ -734,15 +705,18 @@ class _AddListingScreenState extends State<AddListingScreen> {
               ),
             ),
             subtitle: Text(
-              'Multiple customers can book different time slots on the same day.'.tr(),
+              'Multiple customers can book different time slots on the same day.'
+                  .tr(),
               style: TextStyle(
                 color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
               ),
             ),
             activeColor: Color(colorPrimary),
             activeTrackColor: Color(colorPrimary).withOpacity(0.5),
-            inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
-            inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
+            inactiveThumbColor:
+                dark ? Colors.grey.shade600 : Colors.grey.shade400,
+            inactiveTrackColor:
+                dark ? Colors.grey.shade800 : Colors.grey.shade300,
           ),
         if (_bookingEnabled && _useTimeBlocks)
           Padding(
@@ -760,7 +734,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Define hourly time slots (e.g., 09:00-10:00, 10:00-11:00)'.tr(),
+                  'Define hourly time slots (e.g., 09:00-10:00, 10:00-11:00)'
+                      .tr(),
                   style: TextStyle(
                     fontSize: 13,
                     color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -772,12 +747,16 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   runSpacing: 8,
                   children: [
                     ..._timeBlocks.map((block) => Chip(
-                      label: Text(block),
-                      deleteIcon: Icon(Icons.close, size: 18),
-                      onDeleted: () => setState(() => _timeBlocks.remove(block)),
-                      backgroundColor: dark ? Colors.grey.shade800 : Colors.grey.shade200,
-                      labelStyle: TextStyle(color: dark ? Colors.white : Colors.black87),
-                    )),
+                          label: Text(block),
+                          deleteIcon: Icon(Icons.close, size: 18),
+                          onDeleted: () =>
+                              setState(() => _timeBlocks.remove(block)),
+                          backgroundColor: dark
+                              ? Colors.grey.shade800
+                              : Colors.grey.shade200,
+                          labelStyle: TextStyle(
+                              color: dark ? Colors.white : Colors.black87),
+                        )),
                     ActionChip(
                       label: Text('+ Add Time Block'.tr()),
                       onPressed: () => _showAddTimeBlockDialog(dark),
@@ -804,39 +783,50 @@ class _AddListingScreenState extends State<AddListingScreen> {
             decoration: BoxDecoration(
               color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
+              border: Border.all(
+                  color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
             ),
             child: ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _services.length,
-              separatorBuilder: (context, index) => Divider(height: 1, color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
+              separatorBuilder: (context, index) => Divider(
+                  height: 1,
+                  color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
               itemBuilder: (context, index) {
                 final s = _services[index];
                 return ListTile(
                   title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(s.name, style: TextStyle(fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black)),
+                      Text(s.name,
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: dark ? Colors.white : Colors.black)),
                       if (s.description.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 2.0),
                           child: Text(
                             s.description,
-                            style: TextStyle(fontSize: 13, color: dark ? Colors.white70 : Colors.black87),
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: dark ? Colors.white70 : Colors.black87),
                           ),
                         ),
                     ],
                   ),
                   subtitle: Text(
-                    s.duration.isNotEmpty && (s.price != 0.0 && s.price.toString().isNotEmpty)
+                    s.duration.isNotEmpty &&
+                            (s.price != 0.0 && s.price.toString().isNotEmpty)
                         ? '${s.duration} • ${s.price} $_selectedCurrencyCode'
                         : s.duration.isNotEmpty
                             ? s.duration
                             : (s.price != 0.0 && s.price.toString().isNotEmpty)
                                 ? '${s.price} $_selectedCurrencyCode'
                                 : '',
-                    style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade700),
+                    style: TextStyle(
+                        color:
+                            dark ? Colors.grey.shade400 : Colors.grey.shade700),
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -846,7 +836,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         onPressed: () async {
                           _serviceNameController.text = s.name;
                           _serviceDescriptionController.text = s.description;
-                          _servicePriceController.text = s.price != 0.0 ? s.price.toString() : '';
+                          _servicePriceController.text =
+                              s.price != 0.0 ? s.price.toString() : '';
                           _serviceDurationController.text = s.duration;
                           setState(() {
                             _services.removeAt(index);
@@ -854,8 +845,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         },
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red),
-                        onPressed: () => setState(() => _services.removeAt(index)),
+                        icon:
+                            const Icon(Icons.delete_outline, color: Colors.red),
+                        onPressed: () =>
+                            setState(() => _services.removeAt(index)),
                       ),
                     ],
                   ),
@@ -863,20 +856,21 @@ class _AddListingScreenState extends State<AddListingScreen> {
               },
             ),
           ),
-        
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: dark ? Colors.black26 : Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Color(colorPrimary).withOpacity(0.3), width: 1),
+            border: Border.all(
+                color: Color(colorPrimary).withOpacity(0.3), width: 1),
           ),
           child: Column(
             children: [
               TextField(
                 controller: _serviceNameController,
                 style: TextStyle(color: dark ? Colors.white : Colors.black),
-                decoration: _getInputDecoration(label: 'Service Name', hint: 'e.g. Consultation'),
+                decoration: _getInputDecoration(
+                    label: 'Service Name', hint: 'e.g. Consultation'),
               ),
               const SizedBox(height: 12),
               Row(
@@ -885,16 +879,20 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     child: TextField(
                       controller: _servicePriceController,
                       keyboardType: TextInputType.number,
-                      style: TextStyle(color: dark ? Colors.white : Colors.black),
-                      decoration: _getInputDecoration(label: 'Price (optional)'.tr(), hint: '0.00'),
+                      style:
+                          TextStyle(color: dark ? Colors.white : Colors.black),
+                      decoration: _getInputDecoration(
+                          label: 'Price (optional)'.tr(), hint: '0.00'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextField(
                       controller: _serviceDurationController,
-                      style: TextStyle(color: dark ? Colors.white : Colors.black),
-                      decoration: _getInputDecoration(label: 'Duration'.tr(), hint: 'e.g. 30 mins'),
+                      style:
+                          TextStyle(color: dark ? Colors.white : Colors.black),
+                      decoration: _getInputDecoration(
+                          label: 'Duration'.tr(), hint: 'e.g. 30 mins'),
                     ),
                   ),
                 ],
@@ -908,7 +906,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     setState(() {
                       _services.add(ServiceItem(
                         name: _serviceNameController.text.trim(),
-                        price: double.tryParse(_servicePriceController.text.trim()) ?? 0.0,
+                        price: double.tryParse(
+                                _servicePriceController.text.trim()) ??
+                            0.0,
                         duration: _serviceDurationController.text.trim(),
                       ));
                       _serviceNameController.clear();
@@ -972,7 +972,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Add words customers would search for (e.g.  cake, wiring, hair, 24 hours, boat etc)'.tr(),
+          'Add words customers would search for (e.g.  cake, wiring, hair, 24 hours, boat etc)'
+              .tr(),
           style: TextStyle(
             fontSize: 12,
             color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
@@ -1018,7 +1019,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
             decoration: BoxDecoration(
               color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
+              border: Border.all(
+                  color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
             ),
             child: ListView.separated(
               shrinkWrap: true,
@@ -1040,7 +1042,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   ),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    onPressed: () => setState(() => _blockedDates.removeAt(index)),
+                    onPressed: () =>
+                        setState(() => _blockedDates.removeAt(index)),
                   ),
                 );
               },
@@ -1063,8 +1066,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 if (selectedDates != null) {
                   setState(() {
                     for (var date in selectedDates) {
-                      if (!_blockedDates.any((d) => d.year == date.year && d.month == date.month && d.day == date.day)) {
-                        _blockedDates.add(DateTime(date.year, date.month, date.day));
+                      if (!_blockedDates.any((d) =>
+                          d.year == date.year &&
+                          d.month == date.month &&
+                          d.day == date.day)) {
+                        _blockedDates
+                            .add(DateTime(date.year, date.month, date.day));
                       }
                     }
                     _blockedDates.sort();
@@ -1083,7 +1090,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   Widget _buildLogoUpload() {
     final dark = isDarkMode(context);
     final bool hasLogo = _newLogo != null || _existingLogoUrl != null;
-    
+
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -1093,7 +1100,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
         decoration: BoxDecoration(
           color: dark ? Colors.grey[900] : Colors.grey[200],
           borderRadius: BorderRadius.circular(12),
-          border: hasLogo ? null : Border.all(color: Color(colorPrimary).withOpacity(0.5)),
+          border: hasLogo
+              ? null
+              : Border.all(color: Color(colorPrimary).withOpacity(0.5)),
         ),
         child: Stack(
           children: [
@@ -1101,8 +1110,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: _newLogo != null
-                    ? Image.file(_newLogo!, fit: BoxFit.cover, width: 100, height: 100)
-                    : Image.network(_existingLogoUrl!, fit: BoxFit.cover, width: 100, height: 100),
+                    ? Image.file(_newLogo!,
+                        fit: BoxFit.cover, width: 100, height: 100)
+                    : Image.network(_existingLogoUrl!,
+                        fit: BoxFit.cover, width: 100, height: 100),
               )
             else
               Center(
@@ -1111,9 +1122,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Icon(Icons.add_a_photo, color: Color(colorPrimary), size: 28),
+                    Icon(Icons.add_a_photo,
+                        color: Color(colorPrimary), size: 28),
                     const SizedBox(height: 4),
-                    Text('Logo'.tr(), style: TextStyle(fontSize: 12, color: Color(colorPrimary))),
+                    Text('Logo'.tr(),
+                        style: TextStyle(
+                            fontSize: 12, color: Color(colorPrimary))),
                   ],
                 ),
               ),
@@ -1131,7 +1145,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                             borderRadius: BorderRadius.circular(12),
                             color: Colors.black.withOpacity(0.26),
                           ),
-                          child: const Icon(Icons.edit, color: Colors.white, size: 26),
+                          child: const Icon(Icons.edit,
+                              color: Colors.white, size: 26),
                         )
                       : null,
                 ),
@@ -1150,8 +1165,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   }),
                   child: Container(
                     padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                    child: const Icon(Icons.close, color: Colors.white, size: 14),
+                    decoration: const BoxDecoration(
+                        color: Colors.red, shape: BoxShape.circle),
+                    child:
+                        const Icon(Icons.close, color: Colors.white, size: 14),
                   ),
                 ),
               ),
@@ -1191,7 +1208,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
 
   Future<void> _pickLogo({required bool fromGallery}) async {
-    final image = await listingApiManager.getListingImage(fromGallery: fromGallery);
+    final image =
+        await listingApiManager.getListingImage(fromGallery: fromGallery);
     if (image != null) {
       setState(() => _newLogo = image);
     }
@@ -1207,23 +1225,25 @@ class _AddListingScreenState extends State<AddListingScreen> {
       children: [
         // Existing photos
         ..._existingPhotoUrls.asMap().entries.map((entry) => _buildPhotoTile(
-          url: entry.value,
-          dark: dark,
-          onRemove: () => setState(() => _existingPhotoUrls.removeAt(entry.key)),
-        )),
-        
+              url: entry.value,
+              dark: dark,
+              onRemove: () =>
+                  setState(() => _existingPhotoUrls.removeAt(entry.key)),
+            )),
+
         // New photos
         ..._newImages.asMap().entries.map((entry) => _buildPhotoTile(
-          file: entry.value,
-          dark: dark,
-          onRemove: () {
-            context.read<AddListingBloc>().add(RemoveListingImageEvent(image: entry.value));
-          },
-        )),
-        
+              file: entry.value,
+              dark: dark,
+              onRemove: () {
+                context
+                    .read<AddListingBloc>()
+                    .add(RemoveListingImageEvent(image: entry.value));
+              },
+            )),
+
         // Add button (only if under limit)
-        if (totalCount < maxPhotos)
-          _buildAddPhotoButton(dark),
+        if (totalCount < maxPhotos) _buildAddPhotoButton(dark),
       ],
     );
   }
@@ -1247,7 +1267,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
             borderRadius: BorderRadius.circular(8),
             child: url != null
                 ? Image.network(url, fit: BoxFit.cover)
-                : (file != null ? Image.file(file, fit: BoxFit.cover) : const Icon(Icons.image)),
+                : (file != null
+                    ? Image.file(file, fit: BoxFit.cover)
+                    : const Icon(Icons.image)),
           ),
         ),
         Positioned(
@@ -1296,10 +1318,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
   Future<void> _pickPhotosMulti() async {
     final picker = ImagePicker();
     final pickedFiles = await picker.pickMultiImage();
-    
+
     if (pickedFiles.isNotEmpty) {
       final files = pickedFiles.map((xFile) => File(xFile.path)).toList();
-      context.read<AddListingBloc>().add(AddImagesToListingEvent(images: files));
+      context
+          .read<AddListingBloc>()
+          .add(AddImagesToListingEvent(images: files));
     }
   }
 
@@ -1308,7 +1332,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
     if (widget.listingToEdit?.id == null || widget.listingToEdit!.id.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Please save the listing first before enhancing photos'.tr()),
+          content: Text(
+              'Please save the listing first before enhancing photos'.tr()),
           backgroundColor: Colors.orange,
           duration: const Duration(seconds: 3),
         ),
@@ -1372,7 +1397,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Enhanced photo saved, but failed to add to carousel'.tr()),
+            content: Text(
+                'Enhanced photo saved, but failed to add to carousel'.tr()),
             backgroundColor: Colors.orange,
           ),
         );
@@ -1390,23 +1416,25 @@ class _AddListingScreenState extends State<AddListingScreen> {
       children: [
         // Existing videos
         ..._existingVideoUrls.asMap().entries.map((entry) => _buildVideoTile(
-          url: entry.value,
-          dark: dark,
-          onRemove: () => setState(() => _existingVideoUrls.removeAt(entry.key)),
-        )),
-        
+              url: entry.value,
+              dark: dark,
+              onRemove: () =>
+                  setState(() => _existingVideoUrls.removeAt(entry.key)),
+            )),
+
         // New videos
         ..._newVideos.asMap().entries.map((entry) => _buildVideoTile(
-          file: entry.value,
-          dark: dark,
-          onRemove: () {
-            context.read<AddListingBloc>().add(RemoveListingVideoEvent(video: entry.value));
-          },
-        )),
-        
+              file: entry.value,
+              dark: dark,
+              onRemove: () {
+                context
+                    .read<AddListingBloc>()
+                    .add(RemoveListingVideoEvent(video: entry.value));
+              },
+            )),
+
         // Add button (only if under limit)
-        if (totalCount < maxVideos)
-          _buildAddVideoButton(dark),
+        if (totalCount < maxVideos) _buildAddVideoButton(dark),
       ],
     );
   }
@@ -1436,7 +1464,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         return Image.memory(snapshot.data!, fit: BoxFit.cover);
                       }
                       return Center(
-                        child: Icon(Icons.videocam, size: 40, color: Colors.grey.shade600),
+                        child: Icon(Icons.videocam,
+                            size: 40, color: Colors.grey.shade600),
                       );
                     },
                   )
@@ -1460,12 +1489,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
                             );
                           }
                           return Center(
-                            child: Icon(Icons.videocam, size: 40, color: Colors.grey.shade600),
+                            child: Icon(Icons.videocam,
+                                size: 40, color: Colors.grey.shade600),
                           );
                         },
                       )
                     : Center(
-                        child: Icon(Icons.videocam, size: 40, color: Colors.grey.shade600),
+                        child: Icon(Icons.videocam,
+                            size: 40, color: Colors.grey.shade600),
                       ),
           ),
         ),
@@ -1540,10 +1571,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   Future<void> _pickVideosMulti() async {
     final picker = ImagePicker();
-    
+
     // Show selection modal for user to pick videos (max 3, minus existing count)
     final maxAvailable = 3 - _existingVideoUrls.length - _newVideos.length;
-    
+
     if (maxAvailable <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Maximum 3 videos allowed'.tr())),
@@ -1583,7 +1614,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   Future<void> _pickSingleVideoAndAdd({required bool fromGallery}) async {
     try {
-      context.read<AddListingBloc>().add(AddVideoToListingEvent(fromGallery: fromGallery));
+      context
+          .read<AddListingBloc>()
+          .add(AddVideoToListingEvent(fromGallery: fromGallery));
     } catch (_) {
       // Handle error
     }
@@ -1607,8 +1640,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       final headers = <String, String>{};
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
         headers['X-Android-Package'] = 'com.caribtap.instaflutter.android';
-        headers['X-Android-Cert'] =
-            '2edc5d5e857233914f8335c5d4ee9e09fc8f61f9';
+        headers['X-Android-Cert'] = '2edc5d5e857233914f8335c5d4ee9e09fc8f61f9';
       }
 
       final res = await http.get(uri, headers: headers);
@@ -1633,7 +1665,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
     final title = _titleController.text.trim();
     final category = _categoryValue?.title ?? '';
     final existingDesc = _description.trim();
-    final location = _placeDetail?.formattedAddress ?? _selectedPrediction?.description ?? '';
+    final location = _placeDetail?.formattedAddress ??
+        _selectedPrediction?.description ??
+        '';
     final services = _services.map((s) => s.name).toList();
 
     if (title.isEmpty) {
@@ -1672,14 +1706,16 @@ class _AddListingScreenState extends State<AddListingScreen> {
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
     final tier = currentUser.subscriptionTier.toLowerCase();
-    final bool canUseBooking = currentUser.isAdmin || const ['pro', 'premium', 'business'].contains(tier);
+    final bool canUseBooking = currentUser.isAdmin ||
+        const ['pro', 'premium', 'business'].contains(tier);
 
     return BlocListener<AddListingBloc, AddListingState>(
       listener: (listenerContext, state) async {
         if (state is AddListingErrorState) {
           context.read<LoadingCubit>().hideLoading();
           if (!mounted) return;
-          showAlertDialog(listenerContext, state.errorTitle, state.errorMessage);
+          showAlertDialog(
+              listenerContext, state.errorTitle, state.errorMessage);
         } else if (state is PlaceDetailsState) {
           debugPrint('*** DEBUG: PlaceDetailsState received: '
               '${state.placeDetails?.formattedAddress ?? state.placeDetails?.toString()}');
@@ -1701,7 +1737,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
             SnackBar(
               content: Text('Listing saved.'.tr()),
               duration: const Duration(seconds: 2),
-              backgroundColor: state.updatedListing.verified ? Colors.green : Colors.orange,
+              backgroundColor:
+                  state.updatedListing.verified ? Colors.green : Colors.orange,
             ),
           );
           Future.delayed(const Duration(milliseconds: 500), () {
@@ -1729,16 +1766,19 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(colorPrimary),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 ),
                 onPressed: _isFetchingPlaceDetails ? null : _postListing,
                 icon: const Icon(Icons.save, size: 18),
                 label: Text(
-                  _isPublished 
-                    ? (isEdit ? 'Save'.tr() : 'Publish'.tr())
-                    : 'Save Draft'.tr(),
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  _isPublished
+                      ? (isEdit ? 'Save'.tr() : 'Publish'.tr())
+                      : 'Save Draft'.tr(),
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -1750,7 +1790,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Publish toggle 
+              // Publish toggle
               if (_basicInfoExpanded)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
@@ -1813,15 +1853,19 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         _countryCode,
                         caribbeanOnly: true,
                       );
-                      if (selected != null) setState(() => _countryCode = selected);
+                      if (selected != null)
+                        setState(() => _countryCode = selected);
                     },
                     child: AbsorbPointer(
                       child: TextFormField(
                         controller: TextEditingController(
-                          text: CaribbeanCountries.all.firstWhere(
-                            (c) => c.code == _countryCode,
-                            orElse: () => CaribbeanCountry(code: '', name: ''),
-                          ).name,
+                          text: CaribbeanCountries.all
+                              .firstWhere(
+                                (c) => c.code == _countryCode,
+                                orElse: () =>
+                                    CaribbeanCountry(code: '', name: ''),
+                              )
+                              .name,
                         ),
                         decoration: _getInputDecoration(
                           label: 'Country'.tr(),
@@ -1864,7 +1908,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                                     child: Text(currency['code'] ?? ''),
                                   ))
                               .toList(),
-                          onChanged: (value) => setState(() => _selectedCurrencyCode = value ?? 'USD'),
+                          onChanged: (value) => setState(
+                              () => _selectedCurrencyCode = value ?? 'USD'),
                         ),
                       ),
                     ],
@@ -1873,7 +1918,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   BlocBuilder<AddListingBloc, AddListingState>(
                     buildWhen: (old, current) =>
                         old != current &&
-                        (current is CategoriesFetchedState || current is CategorySelectedState),
+                        (current is CategoriesFetchedState ||
+                            current is CategorySelectedState),
                     builder: (context, state) {
                       if (state is CategoriesFetchedState) {
                         isLoadingCategories = false;
@@ -1881,7 +1927,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         if (isEdit && _categoryValue == null) {
                           final l = widget.listingToEdit!;
                           try {
-                            _categoryValue = _categories.firstWhere((c) => c.id == l.categoryID);
+                            _categoryValue = _categories
+                                .firstWhere((c) => c.id == l.categoryID);
                           } catch (_) {}
                         }
                       } else if (state is CategorySelectedState) {
@@ -1898,17 +1945,25 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         dropdownColor: dark ? Colors.grey[900] : Colors.white,
                         hint: Text('Choose Category'.tr()),
                         value: _categoryValue,
-                        items: (_categories.toList()..sort((a, b) => _localizedCategoryName(a.title).toLowerCase().compareTo(_localizedCategoryName(b.title).toLowerCase())))
-                          .map((category) => DropdownMenuItem<CategoriesModel>(
-                              value: category,
-                              child: Text(_localizedCategoryName(category.title), overflow: TextOverflow.ellipsis),
-                            ))
-                          .toList(),
+                        items: (_categories.toList()
+                              ..sort((a, b) => _localizedCategoryName(a.title)
+                                  .toLowerCase()
+                                  .compareTo(_localizedCategoryName(b.title)
+                                      .toLowerCase())))
+                            .map((category) =>
+                                DropdownMenuItem<CategoriesModel>(
+                                  value: category,
+                                  child: Text(
+                                      _localizedCategoryName(category.title),
+                                      overflow: TextOverflow.ellipsis),
+                                ))
+                            .toList(),
                         onChanged: isLoadingCategories
                             ? null
                             : (CategoriesModel? model) => context
                                 .read<AddListingBloc>()
-                                .add(CategorySelectedEvent(categoriesModel: model)),
+                                .add(CategorySelectedEvent(
+                                    categoriesModel: model)),
                       );
                     },
                   ),
@@ -1923,10 +1978,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         if (!mounted) return;
                         showSnackBar(
                           context,
-                          'Google Places API key is missing. Please check .env configuration.'.tr(),
+                          'Google Places API key is missing. Please check .env configuration.'
+                              .tr(),
                         );
                         return;
                       }
+
+                      await _debugProbePlacesAutocomplete();
 
                       final prediction = await PlacesAutocomplete.show(
                         context: context,
@@ -1943,7 +2001,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           _placeManuallySelected = true;
                         });
                         if (!mounted) return;
-                        context.read<AddListingBloc>().add(GetPlaceDetailsEvent(prediction: prediction));
+                        context
+                            .read<AddListingBloc>()
+                            .add(GetPlaceDetailsEvent(prediction: prediction));
                       }
                     },
                     child: InputDecorator(
@@ -1956,12 +2016,19 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         builder: (context) {
                           final displayText = _isFetchingPlaceDetails
                               ? 'Loading...'.tr()
-                              : (_placeDetail?.formattedAddress?.trim().isNotEmpty ?? false)
+                              : (_placeDetail?.formattedAddress
+                                          ?.trim()
+                                          .isNotEmpty ??
+                                      false)
                                   ? _placeDetail!.formattedAddress!
-                                  : (_selectedPrediction?.description?.trim().isNotEmpty ?? false)
+                                  : (_selectedPrediction?.description
+                                              ?.trim()
+                                              .isNotEmpty ??
+                                          false)
                                       ? _selectedPrediction!.description!
                                       : (isEdit
-                                          ? (widget.listingToEdit?.place ?? 'Select Place'.tr())
+                                          ? (widget.listingToEdit?.place ??
+                                              'Select Place'.tr())
                                           : 'Select Place'.tr());
                           return Text(
                             displayText,
@@ -1986,7 +2053,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       });
                     },
                     maxCharacters: 2000,
-                    draftKey: isEdit 
+                    draftKey: isEdit
                         ? 'listing_description_draft_${widget.listingToEdit!.id}'
                         : 'listing_description_draft_new',
                   ),
@@ -1999,15 +2066,19 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           child: OutlinedButton.icon(
                             icon: const Icon(Icons.auto_awesome, size: 18),
                             label: Text(
-                              _description.trim().isEmpty ? 'Generate with AI'.tr() : 'Enhance with AI'.tr(),
+                              _description.trim().isEmpty
+                                  ? 'Generate with AI'.tr()
+                                  : 'Enhance with AI'.tr(),
                               style: const TextStyle(fontSize: 13),
                             ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Color(colorPrimary),
-                              side: BorderSide(color: Color(colorPrimary).withOpacity(0.5)),
+                              side: BorderSide(
+                                  color: Color(colorPrimary).withOpacity(0.5)),
                               padding: const EdgeInsets.symmetric(vertical: 8),
                             ),
-                            onPressed: () => _showAIDescriptionDialog(context, dark),
+                            onPressed: () =>
+                                _showAIDescriptionDialog(context, dark),
                           ),
                         ),
                       ],
@@ -2033,7 +2104,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         initialValue: _openingHoursController.text.trim(),
                       );
                       if (result != null) {
-                        setState(() => _openingHoursController.text = result.trim());
+                        setState(
+                            () => _openingHoursController.text = result.trim());
                       }
                     },
                     child: InputDecorator(
@@ -2044,7 +2116,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       child: Text(
                         _openingHoursController.text.trim().isEmpty
                             ? 'Tap to set opening hours'.tr()
-                            : _openingHoursController.text.trim().replaceAll('\n', ' • '),
+                            : _openingHoursController.text
+                                .trim()
+                                .replaceAll('\n', ' • '),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -2053,17 +2127,22 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   const SizedBox(height: 16),
                   InkWell(
                     onTap: () async {
-                      final filters = await showModalBottomSheet<Map<String, String>>(
+                      final filters =
+                          await showModalBottomSheet<Map<String, String>>(
                         isScrollControlled: true,
                         context: context,
                         shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                          borderRadius:
+                              BorderRadius.vertical(top: Radius.circular(20)),
                         ),
-                        builder: (context) => FilterWrappingWidget(filtersValue: _filters ?? {}),
+                        builder: (context) =>
+                            FilterWrappingWidget(filtersValue: _filters ?? {}),
                       );
                       if (filters != null) {
                         if (!mounted) return;
-                        context.read<AddListingBloc>().add(SetFiltersEvent(filters: filters));
+                        context
+                            .read<AddListingBloc>()
+                            .add(SetFiltersEvent(filters: filters));
                       }
                     },
                     child: InputDecorator(
@@ -2072,11 +2151,15 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         icon: Icons.filter_list,
                       ),
                       child: BlocBuilder<AddListingBloc, AddListingState>(
-                        buildWhen: (old, current) => old != current && current is SetFiltersState,
+                        buildWhen: (old, current) =>
+                            old != current && current is SetFiltersState,
                         builder: (context, state) {
-                          if (state is SetFiltersState) _filters = state.filters ?? {};
+                          if (state is SetFiltersState)
+                            _filters = state.filters ?? {};
                           return Text(
-                            _filters?.isEmpty ?? true ? 'Optional'.tr() : 'Edit Filters'.tr(),
+                            _filters?.isEmpty ?? true
+                                ? 'Optional'.tr()
+                                : 'Edit Filters'.tr(),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           );
@@ -2088,19 +2171,26 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   if (currentUser.isAdmin)
                     Container(
                       decoration: BoxDecoration(
-                        color: isDarkMode(context) ? Colors.grey[900] : Colors.grey[50],
+                        color: isDarkMode(context)
+                            ? Colors.grey[900]
+                            : Colors.grey[50],
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isDarkMode(context) ? Colors.grey[800]! : Colors.grey[300]!,
+                          color: isDarkMode(context)
+                              ? Colors.grey[800]!
+                              : Colors.grey[300]!,
                         ),
                       ),
                       child: CheckboxListTile(
                         title: Text(
                           'Verified'.tr(),
-                          style: TextStyle(color: Color(colorPrimary), fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              color: Color(colorPrimary),
+                              fontWeight: FontWeight.bold),
                         ),
                         value: _verified,
-                        onChanged: (value) => setState(() => _verified = value ?? false),
+                        onChanged: (value) =>
+                            setState(() => _verified = value ?? false),
                         activeColor: Color(colorPrimary),
                       ),
                     ),
@@ -2133,19 +2223,22 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   TextField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
-                    decoration: _getInputDecoration(label: 'Phone'.tr(), icon: Icons.phone),
+                    decoration: _getInputDecoration(
+                        label: 'Phone'.tr(), icon: Icons.phone),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: _getInputDecoration(label: 'Email'.tr(), icon: Icons.email),
+                    decoration: _getInputDecoration(
+                        label: 'Email'.tr(), icon: Icons.email),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _websiteController,
                     keyboardType: TextInputType.url,
-                    decoration: _getInputDecoration(label: 'Website'.tr(), icon: Icons.language),
+                    decoration: _getInputDecoration(
+                        label: 'Website'.tr(), icon: Icons.language),
                   ),
                 ],
               ),
@@ -2161,32 +2254,39 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 children: [
                   TextField(
                     controller: _instagramController,
-                    decoration: _getInputDecoration(label: 'Instagram URL'.tr(), icon: Icons.camera_alt),
+                    decoration: _getInputDecoration(
+                        label: 'Instagram URL'.tr(), icon: Icons.camera_alt),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _facebookController,
-                    decoration: _getInputDecoration(label: 'Facebook URL'.tr(), icon: Icons.facebook),
+                    decoration: _getInputDecoration(
+                        label: 'Facebook URL'.tr(), icon: Icons.facebook),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _whatsappController,
-                    decoration: _getInputDecoration(label: 'WhatsApp Phone'.tr(), icon: Icons.message),
+                    decoration: _getInputDecoration(
+                        label: 'WhatsApp Phone'.tr(), icon: Icons.message),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _tiktokController,
-                    decoration: _getInputDecoration(label: 'TikTok URL'.tr(), icon: Icons.music_note),
+                    decoration: _getInputDecoration(
+                        label: 'TikTok URL'.tr(), icon: Icons.music_note),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _youtubeController,
-                    decoration: _getInputDecoration(label: 'YouTube URL'.tr(), icon: Icons.ondemand_video),
+                    decoration: _getInputDecoration(
+                        label: 'YouTube URL'.tr(), icon: Icons.ondemand_video),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _xController,
-                    decoration: _getInputDecoration(label: 'X (Twitter) URL'.tr(), icon: Icons.alternate_email),
+                    decoration: _getInputDecoration(
+                        label: 'X (Twitter) URL'.tr(),
+                        icon: Icons.alternate_email),
                   ),
                 ],
               ),
@@ -2203,22 +2303,27 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Text(
-                      'Not seen on listing, used for quote and invoice generation'.tr(),
+                      'Not seen on listing, used for quote and invoice generation'
+                          .tr(),
                       style: TextStyle(
                         fontSize: 12,
-                        color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        color:
+                            dark ? Colors.grey.shade400 : Colors.grey.shade600,
                         fontStyle: FontStyle.italic,
                       ),
                     ),
                   ),
                   TextField(
                     controller: _companyRegistrationController,
-                    decoration: _getInputDecoration(label: 'Company Registration #'.tr(), icon: Icons.business),
+                    decoration: _getInputDecoration(
+                        label: 'Company Registration #'.tr(),
+                        icon: Icons.business),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _vatNumberController,
-                    decoration: _getInputDecoration(label: 'VAT / Tax ID #'.tr(), icon: Icons.receipt_long),
+                    decoration: _getInputDecoration(
+                        label: 'VAT / Tax ID #'.tr(), icon: Icons.receipt_long),
                   ),
                 ],
               ),
@@ -2262,8 +2367,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     ),
                     activeColor: Color(colorPrimary),
                     activeTrackColor: Color(colorPrimary).withOpacity(0.5),
-                    inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
-                    inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
+                    inactiveThumbColor:
+                        dark ? Colors.grey.shade600 : Colors.grey.shade400,
+                    inactiveTrackColor:
+                        dark ? Colors.grey.shade800 : Colors.grey.shade300,
                   ),
                   if (_storeEnabled) ...[
                     const SizedBox(height: 12),
@@ -2274,9 +2381,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         label: 'Store Mode'.tr(),
                         icon: Icons.storefront,
                       ),
-                      dropdownColor: isDarkMode(context) ? Colors.grey.shade800 : Colors.white,
+                      dropdownColor: isDarkMode(context)
+                          ? Colors.grey.shade800
+                          : Colors.white,
                       style: TextStyle(
-                        color: isDarkMode(context) ? Colors.white : Colors.black,
+                        color:
+                            isDarkMode(context) ? Colors.white : Colors.black,
                         fontSize: 16,
                       ),
                       items: [
@@ -2293,7 +2403,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                               if (!isPremiumUser(currentUser)) ...[
                                 const SizedBox(width: 8),
                                 Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: Color(0xFFFFD700),
                                     borderRadius: BorderRadius.circular(4),
@@ -2320,7 +2431,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                               if (!isPremiumUser(currentUser)) ...[
                                 const SizedBox(width: 8),
                                 Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: Color(0xFFFFD700),
                                     borderRadius: BorderRadius.circular(4),
@@ -2342,10 +2454,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       onChanged: (value) {
                         if (value != null) {
                           // Block non-Premium users from selecting internal catalog options
-                          if ((value == 'internal_catalog' || value == 'both') && !isPremiumUser(currentUser)) {
+                          if ((value == 'internal_catalog' ||
+                                  value == 'both') &&
+                              !isPremiumUser(currentUser)) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Internal Catalog requires Premium subscription'.tr()),
+                                content: Text(
+                                    'Internal Catalog requires Premium subscription'
+                                        .tr()),
                                 backgroundColor: Colors.orange,
                               ),
                             );
@@ -2357,11 +2473,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     ),
                     const SizedBox(height: 12),
                     // External URL field (show if mode is external_url or both)
-                    if (_storeMode == 'external_url' || _storeMode == 'both') ...[
+                    if (_storeMode == 'external_url' ||
+                        _storeMode == 'both') ...[
                       TextField(
                         controller: _storeUrlController,
                         keyboardType: TextInputType.url,
-                        decoration: _getInputDecoration(label: 'Store URL'.tr(), icon: Icons.link),
+                        decoration: _getInputDecoration(
+                            label: 'Store URL'.tr(), icon: Icons.link),
                       ),
                       const SizedBox(height: 12),
                     ],
@@ -2373,9 +2491,11 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         icon: Icons.access_time,
                         hint: 'Minimum hours needed to prepare orders'.tr(),
                       ),
-                      controller: TextEditingController(text: _storeLeadTimeHours.toString())
+                      controller: TextEditingController(
+                          text: _storeLeadTimeHours.toString())
                         ..selection = TextSelection.fromPosition(
-                          TextPosition(offset: _storeLeadTimeHours.toString().length),
+                          TextPosition(
+                              offset: _storeLeadTimeHours.toString().length),
                         ),
                       onChanged: (value) {
                         final parsed = int.tryParse(value);
@@ -2386,29 +2506,38 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     ),
                     const SizedBox(height: 12),
                     // Manage Catalog button (Premium-only)
-                    if ((_storeMode == 'internal_catalog' || _storeMode == 'both') && isPremiumUser(currentUser)) ...[
+                    if ((_storeMode == 'internal_catalog' ||
+                            _storeMode == 'both') &&
+                        isPremiumUser(currentUser)) ...[
                       ElevatedButton.icon(
                         onPressed: () {
                           // Navigate to CatalogManagerScreen (only after listing is saved)
                           if (!isEdit) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Please save the listing first, then you can manage catalog items'.tr()),
+                                content: Text(
+                                    'Please save the listing first, then you can manage catalog items'
+                                        .tr()),
                                 backgroundColor: Colors.orange,
                               ),
                             );
                             return;
                           }
                           // For edit mode, navigate to catalog manager
-                          push(context, CatalogManagerScreen(
-                            listing: widget.listingToEdit!,
-                            currentUser: currentUser,
-                          ));
+                          push(
+                              context,
+                              CatalogManagerScreen(
+                                listing: widget.listingToEdit!,
+                                currentUser: currentUser,
+                              ));
                         },
                         icon: Icon(Icons.inventory_2),
-                        label: Text(isEdit ? 'Manage Catalog Items'.tr() : 'Save Listing First'.tr()),
+                        label: Text(isEdit
+                            ? 'Manage Catalog Items'.tr()
+                            : 'Save Listing First'.tr()),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isEdit ? Color(colorPrimary) : Colors.grey,
+                          backgroundColor:
+                              isEdit ? Color(colorPrimary) : Colors.grey,
                           foregroundColor: Colors.white,
                           padding: EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
@@ -2423,19 +2552,23 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         value: _acceptProofOfPayment,
-                        onChanged: (value) => setState(() => _acceptProofOfPayment = value),
+                        onChanged: (value) =>
+                            setState(() => _acceptProofOfPayment = value),
                         title: Text(
                           'Accept Proof of Payment'.tr(),
                           style: TextStyle(fontWeight: FontWeight.w500),
                         ),
                         subtitle: Text(
-                          'Require customers to provide proof of payment (photo/receipt) for orders'.tr(),
+                          'Require customers to provide proof of payment (photo/receipt) for orders'
+                              .tr(),
                           style: TextStyle(fontSize: 12),
                         ),
                         activeColor: Color(colorPrimary),
                         activeTrackColor: Color(colorPrimary).withOpacity(0.5),
-                        inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
-                        inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
+                        inactiveThumbColor:
+                            dark ? Colors.grey.shade600 : Colors.grey.shade400,
+                        inactiveTrackColor:
+                            dark ? Colors.grey.shade800 : Colors.grey.shade300,
                       ),
                     ],
                   ],
@@ -2455,7 +2588,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text('Enable Rentals'.tr()),
-                      subtitle: Text('Allow customers to rent items from this listing'.tr(), style: TextStyle(fontSize: 12)),
+                      subtitle: Text(
+                          'Allow customers to rent items from this listing'
+                              .tr(),
+                          style: TextStyle(fontSize: 12)),
                       value: _rentalConfig?.isRentalEnabled ?? false,
                       onChanged: (value) {
                         setState(() {
@@ -2470,24 +2606,30 @@ class _AddListingScreenState extends State<AddListingScreen> {
                             );
                           } else {
                             // Disable rentals
-                            _rentalConfig = _rentalConfig?.copyWith(isRentalEnabled: false);
+                            _rentalConfig =
+                                _rentalConfig?.copyWith(isRentalEnabled: false);
                           }
                         });
                       },
                       activeColor: Color(colorPrimary),
-                      inactiveTrackColor: dark ? Colors.grey.shade700 : Colors.grey.shade300,
-                      inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
+                      inactiveTrackColor:
+                          dark ? Colors.grey.shade700 : Colors.grey.shade300,
+                      inactiveThumbColor:
+                          dark ? Colors.grey.shade600 : Colors.grey.shade400,
                     ),
                     // Rental Management buttons (only when editing and rentals are enabled)
-                    if (isEdit && (_rentalConfig?.isRentalEnabled ?? false)) ...[
+                    if (isEdit &&
+                        (_rentalConfig?.isRentalEnabled ?? false)) ...[
                       const SizedBox(height: 12),
                       // Manage Rental Catalog button
                       ElevatedButton.icon(
                         onPressed: () {
-                          push(context, RentalCatalogManagerScreen(
-                            listing: widget.listingToEdit!,
-                            currentUser: currentUser,
-                          ));
+                          push(
+                              context,
+                              RentalCatalogManagerScreen(
+                                listing: widget.listingToEdit!,
+                                currentUser: currentUser,
+                              ));
                         },
                         icon: const Icon(Icons.inventory_2),
                         label: Text('Manage Rental Catalog'.tr()),
@@ -2503,8 +2645,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     ],
                   ],
                 ),
-              if (isPremiumUser(currentUser))
-                const SizedBox(height: 8),
+              if (isPremiumUser(currentUser)) const SizedBox(height: 8),
 
               // Services section (always available)
               _buildCollapsibleSection(
@@ -2541,12 +2682,16 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 },
                 children: [
                   BlocBuilder<AddListingBloc, AddListingState>(
-                    buildWhen: (old, current) => old != current && current is ListingImagesUpdatedState,
+                    buildWhen: (old, current) =>
+                        old != current && current is ListingImagesUpdatedState,
                     builder: (context, state) {
-                      if (state is ListingImagesUpdatedState) _newImages = state.images;
-                      final normalizedTier = currentUser.subscriptionTier.toLowerCase();
+                      if (state is ListingImagesUpdatedState)
+                        _newImages = state.images;
+                      final normalizedTier =
+                          currentUser.subscriptionTier.toLowerCase();
                       final canUsePhotoEnhancement = currentUser.isAdmin ||
-                          const ['professional', 'pro', 'premium', 'business'].contains(normalizedTier);
+                          const ['professional', 'pro', 'premium', 'business']
+                              .contains(normalizedTier);
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -2554,7 +2699,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           const SizedBox(height: 12),
                           if (canUsePhotoEnhancement) ...[
                             EnhanceButtonWidget(
-                              onPressed: () => _showPhotoEnhancementModal(context),
+                              onPressed: () =>
+                                  _showPhotoEnhancementModal(context),
                               enabled: isEdit,
                               label: 'Enhance Photos'.tr(),
                               width: double.infinity,
@@ -2566,7 +2712,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
                                   'Save listing to enable enhancements'.tr(),
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: isDarkMode(context) ? Colors.grey.shade400 : Colors.grey.shade600,
+                                    color: isDarkMode(context)
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade600,
                                   ),
                                 ),
                               ),
@@ -2574,9 +2722,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
                               Padding(
                                 padding: const EdgeInsets.only(top: 12),
                                 child: FutureBuilder<UserEnhancementQuota?>(
-                                  future: context.read<PhotoEnhancementCubit>().fetchUserQuota(currentUser.userID),
+                                  future: context
+                                      .read<PhotoEnhancementCubit>()
+                                      .fetchUserQuota(currentUser.userID),
                                   builder: (context, snapshot) {
-                                    if (snapshot.hasData && snapshot.data != null) {
+                                    if (snapshot.hasData &&
+                                        snapshot.data != null) {
                                       return UsageCounterWidget(
                                         quota: snapshot.data!,
                                         compact: true,
@@ -2604,7 +2755,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         _locationInstructions = instructions;
                       });
                     },
-                    uploadImages: (images) => listingApiManager.uploadListingImages(images: images),
+                    uploadImages: (images) =>
+                        listingApiManager.uploadListingImages(images: images),
                     isDark: isDarkMode(context),
                     primaryColor: Color(colorPrimary),
                   ),
@@ -2621,9 +2773,11 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 },
                 children: [
                   BlocBuilder<AddListingBloc, AddListingState>(
-                    buildWhen: (old, current) => old != current && current is ListingVideosUpdatedState,
+                    buildWhen: (old, current) =>
+                        old != current && current is ListingVideosUpdatedState,
                     builder: (context, state) {
-                      if (state is ListingVideosUpdatedState) _newVideos = state.videos;
+                      if (state is ListingVideosUpdatedState)
+                        _newVideos = state.videos;
                       return _buildVideoGrid(isDarkMode(context));
                     },
                   ),
@@ -2662,6 +2816,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _storeUrlController.dispose();
     super.dispose();
   }
+
   // Add missing _postListing stub if not present
   void _postListing() {
     // Validate required fields before posting
@@ -2674,17 +2829,22 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
     // Show loading overlay with appropriate message based on toggle state
     context.read<LoadingCubit>().showLoading(
-      context,
-      _isPublished 
-        ? (isEdit ? 'Saving listing...'.tr() : 'Publishing listing...'.tr())
-        : 'Saving as draft...'.tr(),
-      false,
-      Color(colorPrimary),
-    );
+          context,
+          _isPublished
+              ? (isEdit
+                  ? 'Saving listing...'.tr()
+                  : 'Publishing listing...'.tr())
+              : 'Saving as draft...'.tr(),
+          false,
+          Color(colorPrimary),
+        );
 
-    final place = _placeDetail?.formattedAddress ?? (isEdit ? widget.listingToEdit?.place ?? '' : '');
-    final latitude = _placeDetail?.geometry?.location.lat ?? (isEdit ? widget.listingToEdit?.latitude ?? 0 : 0);
-    final longitude = _placeDetail?.geometry?.location.lng ?? (isEdit ? widget.listingToEdit?.longitude ?? 0 : 0);
+    final place = _placeDetail?.formattedAddress ??
+        (isEdit ? widget.listingToEdit?.place ?? '' : '');
+    final latitude = _placeDetail?.geometry?.location.lat ??
+        (isEdit ? widget.listingToEdit?.latitude ?? 0 : 0);
+    final longitude = _placeDetail?.geometry?.location.lng ??
+        (isEdit ? widget.listingToEdit?.longitude ?? 0 : 0);
 
     // Auto-disable bookings for Free tier users (cannot use bookings)
     final bookingEnabledValue = _canUseBooking() ? _bookingEnabled : false;
@@ -2716,7 +2876,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
       storeMode: _storeMode,
       storeLeadTimeHours: _storeLeadTimeHours,
       listerTierSnapshot: currentUser.subscriptionTier.toLowerCase(),
-      rentalConfig: _rentalConfig?.isRentalEnabled ?? false ? _rentalConfig : null,
+      rentalConfig:
+          _rentalConfig?.isRentalEnabled ?? false ? _rentalConfig : null,
       payments: {'acceptProofOfPayment': _acceptProofOfPayment},
       instagram: _instagramController.text.trim(),
       facebook: _facebookController.text.trim(),
@@ -2746,19 +2907,20 @@ class _AddListingScreenState extends State<AddListingScreen> {
     );
 
     // DEBUG: Log proof of address toggle state
-    debugPrint('🟢 DEBUG [_postListing]: Publishing listing with address verification enabled=${listingModel.latitude != 0 && listingModel.longitude != 0}');
+    debugPrint(
+        '🟢 DEBUG [_postListing]: Publishing listing with address verification enabled=${listingModel.latitude != 0 && listingModel.longitude != 0}');
 
     context.read<AddListingBloc>().add(
-      PublishListingEvent(
-        listingModel: listingModel,
-        isEdit: isEdit,
-        listingIdToUpdate: isEdit ? widget.listingToEdit?.id : null,
-        existingPhotoUrls: _existingPhotoUrls,
-        existingVideoUrls: _existingVideoUrls,
-        newLogoFile: _newLogo,
-        existingLogoUrl: _existingLogoUrl,
-      ),
-    );
+          PublishListingEvent(
+            listingModel: listingModel,
+            isEdit: isEdit,
+            listingIdToUpdate: isEdit ? widget.listingToEdit?.id : null,
+            existingPhotoUrls: _existingPhotoUrls,
+            existingVideoUrls: _existingVideoUrls,
+            newLogoFile: _newLogo,
+            existingLogoUrl: _existingLogoUrl,
+          ),
+        );
   }
 
   void _showAddTimeBlockDialog(bool dark) async {
@@ -2786,15 +2948,21 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           value: startHour,
                           decoration: InputDecoration(
                             labelText: 'Start Hour',
-                            labelStyle: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade700),
+                            labelStyle: TextStyle(
+                                color: dark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade700),
                             border: OutlineInputBorder(),
                           ),
-                          dropdownColor: dark ? Colors.grey.shade800 : Colors.white,
-                          style: TextStyle(color: dark ? Colors.white : Colors.black),
+                          dropdownColor:
+                              dark ? Colors.grey.shade800 : Colors.white,
+                          style: TextStyle(
+                              color: dark ? Colors.white : Colors.black),
                           items: List.generate(24, (i) => i).map((hour) {
                             return DropdownMenuItem(
                               value: hour,
-                              child: Text('${hour.toString().padLeft(2, '0')}:00'),
+                              child:
+                                  Text('${hour.toString().padLeft(2, '0')}:00'),
                             );
                           }).toList(),
                           onChanged: (value) {
@@ -2811,15 +2979,21 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           value: endHour,
                           decoration: InputDecoration(
                             labelText: 'End Hour',
-                            labelStyle: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade700),
+                            labelStyle: TextStyle(
+                                color: dark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade700),
                             border: OutlineInputBorder(),
                           ),
-                          dropdownColor: dark ? Colors.grey.shade800 : Colors.white,
-                          style: TextStyle(color: dark ? Colors.white : Colors.black),
+                          dropdownColor:
+                              dark ? Colors.grey.shade800 : Colors.white,
+                          style: TextStyle(
+                              color: dark ? Colors.white : Colors.black),
                           items: List.generate(24, (i) => i).map((hour) {
                             return DropdownMenuItem(
                               value: hour,
-                              child: Text('${hour.toString().padLeft(2, '0')}:00'),
+                              child:
+                                  Text('${hour.toString().padLeft(2, '0')}:00'),
                             );
                           }).toList(),
                           onChanged: (value) {
@@ -2847,7 +3021,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   child: Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed: () => Navigator.pop(context, {'start': startHour, 'end': endHour}),
+                  onPressed: () => Navigator.pop(
+                      context, {'start': startHour, 'end': endHour}),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color(colorPrimary),
                     foregroundColor: Colors.white,
@@ -2864,7 +3039,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
     if (result != null) {
       final start = result['start']!;
       final end = result['end']!;
-      final timeBlock = '${start.toString().padLeft(2, '0')}:00-${end.toString().padLeft(2, '0')}:00';
+      final timeBlock =
+          '${start.toString().padLeft(2, '0')}:00-${end.toString().padLeft(2, '0')}:00';
       if (!_timeBlocks.contains(timeBlock)) {
         setState(() => _timeBlocks.add(timeBlock));
       }
@@ -2878,7 +3054,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: dark ? Colors.grey[900] : Colors.white,
-          title: Text('Add Booking Question'.tr(), style: TextStyle(color: dark ? Colors.white : Colors.black)),
+          title: Text('Add Booking Question'.tr(),
+              style: TextStyle(color: dark ? Colors.white : Colors.black)),
           content: TextField(
             controller: controller,
             autofocus: true,
@@ -2886,19 +3063,24 @@ class _AddListingScreenState extends State<AddListingScreen> {
             style: TextStyle(color: dark ? Colors.white : Colors.black),
             decoration: InputDecoration(
               labelText: 'Question'.tr(),
-              labelStyle: TextStyle(color: dark ? Colors.grey[300] : Colors.grey[700]),
+              labelStyle:
+                  TextStyle(color: dark ? Colors.grey[300] : Colors.grey[700]),
               hintText: 'e.g., Do you have any allergies?',
-              hintStyle: TextStyle(color: dark ? Colors.grey[500] : Colors.grey[400]),
+              hintStyle:
+                  TextStyle(color: dark ? Colors.grey[500] : Colors.grey[400]),
               border: OutlineInputBorder(),
               filled: true,
               fillColor: dark ? Colors.grey[850] : Colors.grey[50],
-              counterStyle: TextStyle(color: dark ? Colors.white : Colors.grey[700]),
+              counterStyle:
+                  TextStyle(color: dark ? Colors.white : Colors.grey[700]),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'.tr(), style: TextStyle(color: dark ? Colors.grey[300] : Color(colorPrimary))),
+              child: Text('Cancel'.tr(),
+                  style: TextStyle(
+                      color: dark ? Colors.grey[300] : Color(colorPrimary))),
             ),
             ElevatedButton(
               onPressed: () {
@@ -2918,13 +3100,17 @@ class _AddListingScreenState extends State<AddListingScreen> {
       },
     );
 
-    if (result != null && result.isNotEmpty && !_customQuestions.contains(result)) {
+    if (result != null &&
+        result.isNotEmpty &&
+        !_customQuestions.contains(result)) {
       setState(() => _customQuestions.add(result));
     }
   }
 
-  PlaceDetails _fakePlaceDetailsFromExisting(String name, String address, double lat, double lng) {
-    final safeAddress = address.trim().isEmpty ? 'Unknown location' : address.trim();
+  PlaceDetails _fakePlaceDetailsFromExisting(
+      String name, String address, double lat, double lng) {
+    final safeAddress =
+        address.trim().isEmpty ? 'Unknown location' : address.trim();
     return PlaceDetails(
       placeId: 'manual_${lat.toStringAsFixed(6)}_${lng.toStringAsFixed(6)}',
       name: name.trim().isEmpty ? safeAddress : name.trim(),
@@ -2940,7 +3126,8 @@ class ExistingListingImageWidget extends StatelessWidget {
   final String imageUrl;
   final VoidCallback onRemove;
 
-  const ExistingListingImageWidget({super.key, required this.imageUrl, required this.onRemove});
+  const ExistingListingImageWidget(
+      {super.key, required this.imageUrl, required this.onRemove});
 
   @override
   Widget build(BuildContext context) {
@@ -2963,7 +3150,8 @@ class ExistingListingImageWidget extends StatelessWidget {
               onTap: onRemove,
               child: Container(
                 padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                decoration: const BoxDecoration(
+                    color: Colors.black54, shape: BoxShape.circle),
                 child: const Icon(Icons.close, size: 16, color: Colors.white),
               ),
             ),
@@ -2978,13 +3166,16 @@ class ExistingListingVideoWidget extends StatefulWidget {
   final String videoUrl;
   final VoidCallback onRemove;
 
-  const ExistingListingVideoWidget({super.key, required this.videoUrl, required this.onRemove});
+  const ExistingListingVideoWidget(
+      {super.key, required this.videoUrl, required this.onRemove});
 
   @override
-  State<ExistingListingVideoWidget> createState() => _ExistingListingVideoWidgetState();
+  State<ExistingListingVideoWidget> createState() =>
+      _ExistingListingVideoWidgetState();
 }
 
-class _ExistingListingVideoWidgetState extends State<ExistingListingVideoWidget> {
+class _ExistingListingVideoWidgetState
+    extends State<ExistingListingVideoWidget> {
   Uint8List? _thumbnail;
   bool _failed = false;
 
@@ -3019,11 +3210,13 @@ class _ExistingListingVideoWidgetState extends State<ExistingListingVideoWidget>
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: _thumbnail != null
-                ? Image.memory(_thumbnail!, fit: BoxFit.cover, width: 100, height: 100)
+                ? Image.memory(_thumbnail!,
+                    fit: BoxFit.cover, width: 100, height: 100)
                 : Container(
                     color: dark ? Colors.grey[900] : Colors.black87,
                     child: const Center(
-                      child: Icon(Icons.play_circle_fill, size: 44, color: Colors.white70),
+                      child: Icon(Icons.play_circle_fill,
+                          size: 44, color: Colors.white70),
                     ),
                   ),
           ),
@@ -3037,7 +3230,8 @@ class _ExistingListingVideoWidgetState extends State<ExistingListingVideoWidget>
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text('Preview unavailable', style: TextStyle(color: Colors.white, fontSize: 10)),
+                child: const Text('Preview unavailable',
+                    style: TextStyle(color: Colors.white, fontSize: 10)),
               ),
             ),
           Positioned(
@@ -3047,7 +3241,8 @@ class _ExistingListingVideoWidgetState extends State<ExistingListingVideoWidget>
               onTap: widget.onRemove,
               child: Container(
                 padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                decoration: const BoxDecoration(
+                    color: Colors.black54, shape: BoxShape.circle),
                 child: const Icon(Icons.close, size: 16, color: Colors.white),
               ),
             ),
@@ -3061,7 +3256,8 @@ class _ExistingListingVideoWidgetState extends State<ExistingListingVideoWidget>
 class ListingImageWidget extends StatefulWidget {
   final File? imageFile;
   final bool isAddButton;
-  const ListingImageWidget({super.key, required this.imageFile, required this.isAddButton});
+  const ListingImageWidget(
+      {super.key, required this.imageFile, required this.isAddButton});
 
   @override
   State<ListingImageWidget> createState() => _ListingImageWidgetState();
@@ -3072,14 +3268,18 @@ class _ListingImageWidgetState extends State<ListingImageWidget> {
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
     return GestureDetector(
-      onTap: () => widget.isAddButton ? _pickImage(context) : _viewOrDeleteImage(widget.imageFile!, context),
+      onTap: () => widget.isAddButton
+          ? _pickImage(context)
+          : _viewOrDeleteImage(widget.imageFile!, context),
       child: Container(
         width: 100,
         margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
           color: dark ? Colors.grey[900] : Colors.grey[200],
           borderRadius: BorderRadius.circular(12),
-          border: widget.isAddButton ? Border.all(color: Color(colorPrimary).withOpacity(0.5)) : null,
+          border: widget.isAddButton
+              ? Border.all(color: Color(colorPrimary).withOpacity(0.5))
+              : null,
         ),
         child: widget.isAddButton
             ? Column(
@@ -3087,25 +3287,32 @@ class _ListingImageWidgetState extends State<ListingImageWidget> {
                 children: [
                   Icon(Icons.add_a_photo, color: Color(colorPrimary), size: 28),
                   const SizedBox(height: 4),
-                  Text('Add'.tr(), style: TextStyle(fontSize: 12, color: Color(colorPrimary))),
+                  Text('Add'.tr(),
+                      style:
+                          TextStyle(fontSize: 12, color: Color(colorPrimary))),
                 ],
               )
             : ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: AspectRatio(aspectRatio: 1, child: Image.file(widget.imageFile!, fit: BoxFit.cover)),
+                child: AspectRatio(
+                    aspectRatio: 1,
+                    child: Image.file(widget.imageFile!, fit: BoxFit.cover)),
               ),
       ),
     );
   }
 
-  void _viewOrDeleteImage(File imageFile, BuildContext blocContext) => showCupertinoModalPopup(
+  void _viewOrDeleteImage(File imageFile, BuildContext blocContext) =>
+      showCupertinoModalPopup(
         context: context,
         builder: (context) => CupertinoActionSheet(
           actions: [
             CupertinoActionSheetAction(
               onPressed: () {
                 Navigator.pop(context);
-                blocContext.read<AddListingBloc>().add(RemoveListingImageEvent(image: imageFile));
+                blocContext
+                    .read<AddListingBloc>()
+                    .add(RemoveListingImageEvent(image: imageFile));
               },
               isDestructiveAction: true,
               child: Text('Remove Picture'.tr()),
@@ -3113,12 +3320,17 @@ class _ListingImageWidgetState extends State<ListingImageWidget> {
             CupertinoActionSheetAction(
               onPressed: () {
                 Navigator.pop(context);
-                push(context, FullScreenImageViewer(imageUrl: 'preview', imageFile: imageFile));
+                push(
+                    context,
+                    FullScreenImageViewer(
+                        imageUrl: 'preview', imageFile: imageFile));
               },
               child: Text('View Picture'.tr()),
             ),
           ],
-          cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(context), child: Text('Cancel'.tr())),
+          cancelButton: CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'.tr())),
         ),
       );
 
@@ -3130,19 +3342,25 @@ class _ListingImageWidgetState extends State<ListingImageWidget> {
             CupertinoActionSheetAction(
               onPressed: () {
                 Navigator.pop(context);
-                blocContext.read<AddListingBloc>().add(AddImageToListingEvent(fromGallery: true));
+                blocContext
+                    .read<AddListingBloc>()
+                    .add(AddImageToListingEvent(fromGallery: true));
               },
               child: Text('Choose from gallery'.tr()),
             ),
             CupertinoActionSheetAction(
               onPressed: () {
                 Navigator.pop(context);
-                blocContext.read<AddListingBloc>().add(AddImageToListingEvent(fromGallery: false));
+                blocContext
+                    .read<AddListingBloc>()
+                    .add(AddImageToListingEvent(fromGallery: false));
               },
               child: Text('Take a picture'.tr()),
             )
           ],
-          cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(context), child: Text('Cancel'.tr())),
+          cancelButton: CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'.tr())),
         ),
       );
 }
@@ -3151,7 +3369,8 @@ class _ListingImageWidgetState extends State<ListingImageWidget> {
 class _ListingVideoWidget extends StatefulWidget {
   final File? videoFile;
   final bool isAddButton;
-  const _ListingVideoWidget({super.key, required this.videoFile, required this.isAddButton});
+  const _ListingVideoWidget(
+      {super.key, required this.videoFile, required this.isAddButton});
 
   @override
   State<_ListingVideoWidget> createState() => _ListingVideoWidgetState();
@@ -3194,14 +3413,18 @@ class _ListingVideoWidgetState extends State<_ListingVideoWidget> {
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
     return GestureDetector(
-      onTap: () => widget.isAddButton ? _pickVideo(context) : _viewOrDeleteVideo(widget.videoFile!, context),
+      onTap: () => widget.isAddButton
+          ? _pickVideo(context)
+          : _viewOrDeleteVideo(widget.videoFile!, context),
       child: Container(
         width: 100,
         margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
           color: dark ? Colors.grey[900] : Colors.grey[200],
           borderRadius: BorderRadius.circular(12),
-          border: widget.isAddButton ? Border.all(color: Color(colorPrimary).withOpacity(0.5)) : null,
+          border: widget.isAddButton
+              ? Border.all(color: Color(colorPrimary).withOpacity(0.5))
+              : null,
         ),
         child: widget.isAddButton
             ? Column(
@@ -3209,7 +3432,9 @@ class _ListingVideoWidgetState extends State<_ListingVideoWidget> {
                 children: [
                   Icon(Icons.video_call, color: Color(colorPrimary), size: 28),
                   const SizedBox(height: 4),
-                  Text('Add'.tr(), style: TextStyle(fontSize: 12, color: Color(colorPrimary))),
+                  Text('Add'.tr(),
+                      style:
+                          TextStyle(fontSize: 12, color: Color(colorPrimary))),
                 ],
               )
             : Stack(
@@ -3221,27 +3446,34 @@ class _ListingVideoWidgetState extends State<_ListingVideoWidget> {
                         ? Image.memory(_thumbnailData!, fit: BoxFit.cover)
                         : Container(color: Colors.black87),
                   ),
-                  const Center(child: Icon(Icons.play_circle_fill, size: 44, color: Colors.white)),
+                  const Center(
+                      child: Icon(Icons.play_circle_fill,
+                          size: 44, color: Colors.white)),
                 ],
               ),
       ),
     );
   }
 
-  void _viewOrDeleteVideo(File videoFile, BuildContext blocContext) => showCupertinoModalPopup(
+  void _viewOrDeleteVideo(File videoFile, BuildContext blocContext) =>
+      showCupertinoModalPopup(
         context: context,
         builder: (context) => CupertinoActionSheet(
           actions: [
             CupertinoActionSheetAction(
               onPressed: () {
                 Navigator.pop(context);
-                blocContext.read<AddListingBloc>().add(RemoveListingVideoEvent(video: videoFile));
+                blocContext
+                    .read<AddListingBloc>()
+                    .add(RemoveListingVideoEvent(video: videoFile));
               },
               isDestructiveAction: true,
               child: Text('Remove Video'.tr()),
             ),
           ],
-          cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(context), child: Text('Cancel'.tr())),
+          cancelButton: CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'.tr())),
         ),
       );
 
@@ -3253,12 +3485,16 @@ class _ListingVideoWidgetState extends State<_ListingVideoWidget> {
             CupertinoActionSheetAction(
               onPressed: () {
                 Navigator.pop(context);
-                blocContext.read<AddListingBloc>().add(AddVideoToListingEvent(fromGallery: true));
+                blocContext
+                    .read<AddListingBloc>()
+                    .add(AddVideoToListingEvent(fromGallery: true));
               },
               child: Text('Choose from gallery'.tr()),
             ),
           ],
-          cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(context), child: Text('Cancel'.tr())),
+          cancelButton: CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'.tr())),
         ),
       );
 }
@@ -3296,10 +3532,12 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
     setState(() {
       // Normalize date to remove time component
       final normalizedDate = DateTime(date.year, date.month, date.day);
-      
+
       final existingIndex = _selectedDates.indexWhere((d) =>
-          d.year == normalizedDate.year && d.month == normalizedDate.month && d.day == normalizedDate.day);
-      
+          d.year == normalizedDate.year &&
+          d.month == normalizedDate.month &&
+          d.day == normalizedDate.day);
+
       if (existingIndex != -1) {
         _selectedDates.removeAt(existingIndex);
       } else {
@@ -3332,7 +3570,8 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
-                  icon: Icon(Icons.chevron_left, color: widget.dark ? Colors.white : Colors.black),
+                  icon: Icon(Icons.chevron_left,
+                      color: widget.dark ? Colors.white : Colors.black),
                   onPressed: () {
                     setState(() {
                       _displayedMonth = DateTime(
@@ -3351,7 +3590,8 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.chevron_right, color: widget.dark ? Colors.white : Colors.black),
+                  icon: Icon(Icons.chevron_right,
+                      color: widget.dark ? Colors.white : Colors.black),
                   onPressed: () {
                     setState(() {
                       _displayedMonth = DateTime(
@@ -3373,7 +3613,8 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
                   .tr(args: [_selectedDates.length.toString()]),
               style: TextStyle(
                 fontSize: 14,
-                color: widget.dark ? Colors.grey.shade400 : Colors.grey.shade700,
+                color:
+                    widget.dark ? Colors.grey.shade400 : Colors.grey.shade700,
               ),
             ),
             const SizedBox(height: 16),
@@ -3383,8 +3624,12 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: widget.dark ? Colors.white : Colors.black,
-                      side: BorderSide(color: widget.dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                      foregroundColor:
+                          widget.dark ? Colors.white : Colors.black,
+                      side: BorderSide(
+                          color: widget.dark
+                              ? Colors.grey.shade700
+                              : Colors.grey.shade300),
                     ),
                     child: Text('Cancel'.tr()),
                   ),
@@ -3412,7 +3657,8 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
 
   Widget _buildCalendar() {
     final firstDay = DateTime(_displayedMonth.year, _displayedMonth.month, 1);
-    final lastDay = DateTime(_displayedMonth.year, _displayedMonth.month + 1, 0);
+    final lastDay =
+        DateTime(_displayedMonth.year, _displayedMonth.month + 1, 0);
     final daysInMonth = lastDay.day;
     final startingDayOfWeek = firstDay.weekday;
     final totalCells = startingDayOfWeek - 1 + daysInMonth;
@@ -3434,7 +3680,8 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
         final day = index - (startingDayOfWeek - 1) + 1;
         final date = DateTime(_displayedMonth.year, _displayedMonth.month, day);
         final today = DateTime.now();
-        final isPast = date.isBefore(DateTime(today.year, today.month, today.day));
+        final isPast =
+            date.isBefore(DateTime(today.year, today.month, today.day));
         final isSelected = _isDateSelected(date);
 
         return InkWell(
@@ -3446,7 +3693,8 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
                   : (widget.dark ? Colors.grey.shade800 : Colors.transparent),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: widget.dark ? Colors.grey.shade700 : Colors.grey.shade300,
+                color:
+                    widget.dark ? Colors.grey.shade700 : Colors.grey.shade300,
               ),
             ),
             child: Center(
@@ -3454,7 +3702,9 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
                 day.toString(),
                 style: TextStyle(
                   color: isPast
-                      ? (widget.dark ? Colors.grey.shade600 : Colors.grey.shade400)
+                      ? (widget.dark
+                          ? Colors.grey.shade600
+                          : Colors.grey.shade400)
                       : isSelected
                           ? Colors.white
                           : (widget.dark ? Colors.white : Colors.black),
@@ -3512,7 +3762,7 @@ class _AIDescriptionSheetState extends State<_AIDescriptionSheet> {
 
     try {
       final hasExisting = widget.existingDescription?.isNotEmpty ?? false;
-      
+
       final result = hasExisting
           ? await GeminiAIService().enhanceDescription(
               description: widget.existingDescription!,
@@ -3565,10 +3815,11 @@ class _AIDescriptionSheetState extends State<_AIDescriptionSheet> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              
+
               // Header
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Row(
                   children: [
                     Icon(
@@ -3597,9 +3848,9 @@ class _AIDescriptionSheetState extends State<_AIDescriptionSheet> {
                   ],
                 ),
               ),
-              
+
               const Divider(height: 1),
-              
+
               // Content
               Expanded(
                 child: _isGenerating
@@ -3614,7 +3865,9 @@ class _AIDescriptionSheetState extends State<_AIDescriptionSheet> {
                             Text(
                               'Generating description...',
                               style: TextStyle(
-                                color: widget.isDark ? Colors.grey[400] : Colors.grey[700],
+                                color: widget.isDark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[700],
                               ),
                             ),
                           ],
@@ -3638,7 +3891,9 @@ class _AIDescriptionSheetState extends State<_AIDescriptionSheet> {
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
-                                      color: widget.isDark ? Colors.white : Colors.black,
+                                      color: widget.isDark
+                                          ? Colors.white
+                                          : Colors.black,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
@@ -3646,7 +3901,9 @@ class _AIDescriptionSheetState extends State<_AIDescriptionSheet> {
                                     _error!,
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      color: widget.isDark ? Colors.grey[400] : Colors.grey[700],
+                                      color: widget.isDark
+                                          ? Colors.grey[400]
+                                          : Colors.grey[700],
                                     ),
                                   ),
                                   const SizedBox(height: 24),
@@ -3664,17 +3921,22 @@ class _AIDescriptionSheetState extends State<_AIDescriptionSheet> {
                           )
                         : SingleChildScrollView(
                             controller: scrollController,
-                            padding: EdgeInsets.fromLTRB(20, 20, 20, 40 + MediaQuery.of(context).viewPadding.bottom),
+                            padding: EdgeInsets.fromLTRB(20, 20, 20,
+                                40 + MediaQuery.of(context).viewPadding.bottom),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: widget.isDark ? Colors.grey[850] : Colors.grey[100],
+                                    color: widget.isDark
+                                        ? Colors.grey[850]
+                                        : Colors.grey[100],
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: widget.isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                                      color: widget.isDark
+                                          ? Colors.grey[700]!
+                                          : Colors.grey[300]!,
                                     ),
                                   ),
                                   child: Text(
@@ -3682,7 +3944,9 @@ class _AIDescriptionSheetState extends State<_AIDescriptionSheet> {
                                     style: TextStyle(
                                       fontSize: 15,
                                       height: 1.5,
-                                      color: widget.isDark ? Colors.white : Colors.black87,
+                                      color: widget.isDark
+                                          ? Colors.white
+                                          : Colors.black87,
                                     ),
                                   ),
                                 ),
@@ -3696,7 +3960,8 @@ class _AIDescriptionSheetState extends State<_AIDescriptionSheet> {
                                         onPressed: _generateDescription,
                                         style: OutlinedButton.styleFrom(
                                           foregroundColor: Color(colorPrimary),
-                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 12),
                                         ),
                                       ),
                                     ),
@@ -3713,7 +3978,8 @@ class _AIDescriptionSheetState extends State<_AIDescriptionSheet> {
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Color(colorPrimary),
                                           foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 12),
                                         ),
                                       ),
                                     ),

@@ -9,6 +9,7 @@ import 'package:caribtap/listings/model/rental_config.dart';
 import 'package:caribtap/screens/rentals/rental_item_models.dart';
 import 'package:caribtap/screens/rentals/rental_browse_service.dart';
 import 'package:caribtap/screens/rentals/rental_cart_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 /// Rental checkout screen - Review cart and complete booking
@@ -48,12 +49,41 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
     return widget.cartItems.fold<double>(0, (sum, item) => sum + item.totalPrice);
   }
 
-  double get _deposit {
+  double get _securityDeposit {
+    final fromCartItems = widget.cartItems.fold<double>(
+      0,
+      (sum, item) => sum + ((item.details?['securityDeposit'] as num?)?.toDouble() ?? 0.0),
+    );
+    if (fromCartItems > 0) {
+      return fromCartItems;
+    }
+
     return widget.rentalConfig.depositAmount ?? 0.0;
   }
 
   double get _total {
-    return _subtotal + _deposit;
+    return _subtotal + _securityDeposit;
+  }
+
+  double _itemSecurityDeposit(RentalCartItem item) {
+    final fromDetails = (item.details?['securityDeposit'] as num?)?.toDouble();
+    if (fromDetails != null) {
+      return fromDetails;
+    }
+
+    final hasAnyItemLevelDeposits = widget.cartItems.any(
+      (cartItem) =>
+          ((cartItem.details?['securityDeposit'] as num?)?.toDouble() ?? 0.0) > 0,
+    );
+    if (hasAnyItemLevelDeposits) {
+      return 0.0;
+    }
+
+    if (widget.cartItems.isEmpty) {
+      return 0.0;
+    }
+
+    return _securityDeposit / widget.cartItems.length;
   }
 
   @override
@@ -118,9 +148,9 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
                       style: const TextStyle(fontSize: 12),
                     ),
                     const SizedBox(height: 8),
-                    if (widget.rentalConfig.requiresDeposit)
+                    if (_securityDeposit > 0)
                       Text(
-                        'Deposit Required: \$${widget.rentalConfig.depositAmount?.toStringAsFixed(2) ?? '0.00'}'.tr(),
+                        'Security Deposit: \$${_securityDeposit.toStringAsFixed(2)}'.tr(),
                         style: const TextStyle(fontSize: 12),
                       ),
                     const SizedBox(height: 8),
@@ -180,12 +210,12 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    if (widget.rentalConfig.requiresDeposit) ...[
+                    if (_securityDeposit > 0) ...[
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Deposit'.tr()),
-                          Text('\$${_deposit.toStringAsFixed(2)}'),
+                          Text('Security Deposit'.tr()),
+                          Text('\$${_securityDeposit.toStringAsFixed(2)}'),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -282,6 +312,9 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
   }
 
   Widget _buildCartItemTile(RentalCartItem item, bool dark) {
+    final itemDeposit = _itemSecurityDeposit(item);
+    final itemTotalWithDeposit = item.totalPrice + itemDeposit;
+
     return Card(
       color: dark ? Colors.grey.shade900 : Colors.white,
       elevation: 1,
@@ -338,9 +371,21 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
                     '${item.durationDays} days × \$${item.pricePerDay.toStringAsFixed(2)}',
                     style: const TextStyle(fontSize: 12),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${'Rental Total'.tr()}: \$${item.totalPrice.toStringAsFixed(2)}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  if (itemDeposit > 0) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      '${'Security Deposit'.tr()}: \$${itemDeposit.toStringAsFixed(2)}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Text(
-                    '\$${item.totalPrice.toStringAsFixed(2)}',
+                    '\$${itemTotalWithDeposit.toStringAsFixed(2)}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -429,13 +474,15 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
     setState(() => _isProcessing = true);
 
     try {
+      await _validateInventoryQuantities();
+
       final bookingIds = await _rentalService.createRentalBooking(
         listingId: widget.listing.id,
         customerId: widget.currentUser!.userID,
         listerId: widget.listing.authorID,
         cartItems: widget.cartItems,
         totalAmount: _total,
-        depositAmount: widget.rentalConfig.requiresDeposit ? _deposit : null,
+        depositAmount: _securityDeposit > 0 ? _securityDeposit : null,
         customerNotes: _notesController.text.isEmpty ? null : _notesController.text,
       );
 
@@ -468,6 +515,44 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
     } finally {
       if (mounted) {
         setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  Future<void> _validateInventoryQuantities() async {
+    final requestedByUnit = <String, int>{};
+    for (final item in widget.cartItems) {
+      requestedByUnit.update(item.rentalUnitId, (value) => value + 1,
+          ifAbsent: () => 1);
+    }
+
+    for (final entry in requestedByUnit.entries) {
+      final unitId = entry.key;
+      final requestedQty = entry.value;
+
+      final catalogDoc = await FirebaseFirestore.instance
+          .collection('listings')
+          .doc(widget.listing.id)
+          .collection('rental_catalog')
+          .doc(unitId)
+          .get();
+
+      if (!catalogDoc.exists) {
+        throw Exception('One or more items are no longer available.');
+      }
+
+      final data = catalogDoc.data() as Map<String, dynamic>;
+      final isAvailable = data['isAvailable'] != false;
+      final stockQty = (data['stockQty'] as num?)?.toInt() ?? 0;
+
+      if (!isAvailable || stockQty <= 0) {
+        throw Exception('One or more items are out of stock.');
+      }
+
+      if (requestedQty > stockQty) {
+        throw Exception(
+          'Requested quantity exceeds availability for one or more items.',
+        );
       }
     }
   }
