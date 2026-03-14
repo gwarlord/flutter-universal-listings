@@ -20,6 +20,7 @@ import 'package:caribtap/listings/services/entitlement_service.dart';
 import 'package:caribtap/listings/utils/caribbean_countries.dart';
 import 'package:caribtap/listings/utils/country_search_dialog.dart';
 import 'package:http/http.dart' as http;
+import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
 
 class CreateEventScreen extends StatefulWidget {
   final ListingsUser currentUser;
@@ -566,6 +567,12 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
     setState(() => _showValidationErrors = true);
     if (_hasRequiredFieldErrors) return;
+
+    final allowed = await checkAndHandleBookingAccess(
+      context: context,
+      listerId: widget.currentUser.userID,
+    );
+    if (!allowed || !mounted) return;
 
     setState(() => _loading = true);
 

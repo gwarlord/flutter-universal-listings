@@ -12,6 +12,7 @@ import 'package:caribtap/listings/listings_module/booking/widgets/date_range_pic
 import 'package:caribtap/listings/model/booking_model.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
 
 class BookingRequestDialog extends StatefulWidget {
   final ListingModel listing;
@@ -89,6 +90,21 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
       return;
     }
 
+    // Run the booking access guard before submitting.
+    _runGuardThenSubmit();
+  }
+
+  Future<void> _runGuardThenSubmit() async {
+    final allowed = await checkAndHandleBookingAccess(
+      context: context,
+      listerId: widget.listing.authorID,
+    );
+    if (!allowed || !mounted) return;
+    _doSubmitBooking();
+  }
+
+  void _doSubmitBooking() {
+
     // Build description of selected services
     String servicesNotes = '';
     if (_selectedServicesQuantity.isNotEmpty) {
@@ -112,11 +128,12 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
       numberOfGuests: _numberOfGuests,
       guestNotes: _notesController.text.trim() + servicesNotes,
       timeBlock: _selectedTimeBlock ?? '', // ✅ Include selected time block
-      totalPrice: _calculatedTotal, 
+      totalPrice: _calculatedTotal,
       currency: widget.listing.currencyCode,
       customAnswers: widget.listing.enableCustomQuestions
           ? _questionControllers.map((k, v) => MapEntry(k, v.text.trim()))
           : {},
+      requesterPhoneVerified: widget.currentUser.phoneVerified,
     );
 
     context.read<BookingBloc>().add(CreateBookingEvent(booking: booking));

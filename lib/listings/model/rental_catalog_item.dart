@@ -64,6 +64,23 @@ class RentalCatalogItem {
   });
 
   factory RentalCatalogItem.fromJson(Map<String, dynamic> json, [String? docId]) {
+    final dynamic rawPhotos = json['photos'] ?? json['photoUrls'] ?? json['images'];
+    final dynamic rawVideos = json['videos'] ?? json['videoUrls'];
+
+    List<String> normalizeMedia(dynamic value) {
+      if (value == null) return const [];
+      if (value is List) {
+        return value
+            .map((e) => e.toString().trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      }
+      if (value is String && value.trim().isNotEmpty) {
+        return [value.trim()];
+      }
+      return const [];
+    }
+
     return RentalCatalogItem(
       id: docId ?? json['id'] ?? '',
       listingId: json['listingId'] ?? '',
@@ -76,8 +93,8 @@ class RentalCatalogItem {
         orElse: () => RentalPricingUnit.daily,
       ),
       currencyCode: json['currencyCode'] ?? 'USD',
-      photos: List<String>.from(json['photos'] ?? []),
-      videos: List<String>.from(json['videos'] ?? []),
+      photos: normalizeMedia(rawPhotos),
+      videos: normalizeMedia(rawVideos),
       isAvailable: json['isAvailable'] ?? true,
       stockQty: json['stockQty'] ?? 1,
       depositAmount: json['depositAmount'] != null ? (json['depositAmount'] as num).toDouble() : null,

@@ -42,6 +42,7 @@ import 'package:caribtap/listings/ui/photo_enhancement/photo_enhancement.dart';
 import 'package:caribtap/listings/listings_module/booking_services/booking_services_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
 
 class AddListingWrappingWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -413,9 +414,25 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
       if (doc.exists && mounted) {
         final data = doc.data();
-        if (data != null && data['subscriptionTier'] != null) {
+        if (data != null) {
+          final rawExpiry = data['subscriptionExpiresAt'];
+          DateTime? expiry;
+          if (rawExpiry is Timestamp) {
+            expiry = rawExpiry.toDate();
+          } else if (rawExpiry != null) {
+            expiry = DateTime.tryParse(rawExpiry.toString());
+          }
+
           setState(() {
-            currentUser.subscriptionTier = data['subscriptionTier'] as String;
+            if (data['subscriptionTier'] != null) {
+              currentUser.subscriptionTier =
+                  data['subscriptionTier'].toString();
+            }
+            if (data['isSubscriptionActive'] != null) {
+              currentUser.isSubscriptionActiveOverride =
+                  data['isSubscriptionActive'] == true;
+            }
+            currentUser.subscriptionExpiresAt = expiry;
           });
         }
       }
@@ -1110,8 +1127,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: _newLogo != null
-                    ? Image.file(_newLogo!,
-                        fit: BoxFit.cover, width: 100, height: 100)
+                    ? _buildSelectedImage(
+                        _newLogo!,
+                        fit: BoxFit.cover,
+                        width: 100,
+                        height: 100,
+                      )
                     : Image.network(_existingLogoUrl!,
                         fit: BoxFit.cover, width: 100, height: 100),
               )
@@ -1268,7 +1289,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
             child: url != null
                 ? Image.network(url, fit: BoxFit.cover)
                 : (file != null
-                    ? Image.file(file, fit: BoxFit.cover)
+                    ? _buildSelectedImage(file, fit: BoxFit.cover)
                     : const Icon(Icons.image)),
           ),
         ),
@@ -1325,6 +1346,29 @@ class _AddListingScreenState extends State<AddListingScreen> {
           .read<AddListingBloc>()
           .add(AddImagesToListingEvent(images: files));
     }
+  }
+
+  Widget _buildSelectedImage(
+    File file, {
+    required BoxFit fit,
+    double? width,
+    double? height,
+  }) {
+    if (kIsWeb) {
+      return Image.network(
+        file.path,
+        fit: fit,
+        width: width,
+        height: height,
+      );
+    }
+
+    return Image.file(
+      file,
+      fit: fit,
+      width: width,
+      height: height,
+    );
   }
 
   void _showPhotoEnhancementModal(BuildContext context) {
@@ -2818,7 +2862,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
 
   // Add missing _postListing stub if not present
-  void _postListing() {
+  Future<void> _postListing() async {
+    final allowed = await checkAndHandleBookingAccess(
+      context: context,
+      listerId: currentUser.userID,
+    );
+    if (!allowed || !mounted) return;
+
     // Validate required fields before posting
     if (_titleController.text.trim().isEmpty || _categoryValue == null) {
       ScaffoldMessenger.of(context).showSnackBar(

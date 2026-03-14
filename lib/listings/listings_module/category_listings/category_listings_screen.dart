@@ -13,6 +13,7 @@ import 'package:caribtap/listings/listings_module/map_view/map_view_screen.dart'
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/feed_item.dart';
+import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
 
 class CategoryListingsWrapperWidget extends StatelessWidget {
   final String categoryID;
@@ -150,10 +151,17 @@ class _CategoryListingsScreenState extends State<CategoryListingsScreen> {
                       'Add a new listing to show up here once approved.'.tr(),
                       buttonTitle: 'Add Listing'.tr(),
                       isDarkMode: isDarkMode(context),
-                      action: () => push(
-                        context,
-                        AddListingWrappingWidget(currentUser: currentUser),
-                      ),
+                      action: () async {
+                        final allowed = await checkAndHandleBookingAccess(
+                          context: context,
+                          listerId: currentUser.userID,
+                        );
+                        if (!allowed || !context.mounted) return;
+                        push(
+                          context,
+                          AddListingWrappingWidget(currentUser: currentUser),
+                        );
+                      },
                       colorPrimary: Color(colorPrimary),
                     ),
                   ),

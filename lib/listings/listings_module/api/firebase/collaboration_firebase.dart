@@ -16,9 +16,11 @@ class CollaborationFirebase extends CollaborationRepository {
     Map<String, dynamic>? userData,
     String fallbackUid,
   ) {
-    final firstName = (userData?['firstName'] ?? '').toString().trim();
-    final lastName = (userData?['lastName'] ?? '').toString().trim();
-    final email = (userData?['email'] ?? '').toString().trim();
+    if (userData == null) return fallbackUid;
+
+    final firstName = (userData['firstName'] ?? '').toString().trim();
+    final lastName = (userData['lastName'] ?? '').toString().trim();
+    final email = (userData['email'] ?? '').toString().trim();
 
     final fullName = [firstName, lastName]
         .where((part) => part.isNotEmpty)
@@ -222,9 +224,29 @@ class CollaborationFirebase extends CollaborationRepository {
           .limit(limit)
           .get();
 
-      return snapshot.docs
-          .map((doc) => ActivityLogEntry.fromJson(doc.id, doc.data()))
-          .toList();
+      final entries = <ActivityLogEntry>[];
+      for (var doc in snapshot.docs) {
+        final entry = ActivityLogEntry.fromJson(doc.id, doc.data());
+
+        // 1. Resolve Actor Name
+        if (entry.actorName == null || entry.actorName!.isEmpty || entry.actorName == entry.actorUid) {
+          try {
+            final userDoc = await _firestore.collection('users').doc(entry.actorUid).get();
+            entry.actorName = _buildCollaboratorDisplayName(userDoc.data(), entry.actorUid);
+          } catch (_) {}
+        }
+
+        // 2. Resolve Target Name (if target is a collaborator/user)
+        if (entry.targetType == 'COLLABORATOR' && (entry.targetName == null || entry.targetName!.isEmpty || entry.targetName == entry.targetId)) {
+          try {
+            final targetUserDoc = await _firestore.collection('users').doc(entry.targetId).get();
+            entry.targetName = _buildCollaboratorDisplayName(targetUserDoc.data(), entry.targetId);
+          } catch (_) {}
+        }
+
+        entries.add(entry);
+      }
+      return entries;
     } catch (e, s) {
       debugPrint('CollaborationFirebase.getActivityLog error: $e $s');
       return [];
@@ -246,11 +268,30 @@ class CollaborationFirebase extends CollaborationRepository {
         .limit(limit)
         .snapshots()
         .listen(
-      (snapshot) {
+      (snapshot) async {
         try {
-          final activityLog = snapshot.docs
-              .map((doc) => ActivityLogEntry.fromJson(doc.id, doc.data()))
-              .toList();
+          final activityLog = <ActivityLogEntry>[];
+          for (var doc in snapshot.docs) {
+            final entry = ActivityLogEntry.fromJson(doc.id, doc.data());
+
+            // 1. Resolve Actor Name
+            if (entry.actorName == null || entry.actorName!.isEmpty || entry.actorName == entry.actorUid) {
+              try {
+                final userDoc = await _firestore.collection('users').doc(entry.actorUid).get();
+                entry.actorName = _buildCollaboratorDisplayName(userDoc.data(), entry.actorUid);
+              } catch (_) {}
+            }
+
+            // 2. Resolve Target Name (if target is a collaborator/user)
+            if (entry.targetType == 'COLLABORATOR' && (entry.targetName == null || entry.targetName!.isEmpty || entry.targetName == entry.targetId)) {
+              try {
+                final targetUserDoc = await _firestore.collection('users').doc(entry.targetId).get();
+                entry.targetName = _buildCollaboratorDisplayName(targetUserDoc.data(), entry.targetId);
+              } catch (_) {}
+            }
+
+            activityLog.add(entry);
+          }
           if (!controller.isClosed) {
             controller.add(activityLog);
           }

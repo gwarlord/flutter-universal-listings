@@ -16,6 +16,7 @@ import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:caribtap/core/ui/full_screen_image_viewer/full_screen_image_viewer.dart';
+import 'package:caribtap/listings/ui/share/promote_event_screen.dart';
 
 class EventDetailsScreen extends StatefulWidget {
   final EventModel event;
@@ -570,10 +571,11 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  void _shareEvent() {
-    final String shareUrl = 'https://caribtap.com/event/${event.id}'; // Example link back to app
-    final String message = 'Check out this event on CaribTap: ${event.title}\n\n$shareUrl';
-    Share.share(message, subject: event.title);
+  Future<void> _shareEvent() async {
+    await push(
+      context,
+      PromoteEventScreen(event: event),
+    );
   }
 
   Future<void> _openMap(double lat, double lng) async {

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:caribtap/core/model/user.dart';
 import 'package:caribtap/core/ui/loading/loading_cubit.dart';
 import 'package:caribtap/core/utils/helper.dart';
@@ -750,12 +751,29 @@ class _SessionCardState extends State<_SessionCard> {
             ),
           ] else if (!isSummon && event.metadata != null) ...[
             const SizedBox(height: 4),
-            Text(
-              '${'Payment'.tr()}: ${event.metadata?['paymentMethod'] ?? 'N/A'}',
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${'Payment'.tr()}: ${event.metadata?['paymentMethod'] ?? 'N/A'}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () {
+                    final value = (event.metadata?['paymentMethod'] ?? 'N/A').toString();
+                    Clipboard.setData(ClipboardData(text: value));
+                    showSnackBar(context, 'Copied to clipboard'.tr());
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(Icons.copy, size: 14, color: requestColor.shade600),
+                  ),
+                ),
+              ],
             ),
           ],
         ],

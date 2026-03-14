@@ -229,6 +229,7 @@ class ActivityLogEntry {
   String actionType; // e.g., 'LISTING_EDITED', 'ORDER_STATUS_CHANGED'
   String targetType; // 'LISTING' | 'ORDER' | 'RENTAL' | 'BOOKING' | 'CHAT' | 'COLLABORATOR'
   String targetId;
+  String? targetName;
   String listingId;
   DateTime createdAt;
   String? note;
@@ -241,6 +242,7 @@ class ActivityLogEntry {
     required this.actionType,
     required this.targetType,
     required this.targetId,
+    this.targetName,
     required this.listingId,
     required this.createdAt,
     this.note,
@@ -258,6 +260,7 @@ class ActivityLogEntry {
       actionType: json['actionType'] ?? '',
       targetType: json['targetType'] ?? '',
       targetId: json['targetId'] ?? '',
+      targetName: json['targetName'],
       listingId: json['listingId'] ?? '',
       createdAt: (json['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       note: json['note'],
@@ -272,6 +275,7 @@ class ActivityLogEntry {
       'actionType': actionType,
       'targetType': targetType,
       'targetId': targetId,
+      'targetName': targetName,
       'listingId': listingId,
       'createdAt': Timestamp.fromDate(createdAt),
       if (note != null) 'note': note,

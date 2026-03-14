@@ -17,6 +17,7 @@ import 'package:caribtap/listings/listings_module/map_view/map_view_screen.dart'
 import 'package:caribtap/listings/listings_module/search/search_screen.dart';
 import 'package:caribtap/listings/listings_module/my_listings/my_listings_screen.dart';
 import 'package:caribtap/listings/listings_module/events/create_event_screen.dart';
+import 'package:caribtap/listings/listings_module/events/event_details_screen.dart';
 import 'package:caribtap/listings/listings_module/booking_services/booking_services_screen.dart';
 import 'package:caribtap/listings/listings_module/booking/my_bookings_screen.dart';
 import 'package:caribtap/listings/listings_module/booking/booking_management_screen.dart';
@@ -49,6 +50,7 @@ import 'package:caribtap/listings/services/attention_service.dart';
 import 'package:caribtap/listings/ui/attention/attention_cubit.dart';
 import 'package:caribtap/listings/model/attention_state_model.dart';
 import 'package:caribtap/listings/model/feed_item.dart';
+import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
 
 enum DrawerSelection {
   home,
@@ -230,6 +232,42 @@ class _ContainerState extends State<ContainerScreen> {
           );
         }
       }
+      return;
+    }
+
+    final pendingEventId = main_entry.getPendingEventId();
+
+    if (pendingEventId != null) {
+      print('🔗 Navigating to pending event: $pendingEventId');
+
+      try {
+        final deepLinkService = DeepLinkService();
+        final event = await deepLinkService.getEventById(pendingEventId);
+
+        if (event != null && mounted) {
+          await push(
+            context,
+            EventDetailsScreen(event: event),
+          );
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Event not found or has been removed.'.tr()),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } catch (e) {
+        print('❌ Error navigating to event: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to open event. Please try again.'.tr()),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -267,8 +305,13 @@ class _ContainerState extends State<ContainerScreen> {
                 ListTile(
                   leading: const Icon(Icons.add_business_outlined),
                   title: Text('Add Listing'.tr()),
-                  onTap: () {
+                  onTap: () async {
                     Navigator.pop(sheetContext);
+                    final allowed = await checkAndHandleBookingAccess(
+                      context: context,
+                      listerId: currentUser.userID,
+                    );
+                    if (!allowed || !context.mounted) return;
                     push(
                       context,
                       AddListingWrappingWidget(currentUser: currentUser),
@@ -286,8 +329,13 @@ class _ContainerState extends State<ContainerScreen> {
                 ListTile(
                   leading: const Icon(Icons.campaign_outlined),
                   title: Text('Upload New Ad'.tr()),
-                  onTap: () {
+                  onTap: () async {
                     Navigator.pop(sheetContext);
+                    final allowed = await checkAndHandleBookingAccess(
+                      context: context,
+                      listerId: currentUser.userID,
+                    );
+                    if (!allowed || !context.mounted) return;
                     push(context, DealsPromotionScreen());
                   },
                 ),
@@ -301,6 +349,12 @@ class _ContainerState extends State<ContainerScreen> {
 
   Future<void> _openCreateEventScreen(ListingsUser currentUser) async {
     if (currentUser.isAdmin || currentUser.hasBookingServices) {
+      final allowed = await checkAndHandleBookingAccess(
+        context: context,
+        listerId: currentUser.userID,
+      );
+      if (!allowed || !mounted) return;
+
       final bool? created = await push(
         context,
         CreateEventScreen(currentUser: currentUser),
@@ -982,8 +1036,13 @@ class _ContainerState extends State<ContainerScreen> {
                   _drawerTile(
                     title: 'Deals & Promotions'.tr(),
                     icon: Icons.local_offer_rounded,
-                    onTap: () {
+                    onTap: () async {
                       Navigator.pop(context);
+                      final allowed = await checkAndHandleBookingAccess(
+                        context: context,
+                        listerId: currentUser.userID,
+                      );
+                      if (!allowed || !context.mounted) return;
                       push(context, DealsPromotionScreen());
                     },
                     isDark: isDark,

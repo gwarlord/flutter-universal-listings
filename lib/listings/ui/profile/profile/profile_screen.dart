@@ -30,6 +30,7 @@ import 'package:caribtap/listings/ui/profile/settings/settings_screen.dart';
 import 'package:caribtap/listings/ui/profile/profile/profile_bloc.dart';
 import 'package:caribtap/core/ui/theme/theme_cubit.dart';
 import 'package:caribtap/listings/screens/listing_freshness_dashboard.dart';
+import 'package:caribtap/listings/ui/phone_verification/phone_verification_for_booking_screen.dart';
 import 'package:caribtap/listings/utils/populate_test_data.dart';
 import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
 import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
@@ -578,6 +579,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 title: 'Booking Requests'.tr(),
                                 onTap: () => push(context, BookingManagementWrapperWidget(currentUser: currentUser)),
                               ),
+                            _modernListTile(
+                              context,
+                              icon: currentUser.phoneVerified
+                                  ? Icons.verified
+                                  : Icons.phone_iphone,
+                              iconColor: currentUser.phoneVerified
+                                  ? Colors.green
+                                  : Theme.of(context).colorScheme.primary,
+                              title: currentUser.phoneVerified
+                                  ? 'Phone verified'.tr()
+                                  : 'Verify phone number'.tr(),
+                              subtitle: currentUser.phoneVerified
+                                  ? (currentUser.phoneNumber.isNotEmpty
+                                      ? currentUser.phoneNumber
+                                      : null)
+                                  : 'Required for booking & rental requests'.tr(),
+                              onTap: currentUser.phoneVerified
+                                  ? () {}
+                                  : () async {
+                                      final verified = await push(
+                                        context,
+                                        const PhoneVerificationForBookingScreen(),
+                                      );
+                                      if (verified == true) {
+                                        await _refreshUserData();
+                                      }
+                                    },
+                            ),
                             _modernListTile(
                               context,
                               icon: Icons.person_outline,

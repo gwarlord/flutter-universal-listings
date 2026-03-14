@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:caribtap/constants.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/core/ui/full_screen_image_viewer/full_screen_image_viewer.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/rental_config.dart';
@@ -335,7 +336,25 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
                           color: dark ? Colors.grey.shade600 : Colors.grey.shade400,
                         ),
                       )
-                    : null,
+                    : Align(
+                        alignment: Alignment.topRight,
+                        child: Container(
+                          margin: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${item.photos.length} ${'Photos'.tr()}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
               ),
             ),
             // Details
@@ -448,31 +467,38 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _RentalItemDetailSheet(
-        item: item,
-        rentalConfig: widget.rentalConfig,
-        onAddToCart: (cartItem) {
-          final latestCount = _cartCountForRentalUnit(item.id);
-          if (item.stockQty > 0 && latestCount >= item.stockQty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'You already have the maximum available quantity for this item in your cart.'.tr(),
+      builder: (context) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.88,
+        maxChildSize: 0.95,
+        minChildSize: 0.45,
+        builder: (context, scrollController) => _RentalItemDetailSheet(
+          item: item,
+          rentalConfig: widget.rentalConfig,
+          sheetScrollController: scrollController,
+          onAddToCart: (cartItem) {
+            final latestCount = _cartCountForRentalUnit(item.id);
+            if (item.stockQty > 0 && latestCount >= item.stockQty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'You already have the maximum available quantity for this item in your cart.'.tr(),
+                  ),
+                  backgroundColor: Colors.orange,
                 ),
-                backgroundColor: Colors.orange,
-              ),
-            );
-            Navigator.pop(context);
-            return;
-          }
+              );
+              Navigator.pop(context);
+              return;
+            }
 
-          setState(() {
-            _cart.add(cartItem);
-          });
-          Navigator.pop(context);
-          _persistCart();
-          _showAddedToCartSnackBar();
-        },
+            setState(() {
+              _cart.add(cartItem);
+            });
+            Navigator.pop(context);
+            _persistCart();
+            _showAddedToCartSnackBar();
+          },
+        ),
       ),
     );
   }
@@ -562,11 +588,13 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
 class _RentalItemDetailSheet extends StatefulWidget {
   final RentalItemBrowse item;
   final RentalConfig rentalConfig;
+  final ScrollController sheetScrollController;
   final Function(RentalCartItem) onAddToCart;
 
   const _RentalItemDetailSheet({
     required this.item,
     required this.rentalConfig,
+    required this.sheetScrollController,
     required this.onAddToCart,
   });
 
@@ -579,6 +607,7 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
   late DateTime _startDate;
   late DateTime _endDate;
   bool _isChecking = false;
+  int _photoIndex = 0;
 
   @override
   void initState() {
@@ -602,6 +631,8 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
       ),
       child: SafeArea(
         child: SingleChildScrollView(
+          controller: widget.sheetScrollController,
+          physics: const ClampingScrollPhysics(),
           child: Padding(
             padding: EdgeInsets.only(
               left: 20,
@@ -613,16 +644,127 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Title
-                Text(
-                  widget.item.unitName,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: dark ? Colors.white : Colors.black,
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: dark ? Colors.grey.shade600 : Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
+
+                // Title
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.item.unitName,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: dark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(
+                        Icons.close,
+                        color: dark ? Colors.white70 : Colors.black54,
+                      ),
+                      tooltip: 'Close'.tr(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                if (widget.item.photos.isNotEmpty) ...[
+                  SizedBox(
+                    height: 210,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: PageView.builder(
+                        itemCount: widget.item.photos.length,
+                        onPageChanged: (index) {
+                          setState(() => _photoIndex = index);
+                        },
+                        itemBuilder: (context, index) {
+                          final photo = widget.item.photos[index];
+                          return GestureDetector(
+                            onTap: () {
+                              push(
+                                context,
+                                FullScreenImageViewer(
+                                  imageUrl: photo,
+                                  galleryImagesList: widget.item.photos,
+                                  index: index,
+                                ),
+                              );
+                            },
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.network(
+                                  photo,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+                                    child: Icon(
+                                      Icons.broken_image,
+                                      color: dark ? Colors.grey.shade600 : Colors.grey.shade500,
+                                    ),
+                                  ),
+                                ),
+                                Align(
+                                  alignment: Alignment.topRight,
+                                  child: Container(
+                                    margin: const EdgeInsets.all(10),
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.5),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      Icons.zoom_in,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  if (widget.item.photos.length > 1)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(widget.item.photos.length, (dotIndex) {
+                          final active = dotIndex == _photoIndex;
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                            width: active ? 16 : 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: active
+                                  ? primaryColor
+                                  : (dark ? Colors.grey.shade600 : Colors.grey.shade400),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                ],
 
                 // Description
                 if (widget.item.description != null)

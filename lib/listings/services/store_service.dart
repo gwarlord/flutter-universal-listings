@@ -280,6 +280,9 @@ class StoreService {
       'status': status.value,
       'updatedAt': Timestamp.now(),
     };
+    if (status == OrderStatus.cancelled) {
+      updateData['cancelledFromStatus'] = order.status.value;
+    }
     if (listerNotes != null && listerNotes.trim().isNotEmpty) {
       updateData['listerNotes'] = listerNotes.trim();
     }
@@ -410,6 +413,7 @@ class StoreService {
     await _firestore.collection('order_requests').doc(requestId).update({
       'status': OrderStatus.cancelled.value,
       'updatedAt': Timestamp.now(),
+      'cancelledFromStatus': order.status.value,
     });
   }
 

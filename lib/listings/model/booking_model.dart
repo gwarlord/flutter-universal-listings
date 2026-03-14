@@ -33,6 +33,9 @@ class BookingModel {
   Map<String, dynamic>? proofOfPayment;
   bool listingAcceptsProofOfPayment = false; // ✅ Snapshot of listing's POP setting
 
+  // Booking Trust System (Phase 1) — snapshotted at request time
+  bool requesterPhoneVerified;
+
   BookingModel({
     this.id = '',
     this.listingId = '',
@@ -61,6 +64,7 @@ class BookingModel {
     this.timezone,
     this.proofOfPayment,
     this.listingAcceptsProofOfPayment = false,
+    this.requesterPhoneVerified = false,
   })  : createdAt = createdAt ?? DateTime.now(),
       updatedAt = updatedAt ?? DateTime.now(),
       customAnswers = customAnswers ?? {};
@@ -114,6 +118,7 @@ class BookingModel {
       timezone: json['timezone'] as String?,
       proofOfPayment: json['proofOfPayment'] as Map<String, dynamic>?,
       listingAcceptsProofOfPayment: json['listingAcceptsProofOfPayment'] ?? false,
+      requesterPhoneVerified: json['requesterPhoneVerified'] as bool? ?? false,
     );
   }
 
@@ -146,6 +151,7 @@ class BookingModel {
       'timezone': timezone,
       'proofOfPayment': proofOfPayment,
       'listingAcceptsProofOfPayment': listingAcceptsProofOfPayment,
+      'requesterPhoneVerified': requesterPhoneVerified,
     };
   }
 

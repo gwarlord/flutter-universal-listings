@@ -16,6 +16,7 @@ import 'package:caribtap/listings/listings_module/api/collaboration_api_manager.
 import 'package:caribtap/listings/ui/collaboration/chat_scope_integration.dart';
 import 'package:caribtap/listings/listings_module/proof_of_payment/proof_of_payment_upload_widget.dart';
 import 'package:caribtap/listings/model/proof_of_payment_model.dart';
+import 'package:caribtap/listings/services/blocked_user_repository.dart';
 import 'package:intl/intl.dart';
 
 class BookingManagementScreen extends StatefulWidget {
@@ -709,7 +710,63 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
                 },
               ),
             ),
-            const SizedBox(height: 12),
+            // ── Trust badge (verified phone) ────────────────────────────────
+            if (booking.requesterPhoneVerified == true) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.verified, color: Colors.green, size: 14),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Verified Phone'.tr(),
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if ((booking.customerPhone ?? '').isNotEmpty) ...[
+                      Text(
+                        '  •  ${booking.customerPhone}',
+                        style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+            // ── Block user action (lister only) ─────────────────────────────
+            if ((booking.customerId ?? '').isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => _showBlockUserDialog(booking),
+                  icon: const Icon(Icons.block, size: 14, color: Colors.red),
+                  label: Text(
+                    'Block this user from future bookings'.tr(),
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 4),
             Text(
               'Dates'.tr(),
               style: TextStyle(
@@ -984,6 +1041,98 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
         ],
       ),
     );
+  }
+
+  Future<void> _showBlockUserDialog(dynamic booking) async {
+    final customerId = (booking.customerId ?? '').toString();
+    if (customerId.isEmpty) return;
+
+    final dark = isDarkMode(context);
+    final onSurface = dark ? Colors.white : Colors.black87;
+    final reasonController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: dark ? Colors.grey[900] : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Block user?'.tr(),
+          style: TextStyle(
+            color: onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This user will no longer be able to send booking or rental requests to your business.'
+                  .tr(),
+              style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              style: TextStyle(color: onSurface),
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: 'Reason (optional)'.tr(),
+                labelStyle:
+                    TextStyle(color: dark ? Colors.white54 : Colors.black45),
+                border: const OutlineInputBorder(),
+                filled: true,
+                fillColor: dark ? Colors.grey[800] : Colors.grey.shade100,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('Cancel'.tr(),
+                style:
+                    TextStyle(color: dark ? Colors.white70 : Colors.black54)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Block user'.tr()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await BlockedUserRepository().blockUser(
+        listerId: widget.currentUser.userID,
+        blockedUserId: customerId,
+        reason: reasonController.text.trim().isNotEmpty
+            ? reasonController.text.trim()
+            : null,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('User has been blocked from future requests.'.tr()),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to block user. Please try again.'.tr()),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
 

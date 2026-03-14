@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
@@ -38,6 +38,7 @@ import '../../ui/deals/deals_feed_screen.dart';
 import 'package:caribtap/listings/location/location_scope_cubit.dart';
 import 'package:caribtap/listings/location/location_scope_model.dart';
 import 'package:caribtap/listings/location/ui/location_scope_floating_button.dart';
+import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
 import 'package:caribtap/listings/model/event_model.dart';
 
 // Country filter selection dialog widget
@@ -645,6 +646,12 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openCreateEventScreen() async {
+    final allowed = await checkAndHandleBookingAccess(
+      context: context,
+      listerId: currentUser.userID,
+    );
+    if (!allowed || !mounted) return;
+
     final bool? created = await push(
       context,
       CreateEventScreen(currentUser: currentUser),
@@ -1906,6 +1913,8 @@ class _DealAdCarouselItemState extends State<DealAdCarouselItem> {
 
   Future<void> _generateLocalThumbnail() async {
     if (_isGenerating) return;
+    if (kIsWeb) return;
+
     setState(() => _isGenerating = true);
     try {
       final uint8list = await VideoThumbnail.thumbnailData(

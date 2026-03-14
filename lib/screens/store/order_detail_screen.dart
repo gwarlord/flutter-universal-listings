@@ -22,6 +22,7 @@ import 'package:caribtap/listings/api/firebase/table_mode_firebase.dart';
 import 'package:caribtap/listings/services/store_service.dart';
 import 'package:caribtap/listings/services/entitlement_service.dart';
 import 'package:caribtap/listings/services/pro_gate.dart';
+import 'package:caribtap/listings/services/blocked_user_repository.dart';
 import 'package:caribtap/screens/store/order_chat_helper.dart';
 import 'package:caribtap/screens/store/shipping_tracking_card.dart';
 import 'package:caribtap/screens/store/shipping_tracking_display.dart';
@@ -56,6 +57,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   TableSessionModel? _tableSession;
   bool _isSummonCooldown = false;
   int _summonCooldownSeconds = 0;
+
+  bool get _canShowBlockUserAction =>
+      widget.viewAsLister &&
+      _currentOrder.customerId.isNotEmpty &&
+      _currentOrder.status == OrderStatus.cancelled &&
+      _currentOrder.cancelledFromStatus == OrderStatus.confirmed;
 
   @override
   void initState() {
@@ -258,11 +265,31 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               style: TextStyle(color: dark ? Colors.white : Colors.black),
             ),
             subtitle: Text(
-              _customer?.email ?? '',
+              [
+                (_customer?.email ?? '').trim(),
+                (_customer?.phoneNumber ?? '').trim().isNotEmpty
+                    ? 'Phone: ${_customer!.phoneNumber.trim()}'
+                    : 'Phone: Not provided'.tr(),
+              ].where((line) => line.isNotEmpty).join('\n'),
               style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
             ),
           ),
         ),
+        if (_canShowBlockUserAction)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _showBlockUserDialog,
+              icon: const Icon(Icons.block, size: 16, color: Colors.red),
+              label: Text(
+                'Block this user from future requests'.tr(),
+                style: const TextStyle(color: Colors.red, fontSize: 13),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              ),
+            ),
+          ),
         const SizedBox(height: 16),
 
         // Items
@@ -1511,6 +1538,96 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       if (mounted) {
         setState(() => _isUpdating = false);
       }
+    }
+  }
+
+  Future<void> _showBlockUserDialog() async {
+    if (_currentOrder.customerId.isEmpty) return;
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final onSurface = theme.colorScheme.onSurface;
+    final reasonController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Block user?'.tr(),
+          style: TextStyle(color: onSurface, fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This user will no longer be able to send booking or rental requests to your business.'
+                  .tr(),
+              style: TextStyle(color: onSurface.withOpacity(0.7)),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              style: TextStyle(color: onSurface),
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: 'Reason (optional)'.tr(),
+                labelStyle: TextStyle(color: onSurface.withOpacity(0.5)),
+                border: const OutlineInputBorder(),
+                filled: true,
+                fillColor: isDark ? Colors.grey[800] : Colors.grey.shade100,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(
+              'Cancel'.tr(),
+              style: TextStyle(color: onSurface.withOpacity(0.7)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Block user'.tr()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await BlockedUserRepository().blockUser(
+        listerId: _currentOrder.listerId,
+        blockedUserId: _currentOrder.customerId,
+        reason: reasonController.text.trim().isNotEmpty
+            ? reasonController.text.trim()
+            : null,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('User has been blocked from future requests.'.tr()),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to block user. Please try again.'.tr()),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 

@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>CaribTap | Discover Businesses, Deals, Rentals & Services Across the Caribbean</title>
+  <meta
+    name="description"
+    content="CaribTap helps people across the Caribbean discover businesses, deals, rentals, services, and local experiences in one place."
+  />
+
+  <meta property="og:title" content="CaribTap | Discover the Caribbean" />
+  <meta
+    property="og:description"
+    content="Find businesses, deals, rentals, and services across the Caribbean with CaribTap."
+  />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://caribtap.com" />
+  <meta property="og:image" content="https://caribtap.com/og-image.png" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="CaribTap | Discover the Caribbean" />
+  <meta
+    name="twitter:description"
+    content="Find businesses, deals, rentals, and services across the Caribbean with CaribTap."
+  />
+  <meta name="twitter:image" content="https://caribtap.com/og-image.png" />
+
+  <link rel="icon" type="image/png" href="/favicon.png" />
+
+  <style>
+    :root {
+      --bg: #08111f;
+      --bg-soft: #0d1728;
+      --card: rgba(255, 255, 255, 0.08);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+      --muted-2: #94a3b8;
+      --primary: #ff5f73;
+      --primary-2: #ff886d;
+      --accent: #40c4ff;
+      --accent-2: #6ee7b7;
+      --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      --radius: 22px;
+      --radius-sm: 16px;
+      --max: 1180px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 20%, rgba(255, 95, 115, 0.22), transparent 24%),
+        radial-gradient(circle at 85% 0%, rgba(64, 196, 255, 0.18), transparent 22%),
+        radial-gradient(circle at 65% 75%, rgba(110, 231, 183, 0.12), transparent 25%),
+        linear-gradient(180deg, #08111f 0%, #0b1323 45%, #0a1220 100%);
+      line-height: 1.5;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
+    }
+
+    .container {
+      width: min(var(--max), calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(14px);
+      background: rgba(8, 17, 31, 0.65);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 76px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      font-size: 1.15rem;
+    }
+
+    .brand-logo {
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+      border-radius: 12px;
+      flex-shrink: 0;
+      box-shadow: var(--shadow);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    .cta-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 50px;
+      padding: 0 18px;
+      border-radius: 999px;
+      font-weight: 700;
+      transition: transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease;
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      opacity: 0.96;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      color: white;
+      box-shadow: 0 14px 30px rgba(255, 95, 115, 0.28);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.12);
+      color: var(--text);
+    }
+
+    .hero {
+      padding: 72px 0 40px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 36px;
+      align-items: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 999px;
+      color: #fee2e2;
+      background: rgba(255, 95, 115, 0.12);
+      border: 1px solid rgba(255, 95, 115, 0.18);
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+
+    h1 {
+      font-size: clamp(2.35rem, 5vw, 4.65rem);
+      line-height: 0.98;
+      margin: 18px 0 18px;
+      letter-spacing: -0.04em;
+    }
+
+    .hero-copy {
+      color: var(--muted);
+      font-size: 1.08rem;
+      max-width: 700px;
+      margin-bottom: 26px;
+    }
+
+    .hero-points {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 18px 0 28px;
+    }
+
+    .pill {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.92rem;
+    }
+
+    .store-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    .store-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 58px;
+      padding: 10px 16px;
+      border-radius: 16px;
+      background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-note {
+      margin-top: 16px;
+      font-size: 0.92rem;
+      color: var(--muted-2);
+    }
+
+    .phone-wrap {
+      position: relative;
+    }
+
+    .phone-glow {
+      position: absolute;
+      inset: 12% 14% auto 14%;
+      height: 72%;
+      background: radial-gradient(circle, rgba(64, 196, 255, 0.22), transparent 60%);
+      filter: blur(36px);
+      z-index: 0;
+    }
+
+    .phone {
+      position: relative;
+      z-index: 1;
+      max-width: 390px;
+      margin: 0 auto;
+      padding: 14px;
+      border-radius: 34px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.07));
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: var(--shadow);
+    }
+
+    .phone-screen {
+      border-radius: 24px;
+      overflow: hidden;
+      background: #050b16;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .screen-top {
+      height: 92px;
+      background: linear-gradient(135deg, var(--primary), #ff7f7f);
+      padding: 18px 18px 0;
+    }
+
+    .screen-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: white;
+      font-weight: 800;
+    }
+
+    .phone-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .phone-brand img {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+
+    .screen-body {
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      background: #040913;
+    }
+
+    .mini-card {
+      background: #151923;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .mini-card-media {
+      height: 108px;
+      background: linear-gradient(135deg, #2a3241, #3a4659);
+    }
+
+    .mini-card-body {
+      padding: 12px;
+    }
+
+    .mini-line {
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.15);
+      margin-bottom: 8px;
+    }
+
+    .mini-line.short {
+      width: 62%;
+    }
+
+    .mini-line.mid {
+      width: 78%;
+    }
+
+    .mini-chip {
+      margin-top: 10px;
+      width: 54%;
+      height: 11px;
+      border-radius: 999px;
+      background: rgba(255, 95, 115, 0.65);
+    }
+
+    .ad-card {
+      grid-column: span 2;
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(64, 196, 255, 0.12), rgba(110, 231, 183, 0.08));
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .ad-thumb {
+      border-radius: 14px;
+      background: linear-gradient(135deg, #2457ff, #66a8ff);
+      min-height: 92px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+    }
+
+    .ad-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 10px;
+    }
+
+    .ad-copy-top {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #e2e8f0;
+      background: rgba(255,255,255,0.12);
+      margin-bottom: 8px;
+    }
+
+    .ad-title {
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .ad-desc {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .ad-btn {
+      display: inline-flex;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.1);
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .section {
+      padding: 56px 0;
+    }
+
+    .section-head {
+      text-align: center;
+      max-width: 760px;
+      margin: 0 auto 34px;
+    }
+
+    .section-head h2 {
+      font-size: clamp(1.8rem, 3vw, 3rem);
+      margin: 0 0 10px;
+      letter-spacing: -0.03em;
+    }
+
+    .section-head p {
+      color: var(--muted);
+      margin: 0;
+      font-size: 1.03rem;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .feature-card,
+    .journey-card,
+    .cta-panel,
+    .faq-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .feature-card {
+      padding: 24px;
+    }
+
+    .feature-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      font-size: 1.35rem;
+      background: linear-gradient(135deg, rgba(255,95,115,0.22), rgba(64,196,255,0.2));
+      margin-bottom: 16px;
+    }
+
+    .feature-card h3 {
+      margin: 0 0 10px;
+      font-size: 1.1rem;
+    }
+
+    .feature-card p {
+      color: var(--muted);
+      margin: 0;
+      font-size: 0.97rem;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .journey-card {
+      padding: 28px;
+    }
+
+    .journey-card h3 {
+      margin: 0 0 10px;
+      font-size: 1.35rem;
+    }
+
+    .journey-card p {
+      color: var(--muted);
+      margin: 0 0 18px;
+    }
+
+    .journey-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 12px;
+    }
+
+    .journey-list li {
+      padding-left: 26px;
+      position: relative;
+      color: var(--muted);
+    }
+
+    .journey-list li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: var(--accent-2);
+      font-weight: 900;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .stat {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 22px 18px;
+      text-align: center;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1.6rem;
+      margin-bottom: 4px;
+    }
+
+    .stat span {
+      color: var(--muted-2);
+      font-size: 0.92rem;
+    }
+
+    .cta-panel {
+      padding: 34px;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 26px;
+      align-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .cta-panel::after {
+      content: "";
+      position: absolute;
+      width: 340px;
+      height: 340px;
+      border-radius: 50%;
+      right: -120px;
+      top: -110px;
+      background: radial-gradient(circle, rgba(255,95,115,0.24), transparent 65%);
+      pointer-events: none;
+    }
+
+    .cta-panel h3 {
+      font-size: clamp(1.6rem, 3vw, 2.6rem);
+      margin: 0 0 10px;
+      letter-spacing: -0.03em;
+    }
+
+    .cta-panel p {
+      color: var(--muted);
+      margin: 0 0 18px;
+      max-width: 640px;
+    }
+
+    .qr-box {
+      justify-self: center;
+      width: min(100%, 280px);
+      aspect-ratio: 1;
+      border-radius: 24px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04)),
+        #0f172a;
+      border: 1px solid rgba(255,255,255,0.1);
+      display: grid;
+      place-items: center;
+      color: var(--muted-2);
+      text-align: center;
+      padding: 18px;
+    }
+
+    .qr-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 18px;
+    }
+
+    .faq-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .faq-card {
+      padding: 22px;
+    }
+
+    .faq-card h4 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .faq-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    footer {
+      padding: 34px 0 52px;
+      color: var(--muted-2);
+      font-size: 0.94rem;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 24px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .footer-links a:hover {
+      color: var(--text);
+    }
+
+    @media (max-width: 980px) {
+      .hero-grid,
+      .split,
+      .cta-panel,
+      .faq-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .feature-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .stats {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .cta-panel {
+        padding: 28px;
+      }
+
+      .qr-box {
+        width: 220px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .nav-links {
+        display: none;
+      }
+
+      .hero {
+        padding-top: 42px;
+      }
+
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+      .store-buttons {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .store-badge {
+        width: 100%;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="/">
+        <img src="/logo.png" alt="CaribTap logo" class="brand-logo" />
+        <span>CaribTap</span>
+      </a>
+
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#why">Why CaribTap</a>
+        <a href="#download">Download</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
+      </div>
+
+      <div class="cta-row">
+        <a class="btn btn-secondary" href="#download">Get the App</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <div class="eyebrow">Built for the Caribbean</div>
+          <h1>Discover businesses, deals, rentals and services in one tap.</h1>
+          <p class="hero-copy">
+            CaribTap helps locals and visitors quickly find trusted businesses, promotions,
+            rentals, services, and opportunities across Caribbean markets — all in one
+            simple mobile experience.
+          </p>
+
+          <div class="hero-points">
+            <span class="pill">Local discovery</span>
+            <span class="pill">Deals & promotions</span>
+            <span class="pill">Rentals & bookings</span>
+            <span class="pill">Built for Caribbean users</span>
+          </div>
+
+          <div class="store-buttons" id="download">
+            <a
+              class="store-badge"
+              href="https://apps.apple.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Download on the App Store"
+            >
+              <img
+                src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg"
+                alt="Download on the App Store"
+                style="height:44px"
+              />
+            </a>
+
+            <a
+              class="store-badge"
+              href="https://play.google.com/store/apps/details?id=com.caribtap.instaflutter.android"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Get it on Google Play"
+            >
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
+                alt="Get it on Google Play"
+                style="height:44px"
+              />
+            </a>
+          </div>
+
+          <div class="hero-note">
+            Available on iPhone and Android. Discover what’s nearby, what’s trending, and what’s worth booking.
+          </div>
+        </div>
+
+        <div class="phone-wrap" aria-hidden="true">
+          <div class="phone-glow"></div>
+          <div class="phone">
+            <div class="phone-screen">
+              <div class="screen-top">
+                <div class="screen-nav">
+                  <span>☰</span>
+                  <div class="phone-brand">
+                    <img src="/logo.png" alt="CaribTap logo" />
+                    <span>CaribTap</span>
+                  </div>
+                  <span>⌕</span>
+                </div>
+              </div>
+
+              <div class="screen-body">
+                <div class="mini-card">
+                  <div class="mini-card-media"></div>
+                  <div class="mini-card-body">
+                    <div class="mini-line mid"></div>
+                    <div class="mini-line short"></div>
+                    <div class="mini-chip"></div>
+                  </div>
+                </div>
+
+                <div class="mini-card">
+                  <div class="mini-card-media" style="background:linear-gradient(135deg,#2d3f67,#56a5d8)"></div>
+                  <div class="mini-card-body">
+                    <div class="mini-line mid"></div>
+                    <div class="mini-line short"></div>
+                    <div class="mini-chip" style="background:rgba(110,231,183,0.72)"></div>
+                  </div>
+                </div>
+
+                <div class="ad-card">
+                  <div class="ad-thumb">
+                    <img src="/logo.png" alt="CaribTap logo" />
+                  </div>
+                  <div>
+                    <div class="ad-copy-top">Sponsored</div>
+                    <div class="ad-title">Promotions that feel native to the feed</div>
+                    <div class="ad-desc">Discover relevant offers while browsing listings and deals.</div>
+                    <span class="ad-btn">Learn More</span>
+                  </div>
+                </div>
+
+                <div class="mini-card">
+                  <div class="mini-card-media" style="background:linear-gradient(135deg,#6d5141,#bd8d68)"></div>
+                  <div class="mini-card-body">
+                    <div class="mini-line mid"></div>
+                    <div class="mini-line short"></div>
+                    <div class="mini-chip"></div>
+                  </div>
+                </div>
+
+                <div class="mini-card">
+                  <div class="mini-card-media" style="background:linear-gradient(135deg,#4f2549,#9b52b9)"></div>
+                  <div class="mini-card-body">
+                    <div class="mini-line mid"></div>
+                    <div class="mini-line short"></div>
+                    <div class="mini-chip" style="background:rgba(64,196,255,0.7)"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="features">
+      <div class="container">
+        <div class="section-head">
+          <h2>Everything people need to discover and transact locally</h2>
+          <p>
+            CaribTap brings together discovery, promotion, rentals, and business visibility in one marketplace-style experience.
+          </p>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-card">
+            <div class="feature-icon">📍</div>
+            <h3>Find businesses nearby</h3>
+            <p>Explore restaurants, services, retailers, and local operators with location-aware discovery.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">🏷️</div>
+            <h3>Access deals & promotions</h3>
+            <p>Browse timely offers and promotions from businesses looking to reach active customers.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">🛠️</div>
+            <h3>Rent tools & equipment</h3>
+            <p>Support rentals, bookings, and requests for practical business and consumer use cases.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">💬</div>
+            <h3>Connect directly</h3>
+            <p>Move from discovery to engagement with messaging, inquiries, and transaction-oriented workflows.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">📈</div>
+            <h3>Grow business visibility</h3>
+            <p>Help entrepreneurs and businesses stand out with richer listings, promotions, and premium tools.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">🌴</div>
+            <h3>Built for Caribbean markets</h3>
+            <p>Designed around the real discovery, mobility, and commerce patterns of the Caribbean.</p>
+          </article>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <strong>1 app</strong>
+            <span>For discovery, deals, rentals and services</span>
+          </div>
+          <div class="stat">
+            <strong>2 platforms</strong>
+            <span>iPhone and Android support</span>
+          </div>
+          <div class="stat">
+            <strong>Local-first</strong>
+            <span>Made to help people find what matters nearby</span>
+          </div>
+          <div class="stat">
+            <strong>Business-ready</strong>
+            <span>Tools to promote and grow visibility</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="why">
+      <div class="container split">
+        <article class="journey-card">
+          <h3>For customers</h3>
+          <p>
+            Quickly discover what’s available around you — from businesses and promotions to services, rentals, and opportunities.
+          </p>
+          <ul class="journey-list">
+            <li>Search and browse local listings</li>
+            <li>Find promotions and featured offers</li>
+            <li>Explore rentals, services, and bookings</li>
+            <li>Open links directly into the app experience</li>
+          </ul>
+        </article>
+
+        <article class="journey-card">
+          <h3>For businesses</h3>
+          <p>
+            Create richer listings, promote offers, and reach customers through a Caribbean-focused marketplace presence.
+          </p>
+          <ul class="journey-list">
+            <li>Publish listings and manage visibility</li>
+            <li>Promote deals and featured placements</li>
+            <li>Support inquiries, requests, and workflows</li>
+            <li>Unlock premium business tools as you grow</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="cta-panel">
+          <div>
+            <h3>Put the Caribbean in your pocket.</h3>
+            <p>
+              Download CaribTap and start exploring businesses, promotions, services, and local opportunities with a cleaner, faster mobile experience.
+            </p>
+            <div class="cta-row">
+              <a
+                class="btn btn-primary"
+                href="https://play.google.com/store/apps/details?id=com.caribtap.instaflutter.android"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Get it on Google Play
+              </a>
+              <a
+                class="btn btn-secondary"
+                href="https://apps.apple.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Download on the App Store
+              </a>
+            </div>
+          </div>
+
+          <div class="qr-box">
+            <img src="/logo.png" alt="CaribTap logo" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>Frequently asked questions</h2>
+          <p>Simple answers for new users, businesses, and partners.</p>
+        </div>
+
+        <div class="faq-grid">
+          <article class="faq-card">
+            <h4>What is CaribTap?</h4>
+            <p>CaribTap is a mobile platform that helps users discover businesses, deals, rentals, services, and local opportunities across the Caribbean.</p>
+          </article>
+
+          <article class="faq-card">
+            <h4>Is CaribTap only for customers?</h4>
+            <p>No. CaribTap is built for both customers and businesses, including sellers, service providers, and operators who want more visibility.</p>
+          </article>
+
+          <article class="faq-card">
+            <h4>Can businesses promote offers?</h4>
+            <p>Yes. Businesses can publish listings and use deal or promotional tools to improve reach and customer engagement.</p>
+          </article>
+
+          <article class="faq-card">
+            <h4>Where is CaribTap available?</h4>
+            <p>CaribTap is built with Caribbean discovery in mind and is designed to support users and businesses across regional markets.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <div>© 2026 CaribTap. All rights reserved.</div>
+      <div class="footer-links">
+        <a href="/privacy.html">Privacy Policy</a>
+        <a href="/terms.html">Terms of Service</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      const isiOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+      const isAndroid = /android/i.test(userAgent);
+
+      const appStoreLink = "https://apps.apple.com";
+      const playStoreLink = "https://play.google.com/store/apps/details?id=com.caribtap.instaflutter.android";
+
+      const pathnameParts = window.location.pathname.split("/").filter(Boolean);
+      const isListingRoute = pathnameParts.length >= 2 && pathnameParts[0] === "l";
+      const isEventRoute = pathnameParts.length >= 2 && pathnameParts[0] === "event";
+      const listingId = isListingRoute ? decodeURIComponent(pathnameParts[1]) : "";
+      const eventId = isEventRoute ? decodeURIComponent(pathnameParts[1]) : "";
+      const sharedItemType = isListingRoute ? "listing" : (isEventRoute ? "event" : "");
+      const sharedItemId = isListingRoute ? listingId : (isEventRoute ? eventId : "");
+
+      // Update primary content when opened via a shared deep link.
+      if (sharedItemType && sharedItemId) {
+        const title = document.querySelector("h1");
+        const copy = document.querySelector(".hero-copy");
+        const ctaRow = document.querySelector(".hero .cta-row");
+        const label = sharedItemType === "event" ? "Event" : "Listing";
+
+        if (title) {
+          title.textContent = "Open This " + label + " In CaribTap";
+        }
+
+        if (copy) {
+          copy.textContent = "This shared " + label.toLowerCase() + " is ready in the app. Open CaribTap for the full details.";
+        }
+
+        if (ctaRow) {
+          const openAppBtn = document.createElement("a");
+          const fallbackStore = isiOS ? appStoreLink : playStoreLink;
+          const appSchemeUrl = "caribtap://" + sharedItemType + "/" + encodeURIComponent(sharedItemId);
+
+          openAppBtn.className = "btn btn-primary";
+          openAppBtn.href = appSchemeUrl;
+          openAppBtn.textContent = "Open In CaribTap";
+
+          openAppBtn.addEventListener("click", function (event) {
+            event.preventDefault();
+            window.location.href = appSchemeUrl;
+
+            // If the app is not installed, send users to the correct store.
+            window.setTimeout(function () {
+              window.location.href = fallbackStore;
+            }, 1600);
+          });
+
+          ctaRow.prepend(openAppBtn);
+        }
+
+        document.title = "Open " + label + " | CaribTap";
+      }
+
+      const primaryButtons = document.querySelectorAll('a[href="https://apps.apple.com"], a[href="https://play.google.com/store/apps/details?id=com.caribtap.instaflutter.android"]');
+
+      if (isiOS) {
+        primaryButtons.forEach((btn) => {
+          if (btn.textContent.toLowerCase().includes("google play")) {
+            btn.style.display = "none";
+          }
+        });
+      }
+
+      if (isAndroid) {
+        primaryButtons.forEach((btn) => {
+          if (btn.textContent.toLowerCase().includes("app store")) {
+            btn.style.display = "none";
+          }
+        });
+      }
+
+      window.caribTapLinks = { appStoreLink, playStoreLink, listingId, eventId };
+    })();
+  </script>
+</body>
+</html>

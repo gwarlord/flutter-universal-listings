@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_native_image_v2/flutter_native_image_v2.dart';
 
 import 'package:caribtap/constants.dart';
@@ -41,6 +42,10 @@ class ProfileFirebaseUtils extends ProfileRepository {
   /// @param file the image file that will be compressed
   /// @return File a new compressed file with smaller size
   Future<File> _compressImage(File file) async {
+    if (kIsWeb) {
+      return file;
+    }
+
     File compressedImage = await FlutterNativeImage.compressImage(
       file.path,
       quality: 25,

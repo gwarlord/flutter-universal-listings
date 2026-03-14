@@ -22,6 +22,11 @@ class PaymentMethodsWidget extends StatefulWidget {
 class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
   bool _isExpanded = false;
 
+  void _copyValue(String value) {
+    Clipboard.setData(ClipboardData(text: value));
+    showSnackBar(context, 'Copied to clipboard'.tr());
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!widget.paymentDetails.hasAnyPaymentMethod) {
@@ -118,6 +123,13 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
                               ),
                             ),
                           ),
+                          InkWell(
+                            onTap: () => _copyValue(widget.paymentDetails.notes),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4),
+                              child: Icon(Icons.copy, size: 16, color: Colors.blue[700]),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -161,21 +173,14 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
           if (bank.bankName.isNotEmpty) _buildInfoRow('Bank'.tr(), bank.bankName),
           if (bank.accountName.isNotEmpty) _buildInfoRow('Account Name'.tr(), bank.accountName),
           if (bank.accountNumber.isNotEmpty)
-            _buildCopyableRow(context, 'Account Number'.tr(), bank.accountNumber),
+            _buildInfoRow('Account Number'.tr(), bank.accountNumber),
           if (bank.branch.isNotEmpty) _buildInfoRow('Branch'.tr(), bank.branch),
           if (bank.currency.isNotEmpty) _buildInfoRow('Currency'.tr(), bank.currency),
-          if (bank.swiftBic.isNotEmpty) _buildCopyableRow(context, 'SWIFT/BIC'.tr(), bank.swiftBic),
-          if (bank.iban.isNotEmpty) _buildCopyableRow(context, 'IBAN'.tr(), bank.iban),
+          if (bank.swiftBic.isNotEmpty) _buildInfoRow('SWIFT/BIC'.tr(), bank.swiftBic),
+          if (bank.iban.isNotEmpty) _buildInfoRow('IBAN'.tr(), bank.iban),
           if (bank.instructions.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              bank.instructions,
-              style: TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: Colors.grey[600],
-              ),
-            ),
+            const SizedBox(height: 4),
+            _buildInfoRow('Instructions'.tr(), bank.instructions),
           ],
         ],
       ),
@@ -203,6 +208,13 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
             child: Text(
               value,
               style: const TextStyle(fontSize: 13),
+            ),
+          ),
+          InkWell(
+            onTap: () => _copyValue(value),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(Icons.copy, size: 16, color: Colors.blue[700]),
             ),
           ),
         ],
@@ -294,16 +306,35 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
               if (app.handle.isNotEmpty)
                 InkWell(
                   onTap: () {
-                    Clipboard.setData(ClipboardData(text: app.handle));
-                    showSnackBar(context, 'Copied to clipboard'.tr());
+                    _copyValue(app.handle);
                   },
                   child: Padding(
                     padding: const EdgeInsets.all(8),
                     child: Icon(Icons.copy, size: 18, color: Colors.blue[700]),
                   ),
                 ),
+              if (app.handle.isEmpty && app.label.isNotEmpty)
+                InkWell(
+                  onTap: () => _copyValue(app.label),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Icon(Icons.copy, size: 18, color: Colors.blue[700]),
+                  ),
+                ),
               if (app.url.isNotEmpty)
-                Icon(Icons.open_in_new, size: 18, color: Colors.blue[700]),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    InkWell(
+                      onTap: () => _copyValue(app.url),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(Icons.copy, size: 18, color: Colors.blue[700]),
+                      ),
+                    ),
+                    Icon(Icons.open_in_new, size: 18, color: Colors.blue[700]),
+                  ],
+                ),
             ],
           ),
         ),

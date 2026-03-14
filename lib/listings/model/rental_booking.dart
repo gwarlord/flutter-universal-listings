@@ -54,7 +54,14 @@ class RentalBooking {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? cancellationReason;
+  final RentalBookingStatus? cancelledFromStatus;
   final String? disputeReason;
+
+  // Booking Trust System (Phase 1) — snapshotted at request submission time
+  final String? requesterName;
+  final String? requesterEmail;
+  final String? requesterPhoneNumber;
+  final bool requesterPhoneVerified;
 
   RentalBooking({
     required this.id,
@@ -85,7 +92,13 @@ class RentalBooking {
     required this.createdAt,
     required this.updatedAt,
     this.cancellationReason,
+    this.cancelledFromStatus,
     this.disputeReason,
+    // Trust fields
+    this.requesterName,
+    this.requesterEmail,
+    this.requesterPhoneNumber,
+    this.requesterPhoneVerified = false,
   });
 
   factory RentalBooking.fromJson(Map<String, dynamic> json, String id) {
@@ -128,7 +141,17 @@ class RentalBooking {
       createdAt: (json['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (json['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       cancellationReason: json['cancellationReason'],
+      cancelledFromStatus: json['cancelledFromStatus'] != null
+          ? RentalBookingStatus.values.firstWhere(
+              (e) => e.toString() == 'RentalBookingStatus.${json['cancelledFromStatus']}',
+              orElse: () => RentalBookingStatus.pending,
+            )
+          : null,
       disputeReason: json['disputeReason'],
+      requesterName: json['requesterName'] as String?,
+      requesterEmail: json['requesterEmail'] as String?,
+      requesterPhoneNumber: json['requesterPhoneNumber'] as String?,
+      requesterPhoneVerified: json['requesterPhoneVerified'] as bool? ?? false,
     );
   }
 
@@ -161,7 +184,12 @@ class RentalBooking {
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'cancellationReason': cancellationReason,
+      'cancelledFromStatus': cancelledFromStatus?.toString().split('.').last,
       'disputeReason': disputeReason,
+      'requesterName': requesterName,
+      'requesterEmail': requesterEmail,
+      'requesterPhoneNumber': requesterPhoneNumber,
+      'requesterPhoneVerified': requesterPhoneVerified,
     };
   }
 
@@ -194,7 +222,12 @@ class RentalBooking {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? cancellationReason,
+    RentalBookingStatus? cancelledFromStatus,
     String? disputeReason,
+    String? requesterName,
+    String? requesterEmail,
+    String? requesterPhoneNumber,
+    bool? requesterPhoneVerified,
   }) {
     return RentalBooking(
       id: id ?? this.id,
@@ -226,7 +259,12 @@ class RentalBooking {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       cancellationReason: cancellationReason ?? this.cancellationReason,
+      cancelledFromStatus: cancelledFromStatus ?? this.cancelledFromStatus,
       disputeReason: disputeReason ?? this.disputeReason,
+      requesterName: requesterName ?? this.requesterName,
+      requesterEmail: requesterEmail ?? this.requesterEmail,
+      requesterPhoneNumber: requesterPhoneNumber ?? this.requesterPhoneNumber,
+      requesterPhoneVerified: requesterPhoneVerified ?? this.requesterPhoneVerified,
     );
   }
 

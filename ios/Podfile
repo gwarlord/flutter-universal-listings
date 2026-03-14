@@ -35,6 +35,8 @@ target 'Runner' do
   # Resolve nanopb and GoogleUtilities version conflicts between Firebase and MLKit
   pod 'GoogleDataTransport', '>= 9.4.1'
   pod 'GoogleUtilities/UserDefaults', '>= 7.13.0'
+  # Required by Firebase Auth phone verification on iOS.
+  pod 'RecaptchaEnterprise', '>= 18.7.0'
 
   pod 'PhoneNumberKit', '~> 3.7.6'
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))

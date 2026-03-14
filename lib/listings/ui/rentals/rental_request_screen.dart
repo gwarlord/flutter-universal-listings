@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
+import 'package:caribtap/constants.dart';
 import '../../model/listing_model.dart';
 import '../../model/rental_config.dart';
 import '../../model/rental_unit.dart';
 import '../../model/rental_booking.dart';
 import '../../services/rental_service.dart';
+import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
 
 class RentalRequestScreen extends StatefulWidget {
   final ListingModel listing;
@@ -483,9 +488,41 @@ class _RentalRequestScreenState extends State<RentalRequestScreen> {
       return;
     }
 
+    // Booking Trust System — run access guard before allowing submission.
+    final allowed = await checkAndHandleBookingAccess(
+      context: context,
+      listerId: widget.listing.authorID,
+    );
+    if (!allowed || !mounted) return;
+
     setState(() => _isSubmitting = true);
 
     try {
+      // Resolve current user info for requester snapshot.
+      final firebaseUser = auth.FirebaseAuth.instance.currentUser;
+      final uid = firebaseUser?.uid ?? '';
+      String requesterName = '';
+      String requesterEmail = firebaseUser?.email ?? '';
+      String requesterPhone = '';
+      bool requesterPhoneVerified = false;
+
+      if (uid.isNotEmpty) {
+        try {
+          final userDoc = await FirebaseFirestore.instance
+              .collection(usersCollection)
+              .doc(uid)
+              .get();
+          final data = userDoc.data() ?? {};
+          final firstName = (data['firstName'] as String?)?.trim() ?? '';
+          final lastName = (data['lastName'] as String?)?.trim() ?? '';
+          requesterName = '$firstName $lastName'.trim();
+          requesterEmail = (data['email'] as String?)?.trim() ?? requesterEmail;
+          requesterPhone = (data['phoneNumber'] as String?)?.trim() ?? '';
+          requesterPhoneVerified = data['phoneVerified'] as bool? ?? false;
+        } catch (_) {
+          // Non-blocking — use fallback values.
+        }
+      }
       final quantity = _rentalService.calculateQuantity(
         startTime: _startTime!,
         endTime: _endTime!,
@@ -502,7 +539,7 @@ class _RentalRequestScreenState extends State<RentalRequestScreen> {
         id: '',
         listingId: widget.listing.id,
         rentalUnitId: _selectedUnit!.id,
-        customerId: 'current_user_id', // TODO: Get from auth
+        customerId: uid.isNotEmpty ? uid : 'unknown',
         listerId: widget.listing.authorID,
         startTime: _startTime!,
         endTime: _endTime!,
@@ -515,6 +552,10 @@ class _RentalRequestScreenState extends State<RentalRequestScreen> {
         status: RentalBookingStatus.pending,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        requesterName: requesterName.isNotEmpty ? requesterName : null,
+        requesterEmail: requesterEmail.isNotEmpty ? requesterEmail : null,
+        requesterPhoneNumber: requesterPhone.isNotEmpty ? requesterPhone : null,
+        requesterPhoneVerified: requesterPhoneVerified,
       );
 
       await _rentalService.createRentalBooking(booking);

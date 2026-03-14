@@ -23,6 +23,7 @@ import 'package:uuid/uuid.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
+import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
 
 // Helper function to convert country code to flag emoji
 String _countryCodeToFlag(String countryCode) {
@@ -243,6 +244,12 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
   }
 
   Future<void> _confirmAndSubmit() async {
+    final allowed = await checkAndHandleBookingAccess(
+      context: context,
+      listerId: auth.FirebaseAuth.instance.currentUser?.uid ?? '',
+    );
+    if (!allowed || !mounted) return;
+
     setState(() => _isSubmitting = true);
     var stage = 'initialize';
     try {

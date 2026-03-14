@@ -12,26 +12,50 @@ import 'package:caribtap/listings/services/pro_gate.dart';
 /// CRITICAL: professional ≠ premium
 /// Only Premium users get commerce features (Mini Store, Order Requests, Rentals)
 
+bool _hasTierFromUser(ListingsUser user, Set<String> allowedTiers) {
+  final tier = user.subscriptionTier.trim().toLowerCase();
+  if (!allowedTiers.contains(tier)) return false;
+  return user.isSubscriptionActive;
+}
+
+bool _hasTierFromEntitlement(ListingsUser user, int minimumTier) {
+  final entitlement = EntitlementService().currentEntitlement;
+  return ProGate.tierAtLeast(entitlement, minimumTier, isAdmin: user.isAdmin);
+}
+
 /// Checks if user has PREMIUM subscription tier
 /// Returns true ONLY for subscriptionTier == "premium"
 bool isPremiumUser(ListingsUser user) {
   if (user.isAdmin) return true; // Admins have all access
-  final entitlement = EntitlementService().currentEntitlement;
-  return ProGate.tierAtLeast(entitlement, 3, isAdmin: user.isAdmin);
+
+  // Prefer user profile state because it is available in Edit Listing flows.
+  // Business tier should inherit premium feature access.
+  if (_hasTierFromUser(user, const {'premium', 'business'})) return true;
+
+  // Fallback to entitlement snapshot if profile values are stale.
+  return _hasTierFromEntitlement(user, 3);
 }
 
 /// Checks if user has PROFESSIONAL subscription tier (NOT premium)
 bool isProfessionalUser(ListingsUser user) {
   if (user.isAdmin) return true;
-  final entitlement = EntitlementService().currentEntitlement;
-  return ProGate.tierAtLeast(entitlement, 2, isAdmin: user.isAdmin);
+
+  if (_hasTierFromUser(user, const {'professional', 'pro', 'premium', 'business'})) {
+    return true;
+  }
+
+  return _hasTierFromEntitlement(user, 2);
 }
 
 /// Checks if user has any paid tier (professional OR premium)
 bool isPaidUser(ListingsUser user) {
   if (user.isAdmin) return true;
-  final entitlement = EntitlementService().currentEntitlement;
-  return ProGate.tierAtLeast(entitlement, 2, isAdmin: user.isAdmin);
+
+  if (_hasTierFromUser(user, const {'professional', 'pro', 'premium', 'business'})) {
+    return true;
+  }
+
+  return _hasTierFromEntitlement(user, 2);
 }
 
 /// Returns a user-friendly display name for subscription tier

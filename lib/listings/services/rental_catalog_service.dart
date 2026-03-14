@@ -19,7 +19,7 @@ class RentalCatalogService {
         .snapshots()
         .map((snapshot) {
           final items = snapshot.docs
-              .map((doc) => RentalCatalogItem.fromJson(doc.data()))
+              .map((doc) => RentalCatalogItem.fromJson(doc.data(), doc.id))
               .toList()
             ..sort((a, b) {
               final sortCompare = a.sortOrder.compareTo(b.sortOrder);
@@ -44,7 +44,7 @@ class RentalCatalogService {
         .get();
 
     if (!doc.exists) return null;
-    return RentalCatalogItem.fromJson(doc.data()!);
+    return RentalCatalogItem.fromJson(doc.data()!, doc.id);
   }
 
   /// Create or update rental catalog item
@@ -203,7 +203,7 @@ class RentalCatalogService {
           .get();
 
       final items = snapshot.docs
-          .map((doc) => RentalCatalogItem.fromJson(doc.data()))
+          .map((doc) => RentalCatalogItem.fromJson(doc.data(), doc.id))
           .toList();
 
       // Filter by query

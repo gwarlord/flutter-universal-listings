@@ -16,6 +16,7 @@ import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart'
 import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
 import 'package:caribtap/listings/listings_module/search/search_bloc.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
 
 class SearchWrapperWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -96,10 +97,17 @@ class _SearchScreenState extends State<SearchScreen> {
                         'Add a new listing to show up here once approved by admins.'.tr(),
                         buttonTitle: 'Add Listing'.tr(),
                         isDarkMode: isDarkMode(context),
-                        action: () => push(
-                          context,
-                          AddListingWrappingWidget(currentUser: currentUser),
-                        ),
+                        action: () async {
+                          final allowed = await checkAndHandleBookingAccess(
+                            context: context,
+                            listerId: currentUser.userID,
+                          );
+                          if (!allowed || !context.mounted) return;
+                          push(
+                            context,
+                            AddListingWrappingWidget(currentUser: currentUser),
+                          );
+                        },
                         colorPrimary: Color(colorPrimary),
                       ),
                     ),

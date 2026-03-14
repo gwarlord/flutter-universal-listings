@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["5Y3WWA45XE.com.caribtap.ios"],
+        "components": [
+          {
+            "/": "/l/*"
+          },
+          {
+            "/": "/event/*"
+          }
+        ]
+      }
+    ]
+  }
+}

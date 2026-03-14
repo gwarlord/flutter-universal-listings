@@ -8,8 +8,7 @@ import 'package:caribtap/listings/model/catalog_item.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/services/store_service.dart';
-import 'package:caribtap/listings/services/entitlement_service.dart';
-import 'package:caribtap/listings/services/pro_gate.dart';
+import 'package:caribtap/listings/utils/subscription_helper.dart';
 import 'package:caribtap/listings/utils/category_localization.dart';
 import 'package:caribtap/screens/store/catalog_item_editor_screen.dart';
 import 'package:caribtap/screens/store/store_settings_screen.dart';
@@ -32,7 +31,6 @@ class CatalogManagerScreen extends StatefulWidget {
 
 class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
   final StoreService _storeService = StoreService();
-  final EntitlementService _entitlementService = EntitlementService();
   String _selectedCategory = 'All';
   bool _migrationDone = false;
 
@@ -47,13 +45,8 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
   }
 
   Future<void> _checkAndSyncPremiumAccess() async {
-    final entitlement =
-        await _entitlementService.fetchEntitlement(widget.currentUser.userID);
-    final isPremium = ProGate.tierAtLeast(
-      entitlement,
-      2,
-      isAdmin: widget.currentUser.isAdmin,
-    );
+    await _refreshCurrentUserSubscription();
+    final isPremium = isPremiumUser(widget.currentUser);
 
     if (!isPremium) {
       if (mounted) {
@@ -65,6 +58,34 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
       await _updateListingTierSnapshot();
       // User is premium - run migration
       _runMigration();
+    }
+  }
+
+  Future<void> _refreshCurrentUserSubscription() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.currentUser.userID)
+          .get();
+      final data = doc.data();
+      if (!doc.exists || data == null) return;
+
+      final rawExpiry = data['subscriptionExpiresAt'];
+      DateTime? expiry;
+      if (rawExpiry is Timestamp) {
+        expiry = rawExpiry.toDate();
+      } else if (rawExpiry != null) {
+        expiry = DateTime.tryParse(rawExpiry.toString());
+      }
+
+      widget.currentUser.subscriptionTier =
+          (data['subscriptionTier'] ?? widget.currentUser.subscriptionTier)
+              .toString();
+      widget.currentUser.isSubscriptionActiveOverride =
+          data['isSubscriptionActive'] == true;
+      widget.currentUser.subscriptionExpiresAt = expiry;
+    } catch (_) {
+      // If refresh fails, use in-memory state and existing fallback logic.
     }
   }
 

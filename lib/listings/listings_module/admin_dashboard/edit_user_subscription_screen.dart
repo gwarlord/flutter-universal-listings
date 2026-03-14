@@ -36,6 +36,19 @@ class _EditUserSubscriptionScreenState
 
   final List<String> _tiers = ['free', 'professional', 'premium', 'business'];
 
+  int _tierNumberFromName(String tierName) {
+    switch (tierName.trim().toLowerCase()) {
+      case 'business':
+      case 'premium':
+        return 3;
+      case 'professional':
+      case 'pro':
+        return 2;
+      default:
+        return 0;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -252,6 +265,20 @@ class _EditUserSubscriptionScreenState
       final userRef =
           firestore.collection(usersCollection).doc(_loadedUserDocId);
       batch.set(userRef, updateData, SetOptions(merge: true));
+
+      final entitlementRef = userRef
+          .collection('entitlements')
+          .doc('subscription');
+      batch.set(entitlementRef, {
+        'platform': 'admin_manual',
+        'productId': 'manual_${_selectedTier}_tier',
+        'tier': _tierNumberFromName(_selectedTier),
+        'status': isPaidTier ? 'active' : 'inactive',
+        'expiresAt': updateData['subscriptionExpiresAt'],
+        'willRenew': false,
+        'lastVerifiedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 
       for (final doc in listingDocsById.values) {
         batch.update(doc.reference, {

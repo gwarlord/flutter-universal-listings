@@ -270,6 +270,7 @@ class OrderRequest {
   final Map<String, dynamic>? payment;
   final Timestamp? createdAt;
   final Timestamp? updatedAt;
+  final OrderStatus? cancelledFromStatus;
 
   OrderRequest({
     required this.id,
@@ -289,6 +290,7 @@ class OrderRequest {
     this.payment,
     this.createdAt,
     this.updatedAt,
+    this.cancelledFromStatus,
   }) : orderType = orderType ?? _determineOrderType(items);
 
   factory OrderRequest.fromJson(Map<String, dynamic> json) {
@@ -316,6 +318,9 @@ class OrderRequest {
       payment: json['payment'] != null ? Map<String, dynamic>.from(json['payment']) : null,
       createdAt: json['createdAt'],
       updatedAt: json['updatedAt'],
+      cancelledFromStatus: json['cancelledFromStatus'] != null
+          ? OrderStatus.fromString(json['cancelledFromStatus'].toString())
+          : null,
     );
   }
 
@@ -338,6 +343,7 @@ class OrderRequest {
       'payment': payment,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
+      'cancelledFromStatus': cancelledFromStatus?.value,
     };
   }
 
@@ -359,6 +365,7 @@ class OrderRequest {
     Map<String, dynamic>? payment,
     Timestamp? createdAt,
     Timestamp? updatedAt,
+    OrderStatus? cancelledFromStatus,
   }) {
     return OrderRequest(
       id: id ?? this.id,
@@ -378,6 +385,7 @@ class OrderRequest {
       payment: payment ?? this.payment,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      cancelledFromStatus: cancelledFromStatus ?? this.cancelledFromStatus,
     );
   }
 

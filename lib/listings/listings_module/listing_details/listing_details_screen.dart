@@ -63,6 +63,7 @@ import 'package:caribtap/listings/ui/rentals/rental_booking_dialog.dart';
 import 'package:caribtap/listings/ui/rentals/rental_bookings_screen.dart';
 import 'package:caribtap/screens/store/store_browse_screen.dart';
 import 'package:caribtap/screens/rentals/rental_browse_screen.dart';
+import 'package:caribtap/listings/ui/share/promote_listing_screen.dart';
 import 'package:caribtap/listings/utils/caribbean_countries.dart';
 import 'package:caribtap/listings/utils/world_countries.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -537,7 +538,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     ),
                     _buildHeaderCircleButton(
                       icon: Icons.share,
-                      onTap: () => _shareListing(),
+                      onTap: () => _openShareOptions(),
                       isDark: dark,
                       margin: const EdgeInsets.only(right: 8),
                     ),
@@ -2349,6 +2350,48 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     if (isDarkMode(context)) {
       _mapController?.setMapStyle('[{"featureType":"all","elementType":"geometry","stylers":[{"color":"#242f3e"}]}]'); // Simplified for brevity
     }
+  }
+
+  Future<void> _openShareOptions() async {
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.share),
+                title: Text('Quick Share Link'.tr()),
+                subtitle: Text('Share listing link using app share sheet.'.tr()),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _shareListing();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.campaign_outlined),
+                title: Text('Promote with QR Poster'.tr()),
+                subtitle: Text('Create a postable image with QR code.'.tr()),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _openPromoteScreen();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openPromoteScreen() async {
+    await push(
+      context,
+      PromoteListingScreen(listing: listing),
+    );
   }
 
   /// Share this listing via deep link

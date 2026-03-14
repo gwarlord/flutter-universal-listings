@@ -42,6 +42,10 @@ class ListingsUser extends User {
   String? locationScopeMode;
   bool strictLocalOnly;
 
+  // Phone verification (Booking Trust System - Phase 1)
+  bool phoneVerified;
+  DateTime? phoneVerifiedAt;
+
   List<String> likedListingsIDs;
   List<String> likedEventsIDs;
 
@@ -74,6 +78,9 @@ class ListingsUser extends User {
     this.selectedCountry,
     this.locationScopeMode,
     this.strictLocalOnly = false,
+    // Phone verification
+    this.phoneVerified = false,
+    this.phoneVerifiedAt,
   })  : isSubscriptionActiveOverride = isSubscriptionActive ?? false,
         super(
           firstName: firstName,
@@ -133,6 +140,11 @@ class ListingsUser extends User {
       selectedCountry: parsedJson['selectedCountry'] as String?,
       locationScopeMode: parsedJson['locationScopeMode'] as String?,
       strictLocalOnly: parsedJson['strictLocalOnly'] as bool? ?? false,
+      // Phone verification
+      phoneVerified: parsedJson['phoneVerified'] as bool? ?? false,
+      phoneVerifiedAt: parsedJson['phoneVerifiedAt'] is Timestamp
+          ? (parsedJson['phoneVerifiedAt'] as Timestamp).toDate()
+          : null,
     );
   }
 
@@ -164,6 +176,11 @@ class ListingsUser extends User {
       'selectedCountry': selectedCountry,
       'locationScopeMode': locationScopeMode,
       'strictLocalOnly': strictLocalOnly,
+      // Phone verification
+      'phoneVerified': phoneVerified,
+      'phoneVerifiedAt': phoneVerifiedAt != null
+          ? Timestamp.fromDate(phoneVerifiedAt!)
+          : null,
       'gender': gender,
       'ageRange': ageRange,
       'listingFreshnessExempt': listingFreshnessExempt,

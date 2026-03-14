@@ -293,6 +293,8 @@ class RentalService {
     }
 
     if (newStatus == RentalBookingStatus.cancelled) {
+      updateData['cancelledFromStatus'] =
+          currentBooking.status.toString().split('.').last;
       if (isLister) {
         updateData['cancelledByRole'] = 'lister';
       } else if (isCustomer) {

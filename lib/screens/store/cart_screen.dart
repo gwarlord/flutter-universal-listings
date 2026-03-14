@@ -15,6 +15,7 @@ import 'package:caribtap/screens/store/store_cart_storage.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/listings/api/firebase/table_mode_firebase.dart';
 import 'package:caribtap/listings/model/table_mode_models.dart';
+import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
 import 'package:caribtap/listings/ui/table_mode/qr_scanner_screen.dart';
 
 /// Cart screen for reviewing and submitting orders
@@ -867,6 +868,12 @@ class _CartScreenState extends State<CartScreen> {
       showSnackBar(context, 'Please sign in to place an order'.tr());
       return;
     }
+
+    final allowed = await checkAndHandleBookingAccess(
+      context: context,
+      listerId: widget.listing.authorID,
+    );
+    if (!allowed || !mounted) return;
 
     // Validate delivery address
     if (_fulfillmentMethod == FulfillmentMethod.delivery && _addressController.text.trim().isEmpty) {

@@ -31,6 +31,14 @@ bool _isIgnorableWebStorageImageError(Object error) {
       text.contains('firebasestorage.googleapis.com');
 }
 
+bool _isIgnorableWebTrackpadPointerAssertion(Object error) {
+  if (!kIsWeb) return false;
+  final text = error.toString();
+  return text.contains('PointerDeviceKind.trackpad') &&
+      text.contains('events.dart') &&
+      text.contains('Assertion failed');
+}
+
 const FirebaseOptions _webFirebaseOptions = FirebaseOptions(
   apiKey: 'AIzaSyD_qHAIpnPymA4X_h0BtJYqxAwk1UG_mTg',
   authDomain: 'caribtap.firebaseapp.com',
@@ -222,6 +230,32 @@ Future<void> _handleListingDeepLink(String? link) async {
   }
 }
 
+// Handle event deep links
+Future<void> _handleEventDeepLink(String? link) async {
+  if (link == null) return;
+
+  try {
+    print('🔗 Processing event deep link: $link');
+
+    final eventId = DeepLinkService.parseEventIdFromUrl(link);
+    if (eventId == null) {
+      print('⚠️ No event ID found in deep link: $link');
+      return;
+    }
+
+    print('🎫 Event ID extracted: $eventId');
+    _pendingEventId = eventId;
+  } catch (e) {
+    print('❌ Error processing event deep link: $e');
+    if (navigatorKey.currentContext != null) {
+      showSnackBar(
+        navigatorKey.currentContext!,
+        'Failed to open event. Please try again.'.tr(),
+      );
+    }
+  }
+}
+
 // Handle listing management deep links
 Future<void> _handleListingManageDeepLink(String? link) async {
   if (link == null) return;
@@ -275,6 +309,7 @@ Future<void> _handleProDocDeepLink(String? link) async {
 
 // Store pending listing navigation
 String? _pendingListingId;
+String? _pendingEventId;
 String? _pendingListingManageId;
 String? _pendingProDocType;
 String? _pendingProDocToken;
@@ -283,6 +318,12 @@ String? _pendingProDocToken;
 String? getPendingListingId() {
   final id = _pendingListingId;
   _pendingListingId = null;
+  return id;
+}
+
+String? getPendingEventId() {
+  final id = _pendingEventId;
+  _pendingEventId = null;
   return id;
 }
 
@@ -518,6 +559,11 @@ void _installGlobalCrashLogging() {
       return;
     }
 
+    if (_isIgnorableWebTrackpadPointerAssertion(details.exception)) {
+      print('ℹ️ Suppressing Flutter Web trackpad pointer assertion from the framework.');
+      return;
+    }
+
     FlutterError.presentError(details);
     print('💥 [FlutterError] ${details.exceptionAsString()}');
     if (details.stack != null) {
@@ -536,6 +582,11 @@ void _installGlobalCrashLogging() {
         _loggedWebImageNoiseSuppression = true;
         print('ℹ️ Suppressing repetitive web image fetch errors from Firebase Storage (statusCode: 0).');
       }
+      return true;
+    }
+
+    if (_isIgnorableWebTrackpadPointerAssertion(error)) {
+      print('ℹ️ Suppressing Flutter Web trackpad pointer assertion from the framework.');
       return true;
     }
 
@@ -682,6 +733,8 @@ Future<void> _initializePostLaunchServices() async {
       _handleProDocDeepLink(url);
     } else if (DeepLinkService.isListingManageDeepLink(url)) {
       _handleListingManageDeepLink(url);
+    } else if (DeepLinkService.isEventDeepLink(url)) {
+      _handleEventDeepLink(url);
     } else if (DeepLinkService.isListingDeepLink(url)) {
       _handleListingDeepLink(url);
     } else {
@@ -700,6 +753,8 @@ Future<void> _initializePostLaunchServices() async {
         await _handleProDocDeepLink(url);
       } else if (DeepLinkService.isListingManageDeepLink(url)) {
         await _handleListingManageDeepLink(url);
+      } else if (DeepLinkService.isEventDeepLink(url)) {
+        await _handleEventDeepLink(url);
       } else if (DeepLinkService.isListingDeepLink(url)) {
         await _handleListingDeepLink(url);
       } else {

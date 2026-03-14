@@ -679,13 +679,31 @@ class _RentalItemEditorScreenState extends State<RentalItemEditorScreen> {
     final picker = ImagePicker();
     
     if (isPhotos) {
+      final remainingSlots = 6 - (_photos.length + _newPhotoFiles.length);
+      if (remainingSlots <= 0) {
+        showSnackBar(context, 'Maximum 6 photos allowed'.tr());
+        return;
+      }
+
       final pickedFiles = await picker.pickMultiImage();
       if (pickedFiles.isNotEmpty) {
+        final files = pickedFiles.map((xFile) => File(xFile.path)).toList();
+        final selected = files.take(remainingSlots).toList();
         setState(() {
-          _newPhotoFiles.addAll(pickedFiles.map((xFile) => File(xFile.path)));
+          _newPhotoFiles.addAll(selected);
         });
+
+        if (files.length > selected.length) {
+          showSnackBar(context, 'Only 6 photos are allowed per item'.tr());
+        }
       }
     } else {
+      final remainingSlots = 2 - (_videos.length + _newVideoFiles.length);
+      if (remainingSlots <= 0) {
+        showSnackBar(context, 'Maximum 2 videos allowed'.tr());
+        return;
+      }
+
       final pickedFile = await picker.pickVideo(source: ImageSource.gallery);
       if (pickedFile != null) {
         setState(() {
@@ -771,8 +789,8 @@ class _RentalItemEditorScreenState extends State<RentalItemEditorScreen> {
         category: _categoryController.text.trim(),
         basePrice: double.parse(_basePriceController.text),
         pricingUnit: _pricingUnit,
-        photos: [..._photos, ...uploadedPhotos],
-        videos: [..._videos, ...uploadedVideos],
+        photos: [..._photos, ...uploadedPhotos].take(6).toList(),
+        videos: [..._videos, ...uploadedVideos].take(2).toList(),
         stockQty: int.parse(_stockQtyController.text),
         depositAmount: _depositController.text.trim().isEmpty 
             ? null 

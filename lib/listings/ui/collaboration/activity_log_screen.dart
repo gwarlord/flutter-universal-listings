@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:caribtap/listings/listings_module/api/collaboration_api_manager.dart';
 import 'package:caribtap/listings/model/collaboration_model.dart';
+import 'package:caribtap/core/ui/theme/app_theme.dart';
 
 class ActivityLogScreen extends StatefulWidget {
   final String listingId;
@@ -29,6 +30,9 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final appColors = context.appThemeColors;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Activity Log'),
@@ -43,7 +47,14 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
 
           if (snapshot.hasError) {
             return Center(
-              child: Text('Error: ${snapshot.error}'),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Text(
+                  'Error: ${snapshot.error}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: theme.colorScheme.error),
+                ),
+              ),
             );
           }
 
@@ -57,17 +68,21 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
                   Icon(
                     Icons.history_outlined,
                     size: 64,
-                    color: Colors.grey[400],
+                    color: appColors.mutedText.withOpacity(0.5),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'No Activity',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Activity log will appear here',
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: appColors.mutedText,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -76,6 +91,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
           }
 
           return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: activities.length,
             itemBuilder: (context, index) {
               final activity = activities[index];
@@ -108,29 +124,54 @@ class ActivityLogTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final appColors = context.appThemeColors;
     final formatter = DateFormat('MMM d, y • h:mm a');
     final formattedDate = formatter.format(activity.createdAt);
 
-    Color? tileColor;
+    Color categoryColor = Colors.grey;
     IconData icon = Icons.info_outline;
 
     if (activity.actionType.contains('COLLABORATOR')) {
-      tileColor = Colors.blue[50];
+      categoryColor = Colors.blue;
       icon = Icons.person;
     } else if (activity.actionType.contains('ORDER')) {
-      tileColor = Colors.orange[50];
+      categoryColor = Colors.orange;
       icon = Icons.shopping_cart;
     } else if (activity.actionType.contains('LISTING')) {
-      tileColor = Colors.green[50];
+      categoryColor = Colors.green;
       icon = Icons.edit;
     } else if (activity.actionType.contains('CHAT')) {
-      tileColor = Colors.purple[50];
+      categoryColor = Colors.purple;
       icon = Icons.chat;
     }
 
+    final isDark = theme.brightness == Brightness.dark;
+    final tileBgColor = isDark
+        ? categoryColor.withOpacity(0.12)
+        : categoryColor.withOpacity(0.08);
+
+    // Prefer actorName (display name) over actorUid
+    final actorDisplayName = activity.actorName != null && activity.actorName!.isNotEmpty
+        ? activity.actorName!
+        : activity.actorUid;
+
+    // Prefer targetName (display name) over targetId
+    final targetDisplayName = activity.targetName != null && activity.targetName!.isNotEmpty
+        ? activity.targetName!
+        : activity.targetId;
+
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: tileColor,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      elevation: 0,
+      color: tileBgColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: categoryColor.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -139,13 +180,13 @@ class ActivityLogTile extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
+                    color: isDark ? Colors.black26 : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, size: 20),
+                  child: Icon(icon, size: 18, color: categoryColor),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -154,17 +195,15 @@ class ActivityLogTile extends StatelessWidget {
                     children: [
                       Text(
                         activity.getActionLabel(),
-                        style: const TextStyle(
+                        style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'by ${activity.actorName ?? activity.actorUid}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
+                        'by $actorDisplayName',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: appColors.mutedText,
                         ),
                       ),
                     ],
@@ -174,8 +213,8 @@ class ActivityLogTile extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
+                    color: _getRoleColor(activity.actorRole).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     activity.actorRole,
@@ -188,52 +227,55 @@ class ActivityLogTile extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            if (activity.targetType.isNotEmpty)
+            if (activity.targetType.isNotEmpty) ...[
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Icon(
                     _getTargetIcon(activity.targetType),
-                    size: 16,
-                    color: Colors.grey[600],
+                    size: 14,
+                    color: appColors.mutedText,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '${activity.targetType}: ${activity.targetId}',
-                      style: TextStyle(
+                      '${activity.targetType}: $targetDisplayName',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: appColors.mutedText,
                         fontSize: 12,
-                        color: Colors.grey[700],
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
+            ],
             if (activity.note != null && activity.note!.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(4),
+                  color: isDark ? Colors.black12 : Colors.white54,
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   activity.note!,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[700],
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 13,
                   ),
                 ),
               ),
             ],
             const SizedBox(height: 12),
-            Text(
-              formattedDate,
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey[500],
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Text(
+                formattedDate,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontSize: 10,
+                  color: appColors.mutedText.withOpacity(0.7),
+                ),
               ),
             ),
           ],
@@ -245,11 +287,11 @@ class ActivityLogTile extends StatelessWidget {
   Color _getRoleColor(String role) {
     switch (role) {
       case 'OWNER':
-        return Colors.red;
+        return Colors.redAccent;
       case 'COLLABORATOR':
-        return Colors.blue;
+        return Colors.blueAccent;
       case 'ADMIN':
-        return Colors.purple;
+        return Colors.purpleAccent;
       default:
         return Colors.grey;
     }
@@ -289,7 +331,11 @@ class ActivityLogTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final appColors = context.appThemeColors;
+
     return ListView.builder(
+      padding: const EdgeInsets.all(16),
       itemCount: activities.length,
       itemBuilder: (context, index) {
         final activity = activities[index];
@@ -302,17 +348,31 @@ class ActivityLogTimeline extends StatelessWidget {
             date !=
                 formatter.format(activities[index - 1].createdAt);
 
+        // Prefer actorName over actorUid
+        final actorDisplayName = activity.actorName != null && activity.actorName!.isNotEmpty
+            ? activity.actorName!
+            : activity.actorUid;
+
         return Column(
           children: [
             if (showDateSeparator) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text(
-                  date,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[500],
-                        fontWeight: FontWeight.bold,
-                      ),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: appColors.subtleBackground,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      date,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                            color: appColors.mutedText,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -323,18 +383,29 @@ class ActivityLogTimeline extends StatelessWidget {
                 Column(
                   children: [
                     Container(
-                      width: 16,
-                      height: 16,
+                      width: 12,
+                      height: 12,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: _getActivityColor(activity),
+                        border: Border.all(
+                          color: theme.scaffoldBackgroundColor,
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _getActivityColor(activity).withOpacity(0.3),
+                            blurRadius: 4,
+                            spreadRadius: 1,
+                          )
+                        ],
                       ),
                     ),
                     if (!isLast)
                       Container(
                         width: 2,
                         height: 60,
-                        color: Colors.grey[300],
+                        color: appColors.cardBorder,
                       ),
                   ],
                 ),
@@ -346,28 +417,40 @@ class ActivityLogTimeline extends StatelessWidget {
                     children: [
                       Text(
                         activity.getActionLabel(),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'by ${activity.actorName ?? activity.actorUid}',
-                        style: Theme.of(context).textTheme.bodySmall,
+                        'by $actorDisplayName',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: appColors.mutedText,
+                        ),
                       ),
                       if (activity.note != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            activity.note!,
-                            style: Theme.of(context).textTheme.bodySmall,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: appColors.subtleBackground,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              activity.note!,
+                              style: theme.textTheme.bodySmall,
+                            ),
                           ),
                         ),
                       const SizedBox(height: 8),
                       Text(
                         DateFormat('h:mm a').format(activity.createdAt),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[500],
+                        style: theme.textTheme.bodySmall?.copyWith(
+                              color: appColors.mutedText.withOpacity(0.6),
                             ),
                       ),
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),

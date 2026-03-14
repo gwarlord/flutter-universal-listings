@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_image_v2/flutter_native_image_v2.dart';
@@ -565,6 +566,10 @@ class ChatFireStoreUtils extends ChatRepository {
   }
 
   Future<File> _compressImage(File file) async {
+    if (kIsWeb) {
+      return file;
+    }
+
     File compressedImage = await FlutterNativeImage.compressImage(
       file.path,
       quality: 25,

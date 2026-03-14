@@ -651,6 +651,10 @@ class AuthFirebaseUtils extends AuthenticationRepository {
   /// @param file the image file that will be compressed
   /// @return File a new compressed file with smaller size
   Future<File> _compressImage(File file) async {
+    if (kIsWeb) {
+      return file;
+    }
+
     File compressedImage = await FlutterNativeImage.compressImage(
       file.path,
       quality: 25,

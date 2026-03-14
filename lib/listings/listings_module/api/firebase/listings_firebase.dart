@@ -567,7 +567,13 @@ class ListingsFirebaseUtils extends ListingsRepository {
         contentType: safeExt == '.png' ? 'image/png' : 'image/jpeg',
       );
 
-      final UploadTask uploadTask = upload.putFile(compressedImage, meta);
+      final UploadTask uploadTask;
+      if (kIsWeb) {
+        final Uint8List bytes = await XFile(compressedImage.path).readAsBytes();
+        uploadTask = upload.putData(bytes, meta);
+      } else {
+        uploadTask = upload.putFile(compressedImage, meta);
+      }
       final String downloadUrl =
       await (await uploadTask.whenComplete(() {})).ref.getDownloadURL();
       imagesUrls.add(downloadUrl);
@@ -771,6 +777,10 @@ class ListingsFirebaseUtils extends ListingsRepository {
   /// - Prior quality=25 produced visibly degraded uploads.
   /// - We downscale to a max dimension (default 1600) and keep JPEG quality high (85).
   Future<File> compressImage(File file) async {
+    if (kIsWeb) {
+      return file;
+    }
+
     try {
       final props = await FlutterNativeImage.getImageProperties(file.path);
       final int w = props.width ?? 0;

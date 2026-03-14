@@ -223,6 +223,16 @@ service cloud.firestore {
         allow read: if isSignedIn();
         allow write: if (isSignedIn() && request.auth.uid == userId) || isAdmin() || request.auth.token.serviceAccount == true;
       }
+
+      // Per-lister blocked users (booking trust system - Phase 1)
+      // Only the lister (userId) can read or write their own block records.
+      // Blocked users cannot discover or remove blocks against themselves.
+      match /blocked_booking_users/{blockedUserId} {
+        allow read, create: if isOwner(userId) || isAdmin();
+        allow update: if isOwner(userId) || isAdmin();
+        // Blocks are soft-deleted (active: false) rather than hard-deleted.
+        allow delete: if isAdmin();
+      }
     }
 
     match /public_docs/{token} {
@@ -853,6 +863,36 @@ service cloud.firestore {
     // Search Analytics (no direct client access)
     match /search_analytics/{docId} {
       allow read, write: if false;
+    }
+
+    // Share Analytics (authenticated client create only)
+    match /analytics/shares/events/{eventId} {
+      allow read: if false;
+      allow create: if isSignedIn() &&
+        (
+          (
+            request.resource.data.keys().hasOnly([
+              'userId',
+              'listingId',
+              'status',
+              'timestamp',
+              'platform'
+            ]) &&
+            request.resource.data.userId == request.auth.uid
+          ) ||
+          request.resource.data.keys().hasOnly([
+            'listingId',
+            'status',
+            'timestamp',
+            'platform'
+          ])
+        ) &&
+        request.resource.data.listingId is string &&
+        request.resource.data.listingId.size() > 0 &&
+        request.resource.data.status is string &&
+        request.resource.data.status.size() > 0 &&
+        request.resource.data.platform == 'mobile';
+      allow update, delete: if false;
     }
 
     // Search Costs (no direct client access)

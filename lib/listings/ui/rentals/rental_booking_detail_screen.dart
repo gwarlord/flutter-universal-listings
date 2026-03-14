@@ -7,6 +7,7 @@ import '../../model/rental_unit.dart';
 import '../../model/rental_catalog_item.dart';
 import '../../services/rental_service.dart';
 import '../../services/rental_catalog_service.dart';
+import '../../services/blocked_user_repository.dart';
 
 class RentalBookingDetailScreen extends StatefulWidget {
   final RentalBooking booking;
@@ -42,6 +43,12 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
         (booking.status == RentalBookingStatus.pending ||
             booking.status == RentalBookingStatus.confirmed) &&
         booking.collectedAt == null;
+
+    bool get _canShowBlockUserAction =>
+      _isListerView &&
+      booking.customerId.isNotEmpty &&
+      booking.status == RentalBookingStatus.cancelled &&
+      booking.cancelledFromStatus == RentalBookingStatus.confirmed;
 
     @override
     void initState() {
@@ -294,6 +301,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
     final phone = (data?['phoneNumber'] as String?)?.trim() ??
         (data?['phone'] as String?)?.trim() ?? '';
     final profilePictureURL = (data?['profilePictureURL'] as String?)?.trim() ?? '';
+    final phoneVerified = data?['phoneVerified'] as bool? ?? false;
 
     final combinedName = '$firstName $lastName'.trim();
     final resolvedName = combinedName.isNotEmpty
@@ -308,6 +316,7 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
       phone: phone.isNotEmpty ? phone : null,
       email: email.isNotEmpty ? email : null,
       profilePictureURL: profilePictureURL,
+      phoneVerified: phoneVerified,
     );
   }
 
@@ -589,6 +598,27 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
+                            if (_isListerView && preview.phoneVerified) ...
+                              [
+                                const SizedBox(height: 4),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.verified,
+                                        size: 14, color: Colors.green),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Verified Phone'.tr(),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                              color: Colors.green,
+                                              fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
+                              ],
                           ],
                         ),
                       ),
@@ -596,6 +626,22 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
                   );
                 },
               ),
+              if (_canShowBlockUserAction)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => _showBlockUserDialog(),
+                    icon: const Icon(Icons.block, size: 16, color: Colors.red),
+                    label: Text(
+                      'Block this user from future requests'.tr(),
+                      style: const TextStyle(color: Colors.red, fontSize: 13),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                    ),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 16),
@@ -832,6 +878,98 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
     }
 
     return null;
+  }
+
+  Future<void> _showBlockUserDialog() async {
+    if (booking.customerId.isEmpty) return;
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final onSurface = theme.colorScheme.onSurface;
+    final reasonController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Block user?'.tr(),
+          style: TextStyle(color: onSurface, fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This user will no longer be able to send booking or rental requests to your business.'
+                  .tr(),
+              style: TextStyle(color: onSurface.withOpacity(0.7)),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              style: TextStyle(color: onSurface),
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: 'Reason (optional)'.tr(),
+                labelStyle:
+                    TextStyle(color: onSurface.withOpacity(0.5)),
+                border: const OutlineInputBorder(),
+                filled: true,
+                fillColor:
+                    isDark ? Colors.grey[800] : Colors.grey.shade100,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('Cancel'.tr(),
+                style: TextStyle(color: onSurface.withOpacity(0.7))),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Block user'.tr()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final listerId = booking.listerId;
+    if (listerId.isEmpty) return;
+
+    try {
+      await BlockedUserRepository().blockUser(
+        listerId: listerId,
+        blockedUserId: booking.customerId,
+        reason: reasonController.text.trim().isNotEmpty
+            ? reasonController.text.trim()
+            : null,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('User has been blocked from future requests.'.tr()),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to block user. Please try again.'.tr()),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _confirmCancelBooking() async {
@@ -1385,11 +1523,13 @@ class _CustomerPreview {
   final String? phone;
   final String? email;
   final String profilePictureURL;
+  final bool phoneVerified;
 
   const _CustomerPreview({
     required this.name,
     this.phone,
     this.email,
     this.profilePictureURL = '',
+    this.phoneVerified = false,
   });
 }

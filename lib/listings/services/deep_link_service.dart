@@ -1,6 +1,8 @@
 import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
+import 'package:caribtap/listings/model/event_model.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -14,27 +16,28 @@ class DeepLinkService {
   // Custom scheme - works immediately without server setup
   static const String _customScheme = 'caribtap';
   static const String _listingHost = 'listing';
+  static const String _eventHost = 'event';
   static const String _listingManageHost = 'listing_manage';
   static const String _proDocHost = 'prodoc';
   
   // Web domain (requires server-side configuration with assetlinks.json and apple-app-site-association)
   static const String _baseDomain = 'caribtap.com';
   static const String _listingPathPrefix = '/l/';
+  static const String _eventPathPrefix = '/event/';
   
   /// Creates a shareable deep link for a listing
   /// 
-  /// Returns a URL in the format: caribtap://listing/<listingId>
-  /// This format works immediately without any server configuration
+  /// Returns a URL in the format: https://caribtap.com/l/<listingId>
   Future<String> createListingShareLink(String listingId, {
     String? title,
     String? description,
     String? imageUrl,
   }) async {
-    // Use custom scheme for immediate support (no server setup needed)
-    final deepLinkUrl = '$_customScheme://$_listingHost/$listingId';
+    // Use HTTPS URL so QR scanners and external browsers always receive a valid link.
+    final deepLinkUrl = 'https://$_baseDomain$_listingPathPrefix$listingId';
     
-    // Alternative web-based format (requires server configuration):
-    // final deepLinkUrl = 'https://$_baseDomain$_listingPathPrefix$listingId';
+    // Alternative custom scheme fallback:
+    // final deepLinkUrl = '$_customScheme://$_listingHost/$listingId';
     
     // For production, you might want to use Firebase Dynamic Links
     // or a URL shortener service here
@@ -181,6 +184,39 @@ class DeepLinkService {
     return parseListingIdFromUrl(url) != null;
   }
 
+  /// Parse a deep link URL and extract the event ID
+  ///
+  /// Supported formats:
+  /// - https://caribtap.com/event/<eventId>
+  /// - caribtap://event/<eventId>
+  static String? parseEventIdFromUrl(String url) {
+    try {
+      final uri = Uri.parse(url);
+
+      if (uri.host.contains(_baseDomain) &&
+          uri.path.startsWith(_eventPathPrefix)) {
+        final eventId = uri.path.substring(_eventPathPrefix.length);
+        final cleanId = eventId.split('?').first.split('/').first;
+        return cleanId.isNotEmpty ? cleanId : null;
+      }
+
+      if (uri.scheme == _customScheme && uri.host == _eventHost) {
+        final eventId =
+            uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
+        return eventId?.isNotEmpty == true ? eventId : null;
+      }
+
+      return null;
+    } catch (e) {
+      print('❌ Error parsing event deep link: $e');
+      return null;
+    }
+  }
+
+  static bool isEventDeepLink(String url) {
+    return parseEventIdFromUrl(url) != null;
+  }
+
   /// Parse a deep link URL and extract the listing ID for management links
   ///
   /// Format: caribtap://listing_manage?listingId=<listingId>
@@ -244,16 +280,44 @@ class DeepLinkService {
       return null;
     }
   }
+
+  /// Get an event by ID from Firestore
+  ///
+  /// Returns the event if found, null otherwise
+  Future<EventModel?> getEventById(String eventId) async {
+    try {
+      final doc =
+          await FirebaseFirestore.instance.collection('events').doc(eventId).get();
+
+      if (!doc.exists || doc.data() == null) {
+        return null;
+      }
+
+      return EventModel.fromJson({
+        ...doc.data()!,
+        'id': doc.id,
+      });
+    } catch (e) {
+      print('❌ Error fetching event by ID: $e');
+      return null;
+    }
+  }
   
   /// Track share events (optional - for analytics)
   Future<void> _trackShareEvent(String listingId, String status) async {
     try {
+      final currentUser = auth.FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        return;
+      }
+
       // Track in Firestore or your analytics service
       await FirebaseFirestore.instance
           .collection('analytics')
           .doc('shares')
           .collection('events')
           .add({
+        'userId': currentUser.uid,
         'listingId': listingId,
         'status': status,
         'timestamp': FieldValue.serverTimestamp(),

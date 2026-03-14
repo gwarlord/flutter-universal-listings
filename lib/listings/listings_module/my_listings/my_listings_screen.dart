@@ -15,6 +15,7 @@ import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:caribtap/listings/ui/collaboration/assigned_listings_screen.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:caribtap/listings/widgets/freshness_indicators.dart';
+import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
 
 class MyListingsWrapperWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -177,10 +178,17 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                       child: showEmptyState(
                         'No Listings'.tr(),
                         'Add a new listing to show up here.'.tr(),
-                        action: () => push(
-                          context,
-                          AddListingWrappingWidget(currentUser: currentUser),
-                        ),
+                        action: () async {
+                          final allowed = await checkAndHandleBookingAccess(
+                            context: context,
+                            listerId: currentUser.userID,
+                          );
+                          if (!allowed || !context.mounted) return;
+                          push(
+                            context,
+                            AddListingWrappingWidget(currentUser: currentUser),
+                          );
+                        },
                         colorPrimary: Color(colorPrimary),
                         isDarkMode: isDarkMode(context),
                         buttonTitle: 'Add Listing'.tr(),
@@ -413,31 +421,39 @@ class _MyListingCardState extends State<MyListingCard> {
                         color: Colors.black.withOpacity(0.7),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.block, color: Colors.red, size: 32),
-                          const SizedBox(height: 4),
-                          Text(
-                            'SUSPENDED'.tr(),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.block, color: Colors.red, size: 32),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'SUSPENDED'.tr(),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                if (suspensionRequested)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      'Request Pending'.tr(),
+                                      style: TextStyle(
+                                        color: Colors.yellow,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
-                          if (suspensionRequested)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                'Request Pending'.tr(),
-                                style: TextStyle(
-                                  color: Colors.yellow,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -448,20 +464,29 @@ class _MyListingCardState extends State<MyListingCard> {
                         color: Colors.black.withOpacity(0.6),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.visibility_off, color: Colors.grey, size: 32),
-                          const SizedBox(height: 4),
-                          Text(
-                            'HIDDEN'.tr(),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.visibility_off,
+                                    color: Colors.grey, size: 32),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'HIDDEN'.tr(),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
