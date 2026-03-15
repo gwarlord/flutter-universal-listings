@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 540">
+  <defs>
+    <linearGradient id="land" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#31475C"/>
+      <stop offset="1" stop-color="#202F40"/>
+    </linearGradient>
+  </defs>
+  <path d="M172 191 L223 178 L275 175 L325 177 L371 186 L336 204 L282 212 L226 209 Z" fill="url(#land)" stroke="#EAF2FF" stroke-width="4"/>
+  <path d="M312 168 L359 158 L423 162 L479 173 L458 190 L390 197 L332 189 Z" fill="url(#land)" stroke="#EAF2FF" stroke-width="4"/>
+  <path d="M530 190 L561 184 L592 189 L597 207 L572 219 L542 216 L528 205 Z" fill="url(#land)" stroke="#EAF2FF" stroke-width="4"/>
+  <path d="M565 233 L584 226 L603 231 L607 246 L593 258 L574 257 L563 247 Z" fill="url(#land)" stroke="#EAF2FF" stroke-width="4"/>
+  <path d="M585 268 L600 263 L613 267 L615 279 L604 287 L591 285 L584 276 Z" fill="url(#land)" stroke="#EAF2FF" stroke-width="4"/>
+  <path d="M602 301 L616 297 L626 301 L627 312 L618 318 L606 316 L600 308 Z" fill="url(#land)" stroke="#EAF2FF" stroke-width="4"/>
+  <path d="M649 250 L664 246 L677 248 L678 260 L669 268 L655 266 L648 258 Z" fill="url(#land)" stroke="#EAF2FF" stroke-width="4"/>
+  <path d="M544 365 L566 358 L585 363 L590 380 L575 392 L556 393 L544 383 Z" fill="url(#land)" stroke="#EAF2FF" stroke-width="4"/>
+  <path d="M724 356 L742 350 L758 357 L760 374 L749 389 L731 394 L716 385 L711 369 Z" fill="url(#land)" stroke="#EAF2FF" stroke-width="4"/>
+</svg>

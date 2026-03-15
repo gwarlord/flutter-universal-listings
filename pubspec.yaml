@@ -114,6 +114,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/maps/caribbean/
     - assets/translations/
     - .env
 

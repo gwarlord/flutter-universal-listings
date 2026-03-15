@@ -14,6 +14,7 @@ import 'package:caribtap/listings/listings_module/add_listing/add_listing_screen
 import 'package:caribtap/listings/listings_module/categories/categories_screen.dart';
 import 'package:caribtap/listings/listings_module/home/home_screen.dart';
 import 'package:caribtap/listings/listings_module/map_view/map_view_screen.dart';
+import 'package:caribtap/map_explorer/services/map_explorer_navigation_service.dart';
 import 'package:caribtap/listings/listings_module/search/search_screen.dart';
 import 'package:caribtap/listings/listings_module/my_listings/my_listings_screen.dart';
 import 'package:caribtap/listings/listings_module/events/create_event_screen.dart';
@@ -135,6 +136,8 @@ class _ContainerState extends State<ContainerScreen> {
   int _selectedTapIndex = 0;
   GlobalKey<HomeScreenState> homeKey = GlobalKey();
   late Widget _currentWidget;
+  final MapExplorerNavigationService _mapExplorerNavigationService =
+      const MapExplorerNavigationService();
 
   bool _showProfessionalFeatures = false;
   bool _showPremiumFeatures = false;
@@ -534,23 +537,7 @@ class _ContainerState extends State<ContainerScreen> {
                         icon: const Icon(
                           Icons.map,
                         ),
-                        onPressed: () {
-                          final homeState = homeKey.currentState;
-                          if (homeState != null) {
-                            final items = homeState.listingsWithAds
-                                .where((e) => e != null)
-                                .cast<FeedItem>()
-                                .toList();
-                            push(
-                              context,
-                              MapViewScreen(
-                                items: items,
-                                fromHome: true,
-                                currentUser: currentUser,
-                              ),
-                            );
-                          }
-                        },
+                        onPressed: () => _showMapEntryOptions(currentUser),
                       ),
                     if (_currentWidget is ConversationsWrapperWidget)
                       IconButton(
@@ -609,6 +596,69 @@ class _ContainerState extends State<ContainerScreen> {
           );
         },
       ),
+    );
+  }
+
+  Future<void> _showMapEntryOptions(ListingsUser currentUser) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Choose Map Experience'.tr(),
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  leading: const Icon(Icons.public),
+                  title: Text('Caribbean Explorer'.tr()),
+                  subtitle: Text('Browse and discover islands across the Caribbean'.tr()),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _mapExplorerNavigationService.openRegionExplorer(
+                      context,
+                      currentUser: currentUser,
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.map_outlined),
+                  title: Text('Spotlight Map'.tr()),
+                  subtitle: Text('Explore listings in your current location'.tr()),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    final homeState = homeKey.currentState;
+                    if (homeState == null) return;
+                    final items = homeState.listingsWithAds
+                        .where((e) => e != null)
+                        .cast<FeedItem>()
+                        .toList();
+                    push(
+                      context,
+                      MapViewScreen(
+                        items: items,
+                        fromHome: true,
+                        currentUser: currentUser,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

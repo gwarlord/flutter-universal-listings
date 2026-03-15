@@ -14,16 +14,40 @@ import 'package:caribtap/listings/listings_module/listing_details/listing_detail
 import 'package:caribtap/listings/listings_module/events/event_details_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+class MapViewQuickFilterOption {
+  final String key;
+  final String label;
+
+  const MapViewQuickFilterOption({
+    required this.key,
+    required this.label,
+  });
+}
+
 class MapViewScreen extends StatefulWidget {
   final List<FeedItem> items;
   final bool fromHome;
   final ListingsUser currentUser;
+  final String? titleOverride;
+  final LatLng? initialFocus;
+  final double? initialZoom;
+  final bool followUserLocation;
+  final List<MapViewQuickFilterOption> quickFilters;
+  final String? activeQuickFilterKey;
+  final ValueChanged<String>? onQuickFilterSelected;
 
   const MapViewScreen(
       {super.key,
       required this.items,
       required this.fromHome,
-      required this.currentUser});
+      required this.currentUser,
+      this.titleOverride,
+      this.initialFocus,
+      this.initialZoom,
+      this.followUserLocation = true,
+      this.quickFilters = const [],
+      this.activeQuickFilterKey,
+      this.onQuickFilterSelected});
 
   @override
   State<MapViewScreen> createState() => _MapViewScreenState();
@@ -78,11 +102,12 @@ class _MapViewScreenState extends State<MapViewScreen> {
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor?.withOpacity(0.5),
-        title: Text(widget.fromHome
+        title: Text(widget.titleOverride ??
+          (widget.fromHome
             ? 'Map View'.tr()
             : widget.items.isNotEmpty && widget.items.first.type == FeedItemType.listing
-                ? widget.items.first.listing!.categoryTitle
-                : 'Map View'.tr()),
+              ? widget.items.first.listing!.categoryTitle
+              : 'Map View'.tr())),
         elevation: 0,
       ),
       body: Stack(
@@ -129,12 +154,13 @@ class _MapViewScreenState extends State<MapViewScreen> {
                               : BitmapDescriptor.defaultMarker)).toSet(),
                   mapType: MapType.normal,
                   initialCameraPosition: CameraPosition(
-                    target: locationData == null
-                        ? widget.items.isNotEmpty
-                            ? LatLng(_getItemLat(widget.items.first), _getItemLng(widget.items.first))
-                            : const LatLng(0, 0)
-                        : LatLng(locationData!.latitude, locationData!.longitude),
-                    zoom: 14.4746,
+                    target: widget.initialFocus ??
+                        (locationData == null
+                            ? widget.items.isNotEmpty
+                                ? LatLng(_getItemLat(widget.items.first), _getItemLng(widget.items.first))
+                                : const LatLng(0, 0)
+                            : LatLng(locationData!.latitude, locationData!.longitude)),
+                    zoom: widget.initialZoom ?? 14.4746,
                   ),
                   onMapCreated: _onMapCreated,
                 );
@@ -142,7 +168,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
           // Custom zoom buttons
           Positioned(
             right: 16,
-            top: 120,
+            top: widget.quickFilters.isEmpty ? 120 : 172,
             child: Column(
               children: [
                 FloatingActionButton(
@@ -201,6 +227,30 @@ class _MapViewScreenState extends State<MapViewScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
           ),
+          if (widget.quickFilters.isNotEmpty)
+            Positioned(
+              left: 12,
+              right: 12,
+              top: 100,
+              child: SizedBox(
+                height: 46,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: widget.quickFilters.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final option = widget.quickFilters[index];
+                    final selected = option.key == widget.activeQuickFilterKey;
+                    return ChoiceChip(
+                      showCheckmark: false,
+                      label: Text(option.label),
+                      selected: selected,
+                      onSelected: (_) => widget.onQuickFilterSelected?.call(option.key),
+                    );
+                  },
+                ),
+              ),
+            ),
           // Search block
           if (_showSearchBlock)
             Positioned(
@@ -409,7 +459,14 @@ class _MapViewScreenState extends State<MapViewScreen> {
       );
     }
 
-    if (locationData != null) {
+    if (widget.initialFocus != null) {
+      _mapController!.moveCamera(
+        CameraUpdate.newLatLngZoom(widget.initialFocus!, widget.initialZoom ?? 12.0),
+      );
+      return;
+    }
+
+    if (locationData != null && widget.followUserLocation) {
       _mapController!.moveCamera(CameraUpdate.newLatLng(
           LatLng(locationData!.latitude, locationData!.longitude)));
     }
@@ -417,7 +474,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
 
   void _getLocation() async {
     locationData = await getCurrentLocation();
-    if (_mapController != null) {
+    if (_mapController != null && widget.followUserLocation && widget.initialFocus == null) {
       _mapController!.moveCamera(CameraUpdate.newLatLng(LatLng(
           locationData?.latitude ?? 0.01, locationData?.longitude ?? 0.01)));
     }
