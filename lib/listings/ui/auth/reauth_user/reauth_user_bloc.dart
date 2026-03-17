@@ -4,7 +4,6 @@ import 'package:bloc/bloc.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/material.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:caribtap/listings/ui/auth/api/authentication_repository.dart';
 import 'package:the_apple_sign_in/the_apple_sign_in.dart' as apple;
 
@@ -12,7 +11,7 @@ part 'reauth_user_event.dart';
 
 part 'reauth_user_state.dart';
 
-enum AuthProviders { password, phone, facebook, apple }
+enum AuthProviders { password, phone, apple }
 
 class ReauthUserBloc extends Bloc<ReauthUserEvent, ReauthUserState> {
   final AuthenticationRepository authenticationRepository;
@@ -39,43 +38,6 @@ class ReauthUserBloc extends Bloc<ReauthUserEvent, ReauthUserState> {
       } else {
         emit(ReauthFailureState(
             errorMessage: 'Password is required to update email'.tr()));
-      }
-    });
-
-    on<FacebookClickEvent>((event, emit) async {
-      try {
-        AccessToken? token;
-        FacebookAuth facebookAuth = FacebookAuth.instance;
-        if (await facebookAuth.accessToken == null) {
-          LoginResult result = await facebookAuth.login();
-          if (result.status == LoginStatus.success) {
-            token = await facebookAuth.accessToken;
-          } else {
-            emit(ReauthFailureState(
-                errorMessage: 'Authentication failed with Facebook.'.tr()));
-          }
-        } else {
-          token = await facebookAuth.accessToken;
-        }
-        if (token != null) {
-          bool success = await authenticationRepository.updateOrDeleteAuthUser(
-              provider,
-              isDelete: true,
-              accessToken: token);
-          if (success) {
-            emit(ReauthSuccessfulSate());
-          } else {
-            emit(ReauthFailureState(
-                errorMessage: 'Couldn\'t verify with Facebook.'.tr()));
-          }
-        } else {
-          emit(ReauthFailureState(
-              errorMessage: 'Couldn\'t verify with Facebook.'.tr()));
-        }
-      } catch (e, s) {
-        debugPrint('FacebookClickEvent $e $s');
-        emit(ReauthFailureState(
-            errorMessage: 'Couldn\'t verify with Facebook.'.tr()));
       }
     });
 

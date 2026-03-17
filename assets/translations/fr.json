@@ -944,5 +944,11 @@
   "Vouched": "Approuve",
   "You vouched": "Vous avez approuve",
   "Community Taps": "Approbations de la communaute",
-  "Tap to vouch for this business": "Touchez pour approuver cette entreprise"
+  "Tap to vouch for this business": "Touchez pour approuver cette entreprise",
+  "store_fulfillment_info_tooltip": "Quelle est la difference ?",
+  "store_fulfillment_info_title": "Livraison vs Expedition",
+  "store_fulfillment_info_body": "Livraison : vous livrez localement vous-meme.\nExpedition : envoi via transporteur avec suivi et frais d'expedition optionnels.",
+  "Delivery Fee (Optional)": "Frais de livraison (optionnel)",
+  "Leave empty or 0 for free delivery": "Laissez vide ou 0 pour une livraison gratuite",
+  "Delivery Fee": "Frais de livraison"
 }

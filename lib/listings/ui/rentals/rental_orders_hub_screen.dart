@@ -6,7 +6,7 @@ import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/rental_booking.dart';
 import 'package:caribtap/listings/services/rental_service.dart';
 import 'package:caribtap/listings/services/entitlement_service.dart';
-import 'package:caribtap/listings/services/pro_gate.dart';
+import 'package:caribtap/listings/utils/subscription_helper.dart';
 import 'package:caribtap/listings/ui/rentals/rental_booking_detail_screen.dart';
 
 class RentalOrdersHubScreen extends StatefulWidget {
@@ -42,19 +42,11 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
   @override
   void initState() {
     super.initState();
-    _showListerTab = ProGate.tierAtLeast(
-      _entitlementService.currentEntitlement,
-      2,
-      isAdmin: widget.currentUser.isAdmin,
-    );
+    _showListerTab = isProfessionalUser(widget.currentUser);
     _tabController = TabController(length: _showListerTab ? 2 : 1, vsync: this);
 
     _entitlementListener = () {
-      final hasAccess = ProGate.tierAtLeast(
-        _entitlementService.currentEntitlement,
-        2,
-        isAdmin: widget.currentUser.isAdmin,
-      );
+      final hasAccess = isProfessionalUser(widget.currentUser);
       if (hasAccess != _showListerTab && mounted) {
         setState(() {
           _showListerTab = hasAccess;
@@ -192,6 +184,12 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
 
               var bookings = snapshot.data ?? [];
 
+              bookings.sort((a, b) {
+                final byCreatedAt = b.createdAt.compareTo(a.createdAt);
+                if (byCreatedAt != 0) return byCreatedAt;
+                return b.id.compareTo(a.id);
+              });
+
               // Filter bookings based on toggle
               final filteredBookings = _showHistory
                   ? bookings
@@ -243,6 +241,11 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                   }
 
                   final searched = searchSnapshot.data ?? const <RentalBooking>[];
+                  searched.sort((a, b) {
+                    final byCreatedAt = b.createdAt.compareTo(a.createdAt);
+                    if (byCreatedAt != 0) return byCreatedAt;
+                    return b.id.compareTo(a.id);
+                  });
                   if (searched.isEmpty) {
                     return _buildEmptyState(
                       Icons.search_off,
@@ -345,11 +348,11 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                 }
               }
 
-              // Oldest request first so listers see requests in FIFO order.
+              // Newest request first so latest bookings appear at the top.
               bookings.sort((a, b) {
-                final byCreatedAt = a.createdAt.compareTo(b.createdAt);
+                final byCreatedAt = b.createdAt.compareTo(a.createdAt);
                 if (byCreatedAt != 0) return byCreatedAt;
-                return a.id.compareTo(b.id);
+                return b.id.compareTo(a.id);
               });
 
               if (bookings.isEmpty) {
@@ -395,9 +398,9 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                   }
 
                   filtered.sort((a, b) {
-                    final byCreatedAt = a.createdAt.compareTo(b.createdAt);
+                    final byCreatedAt = b.createdAt.compareTo(a.createdAt);
                     if (byCreatedAt != 0) return byCreatedAt;
-                    return a.id.compareTo(b.id);
+                    return b.id.compareTo(a.id);
                   });
 
                   final customerIssueBookingIds =
@@ -605,12 +608,28 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     }
   }
 
+  String _localizedBookingStatusForBooking(RentalBooking booking) {
+    if (booking.isOverdue) {
+      return 'Overdue'.tr();
+    }
+
+    return _localizedBookingStatus(booking.status);
+  }
+
+  _StatusStyle _statusStyleForBooking(RentalBooking booking) {
+    if (booking.isOverdue) {
+      return _StatusStyle(Colors.orangeAccent, Icons.warning_amber_rounded);
+    }
+
+    return _statusStyle(booking.status);
+  }
+
   Widget _buildCustomerBookingCard(BuildContext context, RentalBooking booking) {
     final theme = Theme.of(context);
     final surface = theme.colorScheme.surface;
     final surfaceVariant = theme.colorScheme.surfaceVariant;
     final onSurface = theme.colorScheme.onSurface;
-    final statusStyle = _statusStyle(booking.status);
+    final statusStyle = _statusStyleForBooking(booking);
     final canCancel = booking.status == RentalBookingStatus.pending ||
       (booking.status == RentalBookingStatus.confirmed &&
         booking.collectedAt == null);
@@ -639,7 +658,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                       Icon(statusStyle.icon, size: 20, color: statusStyle.color),
                       const SizedBox(width: 8),
                       Text(
-                        _localizedBookingStatus(booking.status),
+                        _localizedBookingStatusForBooking(booking),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: statusStyle.color,
                               fontWeight: FontWeight.bold,
@@ -940,7 +959,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     final surfaceVariant = theme.colorScheme.surfaceVariant;
     final onSurface = theme.colorScheme.onSurface;
     final onSurfaceMuted = onSurface.withOpacity(0.7);
-    final statusStyle = _statusStyle(booking.status);
+    final statusStyle = _statusStyleForBooking(booking);
     
     return FutureBuilder<_RentalItemPreview>(
       future: _fetchRentalItemPreview(booking),
@@ -966,7 +985,7 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                       Icon(statusStyle.icon, size: 20, color: statusStyle.color),
                       const SizedBox(width: 8),
                       Text(
-                        _localizedBookingStatus(booking.status),
+                        _localizedBookingStatusForBooking(booking),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: statusStyle.color,
                               fontWeight: FontWeight.bold,

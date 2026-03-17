@@ -934,5 +934,11 @@
   "You vouched": "You vouched",
   "Community Taps": "Community Taps",
   "Tap to vouch for this business": "Tap to vouch for this business",
-  "Payment Methods": "Payment Methods"
+  "Payment Methods": "Payment Methods",
+  "store_fulfillment_info_tooltip": "What is the difference?",
+  "store_fulfillment_info_title": "Delivery vs Shipping",
+  "store_fulfillment_info_body": "Delivery: you hand-deliver locally.\nShipping: sent by carrier with tracking and optional shipping fee.",
+  "Delivery Fee (Optional)": "Delivery Fee (Optional)",
+  "Leave empty or 0 for free delivery": "Leave empty or 0 for free delivery",
+  "Delivery Fee": "Delivery Fee"
 }

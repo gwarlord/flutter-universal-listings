@@ -59,25 +59,55 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
   }
 
   Future<void> _fetchParticipantDetails() async {
-    List<User> participants = [];
-    if (widget.currentUser != null) {
-      participants.add(widget.currentUser!);
-    }
-    for (var user in widget.otherParticipants) {
-      if (user.profilePictureURL.isEmpty) {
-        final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.userID).get();
-        if (userDoc.exists) {
-          participants.add(User.fromJson(userDoc.data()!));
-        } else {
-          participants.add(user);
-        }
-      } else {
-        participants.add(user);
+    final Map<String, User> participantsById = {};
+
+    void upsertParticipant(User candidate) {
+      final id = candidate.userID.trim();
+      if (id.isEmpty) return;
+      final existing = participantsById[id];
+      if (existing == null) {
+        participantsById[id] = candidate;
+        return;
+      }
+
+      // Prefer the record that has a profile image and a more complete name.
+      final existingNameLen = existing.fullName().trim().length;
+      final candidateNameLen = candidate.fullName().trim().length;
+      final candidateHasBetterProfile =
+          existing.profilePictureURL.isEmpty && candidate.profilePictureURL.isNotEmpty;
+      final candidateHasBetterName = candidateNameLen > existingNameLen;
+
+      if (candidateHasBetterProfile || candidateHasBetterName) {
+        participantsById[id] = candidate;
       }
     }
+
+    if (widget.currentUser != null) {
+      upsertParticipant(widget.currentUser!);
+    }
+
+    for (var user in widget.otherParticipants) {
+      final participantId = user.userID.trim();
+      if (participantId.isEmpty) continue;
+
+      if (user.profilePictureURL.isEmpty) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(participantId)
+            .get();
+        if (userDoc.exists) {
+          upsertParticipant(User.fromJson(userDoc.data()!));
+        } else {
+          upsertParticipant(user);
+        }
+      } else {
+        upsertParticipant(user);
+      }
+    }
+
     if (mounted) {
       setState(() {
-        _fullParticipants = participants;
+        _fullParticipants = participantsById.values.toList();
       });
     }
   }

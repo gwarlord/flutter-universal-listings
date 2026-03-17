@@ -17,6 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:caribtap/listings/main.dart' as listings_app; // Added alias
 import 'package:caribtap/listings/services/deep_link_service.dart';
 import 'package:caribtap/listings/services/deal_notification_service.dart';
+import 'package:caribtap/core/utils/helper.dart' show appScaffoldMessengerKey;
 
 const String _startupStageKey = 'startup_stage';
 const String _startupStageAtKey = 'startup_stage_at';
@@ -347,9 +348,21 @@ String? getPendingProDocToken() {
 
 // Show snackbar
 void showSnackBar(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message)),
-  );
+  final rootMessenger = appScaffoldMessengerKey.currentState;
+  if (rootMessenger != null) {
+    rootMessenger
+      ..removeCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+    return;
+  }
+
+  if (!context.mounted) return;
+  final localMessenger = ScaffoldMessenger.maybeOf(context);
+  if (localMessenger == null) return;
+
+  localMessenger
+    ..removeCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(message)));
 }
 
 // Update notification badge (deprecated - flutter_app_badger removed)
@@ -512,6 +525,14 @@ Future<void> _persistPushTokenIfPossible(String? token) async {
       'fcmTokens': FieldValue.arrayUnion([token]),
     }, SetOptions(merge: true));
     print('✅ [FCM] pushToken + fcmTokens saved for user: ${currentUser.uid}');
+
+    // Subscribe to global topic so admin broadcasts reach this device
+    try {
+      await FirebaseMessaging.instance.subscribeToTopic('all_users');
+      print('✅ [FCM] Subscribed to topic: all_users');
+    } catch (e) {
+      print('⚠️ [FCM] Failed to subscribe to all_users topic: $e');
+    }
   } catch (e) {
     print('⚠️ [FCM] Failed to persist pushToken: $e');
   }

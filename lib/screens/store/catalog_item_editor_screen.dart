@@ -1,8 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:caribtap/constants.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/model/catalog_item.dart';
@@ -39,6 +39,11 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
   late TextEditingController _priceController;
   late TextEditingController _stockQtyController;
   late TextEditingController _categoryController;
+  late TextEditingController _option1NameController;
+  late TextEditingController _option2NameController;
+  late TextEditingController _option3NameController;
+  late TextEditingController _option4NameController;
+  StreamSubscription<List<CatalogItem>>? _catalogItemsSubscription;
 
   bool _isAvailable = true;
   bool _trackStock = false;
@@ -48,8 +53,23 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
   List<File> _newPhotoFiles = [];
   List<File> _newVideoFiles = [];
   List<CatalogVariant> _variants = [];
-  bool _isUploading = false;
   bool _isSaving = false;
+  List<String> _existingCategories = [];
+
+  double _lowestVariantPrice() {
+    if (_variants.isEmpty) {
+      return double.tryParse(_priceController.text.trim()) ?? 0;
+    }
+    return _variants
+        .map((v) => v.price)
+        .reduce((a, b) => a < b ? a : b);
+  }
+
+  void _syncBasePriceFromVariants() {
+    if (_variants.isEmpty) return;
+    final lowest = _lowestVariantPrice();
+    _priceController.text = lowest.toStringAsFixed(2);
+  }
 
   @override
   void initState() {
@@ -61,6 +81,19 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
     _priceController = TextEditingController(text: item?.price.toStringAsFixed(2) ?? '');
     _stockQtyController = TextEditingController(text: item?.stockQty.toString() ?? '0');
     _categoryController = TextEditingController(text: item?.category ?? '');
+    _option1NameController = TextEditingController(
+      text: item?.normalizedOption1Name ?? (item?.hasFirstVariantOption == true ? item!.resolvedOption1Name : ''),
+    );
+    _option2NameController = TextEditingController(
+      text: item?.normalizedOption2Name ?? (item?.hasSecondVariantOption == true ? item!.resolvedOption2Name : ''),
+    );
+    _option3NameController = TextEditingController(
+      text: item?.normalizedOption3Name ?? (item?.hasThirdVariantOption == true ? item!.resolvedOption3Name : ''),
+    );
+    _option4NameController = TextEditingController(
+      text: item?.normalizedOption4Name ?? (item?.hasFourthVariantOption == true ? item!.resolvedOption4Name : ''),
+    );
+    _categoryController.addListener(_onCategoryChanged);
     
     if (item != null) {
       _isAvailable = item.isAvailable;
@@ -69,17 +102,133 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
       _photos = List.from(item.photos);
       _videos = List.from(item.videos);
       _variants = List.from(item.variants);
+      _syncBasePriceFromVariants();
     }
+
+    _catalogItemsSubscription =
+        _storeService.getCatalogItems(widget.listing.id).listen((items) {
+      final categoryByNormalized = <String, String>{};
+      for (final catalogItem in items) {
+        final category = catalogItem.category.trim();
+        final normalized = _normalizeCategory(category);
+        if (category.isEmpty || normalized.isEmpty) continue;
+        categoryByNormalized.putIfAbsent(normalized, () => category);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _existingCategories = categoryByNormalized.values.toList()
+          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      });
+    });
   }
 
   @override
   void dispose() {
+    _catalogItemsSubscription?.cancel();
     _nameController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
     _stockQtyController.dispose();
+    _categoryController.removeListener(_onCategoryChanged);
     _categoryController.dispose();
+    _option1NameController.dispose();
+    _option2NameController.dispose();
+    _option3NameController.dispose();
+    _option4NameController.dispose();
     super.dispose();
+  }
+
+  String? _normalizedText(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  String _variantDisplayLabel(CatalogVariant variant) {
+    final label = variant.displayLabel();
+    return label.isEmpty ? 'Default variant'.tr() : label;
+  }
+
+  Widget _buildVariantImagePreview(String? imageValue, bool dark) {
+    final imagePath = _normalizedText(imageValue ?? '');
+    final preview = Container(
+      width: 72,
+      height: 72,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: dark ? Colors.grey.shade900 : Colors.grey.shade200,
+      ),
+      child: const Icon(Icons.image_outlined, color: Colors.grey),
+    );
+
+    if (imagePath == null) return preview;
+
+    if (imagePath.startsWith('file://')) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.file(
+          File(imagePath.replaceFirst('file://', '')),
+          width: 72,
+          height: 72,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => preview,
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Image.network(
+        imagePath,
+        width: 72,
+        height: 72,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => preview,
+      ),
+    );
+  }
+
+  Future<String?> _pickVariantImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return null;
+    return 'file://${pickedFile.path}';
+  }
+
+  void _onCategoryChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  String _normalizeCategory(String value) {
+    return value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
+  String _canonicalizeCategory(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return '';
+
+    final normalizedInput = _normalizeCategory(trimmed);
+    for (final category in _existingCategories) {
+      if (_normalizeCategory(category) == normalizedInput) {
+        return category;
+      }
+    }
+    return trimmed;
+  }
+
+  List<String> _categorySuggestions() {
+    final query = _categoryController.text.trim();
+    if (query.isEmpty) return _existingCategories.take(6).toList();
+
+    final normalizedQuery = _normalizeCategory(query);
+    return _existingCategories.where((category) {
+      final normalizedCategory = _normalizeCategory(category);
+      return category.toLowerCase().contains(query.toLowerCase()) ||
+          normalizedCategory.contains(normalizedQuery) ||
+          normalizedQuery.contains(normalizedCategory);
+    }).take(6).toList();
   }
 
   InputDecoration _inputDecoration({
@@ -174,7 +323,55 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
                   hint: 'e.g., Appetizers, Beverages, Electronics'.tr(),
                   dark: dark,
                 ),
+                onEditingComplete: () {
+                  final canonical =
+                      _canonicalizeCategory(_categoryController.text);
+                  if (canonical != _categoryController.text) {
+                    _categoryController.text = canonical;
+                    _categoryController.selection = TextSelection.fromPosition(
+                      TextPosition(offset: canonical.length),
+                    );
+                  }
+                  FocusScope.of(context).nextFocus();
+                },
               ),
+              if (_existingCategories.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _categorySuggestions().map((category) {
+                    final isSelected = _categoryController.text.trim() == category;
+                    return ActionChip(
+                      label: Text(category),
+                      onPressed: () {
+                        setState(() {
+                          _categoryController.text = category;
+                          _categoryController.selection = TextSelection.fromPosition(
+                            TextPosition(offset: category.length),
+                          );
+                        });
+                      },
+                      backgroundColor: isSelected
+                          ? Color(cfg.colorPrimary).withOpacity(0.18)
+                          : (dark ? Colors.grey.shade800 : Colors.grey.shade200),
+                      labelStyle: TextStyle(
+                        color: isSelected
+                            ? Color(cfg.colorPrimary)
+                            : (dark ? Colors.white70 : Colors.black87),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Suggestions are based on categories already used in this store.'.tr(),
+                  style: TextStyle(
+                    color: dark ? Colors.white54 : Colors.black54,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
 
               // Item Type Selector
@@ -264,15 +461,15 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
                 style: TextStyle(color: dark ? Colors.white : Colors.black),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: _inputDecoration(
-                  label: 'Price *'.tr(),
+                  label: hasVariants
+                      ? 'Base Price (auto from variants)'.tr()
+                      : 'Price *'.tr(),
                   prefix: getCurrencySymbol(widget.listing.currencyCode),
                   dark: dark,
-                  enabled: !hasVariants,
                 ),
                 validator: (value) {
-                  if (hasVariants) return null;
                   if (value == null || value.trim().isEmpty) {
-                    return 'Price is required'.tr();
+                    return hasVariants ? null : 'Price is required'.tr();
                   }
                   if (double.tryParse(value) == null) {
                     return 'Invalid price'.tr();
@@ -283,7 +480,10 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
               if (hasVariants)
                 Padding(
                   padding: const EdgeInsets.only(top: 4.0),
-                  child: Text('Price is managed in variants.'.tr(), style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  child: Text(
+                    'Using the lowest variant price for item display.'.tr(),
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
                 ),
               const SizedBox(height: 24),
 
@@ -318,14 +518,14 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
                if (hasVariants)
                 Padding(
                   padding: const EdgeInsets.only(top: 4.0),
-                  child: Text('Stock is managed in variants.'.tr(), style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  child: Text('Stock can be managed per Option 1 value.'.tr(), style: TextStyle(color: Colors.grey, fontSize: 12)),
                 ),
               const SizedBox(height: 16),
 
               // Variants Management
               if (_itemType == CatalogItemType.product) ...[
                 Text(
-                  'Variants (e.g., Size, Color)'.tr(),
+                  'Variants'.tr(),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -334,8 +534,48 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Add different options for this product. Each variant can have its own price and stock.'.tr(),
+                  'Name up to four option types for this product. Each variant can have its own values, price, stock, and image.'.tr(),
                   style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _option1NameController,
+                  style: TextStyle(color: dark ? Colors.white : Colors.black),
+                  decoration: _inputDecoration(
+                    label: 'Option 1 Name'.tr(),
+                    hint: 'e.g., Size, Style, Material'.tr(),
+                    dark: dark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _option2NameController,
+                  style: TextStyle(color: dark ? Colors.white : Colors.black),
+                  decoration: _inputDecoration(
+                    label: 'Option 2 Name (Optional)'.tr(),
+                    hint: 'e.g., Color, Finish, Flavor'.tr(),
+                    dark: dark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _option3NameController,
+                  style: TextStyle(color: dark ? Colors.white : Colors.black),
+                  decoration: _inputDecoration(
+                    label: 'Option 3 Name (Optional)'.tr(),
+                    hint: 'e.g., Fit, Pattern'.tr(),
+                    dark: dark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _option4NameController,
+                  style: TextStyle(color: dark ? Colors.white : Colors.black),
+                  decoration: _inputDecoration(
+                    label: 'Option 4 Name (Optional)'.tr(),
+                    hint: 'e.g., Region, Edition'.tr(),
+                    dark: dark,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 _buildVariantList(dark),
@@ -427,8 +667,9 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
           margin: const EdgeInsets.only(bottom: 8),
           color: dark ? Colors.grey.shade900 : Colors.white,
           child: ListTile(
+            leading: _buildVariantImagePreview(variant.imageUrl, dark),
             title: Text(
-              '${variant.size ?? ''}${variant.size != null && variant.color != null ? ' - ' : ''}${variant.color ?? ''}',
+              _variantDisplayLabel(variant),
               style: TextStyle(color: dark ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
             ),
             subtitle: Text(
@@ -448,6 +689,7 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
                   onPressed: () {
                     setState(() {
                       _variants.removeAt(index);
+                      _syncBasePriceFromVariants();
                     });
                   },
                   color: Colors.red,
@@ -463,72 +705,166 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
   Future<void> _showVariantDialog({CatalogVariant? variant, int? index, required bool dark}) async {
     final _variantFormKey = GlobalKey<FormState>();
     final skuController = TextEditingController(text: variant?.sku ?? '');
-    final sizeController = TextEditingController(text: variant?.size ?? '');
-    final colorController = TextEditingController(text: variant?.color ?? '');
+    final option1Controller = TextEditingController(text: variant?.effectiveOption1Value ?? '');
+    final option2Controller = TextEditingController(text: variant?.effectiveOption2Value ?? '');
+    final option3Controller = TextEditingController(text: variant?.effectiveOption3Value ?? '');
+    final option4Controller = TextEditingController(text: variant?.effectiveOption4Value ?? '');
     final priceController = TextEditingController(text: variant?.price.toStringAsFixed(2) ?? '');
     final stockController = TextEditingController(text: variant?.stockQty.toString() ?? '0');
+    String? variantImage = variant?.imageUrl;
+
+    final option1Label = _normalizedText(_option1NameController.text) ?? 'Option 1'.tr();
+    final option2Label = _normalizedText(_option2NameController.text) ?? 'Option 2'.tr();
+    final option3Label = _normalizedText(_option3NameController.text) ?? 'Option 3'.tr();
+    final option4Label = _normalizedText(_option4NameController.text) ?? 'Option 4'.tr();
 
     return showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          backgroundColor: dark ? Colors.grey.shade800 : Colors.white,
-          title: Text(variant == null ? 'Add Variant'.tr() : 'Edit Variant'.tr(), style: TextStyle(color: dark ? Colors.white : Colors.black)),
-          content: Form(
-            key: _variantFormKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(controller: sizeController, style: TextStyle(color: dark ? Colors.white : Colors.black), decoration: _inputDecoration(label: 'Size (e.g., S, M, L)'.tr(), dark: dark)),
-                  const SizedBox(height: 12),
-                  TextFormField(controller: colorController, style: TextStyle(color: dark ? Colors.white : Colors.black), decoration: _inputDecoration(label: 'Color (e.g., Red, Blue)'.tr(), dark: dark)),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: priceController,
-                    style: TextStyle(color: dark ? Colors.white : Colors.black),
-                    decoration: _inputDecoration(label: 'Price *'.tr(), dark: dark),
-                    keyboardType: TextInputType.number,
-                    validator: (v) => (v == null || v.isEmpty || double.tryParse(v) == null) ? 'Required'.tr() : null,
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: dark ? Colors.grey.shade800 : Colors.white,
+              title: Text(variant == null ? 'Add Variant'.tr() : 'Edit Variant'.tr(), style: TextStyle(color: dark ? Colors.white : Colors.black)),
+              content: Form(
+                key: _variantFormKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: option1Controller,
+                        style: TextStyle(color: dark ? Colors.white : Colors.black),
+                        decoration: _inputDecoration(label: '$option1Label *', dark: dark),
+                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Required'.tr() : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: option2Controller,
+                        style: TextStyle(color: dark ? Colors.white : Colors.black),
+                        decoration: _inputDecoration(label: option2Label, dark: dark),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: option3Controller,
+                        style: TextStyle(color: dark ? Colors.white : Colors.black),
+                        decoration: _inputDecoration(label: option3Label, dark: dark),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: option4Controller,
+                        style: TextStyle(color: dark ? Colors.white : Colors.black),
+                        decoration: _inputDecoration(label: option4Label, dark: dark),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: priceController,
+                        style: TextStyle(color: dark ? Colors.white : Colors.black),
+                        decoration: _inputDecoration(label: 'Price *'.tr(), dark: dark),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        validator: (v) => (v == null || v.isEmpty || double.tryParse(v) == null) ? 'Required'.tr() : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: stockController,
+                        style: TextStyle(color: dark ? Colors.white : Colors.black),
+                        decoration: _inputDecoration(label: 'Stock Quantity'.tr(), dark: dark),
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(controller: skuController, style: TextStyle(color: dark ? Colors.white : Colors.black), decoration: _inputDecoration(label: 'SKU (Optional)'.tr(), dark: dark)),
+                      const SizedBox(height: 16),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildVariantImagePreview(variantImage, dark),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Variant Image (Optional)'.tr(),
+                                  style: TextStyle(
+                                    color: dark ? Colors.white : Colors.black,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'This image is used when the customer selects this variant.'.tr(),
+                                  style: TextStyle(
+                                    color: dark ? Colors.white70 : Colors.black54,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    OutlinedButton.icon(
+                                      onPressed: () async {
+                                        final picked = await _pickVariantImage();
+                                        if (picked == null) return;
+                                        setDialogState(() => variantImage = picked);
+                                      },
+                                      icon: const Icon(Icons.photo_library_outlined),
+                                      label: Text('Choose Image'.tr()),
+                                    ),
+                                    if (_normalizedText(variantImage ?? '') != null)
+                                      TextButton(
+                                        onPressed: () => setDialogState(() => variantImage = null),
+                                        child: Text('Remove'.tr()),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: stockController,
-                    style: TextStyle(color: dark ? Colors.white : Colors.black),
-                    decoration: _inputDecoration(label: 'Stock Quantity'.tr(), dark: dark),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(controller: skuController, style: TextStyle(color: dark ? Colors.white : Colors.black), decoration: _inputDecoration(label: 'SKU (Optional)'.tr(), dark: dark)),
-                ],
+                ),
               ),
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel'.tr())),
-            ElevatedButton(
-              onPressed: () {
-                if (_variantFormKey.currentState!.validate()) {
-                  final newVariant = CatalogVariant(
-                    sku: skuController.text.trim(),
-                    size: sizeController.text.trim().isEmpty ? null : sizeController.text.trim(),
-                    color: colorController.text.trim().isEmpty ? null : colorController.text.trim(),
-                    price: double.parse(priceController.text),
-                    stockQty: int.tryParse(stockController.text) ?? 0,
-                  );
-                  setState(() {
-                    if (index != null) {
-                      _variants[index] = newVariant;
-                    } else {
-                      _variants.add(newVariant);
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel'.tr())),
+                ElevatedButton(
+                  onPressed: () {
+                    if (_variantFormKey.currentState!.validate()) {
+                      final option1Value = _normalizedText(option1Controller.text);
+                      final option2Value = _normalizedText(option2Controller.text);
+                      final option3Value = _normalizedText(option3Controller.text);
+                      final option4Value = _normalizedText(option4Controller.text);
+                      final newVariant = CatalogVariant(
+                        sku: skuController.text.trim(),
+                        size: option1Value,
+                        color: option2Value,
+                        option1Value: option1Value,
+                        option2Value: option2Value,
+                        option3Value: option3Value,
+                        option4Value: option4Value,
+                        imageUrl: _normalizedText(variantImage ?? ''),
+                        price: double.parse(priceController.text),
+                        stockQty: int.tryParse(stockController.text) ?? 0,
+                      );
+                      setState(() {
+                        if (index != null) {
+                          _variants[index] = newVariant;
+                        } else {
+                          _variants.add(newVariant);
+                        }
+                        _syncBasePriceFromVariants();
+                      });
+                      Navigator.pop(context);
                     }
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              child: Text('Save'.tr()),
-            ),
-          ],
+                  },
+                  child: Text('Save'.tr()),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -632,20 +968,76 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
         if (_newVideoFiles.indexOf(videoFile) < _newVideoFiles.length - 1) await Future.delayed(const Duration(milliseconds: 500));
       }
 
+      final parsedBasePrice = double.tryParse(_priceController.text.trim()) ?? 0;
+      final effectivePrice = _variants.isNotEmpty
+          ? _lowestVariantPrice()
+          : parsedBasePrice;
+
+      final resolvedVariants = <CatalogVariant>[];
+      for (var index = 0; index < _variants.length; index++) {
+        final variant = _variants[index];
+        final rawImage = _normalizedText(variant.imageUrl ?? '');
+        if (rawImage != null && rawImage.startsWith('file://')) {
+          final imageFile = File(rawImage.replaceFirst('file://', ''));
+          final uploadedImage = await _storeService.uploadCatalogMedia(
+            listingId: widget.listing.id,
+            itemId: itemId,
+            file: imageFile,
+            isVideo: false,
+          );
+          resolvedVariants.add(CatalogVariant(
+            sku: variant.sku,
+            size: variant.effectiveOption1Value,
+            color: variant.effectiveOption2Value,
+            option1Value: variant.effectiveOption1Value,
+            option2Value: variant.effectiveOption2Value,
+            option3Value: variant.effectiveOption3Value,
+            option4Value: variant.effectiveOption4Value,
+            imageUrl: uploadedImage,
+            price: variant.price,
+            stockQty: variant.stockQty,
+          ));
+        } else {
+          resolvedVariants.add(CatalogVariant(
+            sku: variant.sku,
+            size: variant.effectiveOption1Value,
+            color: variant.effectiveOption2Value,
+            option1Value: variant.effectiveOption1Value,
+            option2Value: variant.effectiveOption2Value,
+            option3Value: variant.effectiveOption3Value,
+            option4Value: variant.effectiveOption4Value,
+            imageUrl: rawImage,
+            price: variant.price,
+            stockQty: variant.stockQty,
+          ));
+        }
+
+        if (index < _variants.length - 1) {
+          await Future.delayed(const Duration(milliseconds: 250));
+        }
+      }
+
+      final canonicalCategory =
+          _canonicalizeCategory(_categoryController.text);
+
       final item = CatalogItem(
         id: itemId,
         type: _itemType,
-        category: _categoryController.text.trim(),
+        category: canonicalCategory,
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
-        price: double.tryParse(_priceController.text) ?? 0,
+        price: effectivePrice,
         currencyCode: widget.listing.storeCurrencyCode ?? widget.listing.currencyCode,
         photos: [..._photos, ...uploadedPhotos],
         videos: [..._videos, ...uploadedVideos],
         isAvailable: _isAvailable,
         trackStock: _trackStock,
         stockQty: _trackStock ? int.tryParse(_stockQtyController.text) ?? 0 : 0,
-        variants: _variants,
+        variants: resolvedVariants,
+        option1Name: _normalizedText(_option1NameController.text),
+        option2Name: _normalizedText(_option2NameController.text),
+        option3Name: _normalizedText(_option3NameController.text),
+        option4Name: _normalizedText(_option4NameController.text),
         createdAt: widget.item?.createdAt,
       );
 

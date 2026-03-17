@@ -76,8 +76,6 @@ class SearchRateLimitService {
       case 'pro':
       case 'premium':
         return 50;
-      case 'business':
-        return 9999;
       default:
         return 5;
     }

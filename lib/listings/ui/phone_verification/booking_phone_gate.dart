@@ -42,13 +42,7 @@ Future<bool> checkAndHandleBookingAccess({
     case BookingAccessStatus.requiresPhoneVerification:
       final verified = await _showVerificationGate(context);
       if (verified == true && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Phone verified successfully!'.tr()),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        showSnackBar(context, 'Phone verified successfully!'.tr());
       }
       return verified == true;
 

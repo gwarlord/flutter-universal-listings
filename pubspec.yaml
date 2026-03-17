@@ -25,7 +25,7 @@ dependencies:
   smooth_page_indicator: ^1.2.0+3
   intl_phone_number_input: ^0.7.4
   pin_code_fields: ^8.0.1
-  flutter_facebook_auth: ^7.0.1
+  sms_autofill: ^2.4.1
   google_sign_in: ^6.2.1
   the_apple_sign_in: ^1.1.1
   shared_preferences: ^2.3.2

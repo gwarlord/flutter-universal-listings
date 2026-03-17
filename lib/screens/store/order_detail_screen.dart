@@ -5,15 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:caribtap/main.dart' hide showSnackBar;
 import 'package:caribtap/core/ui/full_screen_image_viewer/full_screen_image_viewer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:caribtap/constants.dart';
 import 'package:caribtap/core/model/user.dart';
 import 'package:caribtap/core/ui/chat/chat/firestore_chat_screen_v2.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/model/catalog_item.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/order_request.dart';
@@ -26,6 +25,7 @@ import 'package:caribtap/listings/services/blocked_user_repository.dart';
 import 'package:caribtap/screens/store/order_chat_helper.dart';
 import 'package:caribtap/screens/store/shipping_tracking_card.dart';
 import 'package:caribtap/screens/store/shipping_tracking_display.dart';
+import 'package:caribtap/listings/listings_module/api/collaboration_api_manager.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 
@@ -1219,7 +1219,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   if (item.variant != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      '${item.variant!['size'] ?? ''}${item.variant!['size'] != null && item.variant!['color'] != null ? ', ' : ''}${item.variant!['color'] ?? ''}',
+                      formatVariantSelectionLabel(item.variant),
                       style: TextStyle(
                         fontSize: 14,
                         color: dark ? Colors.white70 : Colors.black54,
@@ -1525,6 +1525,19 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           actor: widget.currentUser,
         );
       }
+
+      // Log activity (fire-and-forget)
+      final isOwner = widget.viewAsLister;
+      collaborationApiManager.logActivity(
+        listingId: widget.order.listingId,
+        actorUid: widget.currentUser.userID,
+        actorName: widget.currentUser.fullName(),
+        actorRole: isOwner ? 'OWNER' : 'COLLABORATOR',
+        actionType: 'ORDER_STATUS_CHANGED',
+        targetType: 'ORDER',
+        targetId: widget.order.id,
+        note: newStatus.value,
+      );
 
       if (!mounted) return;
 

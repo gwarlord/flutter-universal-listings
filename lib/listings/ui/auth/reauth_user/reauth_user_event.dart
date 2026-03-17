@@ -22,8 +22,6 @@ class PasswordClickEvent extends ReauthUserEvent {
   });
 }
 
-class FacebookClickEvent extends ReauthUserEvent {}
-
 class AppleClickEvent extends ReauthUserEvent {}
 
 class SubmitSmsCodeEvent extends ReauthUserEvent {

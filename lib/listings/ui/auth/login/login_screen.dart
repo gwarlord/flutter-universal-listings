@@ -294,34 +294,6 @@ class _LoginScreen extends State<LoginScreen> {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            label: const Text(
-                              'Facebook Login',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                            ).tr(),
-                            icon: const FaIcon(
-                              FontAwesomeIcons.facebookF,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              backgroundColor: const Color(0xFF1877F2),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14.0),
-                              ),
-                            ),
-                            onPressed: () {
-                              context.read<LoadingCubit>().showLoading(
-                                    context,
-                                    'Logging in, Please wait...'.tr(),
-                                    false,
-                                    Color(colorPrimary),
-                                  );
-                              context.read<AuthenticationBloc>().add(LoginWithFacebookEvent());
-                            },
-                          ),
                           const SizedBox(height: 12),
                           FutureBuilder<bool>(
                             future: apple.TheAppleSignIn.isAvailable(),

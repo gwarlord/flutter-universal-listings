@@ -364,41 +364,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               stream: _assignedListingsStream,
                               builder: (context, snapshot) {
                                 final assignedCount = snapshot.data?.length ?? 0;
-                                if (assignedCount == 0) {
-                                  return const SizedBox.shrink();
-                                }
+                                final hasAssignments = assignedCount > 0;
                                 return Column(
                                   children: [
                                     _modernListTile(
                                       context,
                                       icon: Icons.group_outlined,
-                                      iconColor: Theme.of(context).colorScheme.primary,
-                                      title: 'Assigned Listings (${assignedCount.toString()})'.tr(),
-                                      onTap: () => push(
-                                        context,
-                                        AssignedListingsScreen(
-                                          userId: currentUser.userID,
-                                          onListingSelected: (listingId) async {
-                                            final listing = await listingApiManager.getListing(
-                                              listingID: listingId,
-                                            );
-                                            if (listing == null) {
-                                              if (context.mounted) {
-                                                showSnackBar(context, 'Listing not found'.tr());
-                                              }
-                                              return;
-                                            }
-                                            if (!context.mounted) return;
-                                            await push(
-                                              context,
-                                              ListingDetailsWrappingWidget(
-                                                listing: listing,
-                                                currentUser: currentUser,
-                                              ),
-                                            );
-                                          },
+                                      iconColor: hasAssignments
+                                          ? Theme.of(context).colorScheme.primary
+                                          : Theme.of(context).colorScheme.primary.withOpacity(0.4),
+                                      title: hasAssignments
+                                          ? 'Assigned Listings (${assignedCount.toString()})'.tr()
+                                          : 'Assigned Listings'.tr(),
+                                      subtitle: hasAssignments
+                                          ? null
+                                          : 'No collaborations yet'.tr(),
+                                      trailing: IconButton(
+                                        icon: Icon(
+                                          Icons.info_outline,
+                                          color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
                                         ),
+                                        tooltip: 'What is this?'.tr(),
+                                        onPressed: () => _showCollaborationsInfo(context),
                                       ),
+                                      onTap: hasAssignments
+                                          ? () => push(
+                                              context,
+                                              AssignedListingsScreen(
+                                                userId: currentUser.userID,
+                                                onListingSelected: (listingId) async {
+                                                  final listing = await listingApiManager.getListing(
+                                                    listingID: listingId,
+                                                  );
+                                                  if (listing == null) {
+                                                    if (context.mounted) {
+                                                      showSnackBar(context, 'Listing not found'.tr());
+                                                    }
+                                                    return;
+                                                  }
+                                                  if (!context.mounted) return;
+                                                  await push(
+                                                    context,
+                                                    ListingDetailsWrappingWidget(
+                                                      listing: listing,
+                                                      currentUser: currentUser,
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            )
+                                          : () => _showCollaborationsInfo(context),
                                     ),
                                     const Divider(height: 32, indent: 32, endIndent: 32),
                                   ],
@@ -411,6 +426,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 icon: Icons.history,
                                 iconColor: Theme.of(context).colorScheme.primary,
                                 title: 'Activity Log'.tr(),
+                                trailing: IconButton(
+                                  icon: Icon(
+                                    Icons.info_outline,
+                                    color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                                  ),
+                                  tooltip: 'What is this?'.tr(),
+                                  onPressed: () => _showActivityLogInfo(context),
+                                ),
                                 onTap: _openActivityLogForOwnedListing,
                               ),
                               const Divider(height: 32, indent: 32, endIndent: 32),
@@ -555,6 +578,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               iconColor: Theme.of(context).colorScheme.primary,
                               title: 'Listing Freshness'.tr(),
                               subtitle: 'Manage your active listings'.tr(),
+                              trailing: IconButton(
+                                icon: Icon(
+                                  Icons.info_outline,
+                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                                ),
+                                tooltip: 'What is this?'.tr(),
+                                onPressed: () => _showFreshnessInfo(context),
+                              ),
                               onTap: () => _openFreshnessDashboard(context, currentUser),
                             ),
                             _modernListTile(
@@ -571,7 +602,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               title: 'My Bookings'.tr(),
                               onTap: () => push(context, MyBookingsWrapperWidget(currentUser: currentUser)),
                             ),
-                            if (currentUser.isAdmin || const ['professional', 'premium', 'business'].contains(currentUser.subscriptionTier.toLowerCase()))
+                            if (currentUser.isAdmin || const ['professional', 'premium'].contains(currentUser.subscriptionTier.toLowerCase()))
                               _modernListTile(
                                 context,
                                 icon: Icons.event_note_outlined,
@@ -841,6 +872,117 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             onPressed: () => Navigator.pop(context, true),
             child: Text('Delete Permanently'.tr()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showActivityLogInfo(BuildContext context) {
+    final isDark = isDarkMode(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.history, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 10),
+            Text(
+              'Activity Log'.tr(),
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'The Activity Log records actions taken on your listings by you and any collaborators — such as responding to messages, updating details, managing orders, and more. It helps you keep track of who did what and when.'.tr(),
+          style: TextStyle(
+            color: isDark ? Colors.grey[300] : Colors.grey[700],
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Got it'.tr(), style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCollaborationsInfo(BuildContext context) {
+    final isDark = isDarkMode(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.group_outlined, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 10),
+            Text(
+              'Assigned Listings'.tr(),
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'When another user assigns you to help manage their listing — such as responding to inquiries, managing bookings, or handling orders — it will appear here.'.tr(),
+          style: TextStyle(
+            color: isDark ? Colors.grey[300] : Colors.grey[700],
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Got it'.tr(), style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFreshnessInfo(BuildContext context) {
+    final isDark = isDarkMode(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.schedule_outlined, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 10),
+            Text(
+              'Listing Freshness'.tr(),
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Keep your listings fresh and relevant by regularly reviewing and updating them. The Freshness Dashboard helps you manage when your listings were last updated and reminds you to refresh them so they stay visible to customers and maintain their search ranking.'.tr(),
+          style: TextStyle(
+            color: isDark ? Colors.grey[300] : Colors.grey[700],
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Got it'.tr(), style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
           ),
         ],
       ),

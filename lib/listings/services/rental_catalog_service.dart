@@ -10,6 +10,23 @@ class RentalCatalogService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
+  Future<String> _resolveListingCurrencyCode(String listingId) async {
+    final listingDoc = await _firestore.collection('listings').doc(listingId).get();
+    final data = listingDoc.data();
+
+    final storeCurrency = (data?['storeCurrencyCode'] as String?)?.trim() ?? '';
+    if (storeCurrency.isNotEmpty) {
+      return storeCurrency;
+    }
+
+    final listingCurrency = (data?['currencyCode'] as String?)?.trim() ?? '';
+    if (listingCurrency.isNotEmpty) {
+      return listingCurrency;
+    }
+
+    return 'USD';
+  }
+
   /// Get all rental catalog items for a listing
   Stream<List<RentalCatalogItem>> getRentalCatalogItems(String listingId) {
     return _firestore
@@ -60,8 +77,18 @@ class RentalCatalogService {
     }
 
     final now = Timestamp.now();
+    final listingCurrencyCode = await _resolveListingCurrencyCode(listingId);
+    final incomingCurrency = item.currencyCode.trim();
+    final shouldUseListingCurrency =
+        incomingCurrency.isEmpty ||
+        (incomingCurrency.toUpperCase() == 'USD' &&
+            listingCurrencyCode.toUpperCase() != 'USD');
+
     final itemData = item.copyWith(
       listingId: listingId,
+      currencyCode: shouldUseListingCurrency
+          ? listingCurrencyCode
+          : incomingCurrency,
       updatedAt: now,
       createdAt: item.createdAt ?? now,
     ).toJson();

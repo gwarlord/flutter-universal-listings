@@ -18,8 +18,34 @@ class TierGateService {
   }) : _entitlementService = entitlementService ?? EntitlementService();
 
   ProTier resolveTierFromUser(ListingsUser user) {
+    if (user.isAdmin) return ProTier.tier3;
+
+    // Prefer user profile fields because admin tools and migrations update
+    // subscriptionTier/isSubscriptionActive on the main user document.
+    final profileTier = _resolveTierFromProfile(user);
+    if (profileTier != ProTier.none) {
+      return profileTier;
+    }
+
+    // Fallback to entitlement snapshot when profile values are unavailable.
     final entitlement = _entitlementService.currentEntitlement;
     return resolveTierFromEntitlement(entitlement, isAdmin: user.isAdmin);
+  }
+
+  ProTier _resolveTierFromProfile(ListingsUser user) {
+    if (!user.isSubscriptionActive) {
+      return ProTier.none;
+    }
+
+    switch (user.subscriptionTier.trim().toLowerCase()) {
+      case 'premium':
+        return ProTier.tier3;
+      case 'professional':
+      case 'pro':
+        return ProTier.tier2;
+      default:
+        return ProTier.none;
+    }
   }
 
   ProTier resolveTierFromEntitlement(

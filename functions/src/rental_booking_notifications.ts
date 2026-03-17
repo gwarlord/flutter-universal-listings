@@ -1,8 +1,14 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import sgMail from "@sendgrid/mail";
+import { sendgridKeySecret } from "./common/secrets";
 
 const RETURN_REMINDER_WINDOW_MS = 10 * 60 * 1000; // +/- 10 min
 const RENTAL_EVENT_DEDUP_COLLECTION = "_function_event_dedup";
+const RENTAL_ALERTS_EMAIL_FROM = {
+  email: "bookings@caribtap.com",
+  name: "CaribTap Rentals",
+};
 
 function getUserPushTokens(userData: FirebaseFirestore.DocumentData | undefined): string[] {
   if (!userData) return [];
@@ -519,6 +525,213 @@ export const sendRentalReturnReminders = functions.pubsub
       return null;
     } catch (error) {
       console.error("Error sending rental return reminders", error);
+      return null;
+    }
+  });
+
+/**
+ * Notify listers when an active rental is overdue for return.
+ * Sends one-time push + email per booking (tracked via overdueAlertSentAt).
+ */
+export const sendOverdueRentalAlerts = functions.pubsub
+  .schedule("every 10 minutes")
+  .timeZone("UTC")
+  .onRun(async () => {
+    try {
+      const now = Date.now();
+      const sendgridKey = await sendgridKeySecret.value();
+      if (sendgridKey) {
+        sgMail.setApiKey(sendgridKey);
+      }
+
+      const snapshot = await admin
+        .firestore()
+        .collection("rental_bookings")
+        .where("status", "==", "active")
+        .get();
+
+      let checked = 0;
+      let alertsSent = 0;
+
+      for (const doc of snapshot.docs) {
+        const booking = doc.data();
+        const bookingId = doc.id;
+        const endMillis = booking.endTime?.toDate?.()?.getTime?.();
+
+        if (!endMillis || endMillis > now) {
+          continue;
+        }
+
+        checked++;
+
+        let claimed = false;
+        let claimedBooking: FirebaseFirestore.DocumentData | null = null;
+
+        // Claim once to avoid duplicate sends on overlapping scheduler runs.
+        await admin.firestore().runTransaction(async (tx) => {
+          const freshSnap = await tx.get(doc.ref);
+          if (!freshSnap.exists) {
+            return;
+          }
+
+          const fresh = freshSnap.data() as FirebaseFirestore.DocumentData;
+          const status = (fresh.status || "").toString().toLowerCase();
+          const freshEndMillis = fresh.endTime?.toDate?.()?.getTime?.();
+
+          if (!freshEndMillis || freshEndMillis > now) {
+            return;
+          }
+
+          if (status !== "active") {
+            return;
+          }
+
+          if (fresh.overdueAlertSentAt) {
+            return;
+          }
+
+          if (hasRentalBeenReturned(fresh, status)) {
+            return;
+          }
+
+          tx.update(doc.ref, {
+            overdueAlertSentAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+          claimed = true;
+          claimedBooking = fresh;
+        });
+
+        if (!claimed || !claimedBooking) {
+          continue;
+        }
+
+        const currentBooking = claimedBooking as FirebaseFirestore.DocumentData;
+        const listerId = (currentBooking.listerId as string | undefined) || "";
+        if (!listerId) {
+          continue;
+        }
+
+        const [listerSnap, listingSnap, customerSnap] = await Promise.all([
+          admin.firestore().collection("users").doc(listerId).get(),
+          admin.firestore().collection("listings").doc(currentBooking.listingId || "").get(),
+          admin.firestore().collection("users").doc(currentBooking.customerId || "").get(),
+        ]);
+
+        if (!listerSnap.exists) {
+          continue;
+        }
+
+        const lister = listerSnap.data() || {};
+        const listingTitle = listingSnap.exists
+          ? (listingSnap.data()?.title as string | undefined) || "your rental item"
+          : "your rental item";
+        const customerName = customerSnap.exists
+          ? `${(customerSnap.data()?.firstName as string | undefined) || ""} ${(customerSnap.data()?.lastName as string | undefined) || ""}`.trim() || "a customer"
+          : "a customer";
+
+        const overdueSince = currentBooking.endTime?.toDate?.() || new Date(now);
+        const overdueTimeText = overdueSince.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+        });
+        const overdueDateText = overdueSince.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+
+        let pushSent = false;
+        let emailSent = false;
+
+        if (lister.settings?.allowPushNotifications !== false) {
+          const tokens = getUserPushTokens(lister);
+          if (tokens.length > 0) {
+            const pushMessage: admin.messaging.MulticastMessage = {
+              tokens,
+              notification: {
+                title: "Overdue Return Alert",
+                body: `${listingTitle} is overdue for return (due ${overdueDateText} at ${overdueTimeText}).`,
+              },
+              data: {
+                type: "rental_overdue",
+                bookingId,
+                listingId: (currentBooking.listingId as string) || "",
+                customerId: (currentBooking.customerId as string) || "",
+                overdueSince: overdueSince.toISOString(),
+                click_action: "FLUTTER_NOTIFICATION_CLICK",
+              },
+              android: {
+                priority: "high",
+                notification: {
+                  sound: "default",
+                  channelId: "rental_bookings",
+                },
+              },
+              apns: {
+                payload: {
+                  aps: {
+                    sound: "default",
+                    badge: 1,
+                  },
+                },
+              },
+            };
+
+            const pushResponse = await admin.messaging().sendEachForMulticast(pushMessage);
+            pushSent = pushResponse.successCount > 0;
+          }
+        }
+
+        const listerEmail = (lister.email as string | undefined)?.trim();
+        const emailEnabled = lister.settings?.bookingEmailReminders !== false;
+        if (emailEnabled && listerEmail && sendgridKey) {
+          const html = `
+            <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #1f2937;">
+              <h2 style="margin: 0 0 12px; color: #b91c1c;">Overdue Rental Return</h2>
+              <p style="margin: 0 0 10px;">A rental booking is now overdue for return.</p>
+              <p style="margin: 0 0 10px;"><strong>Listing:</strong> ${listingTitle}</p>
+              <p style="margin: 0 0 10px;"><strong>Customer:</strong> ${customerName}</p>
+              <p style="margin: 0 0 10px;"><strong>Due back:</strong> ${overdueDateText} at ${overdueTimeText}</p>
+              <p style="margin: 0 0 10px;"><strong>Booking ID:</strong> ${bookingId}</p>
+              <p style="margin: 0;">Open Manage Rentals in CaribTap to review and follow up.</p>
+            </div>
+          `;
+
+          try {
+            await sgMail.send({
+              to: listerEmail,
+              from: RENTAL_ALERTS_EMAIL_FROM,
+              subject: `Overdue return alert: ${listingTitle}`,
+              html,
+            });
+            emailSent = true;
+          } catch (emailError) {
+            console.error("Error sending overdue rental email", {
+              bookingId,
+              listerId,
+              emailError,
+            });
+          }
+        }
+
+        if (!pushSent && !emailSent) {
+          // Retry later if no channel succeeded.
+          await doc.ref.update({ overdueAlertSentAt: null });
+          continue;
+        }
+
+        alertsSent++;
+      }
+
+      console.log("Overdue rental alerts processed", {
+        totalActive: snapshot.size,
+        checked,
+        alertsSent,
+      });
+      return null;
+    } catch (error) {
+      console.error("Error processing overdue rental alerts", error);
       return null;
     }
   });

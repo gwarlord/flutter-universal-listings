@@ -13,6 +13,15 @@ abstract class BookingRepository {
   Future<void> cancelBooking({
     required String listingId,
     required String bookingId,
+    String? cancellationReason,
+    String? cancelledBy,
+    String? cancelledByUserId,
+  });
+  Future<void> updateBookingCompletionTag({
+    required String listingId,
+    required String bookingId,
+    required String completionTag,
+    String? completionTaggedByUserId,
   });
   Future<List<DateTime>> getBookedDates({required String listingId});
   Future<List<DateTime>> getBlockedDates({required String listingId});

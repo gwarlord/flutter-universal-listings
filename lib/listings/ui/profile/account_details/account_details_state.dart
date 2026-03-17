@@ -6,6 +6,12 @@ class AccountDetailsInitial extends AccountDetailsState {}
 
 class AccountFieldsRequiredState extends AccountDetailsState {}
 
+class AccountValidationErrorState extends AccountDetailsState {
+  final String message;
+
+  AccountValidationErrorState(this.message);
+}
+
 class ValidFieldsState extends AccountDetailsState {}
 
 class UpdatingDataState extends AccountDetailsState {}

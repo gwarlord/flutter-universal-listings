@@ -955,5 +955,13 @@ service cloud.firestore {
     // Only Cloud Functions and admins can write
     allow create, update, delete: if request.auth.token.serviceAccount == true || isAdmin();
   }
+
+  // Admin Global Notification audit log
+  match /adminNotifications/{notifId} {
+    // Only admins can read the audit history
+    allow read: if isAdmin();
+    // Only Cloud Functions (service account) can write
+    allow create, update, delete: if request.auth.token.serviceAccount == true;
+  }
   }
 }

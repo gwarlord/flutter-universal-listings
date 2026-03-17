@@ -196,7 +196,6 @@ class ListingsUser extends User {
   bool get isFree => _normalizedTier == 'free';
   bool get isProfessional => _normalizedTier == 'professional';
   bool get isPremium => _normalizedTier == 'premium';
-  bool get isBusiness => _normalizedTier == 'business';
 
   bool get isSubscriptionActive {
     // Admins always have active access
@@ -222,7 +221,7 @@ class ListingsUser extends User {
   // Note: Premium users get ALL professional features plus premium-only features
   bool get hasBookingServices {
     if (isAdmin) return true;
-    final paidTier = isProfessional || isPremium || isBusiness;
+    final paidTier = isProfessional || isPremium;
     return paidTier && isSubscriptionActive;
   }
   bool get hasAdvancedAnalytics => (isPremium && isSubscriptionActive) || isAdmin;

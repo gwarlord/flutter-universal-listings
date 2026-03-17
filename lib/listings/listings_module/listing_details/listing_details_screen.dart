@@ -101,20 +101,77 @@ class ListingDetailsScreen extends StatefulWidget {
 class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   Map<String, dynamic>? _storePreview;
 
+  String _normalizeHttpUrl(String url) {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return '';
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    return 'https://$trimmed';
+  }
+
   Future<void> _fetchStorePreview(String url) async {
+    final normalizedUrl = _normalizeHttpUrl(url);
+    if (normalizedUrl.isEmpty) return;
+
+    final parsedUri = Uri.tryParse(normalizedUrl);
+    final host = parsedUri?.host ?? '';
+    final fallbackTitle = host.isNotEmpty ? host.replaceFirst('www.', '') : normalizedUrl;
+    final fallbackImage = parsedUri != null
+        ? '${parsedUri.scheme.isNotEmpty ? parsedUri.scheme : 'https'}://${parsedUri.host}/logo.png'
+        : '';
+
+    Future<Map<String, dynamic>?> tryExtract(String candidateUrl) async {
+      final data = await MetadataFetch.extract(candidateUrl);
+      if (data == null) return null;
+      return {
+        'title': (data.title ?? '').trim(),
+        'description': (data.description ?? '').trim(),
+        'image': (data.image ?? '').trim(),
+      };
+    }
+
     try {
-      final data = await MetadataFetch.extract(url);
-      if (data != null) {
-        setState(() {
-          _storePreview = {
-            'title': data.title,
-            'description': data.description,
-            'image': data.image,
-          };
-        });
+      // First pass: direct URL
+      var preview = await tryExtract(normalizedUrl);
+
+      // Retry with cache-buster if primary extraction is too sparse.
+      final hasUsablePreview = preview != null &&
+          ((preview['title'] as String).isNotEmpty ||
+              (preview['description'] as String).isNotEmpty ||
+              (preview['image'] as String).isNotEmpty);
+
+      if (!hasUsablePreview) {
+        final separator = normalizedUrl.contains('?') ? '&' : '?';
+        final bust = '${DateTime.now().millisecondsSinceEpoch}';
+        preview = await tryExtract('${normalizedUrl}${separator}ct_preview=$bust');
       }
+
+      final merged = <String, dynamic>{
+        'title': (preview?['title'] as String?)?.isNotEmpty == true
+            ? preview!['title']
+            : fallbackTitle,
+        'description': (preview?['description'] as String?)?.isNotEmpty == true
+            ? preview!['description']
+            : '',
+        'image': (preview?['image'] as String?)?.isNotEmpty == true
+            ? preview!['image']
+            : fallbackImage,
+      };
+
+      if (!mounted) return;
+      setState(() {
+        _storePreview = merged;
+      });
     } catch (e) {
-      // Optionally handle error silently or log minimally
+      if (!mounted) return;
+      setState(() {
+        _storePreview = {
+          'title': fallbackTitle,
+          'description': '',
+          'image': fallbackImage,
+        };
+      });
     }
   }
   late ListingModel listing;
@@ -385,7 +442,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
         final subscriptionTier = authorDoc.data()?['subscriptionTier'] as String? ?? 'free';
         setState(() {
           _authorIsPremium = subscriptionTier.toLowerCase() == 'premium' ||
-                            subscriptionTier.toLowerCase() == 'professional' ||
                             (authorDoc.data()?['isAdmin'] as bool? ?? false);
         });
       } else {
@@ -1088,11 +1144,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     Navigator.pop(context);
                     final hasPremium = currentUser.isAdmin ||
                       ((currentUser.isProfessional ||
-                          currentUser.isPremium ||
-                          currentUser.subscriptionTier
-                              .trim()
-                              .toLowerCase() ==
-                            'business') &&
+                          currentUser.isPremium) &&
                             currentUser.isSubscriptionActive);
                     await push(
                       context,
@@ -1394,6 +1446,13 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   }
 
   Widget _buildStoreSection(bool isDark, Color primaryColor) {
+    double effectiveCatalogPrice(CatalogItem item) {
+      if (item.variants.isEmpty) return item.price;
+      return item.variants
+          .map((variant) => variant.price)
+          .reduce((a, b) => a < b ? a : b);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1451,6 +1510,8 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     itemCount: items.length,
                     itemBuilder: (context, index) {
                       final item = items[index];
+                      final displayPrice = effectiveCatalogPrice(item);
+                      final previewImage = item.primaryDisplayImage;
                       return Container(
                         width: 110,
                         margin: EdgeInsets.only(right: 12),
@@ -1462,9 +1523,9 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                               child: Container(
                                 height: 90,
                                 color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                                child: item.photos.isNotEmpty
+                                child: previewImage != null
                                     ? Image.network(
-                                        item.photos.first,
+                                    previewImage,
                                         fit: BoxFit.cover,
                                         width: double.infinity,
                                         errorBuilder: (_, __, ___) => Icon(Icons.image, size: 40),
@@ -1480,7 +1541,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                             ),
                             Text(
-                              '\$${item.price.toStringAsFixed(2)} ${item.currencyCode}',
+                              '\$${displayPrice.toStringAsFixed(2)} ${item.currencyCode}',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: primaryColor,
@@ -1785,7 +1846,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
         CaribbeanCountries.byCode(listing.countryCode)?.name ?? WorldCountries.byCode(listing.countryCode)?.name ?? '';
     final locationLabel = place.isNotEmpty && countryName.isNotEmpty
         ? '$place, $countryName'
-        : (place.isNotEmpty ? place : countryName);
+      : (place.isNotEmpty ? place : countryName);
 
     return Stack(
       children: [
@@ -1802,12 +1863,22 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                 }
                 return GoogleMap(
                   myLocationEnabled: true,
+                  mapType: MapType.normal,
                   gestureRecognizers: {}..add(Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer())),
                   markers: {Marker(markerId: const MarkerId('m1'), position: _placeLocation)},
                   initialCameraPosition: CameraPosition(target: _placeLocation, zoom: 14),
                   onMapCreated: _onMapCreated,
                 );
               },
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => _openLocationSpotlight(locationLabel),
             ),
           ),
         ),
@@ -1886,15 +1957,26 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   }
 
   Future<void> _openInGoogleMaps(String locationLabel) async {
-    final query = locationLabel.trim().isNotEmpty
-        ? locationLabel
-        : '${listing.latitude},${listing.longitude}';
+    final hasCoordinates = listing.latitude != 0.0 && listing.longitude != 0.0;
+    final query = hasCoordinates
+        ? '${listing.latitude},${listing.longitude}'
+        : locationLabel.trim();
     final uri = Uri.parse(
       'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}',
     );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+
+  void _openLocationSpotlight(String locationLabel) {
+    push(
+      context,
+      _LocationSpotlightView(
+        locationLabel: locationLabel,
+        placeLocation: _placeLocation,
+      ),
+    );
   }
 
   Widget _buildDetailsList(bool isDark, Color primaryColor) {
@@ -2347,9 +2429,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
-    if (isDarkMode(context)) {
-      _mapController?.setMapStyle('[{"featureType":"all","elementType":"geometry","stylers":[{"color":"#242f3e"}]}]'); // Simplified for brevity
-    }
   }
 
   Future<void> _openShareOptions() async {
@@ -2545,19 +2624,66 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
   deleteListing(BuildContext blocContext) {
     Navigator.pop(context);
+    bool acknowledgedIrreversible = false;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete Listing?'.tr()),
-        content: Text('Are you sure you want to remove this listing?'.tr()),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('No'.tr())),
-          TextButton(onPressed: () {
-            Navigator.pop(context);
-            context.read<LoadingCubit>().showLoading(context, 'Deleting...'.tr(), false, Color(cfg.colorPrimary));
-            blocContext.read<ListingDetailsBloc>().add(DeleteListingEvent());
-          }, child: Text('Yes'.tr(), style: const TextStyle(color: Colors.red))),
-        ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Delete Listing?'.tr()),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Are you sure you want to remove this listing?'.tr()),
+              const SizedBox(height: 8),
+              Text(
+                'This action is permanent and cannot be reversed.'.tr(),
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              CheckboxListTile(
+                value: acknowledgedIrreversible,
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                title: Text('I understand this cannot be undone.'.tr()),
+                onChanged: (value) {
+                  setState(() {
+                    acknowledgedIrreversible = value ?? false;
+                  });
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'.tr()),
+            ),
+            TextButton(
+              onPressed: acknowledgedIrreversible
+                  ? () {
+                      Navigator.pop(context);
+                      context.read<LoadingCubit>().showLoading(
+                        context,
+                        'Deleting...'.tr(),
+                        false,
+                        Color(cfg.colorPrimary),
+                      );
+                      blocContext
+                          .read<ListingDetailsBloc>()
+                          .add(DeleteListingEvent());
+                    }
+                  : null,
+              child: Text(
+                'Delete'.tr(),
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2682,6 +2808,109 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     try {
       if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) { debugPrint(e.toString()); }
+  }
+}
+
+class _LocationSpotlightView extends StatelessWidget {
+  final String locationLabel;
+  final LatLng placeLocation;
+
+  const _LocationSpotlightView({
+    required this.locationLabel,
+    required this.placeLocation,
+  });
+
+  Future<void> _openInGoogleMaps() async {
+    final hasCoordinates =
+        placeLocation.latitude != 0.0 && placeLocation.longitude != 0.0;
+    final query = hasCoordinates
+        ? '${placeLocation.latitude},${placeLocation.longitude}'
+        : locationLabel.trim();
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}',
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = isDarkMode(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Location Spotlight'.tr()),
+      ),
+      body: Stack(
+        children: [
+          GoogleMap(
+            myLocationEnabled: true,
+            mapType: MapType.normal,
+            markers: {
+              Marker(
+                markerId: const MarkerId('listing_location'),
+                position: placeLocation,
+              ),
+            },
+            initialCameraPosition: CameraPosition(target: placeLocation, zoom: 16),
+          ),
+          Positioned(
+            top: 12,
+            left: 12,
+            right: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: dark ? Colors.black87 : Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.location_on, color: Color(cfg.colorPrimary)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      locationLabel.trim().isNotEmpty
+                          ? locationLabel
+                          : '${placeLocation.latitude}, ${placeLocation.longitude}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: dark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _openInGoogleMaps,
+            icon: const Icon(Icons.open_in_new),
+            label: Text('Open in Google Maps'.tr()),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              backgroundColor: Color(cfg.colorPrimary),
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -3179,29 +3408,64 @@ class FilterDetailsWidget extends StatelessWidget {
     required this.isLast,
   });
 
+  String _formatFilterValue(dynamic value) {
+    if (value is Iterable) {
+      return value.map((v) => v.toString().tr()).join(', ');
+    }
+
+    final raw = value.toString();
+    return raw
+        .split(',')
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .join(', ')
+        .tr();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final label = filter.key.tr();
+    final displayValue = _formatFilterValue(filter.value);
+
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.check_circle_outline, color: colorPrimary),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(Icons.check_circle_outline, color: colorPrimary),
+              ),
               const SizedBox(width: 16),
               Expanded(
-                child: Text(
-                  filter.key.tr(),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    color: isDark ? Colors.white : Colors.black,
-                  ),
-                ),
-              ),
-              Text(
-                filter.value.toString().tr(),
-                style: TextStyle(
-                  color: isDark ? Colors.grey : Colors.grey.shade600,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 6,
+                      child: Text(
+                        displayValue,
+                        textAlign: TextAlign.right,
+                        softWrap: true,
+                        style: TextStyle(
+                          color: isDark ? Colors.grey : Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

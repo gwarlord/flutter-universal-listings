@@ -157,7 +157,13 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
                 itemCount: _feedItems.length,
                 controller: _pageController,
                 onPageChanged: (index) {
-                  _currentIndex = index;
+                  if (mounted) {
+                    setState(() {
+                      _currentIndex = index;
+                    });
+                  } else {
+                    _currentIndex = index;
+                  }
                   _startAutoScroll();
                 },
                 itemBuilder: (context, index) {

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:caribtap/listings/model/attention_state_model.dart';
+import 'package:caribtap/listings/ui/attention/attention_cubit.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/core/ui/chat/chat/chat_screen.dart';
 import 'package:caribtap/core/model/user.dart' as core_user;
@@ -30,6 +32,8 @@ class MyBookingsScreen extends StatefulWidget {
 class _MyBookingsScreenState extends State<MyBookingsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -38,10 +42,19 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     context
         .read<BookingBloc>()
         .add(GetMyBookingsEvent(userId: widget.currentUser.userID));
+    // Clear the my-bookings badge whenever this screen opens.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context
+            .read<AttentionCubit>()
+            .markModuleAsSeen(AttentionModule.myBookings);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _searchController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -151,13 +164,58 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             final cancelledBookings =
                 allBookings.where((b) => b.isCancelled).toList();
 
-            return TabBarView(
-              controller: _tabController,
+            final filteredPendingBookings =
+                pendingBookings.where(_matchesBookingSearch).toList();
+            final filteredConfirmedBookings =
+                confirmedBookings.where(_matchesBookingSearch).toList();
+            final filteredRejectedBookings =
+                rejectedBookings.where(_matchesBookingSearch).toList();
+            final filteredCancelledBookings =
+                cancelledBookings.where(_matchesBookingSearch).toList();
+
+            return Column(
               children: [
-                _buildBookingsList(pendingBookings, 'pending'),
-                _buildBookingsList(confirmedBookings, 'confirmed'),
-                _buildBookingsList(rejectedBookings, 'rejected'),
-                _buildBookingsList(cancelledBookings, 'cancelled'),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value.trim().toLowerCase();
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Search bookings...'.tr(),
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildBookingsList(filteredPendingBookings, 'pending'),
+                      _buildBookingsList(
+                          filteredConfirmedBookings, 'confirmed'),
+                      _buildBookingsList(filteredRejectedBookings, 'rejected'),
+                      _buildBookingsList(
+                          filteredCancelledBookings, 'cancelled'),
+                    ],
+                  ),
+                ),
               ],
             );
           } else if (state is BookingErrorState) {
@@ -188,6 +246,29 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     );
   }
 
+  bool _matchesBookingSearch(dynamic booking) {
+    if (_searchQuery.isEmpty) return true;
+
+    final checkIn = booking.checkInDate is DateTime
+        ? DateFormat('MMM dd, yyyy').format(booking.checkInDate as DateTime)
+        : '';
+    final checkOut = booking.checkOutDate is DateTime
+        ? DateFormat('MMM dd, yyyy').format(booking.checkOutDate as DateTime)
+        : '';
+
+    final haystack = [
+      (booking.listingTitle ?? '').toString(),
+      (booking.listersName ?? '').toString(),
+      (booking.status ?? '').toString(),
+      (booking.guestNotes ?? '').toString(),
+      checkIn,
+      checkOut,
+      (booking.numberOfGuests ?? '').toString(),
+    ].join(' ').toLowerCase();
+
+    return haystack.contains(_searchQuery);
+  }
+
   Widget _buildBookingsList(List<dynamic> bookings, String status) {
     if (bookings.isEmpty) {
       return Center(child: Text(_emptyBookingsLabel(status)));
@@ -205,6 +286,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
   Widget _buildBookingCard(dynamic booking) {
     final dark = isDarkMode(context);
+    final String hostName = (booking.listersName ?? '').toString().trim();
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -247,14 +329,16 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${'Host'.tr()}: ${booking.listersName}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: dark ? Colors.white70 : Colors.black87,
+                      if (hostName.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '${'Host'.tr()}: $hostName',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: dark ? Colors.white70 : Colors.black87,
+                          ),
                         ),
-                      ),
+                      ],
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -374,11 +458,39 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               ),
             ] else if (booking.isConfirmed) ...[
               const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => _showContactHost(booking),
-                  child: Text('Contact host'.tr()),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _showContactHost(booking),
+                      child: Text('Contact host'.tr()),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _cancelBooking(booking),
+                      child: Text('Cancel booking'.tr()),
+                    ),
+                  ),
+                ],
+              ),
+            ] else if (booking.isCancelled && (booking.cancellationReason ?? '').trim().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Cancellation reason'.tr(),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: dark ? Colors.white : Colors.black,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                booking.cancellationReason!.trim(),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: dark ? Colors.white70 : Colors.black87,
                 ),
               ),
             ],
@@ -436,21 +548,47 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   void _cancelBooking(dynamic booking) {
     final bookingBloc = context.read<BookingBloc>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isConfirmed = (booking.status ?? '').toString().toLowerCase() == 'confirmed';
+    final reasonController = TextEditingController();
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: isDark ? const Color(0xFF22242A) : null,
         title: Text(
-          'Cancel booking request?'.tr(),
+          isConfirmed ? 'Cancel confirmed booking?'.tr() : 'Cancel booking request?'.tr(),
           style: TextStyle(
             color: isDark ? Colors.white : Colors.black,
           ),
         ),
-        content: Text(
-          'Are you sure you want to cancel this booking request?'.tr(),
-          style: TextStyle(
-            color: isDark ? Colors.white70 : Colors.black87,
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isConfirmed
+                  ? 'Please let the host know why you are cancelling this confirmed booking.'.tr()
+                  : 'Are you sure you want to cancel this booking request?'.tr(),
+              style: TextStyle(
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+            ),
+            if (isConfirmed) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: reasonController,
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                maxLines: 3,
+                maxLength: 250,
+                decoration: InputDecoration(
+                  labelText: 'Cancellation reason'.tr(),
+                  hintText: 'Enter your reason'.tr(),
+                  labelStyle: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+                  hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ],
         ),
         actions: [
           TextButton(
@@ -464,11 +602,24 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
           ),
           TextButton(
             onPressed: () async {
+              final cancellationReason = reasonController.text.trim();
+              if (isConfirmed && cancellationReason.isEmpty) {
+                showAlertDialog(
+                  context,
+                  'Cancellation reason required'.tr(),
+                  'Please provide a reason so the host can review it.'.tr(),
+                );
+                return;
+              }
+
               Navigator.pop(dialogContext);
               bookingBloc.add(
                 CancelBookingEvent(
                   listingId: booking.listingId,
                   bookingId: booking.id,
+                  cancellationReason: cancellationReason.isEmpty ? null : cancellationReason,
+                  cancelledBy: 'customer',
+                  cancelledByUserId: widget.currentUser.userID,
                 ),
               );
               // Wait a short moment for cancellation to process, then refresh bookings

@@ -1,11 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
+import 'package:caribtap/listings/listings_module/add_listing/add_listing_screen.dart';
 
 class BookingServicesWrapperWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -33,7 +33,6 @@ class _BookingServicesScreenState extends State<BookingServicesScreen> {
   List<ListingModel> _listings = [];
   late ListingsUser currentUser;
   bool isLoading = true;
-  bool _isUpdating = false;
 
   @override
   void initState() {
@@ -69,31 +68,6 @@ class _BookingServicesScreenState extends State<BookingServicesScreen> {
     }
   }
 
-  Future<void> _updateListing(ListingModel listing) async {
-    if (_isUpdating) return;
-    
-    setState(() => _isUpdating = true);
-    
-    try {
-      await listingApiManager.publishListing(listing);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Listing updated successfully'.tr())),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${'Error updating listing'.tr()}: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isUpdating = false);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
@@ -109,13 +83,34 @@ class _BookingServicesScreenState extends State<BookingServicesScreen> {
               ? Center(
                   child: Text('No listings found'.tr()),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _listings.length,
-                  itemBuilder: (context, index) {
-                    final listing = _listings[index];
-                    return _buildListingCard(listing, dark, key: ValueKey(listing.id));
-                  },
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: Text(
+                        'Choose a listing to manage booking settings, services, time blocks, blocked dates, and custom questions.'.tr(),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        itemCount: _listings.length,
+                        itemBuilder: (context, index) {
+                          final listing = _listings[index];
+                          return _buildListingCard(
+                            listing,
+                            dark,
+                            key: ValueKey(listing.id),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
     );
   }
@@ -130,7 +125,6 @@ class _BookingServicesScreenState extends State<BookingServicesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Listing Title
             Text(
               listing.title,
               style: TextStyle(
@@ -139,122 +133,104 @@ class _BookingServicesScreenState extends State<BookingServicesScreen> {
                 color: dark ? Colors.white : Colors.black,
               ),
             ),
-            const SizedBox(height: 16),
-
-            // Require Booking Toggle
-            _buildToggleTile(
-              title: 'Require Booking'.tr(),
-              subtitle: 'Show a "Book Now" button on your listing'.tr(),
-              value: listing.bookingEnabled ?? false,
-              onChanged: _isUpdating ? null : (value) {
-                final updated = listing.copyWith(bookingEnabled: value);
-                _updateListing(updated);
-                setState(() {
-                  _listings = _listings.map((l) => l.id == listing.id ? updated : l).toList();
-                });
-              },
-              dark: dark,
+            const SizedBox(height: 8),
+            Text(
+              listing.bookingEnabled
+                  ? 'Booking is enabled for this listing.'.tr()
+                  : 'Booking is currently disabled for this listing.'.tr(),
+              style: TextStyle(
+                fontSize: 13,
+                color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+              ),
             ),
-
-            if (listing.bookingEnabled ?? false) ...[
-              const SizedBox(height: 12),
-              // Allow Quantity Selection Toggle
-              _buildToggleTile(
-                title: 'Allow Quantity Selection'.tr(),
-                subtitle: 'Customers can select quantity when booking services'.tr(),
-                value: listing.allowQuantitySelection ?? false,
-                onChanged: _isUpdating ? null : (value) {
-                  final updated = listing.copyWith(allowQuantitySelection: value);
-                  _updateListing(updated);
-                  setState(() {
-                    _listings = _listings.map((l) => l.id == listing.id ? updated : l).toList();
-                  });
-                },
-                dark: dark,
-              ),
-              const SizedBox(height: 12),
-              // Use Time Blocks Toggle
-              _buildToggleTile(
-                title: 'Use Time Blocks'.tr(),
-                subtitle: 'Enable hourly time slot bookings instead of full day bookings'.tr(),
-                value: listing.useTimeBlocks ?? false,
-                onChanged: _isUpdating ? null : (value) {
-                  final updated = listing.copyWith(useTimeBlocks: value);
-                  _updateListing(updated);
-                  setState(() {
-                    _listings = _listings.map((l) => l.id == listing.id ? updated : l).toList();
-                  });
-                },
-                dark: dark,
-              ),
-              const SizedBox(height: 12),
-              // Custom Questions Toggle
-              _buildToggleTile(
-                title: 'Custom Booking Questions'.tr(),
-                subtitle: 'Ask customers to answer questions when they book'.tr(),
-                value: listing.enableCustomQuestions,
-                onChanged: _isUpdating ? null : (value) {
-                  final updated = listing.copyWith(enableCustomQuestions: value);
-                  _updateListing(updated);
-                  setState(() {
-                    _listings = _listings.map((l) => l.id == listing.id ? updated : l).toList();
-                  });
-                },
-                dark: dark,
-              ),
-              if (listing.useTimeBlocks ?? false) ...[
-                const SizedBox(height: 12),
-                // Allow Multiple Bookings Per Day Toggle
-                _buildToggleTile(
-                  title: 'Allow Multiple Bookings Per Day'.tr(),
-                  subtitle: 'Multiple customers can book different time slots on the same day'.tr(),
-                  value: listing.allowMultipleBookingsPerDay ?? false,
-                  onChanged: _isUpdating ? null : (value) {
-                    final updated = listing.copyWith(allowMultipleBookingsPerDay: value);
-                    _updateListing(updated);
-                    setState(() {
-                      _listings = _listings.map((l) => l.id == listing.id ? updated : l).toList();
-                    });
-                  },
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildInfoChip(
                   dark: dark,
+                  label: listing.bookingEnabled
+                      ? 'Booking On'.tr()
+                      : 'Booking Off'.tr(),
+                ),
+                _buildInfoChip(
+                  dark: dark,
+                  label:
+                      '${'Services'.tr()}: ${listing.services.length}',
+                ),
+                _buildInfoChip(
+                  dark: dark,
+                  label: listing.allowQuantitySelection
+                      ? 'Quantity Enabled'.tr()
+                      : 'Quantity Disabled'.tr(),
+                ),
+                _buildInfoChip(
+                  dark: dark,
+                  label: listing.useTimeBlocks
+                      ? '${'Time Blocks'.tr()}: ${listing.timeBlocks.length}'
+                      : 'Time Blocks Off'.tr(),
+                ),
+                _buildInfoChip(
+                  dark: dark,
+                  label:
+                      '${'Blocked Dates'.tr()}: ${listing.blockedDates.length}',
+                ),
+                _buildInfoChip(
+                  dark: dark,
+                  label: listing.enableCustomQuestions
+                      ? '${'Questions'.tr()}: ${listing.customQuestions.length}'
+                      : 'Questions Off'.tr(),
                 ),
               ],
-            ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  await push(
+                    context,
+                    EditListingWrappingWidget(
+                      currentUser: currentUser,
+                      listingToEdit: listing,
+                    ),
+                  );
+                  if (mounted) {
+                    _loadListings();
+                  }
+                },
+                icon: const Icon(Icons.edit_outlined),
+                label: Text('Open Booking Settings'.tr()),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(colorPrimary),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildToggleTile({
-    required String title,
-    required String subtitle,
-    required bool value,
-    required Function(bool)? onChanged,
+  Widget _buildInfoChip({
     required bool dark,
+    required String label,
   }) {
-    return SwitchListTile(
-      contentPadding: EdgeInsets.zero,
-      value: value,
-      onChanged: onChanged,
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: dark ? Colors.white : Colors.black,
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: dark ? Colors.grey.shade800 : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(999),
       ),
-      subtitle: Text(
-        subtitle,
+      child: Text(
+        label,
         style: TextStyle(
           fontSize: 12,
           color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
         ),
       ),
-      activeColor: Color(colorPrimary),
-      activeTrackColor: Color(colorPrimary).withOpacity(0.5),
-      inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
-      inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
     );
   }
 }

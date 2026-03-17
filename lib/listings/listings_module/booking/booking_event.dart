@@ -39,10 +39,34 @@ class UpdateBookingStatusEvent extends BookingEvent {
 class CancelBookingEvent extends BookingEvent {
   final String listingId;
   final String bookingId;
+  final String? cancellationReason;
+  final String? cancelledBy;
+  final String? cancelledByUserId;
+  final String? listersUserId;
   
   CancelBookingEvent({
     required this.listingId,
     required this.bookingId,
+    this.cancellationReason,
+    this.cancelledBy,
+    this.cancelledByUserId,
+    this.listersUserId,
+  });
+}
+
+class UpdateBookingCompletionTagEvent extends BookingEvent {
+  final String listingId;
+  final String bookingId;
+  final String completionTag;
+  final String? listersUserId;
+  final String? completionTaggedByUserId;
+
+  UpdateBookingCompletionTagEvent({
+    required this.listingId,
+    required this.bookingId,
+    required this.completionTag,
+    this.listersUserId,
+    this.completionTaggedByUserId,
   });
 }
 

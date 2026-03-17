@@ -94,8 +94,14 @@ class _CartScreenState extends State<CartScreen> {
         : 0.0;
   }
 
+  double get _deliveryCost {
+    return _fulfillmentMethod == FulfillmentMethod.delivery
+        ? widget.listing.storeDeliveryFee
+        : 0.0;
+  }
+
   double get _total {
-    return _subtotal + _shippingCost;
+    return _subtotal + _shippingCost + _deliveryCost;
   }
 
   @override
@@ -467,17 +473,30 @@ class _CartScreenState extends State<CartScreen> {
                 IconButton(
                   onPressed: () async {
                     setState(() {
-                      if (item.qty > 1) {
-                        item.qty--;
-                      } else {
-                        widget.cartItems.remove(item);
-                      }
+                      widget.cartItems.remove(item);
                       widget.onCartUpdated?.call();
                     });
-                    await StoreCartStorage.saveCart(widget.listing.id, widget.cartItems);
+                    await StoreCartStorage.saveCart(
+                        widget.listing.id, widget.cartItems);
                   },
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.redAccent,
+                  ),
+                ),
+                IconButton(
+                  onPressed: item.qty > 1
+                      ? () async {
+                          setState(() {
+                            item.qty--;
+                            widget.onCartUpdated?.call();
+                          });
+                          await StoreCartStorage.saveCart(
+                              widget.listing.id, widget.cartItems);
+                        }
+                      : null,
                   icon: Icon(
-                    item.qty > 1 ? Icons.remove_circle_outline : Icons.delete_outline,
+                    Icons.remove_circle_outline,
                     color: dark ? Colors.white70 : Colors.black54,
                   ),
                 ),
@@ -559,6 +578,32 @@ class _CartScreenState extends State<CartScreen> {
               ),
             ],
           ),
+        ],
+        if (_deliveryCost > 0) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Delivery Fee'.tr(),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: dark ? Colors.white70 : Colors.black54,
+                ),
+              ),
+              Text(
+                _formatCurrency(_deliveryCost, currencyCode),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Color(colorPrimary),
+                ),
+              ),
+            ],
+          ),
+        ],
+        if (_shippingCost > 0 || _deliveryCost > 0) ...[
           const SizedBox(height: 12),
           const Divider(height: 0),
           const SizedBox(height: 12),
@@ -906,7 +951,8 @@ class _CartScreenState extends State<CartScreen> {
           unitPrice: cartItem.unitPrice,
           variant: cartItem.variant,
           itemType: catalogItem?.type.value ?? 'product',
-          photoUrl: catalogItem?.photos.isNotEmpty == true ? catalogItem!.photos.first : null,
+          photoUrl: cartItem.photoUrl ??
+              (catalogItem?.photos.isNotEmpty == true ? catalogItem!.photos.first : null),
         ));
       }
 

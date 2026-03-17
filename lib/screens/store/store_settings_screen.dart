@@ -28,10 +28,12 @@ class StoreSettingsScreen extends StatefulWidget {
 
 class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
   final StoreService _storeService = StoreService();
+  late TextEditingController _deliveryFeeController;
   late TextEditingController _shippingFeeController;
   
   late bool _pickupEnabled;
   late bool _deliveryEnabled;
+  late double _deliveryFee;
   late bool _dineInEnabled;
   late bool _shippingEnabled;
   late double _shippingFee;
@@ -45,10 +47,12 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
     super.initState();
     _pickupEnabled = widget.listing.storePickupEnabled;
     _deliveryEnabled = widget.listing.storeDeliveryEnabled;
+    _deliveryFee = widget.listing.storeDeliveryFee;
     _dineInEnabled = widget.listing.storeDineInEnabled;
     _shippingEnabled = widget.listing.storeShippingEnabled;
     _shippingFee = widget.listing.storeShippingFee;
     _leadTimeHours = widget.listing.storeLeadTimeHours;
+    _deliveryFeeController = TextEditingController(text: _deliveryFee > 0 ? _deliveryFee.toString() : '');
     _shippingFeeController = TextEditingController(text: _shippingFee > 0 ? _shippingFee.toString() : '');
     _checkTableModePermissions();
   }
@@ -90,6 +94,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
 
   @override
   void dispose() {
+    _deliveryFeeController.dispose();
     _shippingFeeController.dispose();
     super.dispose();
   }
@@ -109,6 +114,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
       final updatedListing = widget.listing;
       updatedListing.storePickupEnabled = _pickupEnabled;
       updatedListing.storeDeliveryEnabled = _deliveryEnabled;
+      updatedListing.storeDeliveryFee = _deliveryFee;
       updatedListing.storeDineInEnabled = _dineInEnabled;
       updatedListing.storeShippingEnabled = _shippingEnabled;
       updatedListing.storeShippingFee = _shippingFee;
@@ -119,6 +125,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
         listingId: widget.listing.id,
         pickupEnabled: _pickupEnabled,
         deliveryEnabled: _deliveryEnabled,
+        deliveryFee: _deliveryFee,
         dineInEnabled: _dineInEnabled,
         shippingEnabled: _shippingEnabled,
         shippingFee: _shippingFee,
@@ -137,6 +144,30 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  void _showFulfillmentInfo() {
+    final dark = isDarkMode(context);
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
+        title: Text(
+          'store_fulfillment_info_title'.tr(),
+          style: TextStyle(color: dark ? Colors.white : Colors.black),
+        ),
+        content: Text(
+          'store_fulfillment_info_body'.tr(),
+          style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK'.tr()),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -164,13 +195,33 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Fulfillment Methods Section
-            Text(
-              'Fulfillment Methods'.tr(),
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: dark ? Colors.white : Colors.black,
-              ),
+            Row(
+              children: [
+                Text(
+                  'Fulfillment Methods'.tr(),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: dark ? Colors.white : Colors.black,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: 'store_fulfillment_info_tooltip'.tr(),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: _showFulfillmentInfo,
+                    child: Padding(
+                      padding: const EdgeInsets.all(2),
+                      child: Icon(
+                        Icons.info_outline,
+                        size: 18,
+                        color: dark ? Colors.white70 : Colors.black54,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Text(
@@ -275,6 +326,71 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
               ),
             ),
             const SizedBox(height: 12),
+
+            // Delivery Fee (shown only when delivery is enabled)
+            if (_deliveryEnabled) ...[
+              Card(
+                color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Delivery Fee (Optional)'.tr(),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: dark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _deliveryFeeController,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              style: TextStyle(color: dark ? Colors.white : Colors.black),
+                              onChanged: (value) {
+                                setState(() {
+                                  _deliveryFee = double.tryParse(value) ?? 0.0;
+                                });
+                              },
+                              decoration: InputDecoration(
+                                labelText: 'Fee amount'.tr(),
+                                labelStyle: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                                hintText: '0.00'.tr(),
+                                hintStyle: TextStyle(color: dark ? Colors.white38 : Colors.black26),
+                                border: const OutlineInputBorder(),
+                                filled: true,
+                                fillColor: dark ? Colors.grey.shade800 : Colors.white,
+                                prefixText: '${widget.listing.storeCurrencyCode ?? 'USD'} ',
+                                prefixStyle: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: dark ? Colors.white70 : Colors.black54,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Leave empty or 0 for free delivery'.tr(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
 
             // Dining In Option
             Card(

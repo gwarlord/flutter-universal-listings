@@ -54,18 +54,6 @@ class AuthenticationBloc
             message: 'Login failed, Please try again.'.tr()));
       }
     });
-    on<LoginWithFacebookEvent>((event, emit) async {
-      dynamic result = await authenticationRepository.loginWithFacebook();
-      if (result != null && result is ListingsUser) {
-        user = result;
-        emit(AuthenticationState.authenticated(user!));
-      } else if (result != null && result is String) {
-        emit(AuthenticationState.unauthenticated(message: result));
-      } else {
-        emit(AuthenticationState.unauthenticated(
-            message: 'Facebook login failed, Please try again.'.tr()));
-      }
-    });
     on<LoginWithAppleEvent>((event, emit) async {
       try {
         dynamic result = await authenticationRepository.loginWithApple();

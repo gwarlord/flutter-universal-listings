@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:caribtap/constants.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/listings_module/api/collaboration_api_manager.dart';
@@ -35,6 +36,25 @@ class _CollaboratorsManagementScreenState
   void initState() {
     super.initState();
     _loadCollaborators();
+  }
+
+  String _friendlyError(Object error) {
+    if (error is FirebaseFunctionsException) {
+      if ((error.message ?? '').trim().isNotEmpty) {
+        return error.message!.trim();
+      }
+      switch (error.code) {
+        case 'not-found':
+          return 'User not found';
+        case 'invalid-argument':
+          return 'Please enter a valid collaborator email or UID';
+        case 'permission-denied':
+          return 'You do not have permission for this action';
+        default:
+          return 'Action failed. Please try again.';
+      }
+    }
+    return error.toString();
   }
 
   void _loadCollaborators() async {
@@ -76,7 +96,16 @@ class _CollaboratorsManagementScreenState
               collaboratorEmailOrUid: email,
               permissions: permissions,
             );
-
+            // Log activity (fire-and-forget)
+            collaborationApiManager.logActivity(
+              listingId: widget.listingId,
+              actorUid: widget.currentUserId,
+              actorRole: 'OWNER',
+              actionType: 'COLLABORATOR_ADDED',
+              targetType: 'COLLABORATOR',
+              targetId: uid,
+              targetName: email,
+            );
             if (mounted) {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -87,7 +116,7 @@ class _CollaboratorsManagementScreenState
           } catch (e) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Error: $e')),
+                SnackBar(content: Text('Error: ${_friendlyError(e)}')),
               );
             }
           }
@@ -107,13 +136,24 @@ class _CollaboratorsManagementScreenState
         permissions: newPermissions,
       );
 
+      // Log activity (fire-and-forget)
+      collaborationApiManager.logActivity(
+        listingId: widget.listingId,
+        actorUid: widget.currentUserId,
+        actorRole: 'OWNER',
+        actionType: 'COLLABORATOR_PERMISSIONS_UPDATED',
+        targetType: 'COLLABORATOR',
+        targetId: collaborator.uid,
+        targetName: collaborator.displayName ?? collaborator.uid,
+      );
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Permissions updated')),
       );
       _loadCollaborators();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text('Error: ${_friendlyError(e)}')),
       );
     }
   }
@@ -168,6 +208,17 @@ class _CollaboratorsManagementScreenState
           collaboratorUid: collaborator.uid,
         );
 
+        // Log activity (fire-and-forget)
+        collaborationApiManager.logActivity(
+          listingId: widget.listingId,
+          actorUid: widget.currentUserId,
+          actorRole: 'OWNER',
+          actionType: 'COLLABORATOR_REMOVED',
+          targetType: 'COLLABORATOR',
+          targetId: collaborator.uid,
+          targetName: collaborator.displayName ?? collaborator.uid,
+        );
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Collaborator removed')),
@@ -177,7 +228,7 @@ class _CollaboratorsManagementScreenState
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
+            SnackBar(content: Text('Error: ${_friendlyError(e)}')),
           );
         }
       }

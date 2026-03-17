@@ -2,7 +2,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart';
 
 // Removed chat-related imports for migration to flutter_chat_ui
-const facebookButtonColor = 0xFF415893;
 const usersCollection = 'users';
 const socialFeedsCollection = 'social_feeds';
 const chatFeedLiveCollection = 'chat_feed_live';
@@ -41,14 +40,16 @@ String get googleIosApiKey => _firstNonEmpty([
 String get googlePlacesApiKey => dotenv.env['GOOGLE_PLACES_API_KEY'] ?? '';
 
 String get placesApiKey {
-	if (googlePlacesApiKey.trim().isNotEmpty) return googlePlacesApiKey.trim();
-	if (googleApiKey.trim().isNotEmpty) return googleApiKey.trim();
-	// Places autocomplete/details use HTTP APIs, so platform-restricted SDK
-	// keys are only safe as a last resort fallback.
+	// On iOS, prefer the iOS-restricted key so Places requests include a key
+	// that matches X-Ios-Bundle-Identifier restrictions.
 	if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS &&
 		googleIosApiKey.trim().isNotEmpty) {
 		return googleIosApiKey.trim();
 	}
+	if (googlePlacesApiKey.trim().isNotEmpty) return googlePlacesApiKey.trim();
+	if (googleApiKey.trim().isNotEmpty) return googleApiKey.trim();
+	// Places autocomplete/details use HTTP APIs, so platform-restricted SDK
+	// keys are only safe as a last resort fallback on non-iOS platforms.
 	if (defaultTargetPlatform == TargetPlatform.android &&
 		googleAndroidApiKey.trim().isNotEmpty) {
 		return googleAndroidApiKey.trim();
@@ -57,12 +58,12 @@ String get placesApiKey {
 }
 
 String get placesApiKeySource {
-	if (googlePlacesApiKey.trim().isNotEmpty) return 'GOOGLE_PLACES_API_KEY';
-	if (googleApiKey.trim().isNotEmpty) return 'GOOGLE_API_KEY/GOOGLE_MAPS_API_KEY';
 	if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS &&
 		googleIosApiKey.trim().isNotEmpty) {
-		return 'GOOGLE_IOS_API_KEY fallback';
+		return 'GOOGLE_IOS_API_KEY';
 	}
+	if (googlePlacesApiKey.trim().isNotEmpty) return 'GOOGLE_PLACES_API_KEY';
+	if (googleApiKey.trim().isNotEmpty) return 'GOOGLE_API_KEY/GOOGLE_MAPS_API_KEY';
 	if (defaultTargetPlatform == TargetPlatform.android &&
 		googleAndroidApiKey.trim().isNotEmpty) {
 		return 'GOOGLE_ANDROID_API_KEY fallback';

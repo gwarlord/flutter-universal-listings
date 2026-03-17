@@ -2,6 +2,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:caribtap/listings/model/attention_state_model.dart';
+import 'package:caribtap/listings/ui/attention/attention_cubit.dart';
 import 'package:caribtap/constants.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/core/ui/chat/chat/chat_screen.dart';
@@ -31,6 +33,8 @@ class BookingManagementScreen extends StatefulWidget {
 class _BookingManagementScreenState extends State<BookingManagementScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
   bool _statusUpdated = false;
   DateTime? _selectedFilterDate;
   Set<String> _bookingDateKeys = {};
@@ -42,6 +46,15 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
     context.read<BookingBloc>().add(
           GetReceivedBookingsEvent(listersUserId: widget.currentUser.userID),
         );
+    // Clear the booking-requests badge whenever this screen opens,
+    // regardless of how the user navigated here.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context
+            .read<AttentionCubit>()
+            .markModuleAsSeen(AttentionModule.bookingRequests);
+      }
+    });
   }
 
   Future<_CustomerPreview> _fetchCustomerPreview(dynamic booking) async {
@@ -109,6 +122,7 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
 
   @override
   void dispose() {
+    _searchController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -121,11 +135,22 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
 
   void _updateBookingDateKeys(List<dynamic> bookings) {
     final nextKeys = _collectBookingDateKeys(bookings);
-    if (_bookingDateKeys.length == nextKeys.length && _bookingDateKeys.containsAll(nextKeys)) {
+    final selectedDateKey = _selectedFilterDate != null
+        ? _dateKey(DateUtils.dateOnly(_selectedFilterDate!))
+        : null;
+    final shouldClearSelectedDate =
+        selectedDateKey != null && !nextKeys.contains(selectedDateKey);
+
+    if (_bookingDateKeys.length == nextKeys.length &&
+        _bookingDateKeys.containsAll(nextKeys) &&
+        !shouldClearSelectedDate) {
       return;
     }
     setState(() {
       _bookingDateKeys = nextKeys;
+      if (shouldClearSelectedDate) {
+        _selectedFilterDate = null;
+      }
     });
   }
 
@@ -270,15 +295,95 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
               return const Center(child: CircularProgressIndicator.adaptive());
             } else if (state is ReceivedBookingsLoadedState) {
               final allBookings = _applyDateFilter(state.bookings);
-              final pendingBookings = allBookings.where((b) => b.isPending).toList();
-              final confirmedBookings = allBookings.where((b) => b.isConfirmed).toList();
+              final pendingBookings =
+                  allBookings.where((b) => b.isPending).toList();
+              final confirmedBookings =
+                  allBookings.where((b) => b.isConfirmed).toList();
 
-              return TabBarView(
-                controller: _tabController,
+              final filteredAllBookings =
+                  allBookings.where(_matchesBookingSearch).toList();
+              final filteredPendingBookings =
+                  pendingBookings.where(_matchesBookingSearch).toList();
+              final filteredConfirmedBookings =
+                  confirmedBookings.where(_matchesBookingSearch).toList();
+
+              return Column(
                 children: [
-                  _buildBookingsList(pendingBookings),
-                  _buildBookingsList(confirmedBookings),
-                  _buildBookingsList(allBookings),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: _searchController,
+                          onChanged: (value) {
+                            setState(() {
+                              _searchQuery = value.trim().toLowerCase();
+                            });
+                          },
+                          decoration: InputDecoration(
+                            hintText: 'Search bookings...'.tr(),
+                            prefixIcon: const Icon(Icons.search),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _searchQuery = '');
+                                    },
+                                  )
+                                : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            isDense: true,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        AnimatedBuilder(
+                          animation: _tabController,
+                          builder: (context, _) {
+                            final int tabIndex = _tabController.index;
+                            int count;
+                            String label;
+
+                            if (tabIndex == 0) {
+                              count = filteredPendingBookings.length;
+                              label = 'Pending'.tr();
+                            } else if (tabIndex == 1) {
+                              count = filteredConfirmedBookings.length;
+                              label = 'Confirmed'.tr();
+                            } else {
+                              count = filteredAllBookings.length;
+                              label = 'All'.tr();
+                            }
+
+                            return Text(
+                              _searchQuery.isEmpty
+                                  ? '${count.toString()} ${label.toLowerCase()} ${'bookings'.tr().toLowerCase()}'
+                                  : '${count.toString()} ${'matching'.tr()} ${label.toLowerCase()} ${'bookings'.tr().toLowerCase()}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDarkMode(context)
+                                    ? Colors.white54
+                                    : Colors.black54,
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildBookingsList(filteredPendingBookings),
+                        _buildBookingsList(filteredConfirmedBookings),
+                        _buildBookingsList(filteredAllBookings),
+                      ],
+                    ),
+                  ),
                 ],
               );
             } else if (state is BookingErrorState) {
@@ -308,6 +413,31 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
         ),
       ),
     );
+  }
+
+  bool _matchesBookingSearch(dynamic booking) {
+    if (_searchQuery.isEmpty) return true;
+
+    final checkIn = booking.checkInDate is DateTime
+        ? DateFormat('MMM dd, yyyy').format(booking.checkInDate as DateTime)
+        : '';
+    final checkOut = booking.checkOutDate is DateTime
+        ? DateFormat('MMM dd, yyyy').format(booking.checkOutDate as DateTime)
+        : '';
+
+    final haystack = [
+      (booking.listingTitle ?? '').toString(),
+      (booking.customerName ?? '').toString(),
+      (booking.customerEmail ?? '').toString(),
+      (booking.customerPhone ?? '').toString(),
+      (booking.status ?? '').toString(),
+      (booking.guestNotes ?? '').toString(),
+      checkIn,
+      checkOut,
+      (booking.numberOfGuests ?? '').toString(),
+    ].join(' ').toLowerCase();
+
+    return haystack.contains(_searchQuery);
   }
 
   Future<void> _openBookingDateFilter() async {
@@ -353,12 +483,20 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
                   ),
                 ],
               ),
-              content: _buildCalendarGrid(displayMonth, dark, onSelect: (selected) {
-                setState(() {
-                  _selectedFilterDate = selected;
-                });
-                Navigator.pop(dialogContext);
-              }),
+              content: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 320,
+                  maxHeight: MediaQuery.of(dialogContext).size.height * 0.55,
+                ),
+                child: SingleChildScrollView(
+                  child: _buildCalendarGrid(displayMonth, dark, onSelect: (selected) {
+                    setState(() {
+                      _selectedFilterDate = selected;
+                    });
+                    Navigator.pop(dialogContext);
+                  }),
+                ),
+              ),
               actions: [
                 if (_selectedFilterDate != null)
                   TextButton(
@@ -492,7 +630,7 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
               ),
               const SizedBox(width: 6),
               Text(
-                'Dates with bookings'.tr(),
+                'Dates with active bookings'.tr(),
                 style: TextStyle(fontSize: 11, color: dark ? Colors.white54 : Colors.black45),
               ),
             ],
@@ -520,6 +658,10 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
   Set<String> _collectBookingDateKeys(List<dynamic> bookings) {
     final keys = <String>{};
     for (final booking in bookings) {
+      if (!_isCalendarRelevantBookingStatus(booking)) {
+        continue;
+      }
+
       final start = DateUtils.dateOnly(booking.checkInDate);
       final end = DateUtils.dateOnly(booking.checkOutDate);
       DateTime cursor = start;
@@ -533,6 +675,11 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
 
   String _dateKey(DateTime date) {
     return DateFormat('yyyy-MM-dd').format(date);
+  }
+
+  bool _isCalendarRelevantBookingStatus(dynamic booking) {
+    final status = (booking.status ?? '').toString().toLowerCase();
+    return status == 'pending' || status == 'confirmed';
   }
 
   Widget _buildBookingsList(List<dynamic> bookings) {
@@ -552,6 +699,17 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
 
   Widget _buildBookingCard(dynamic booking) {
     final dark = isDarkMode(context);
+    final String bookingStatus = (booking.status ?? '').toString().toLowerCase();
+    final String completionTag = (booking.completionTag ?? '').toString().trim().toLowerCase();
+    final String cancelledBy = (booking.cancelledBy ?? '').toString().toLowerCase();
+    final String cancelledByUserId = (booking.cancelledByUserId ?? '').toString().trim();
+    final String customerId = (booking.customerId ?? '').toString().trim();
+    final String cancellationReason = (booking.cancellationReason ?? '').toString().trim();
+    final bool isCustomerCancelled =
+        bookingStatus == 'cancelled' &&
+        cancelledBy == 'customer' &&
+        cancelledByUserId.isNotEmpty &&
+        cancelledByUserId == customerId;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -610,6 +768,24 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
                           ),
                         ),
                       ),
+                      if (completionTag.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _getCompletionTagColor(completionTag).withOpacity(0.16),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            _localizedCompletionTag(completionTag),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: _getCompletionTagColor(completionTag),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -746,8 +922,31 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
                 ),
               ),
             ],
-            // ── Block user action (lister only) ─────────────────────────────
-            if ((booking.customerId ?? '').isNotEmpty) ...[
+            if (isCustomerCancelled && cancellationReason.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Customer cancellation reason'.tr(),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: dark ? Colors.white : Colors.black,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                cancellationReason,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: dark ? Colors.white70 : Colors.black87,
+                ),
+              ),
+            ],
+
+            // ── Block user action (lister only, customer-cancelled bookings) ─
+            if (isCustomerCancelled &&
+                customerId.isNotEmpty &&
+                customerId != widget.currentUser.userID &&
+                cancellationReason.isNotEmpty) ...[
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerRight,
@@ -893,6 +1092,28 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
               ),
             ] else if (booking.isConfirmed) ...[
               const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: completionTag == 'completed'
+                          ? null
+                          : () => _tagBookingCompletion(booking, 'completed'),
+                      child: Text('Mark completed'.tr()),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: completionTag == 'no_show'
+                          ? null
+                          : () => _tagBookingCompletion(booking, 'no_show'),
+                      child: Text('Mark no-show'.tr()),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
@@ -937,8 +1158,63 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
     }
   }
 
+  Color _getCompletionTagColor(String tag) {
+    switch (tag.toLowerCase()) {
+      case 'completed':
+        return Colors.green;
+      case 'no_show':
+        return Colors.deepOrange;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
+  String _localizedCompletionTag(String tag) {
+    switch (tag.toLowerCase()) {
+      case 'completed':
+        return 'Completed'.tr();
+      case 'no_show':
+        return 'No-show'.tr();
+      default:
+        return tag;
+    }
+  }
+
+  void _tagBookingCompletion(dynamic booking, String completionTag) {
+    _statusUpdated = true;
+    collaborationApiManager.logActivity(
+      listingId: booking.listingId,
+      actorUid: widget.currentUser.userID,
+      actorName: widget.currentUser.fullName(),
+      actorRole: 'OWNER',
+      actionType: 'BOOKING_STATUS_CHANGED',
+      targetType: 'BOOKING',
+      targetId: booking.id,
+      note: completionTag,
+    );
+    context.read<BookingBloc>().add(
+          UpdateBookingCompletionTagEvent(
+            listingId: booking.listingId,
+            bookingId: booking.id,
+            completionTag: completionTag,
+            completionTaggedByUserId: widget.currentUser.userID,
+            listersUserId: widget.currentUser.userID,
+          ),
+        );
+  }
+
   void _approveBooking(dynamic booking) {
     _statusUpdated = true;
+    collaborationApiManager.logActivity(
+      listingId: booking.listingId,
+      actorUid: widget.currentUser.userID,
+      actorName: widget.currentUser.fullName(),
+      actorRole: 'OWNER',
+      actionType: 'BOOKING_STATUS_CHANGED',
+      targetType: 'BOOKING',
+      targetId: booking.id,
+      note: 'confirmed',
+    );
     context.read<BookingBloc>().add(
           UpdateBookingStatusEvent(
             listingId: booking.listingId,
@@ -990,6 +1266,16 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
               Navigator.pop(dialogContext);
               _statusUpdated = true;
               print('DEBUG: Rejecting booking - listingId: ${booking.listingId}, bookingId: ${booking.id}');
+              collaborationApiManager.logActivity(
+                listingId: booking.listingId,
+                actorUid: widget.currentUser.userID,
+                actorName: widget.currentUser.fullName(),
+                actorRole: 'OWNER',
+                actionType: 'BOOKING_STATUS_CHANGED',
+                targetType: 'BOOKING',
+                targetId: booking.id,
+                note: 'rejected',
+              );
               context.read<BookingBloc>().add(
                     UpdateBookingStatusEvent(
                       listingId: booking.listingId,
@@ -1026,10 +1312,23 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
             onPressed: () {
               Navigator.pop(dialogContext);
               _statusUpdated = true;
+              collaborationApiManager.logActivity(
+                listingId: booking.listingId,
+                actorUid: widget.currentUser.userID,
+                actorName: widget.currentUser.fullName(),
+                actorRole: 'OWNER',
+                actionType: 'BOOKING_STATUS_CHANGED',
+                targetType: 'BOOKING',
+                targetId: booking.id,
+                note: 'cancelled',
+              );
               context.read<BookingBloc>().add(
                     CancelBookingEvent(
                       listingId: booking.listingId,
                       bookingId: booking.id,
+                      cancelledBy: 'lister',
+                      cancelledByUserId: widget.currentUser.userID,
+                      listersUserId: widget.currentUser.userID,
                     ),
                   );
             },

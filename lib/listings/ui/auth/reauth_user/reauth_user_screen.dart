@@ -8,7 +8,6 @@ import 'package:caribtap/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
 import 'package:caribtap/core/ui/loading/loading_cubit.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:the_apple_sign_in/the_apple_sign_in.dart' as apple;
-import 'package:caribtap/constants.dart';
 
 class ReAuthUserScreen extends StatefulWidget {
   final AuthProviders provider;
@@ -64,9 +63,6 @@ class _ReAuthUserScreenState extends State<ReAuthUserScreen> {
                 case AuthProviders.phone:
                   context.read<ReauthUserBloc>().add(
                       VerifyPhoneNumberEvent(phoneNumber: widget.phoneNumber!));
-                  break;
-                case AuthProviders.facebook:
-                  body = buildFacebookButton(context);
                   break;
                 case AuthProviders.apple:
                   body = buildAppleButton(context);
@@ -210,42 +206,6 @@ class _ReAuthUserScreenState extends State<ReAuthUserScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget buildFacebookButton(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: ElevatedButton.icon(
-        label: Text(
-          'Continue with Facebook'.tr(),
-          style: const TextStyle(
-              fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        icon: Image.asset(
-          'assets/images/facebook_logo.png',
-          color: Colors.white,
-          height: 24,
-          width: 24,
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(facebookButtonColor),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-          elevation: 0,
-        ),
-        onPressed: () {
-          context.read<LoadingCubit>().showLoading(
-                context,
-                'Verifying...'.tr(),
-                false,
-                Color(colorPrimary),
-              );
-          context.read<ReauthUserBloc>().add(FacebookClickEvent());
-        },
-      ),
     );
   }
 

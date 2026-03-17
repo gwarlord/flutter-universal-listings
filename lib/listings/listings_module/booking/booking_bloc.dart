@@ -14,6 +14,7 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
     on<GetReceivedBookingsEvent>(_onGetReceivedBookings);
     on<UpdateBookingStatusEvent>(_onUpdateBookingStatus);
     on<CancelBookingEvent>(_onCancelBooking);
+    on<UpdateBookingCompletionTagEvent>(_onUpdateBookingCompletionTag);
     on<GetBookedDatesEvent>(_onGetBookedDates);
   }
 
@@ -124,10 +125,18 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
       await bookingRepository.cancelBooking(
         listingId: event.listingId,
         bookingId: event.bookingId,
+        cancellationReason: event.cancellationReason,
+        cancelledBy: event.cancelledBy,
+        cancelledByUserId: event.cancelledByUserId,
       );
 
-      // We don't refresh the list here because MyBookingsScreen manually calls GetMyBookingsEvent
-      // and a customer might not have permission to read the listing's full booking collection.
+      final listerId = (event.listersUserId ?? '').trim();
+      if (listerId.isNotEmpty) {
+        final receivedBookings = await bookingRepository.getReceivedBookings(
+          listersUserId: listerId,
+        );
+        emit(ReceivedBookingsLoadedState(bookings: receivedBookings));
+      }
     } catch (e) {
       emit(BookingErrorState(errorMessage: e.toString()));
     }
@@ -164,6 +173,31 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
         // On error, still allow booking with empty dates
         emit(BookedDatesLoadedState(bookedDates: const []));
       }
+    }
+  }
+
+  Future<void> _onUpdateBookingCompletionTag(
+    UpdateBookingCompletionTagEvent event,
+    Emitter<BookingState> emit,
+  ) async {
+    emit(const BookingLoading());
+    try {
+      await bookingRepository.updateBookingCompletionTag(
+        listingId: event.listingId,
+        bookingId: event.bookingId,
+        completionTag: event.completionTag,
+        completionTaggedByUserId: event.completionTaggedByUserId,
+      );
+
+      final listerId = (event.listersUserId ?? '').trim();
+      if (listerId.isNotEmpty) {
+        final receivedBookings = await bookingRepository.getReceivedBookings(
+          listersUserId: listerId,
+        );
+        emit(ReceivedBookingsLoadedState(bookings: receivedBookings));
+      }
+    } catch (e) {
+      emit(BookingErrorState(errorMessage: e.toString()));
     }
   }
 }

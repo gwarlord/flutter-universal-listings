@@ -410,6 +410,7 @@ class _MyListingCardState extends State<MyListingCard> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
+            flex: 6,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -512,173 +513,171 @@ class _MyListingCardState extends State<MyListingCard> {
               ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            widget.listing.title,
-            maxLines: 1,
-            style: TextStyle(
-                fontSize: 16,
-                color: isDarkMode(context)
-                    ? Colors.grey.shade400
-                    : Colors.grey.shade800,
-                fontWeight: FontWeight.bold),
-          ),
-          // Freshness Status Badge
-          if (!isSuspended && widget.listing.freshness.enabled && !widget.listing.freshness.exempt)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: FreshnessStatusBadge(listing: widget.listing, compact: true),
-            ),
-          if (!isSuspended && showExpiryBadge)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.orange, width: 1),
-                ),
-                child: Text(
-                  'Expires in $daysRemaining days'.tr(),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.orange,
-                  ),
-                ),
-              ),
-            ),
-          if (!isSuspended && isHiddenExpired)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.red, width: 1),
-                ),
-                child: Text(
-                  'Hidden (expired)'.tr(),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.red,
-                  ),
-                ),
-              ),
-            ),
-          if (isSuspended && !suspensionRequested)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                ),
-                icon: Icon(Icons.feedback, size: 16),
-                label: Text('Request Unsuspension'.tr(), style: TextStyle(fontSize: 11)),
-                onPressed: _showRequestUnsuspensionDialog,
-              ),
-            ),
-          if (!isSuspended) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4.0),
-              child: Text(widget.listing.place, maxLines: 1),
-            ),
-            if (isHiddenExpired)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(colorPrimary),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                  ),
-                  icon: _isRefreshing
-                      ? const SizedBox(
-                          height: 14,
-                          width: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.refresh, size: 16),
-                  label: Text('Reactivate / Reset'.tr(),
-                      style: const TextStyle(fontSize: 11)),
-                  onPressed: _isRefreshing
-                      ? null
-                      : () => _refreshFreshness(
-                            'Listing reactivated and refreshed',
-                          ),
-                ),
-              ),
-            if (!isHiddenExpired && showExpiryBadge)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    side: BorderSide(color: Color(colorPrimary)),
-                  ),
-                  icon: _isRefreshing
-                      ? const SizedBox(
-                          height: 14,
-                          width: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.refresh, size: 16),
-                  label: Text('Reset counter'.tr(),
-                      style: const TextStyle(fontSize: 11)),
-                  onPressed: _isRefreshing
-                      ? null
-                      : () => _refreshFreshness('Listing freshness refreshed'),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const SizedBox(height: 2),
+          Expanded(
+            flex: 5,
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Text(
-                      widget.listing.hidden ? 'Hidden'.tr() : 'Visible'.tr(),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: widget.listing.hidden
-                            ? Colors.orange
-                            : Colors.green,
-                        fontWeight: FontWeight.w500,
+                  Text(
+                    widget.listing.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 16,
+                        color: isDarkMode(context)
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade800,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  // Freshness Status Badge
+                  if (!isSuspended && widget.listing.freshness.enabled && !widget.listing.freshness.exempt)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: FreshnessStatusBadge(listing: widget.listing, compact: true),
+                    ),
+                  // In compact card mode, the FreshnessStatusBadge already shows
+                  // remaining days. Avoid rendering a duplicate expiry chip.
+                  if (!isSuspended && isHiddenExpired)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.red, width: 1),
+                        ),
+                        child: Text(
+                          'Hidden (expired)'.tr(),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.red,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  Transform.scale(
-                    scale: 0.8,
-                    child: Switch(
-                      value: !widget.listing.hidden,
-                      activeColor: Color(colorPrimary),
-                      activeTrackColor: Color(colorPrimary).withOpacity(0.5),
-                      inactiveThumbColor: isDarkMode(context) 
-                          ? Colors.grey.shade600 
-                          : Colors.grey.shade400,
-                      inactiveTrackColor: isDarkMode(context) 
-                          ? Colors.grey.shade800 
-                          : Colors.grey.shade300,
-                      onChanged: (value) => context
-                          .read<MyListingsBloc>()
-                          .add(ListingHiddenToggled(
-                            listing: widget.listing,
-                            setHidden: !value,
-                          )),
+                  if (isSuspended && !suspensionRequested)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                        ),
+                        icon: Icon(Icons.feedback, size: 16),
+                        label: Text('Request Unsuspension'.tr(), style: TextStyle(fontSize: 11)),
+                        onPressed: _showRequestUnsuspensionDialog,
+                      ),
                     ),
-                  ),
+                  if (!isSuspended) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2.0),
+                      child: Text(
+                        widget.listing.place,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isHiddenExpired)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(colorPrimary),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                          ),
+                          icon: _isRefreshing
+                              ? const SizedBox(
+                                  height: 14,
+                                  width: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.refresh, size: 16),
+                          label: Text('Reactivate / Reset'.tr(),
+                              style: const TextStyle(fontSize: 11)),
+                          onPressed: _isRefreshing
+                              ? null
+                              : () => _refreshFreshness(
+                                    'Listing reactivated and refreshed',
+                                  ),
+                        ),
+                      ),
+                    if (!isHiddenExpired && showExpiryBadge)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            side: BorderSide(color: Color(colorPrimary)),
+                          ),
+                          icon: _isRefreshing
+                              ? const SizedBox(
+                                  height: 14,
+                                  width: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.refresh, size: 16),
+                          label: Text('Reset counter'.tr(),
+                              style: const TextStyle(fontSize: 11)),
+                          onPressed: _isRefreshing
+                              ? null
+                              : () => _refreshFreshness('Listing freshness refreshed'),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              widget.listing.hidden ? 'Hidden'.tr() : 'Visible'.tr(),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: widget.listing.hidden
+                                    ? Colors.orange
+                                    : Colors.green,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          Transform.scale(
+                            scale: 0.8,
+                            child: Switch(
+                              value: !widget.listing.hidden,
+                              activeColor: Color(colorPrimary),
+                              activeTrackColor: Color(colorPrimary).withOpacity(0.5),
+                              inactiveThumbColor: isDarkMode(context)
+                                  ? Colors.grey.shade600
+                                  : Colors.grey.shade400,
+                              inactiveTrackColor: isDarkMode(context)
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade300,
+                              onChanged: (value) => context
+                                  .read<MyListingsBloc>()
+                                  .add(ListingHiddenToggled(
+                                    listing: widget.listing,
+                                    setHidden: !value,
+                                  )),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
-          ],
+          ),
         ],
       ),
     );

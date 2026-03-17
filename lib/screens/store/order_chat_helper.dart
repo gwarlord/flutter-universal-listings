@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:caribtap/constants.dart';
-import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/model/catalog_item.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/order_request.dart';
@@ -52,8 +52,9 @@ class OrderChatHelper {
   }) async {
     final itemsText = order.items
         .map((item) {
+          final variantLabel = formatVariantSelectionLabel(item.variant);
           final variantText = item.variant != null
-              ? ' (${item.variant!['size'] ?? ''}${item.variant!['size'] != null && item.variant!['color'] != null ? ', ' : ''}${item.variant!['color'] ?? ''})'
+              ? ' (${variantLabel.isEmpty ? 'Default' : variantLabel})'
               : '';
           return '• ${item.name}$variantText x${item.qty} @ ${_formatCurrency(item.unitPrice, order.currencyCode)}';
         })

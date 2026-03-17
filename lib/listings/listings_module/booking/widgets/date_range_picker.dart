@@ -128,7 +128,19 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
             ],
           ),
         ),
+        _buildWeekdayHeader(isDarkMode),
         _buildCalendar(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Text(
+            'Tip: Tap the same day twice to book a single day.'.tr(),
+            style: TextStyle(
+              fontSize: 12,
+              color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
         if (_checkInDate != null) ...[
           Padding(
             padding: const EdgeInsets.all(16),
@@ -164,8 +176,8 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
     final firstDay = DateTime(_displayedMonth.year, _displayedMonth.month, 1);
     final lastDay = DateTime(_displayedMonth.year, _displayedMonth.month + 1, 0);
     final daysInMonth = lastDay.day;
-    final startingDayOfWeek = firstDay.weekday;
-    final totalCells = startingDayOfWeek - 1 + daysInMonth;
+    final startingDayOffset = firstDay.weekday % 7;
+    final totalCells = startingDayOffset + daysInMonth;
 
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -179,11 +191,11 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
       padding: const EdgeInsets.all(16),
       itemBuilder: (context, index) {
         // Empty cells before first day of month
-        if (index < startingDayOfWeek - 1) {
+        if (index < startingDayOffset) {
           return const SizedBox.shrink();
         }
 
-        final day = index - (startingDayOfWeek - 1) + 1;
+        final day = index - startingDayOffset + 1;
         final date = DateTime(_displayedMonth.year, _displayedMonth.month, day);
         
         final isBooked = _isDateBooked(date);
@@ -229,6 +241,34 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildWeekdayHeader(bool isDarkMode) {
+    const labels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+      child: Row(
+        children: labels
+            .map(
+              (label) => Expanded(
+                child: Center(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: isDarkMode
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade700,
+                    ),
+                  ),
+                ),
+              ),
+            )
+            .toList(),
+      ),
     );
   }
 }

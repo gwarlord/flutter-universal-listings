@@ -315,6 +315,40 @@ class CollaborationFirebase extends CollaborationRepository {
     return controller.stream;
   }
 
+  @override
+  Future<void> logActivity({
+    required String listingId,
+    required String actorUid,
+    String? actorName,
+    required String actorRole,
+    required String actionType,
+    required String targetType,
+    required String targetId,
+    String? targetName,
+    String? note,
+  }) async {
+    try {
+      await _firestore
+          .collection('listings')
+          .doc(listingId)
+          .collection('activity')
+          .add({
+        'actorUid': actorUid,
+        'actorName': actorName,
+        'actorRole': actorRole,
+        'actionType': actionType,
+        'targetType': targetType,
+        'targetId': targetId,
+        if (targetName != null) 'targetName': targetName,
+        'listingId': listingId,
+        if (note != null) 'note': note,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e, s) {
+      debugPrint('CollaborationFirebase.logActivity error: $e $s');
+    }
+  }
+
   // ========================================================================
   // ASSIGNED LISTINGS
   // ========================================================================

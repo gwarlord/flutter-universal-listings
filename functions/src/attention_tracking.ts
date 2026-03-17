@@ -345,7 +345,7 @@ export const onBookingCreatedUpdateAttention = functions.firestore
     if (!booking) return null;
 
     const bookingId = context.params.bookingId;
-    const listerId = booking.listersUserId;
+    const listerId = booking.listersUserId || booking.listerId || booking.authorID;
 
     functions.logger.info("🆕 Updating booking requests attention", {
       bookingId,
@@ -379,7 +379,11 @@ export const onBookingCreatedUpdateAttention = functions.firestore
           const collaborators = listingData?.collaborators || [];
 
           for (const collab of collaborators) {
-            if (collab.canManageBookings === true) {
+            const canManageBookings =
+              collab?.permissions?.manageBookings === true ||
+              collab?.canManageBookings === true;
+
+            if (canManageBookings) {
               const collabAttentionRef = db
                 .collection("users")
                 .doc(collab.userId)

@@ -13,7 +13,9 @@ import 'package:caribtap/listings/ui/auth/phone_auth/code_input/code_input_scree
 import 'package:caribtap/listings/ui/auth/phone_auth/number_input/phone_number_input_bloc.dart';
 import 'package:caribtap/listings/ui/container/container_screen.dart';
 import 'package:caribtap/core/ui/loading/loading_cubit.dart';
+import 'package:caribtap/core/utils/phone_number_utils.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:caribtap/constants.dart';
 
@@ -29,11 +31,47 @@ class PhoneNumberInputScreen extends StatefulWidget {
 }
 
 class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
+  static const String _lastPhoneCountryCodeKey = 'auth_phone_last_country_code';
+
   final GlobalKey<FormState> _key = GlobalKey();
   String? firstName, lastName, _phoneNumber;
   bool _isPhoneValid = false;
   AutovalidateMode _validate = AutovalidateMode.disabled;
   bool acceptEULA = true;
+  PhoneNumber _initialPhoneNumber = PhoneNumber(isoCode: 'US');
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveInitialCountryPrediction();
+  }
+
+  Future<void> _resolveInitialCountryPrediction() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = (prefs.getString(_lastPhoneCountryCodeKey) ?? '').trim().toUpperCase();
+
+    final deviceCountry =
+        (WidgetsBinding.instance.platformDispatcher.locale.countryCode ?? '')
+            .trim()
+            .toUpperCase();
+
+    final predictedCountry = saved.isNotEmpty
+        ? saved
+        : (deviceCountry.isNotEmpty ? deviceCountry : 'US');
+
+    if (!mounted) return;
+    setState(() {
+      _initialPhoneNumber = PhoneNumber(isoCode: predictedCountry);
+    });
+  }
+
+  Future<void> _savePredictedCountry(String? isoCode) async {
+    final normalized = (isoCode ?? '').trim().toUpperCase();
+    if (normalized.length != 2) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastPhoneCountryCodeKey, normalized);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -340,8 +378,12 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
                                       child: InternationalPhoneNumberInput(
                                         autoFocus: widget.isLogin,
                                         autoFocusSearch: true,
-                                        onInputChanged: (PhoneNumber number) =>
-                                            _phoneNumber = number.phoneNumber,
+                                        initialValue: _initialPhoneNumber,
+                                        onInputChanged: (PhoneNumber number) {
+                                          _phoneNumber = normalizePhoneForVerification(
+                                              number.phoneNumber ?? '');
+                                          _savePredictedCountry(number.isoCode);
+                                        },
                                         onInputValidated: (bool value) =>
                                             _isPhoneValid = value,
                                         ignoreBlank: true,
@@ -366,8 +408,9 @@ class _PhoneNumberInputScreenState extends State<PhoneNumberInputScreen> {
                                           borderSide: BorderSide.none,
                                         ),
                                         selectorConfig: const SelectorConfig(
-                                            selectorType:
-                                                PhoneInputSelectorType.DIALOG),
+                                          selectorType:
+                                              PhoneInputSelectorType.DIALOG,
+                                        ),
                                       ),
                                     ),
                                   ),

@@ -8,6 +8,7 @@ import '../../model/rental_catalog_item.dart';
 import '../../services/rental_service.dart';
 import '../../services/rental_catalog_service.dart';
 import '../../services/blocked_user_repository.dart';
+import 'package:caribtap/listings/listings_module/api/collaboration_api_manager.dart';
 
 class RentalBookingDetailScreen extends StatefulWidget {
   final RentalBooking booking;
@@ -1057,6 +1058,18 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
         reason: reason.trim(),
       );
 
+      // Log activity (fire-and-forget)
+      final actorUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      collaborationApiManager.logActivity(
+        listingId: booking.listingId,
+        actorUid: actorUid,
+        actorRole: actorUid == booking.listerId ? 'OWNER' : 'COLLABORATOR',
+        actionType: 'RENTAL_STATUS_CHANGED',
+        targetType: 'RENTAL',
+        targetId: booking.id,
+        note: 'cancelled',
+      );
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Status updated'.tr())),
@@ -1181,6 +1194,18 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
         newStatus: newStatus,
         returnedInGoodCondition: returnedInGoodCondition,
         returnIssueNote: returnIssueNote,
+      );
+
+      // Log activity (fire-and-forget)
+      final actorUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      collaborationApiManager.logActivity(
+        listingId: booking.listingId,
+        actorUid: actorUid,
+        actorRole: actorUid == booking.listerId ? 'OWNER' : 'COLLABORATOR',
+        actionType: 'RENTAL_STATUS_CHANGED',
+        targetType: 'RENTAL',
+        targetId: booking.id,
+        note: newStatus.name,
       );
 
       if (!mounted) return;

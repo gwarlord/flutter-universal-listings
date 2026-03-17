@@ -1,5 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
+import 'package:caribtap/core/utils/phone_number_utils.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
 import 'package:caribtap/listings/ui/profile/api/firebase/profile_firebase.dart';
@@ -26,15 +27,27 @@ class AccountDetailsBloc
       }
     });
     on<TryToSubmitDataEvent>((event, emit) async {
+      final normalizedPhone = await normalizePhoneForCountry(
+        event.phoneNumber,
+        event.countryCode,
+      );
+      if (normalizedPhone == null) {
+        emit(AccountValidationErrorState(
+          phoneValidationMessage(event.countryCode),
+        ));
+        return;
+      }
+
       if (profileRepository is ProfileFirebaseUtils) {
         AuthProviders? authProvider =
             await (profileRepository as ProfileFirebaseUtils)
                 .getUserAuthProvider();
         if (authProvider == AuthProviders.phone &&
-            currentUser.phoneNumber != event.phoneNumber) {
+            normalizePhoneForVerification(currentUser.phoneNumber) !=
+                normalizedPhone) {
           emit(ReauthRequiredState(
             authProvider: authProvider!,
-            data: event.phoneNumber,
+            data: normalizedPhone,
           ));
         } else if (authProvider == AuthProviders.password &&
             currentUser.email != event.emailAddress) {
@@ -48,7 +61,7 @@ class AccountDetailsBloc
             firstName: event.firstName,
             lastName: event.lastName,
             emailAddress: event.emailAddress,
-            phoneNumber: event.phoneNumber,
+            phoneNumber: normalizedPhone,
             countryCode: event.countryCode,
           ));
         }
@@ -58,17 +71,28 @@ class AccountDetailsBloc
           firstName: event.firstName,
           lastName: event.lastName,
           emailAddress: event.emailAddress,
-          phoneNumber: event.phoneNumber,
+          phoneNumber: normalizedPhone,
           countryCode: event.countryCode,
         ));
       }
     });
     on<UpdateUserDataEvent>((event, emit) async {
+      final previousPhone = normalizePhoneForVerification(currentUser.phoneNumber);
+      final nextPhone = normalizePhoneForVerification(event.phoneNumber);
+      final phoneChanged = previousPhone != nextPhone;
+
       currentUser.firstName = event.firstName;
       currentUser.lastName = event.lastName;
       currentUser.email = event.emailAddress;
       currentUser.phoneNumber = event.phoneNumber;
       currentUser.countryCode = event.countryCode;
+
+      // Trust rule: a changed phone number must be re-verified.
+      if (phoneChanged) {
+        currentUser.phoneVerified = false;
+        currentUser.phoneVerifiedAt = null;
+      }
+
       await profileRepository.updateCurrentUser(currentUser);
       emit(UserDataUpdatedState(updatedUser: currentUser));
     });

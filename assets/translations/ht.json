@@ -938,5 +938,11 @@
   "Vouched": "Apwouve",
   "You vouched": "Ou te apwouve",
   "Community Taps": "Apwobasyon kominote a",
-  "Tap to vouch for this business": "Tape pou apwouve biznis sa a"
+  "Tap to vouch for this business": "Tape pou apwouve biznis sa a",
+  "store_fulfillment_info_tooltip": "Ki diferans lan?",
+  "store_fulfillment_info_title": "Livrezon vs Ekspedisyon",
+  "store_fulfillment_info_body": "Livrezon: ou menm ki livre lokalman.\nEkspedisyon: voye pa transpote ak swivi ak fre ekspedisyon opsyonel.",
+  "Delivery Fee (Optional)": "Fre livrezon (opsyonel)",
+  "Leave empty or 0 for free delivery": "Kite vid oswa 0 pou livrezon gratis",
+  "Delivery Fee": "Fre livrezon"
 }

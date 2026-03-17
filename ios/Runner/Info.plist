@@ -32,12 +32,6 @@
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>fb285315185217069</string>
-			</array>
-		</dict>
-		<dict>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
@@ -58,25 +52,12 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>FacebookAppID</key>
-	<string>285315185217069</string>
-	<key>FacebookClientToken</key>
-	<string>cbaaabc1ed334fbbc3d3b88d03f98869</string>
-	<key>FacebookDisplayName</key>
-	<string>CaribTap</string>
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<true/>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-4460203900531587~6505255326</string>
 	<key>GMSApiKey</key>
 	<string>$(GMS_API_KEY)</string>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>fbapi</string>
-		<string>fb-messenger-api</string>
-		<string>fbauth2</string>
-		<string>fbshareextension</string>
-	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppleMusicUsageDescription</key>

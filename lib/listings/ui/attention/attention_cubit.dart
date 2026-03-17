@@ -43,6 +43,23 @@ class AttentionCubit extends Cubit<AttentionState> {
   /// Mark a module as seen
   Future<void> markModuleAsSeen(AttentionModule module) async {
     debugPrint('✋ AttentionCubit: Marking ${module.key} as seen');
+
+    // Optimistically clear the badge in local state immediately so the UI
+    // updates right away without waiting for the Firestore round-trip.
+    final current = state.attentionState;
+    if (current != null) {
+      final updatedCounts = Map<String, int>.from(current.counts)
+        ..[module.key] = 0;
+      emit(AttentionState.loaded(
+        AttentionStateModel(
+          lastSeen: current.lastSeen,
+          counts: updatedCounts,
+          updatedAt: current.updatedAt,
+        ),
+      ));
+    }
+
+    // Then persist to Firestore via Cloud Function (stream will confirm later)
     await attentionService.markModuleAsSeen(module);
   }
 

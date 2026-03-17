@@ -211,6 +211,7 @@ class ListingModel {
   String storeUrl;
   String? storeCurrencyCode; // Defaults to listing.currencyCode
   bool storeDeliveryEnabled;
+  double storeDeliveryFee; // Delivery cost (0 for free delivery)
   bool storePickupEnabled;
   bool storeDineInEnabled; // Dining in at restaurant
   bool storeShippingEnabled; // Shipping/carrier fulfillment
@@ -331,6 +332,7 @@ class ListingModel {
     this.storeUrl = '',
     String? storeCurrencyCode,
     this.storeDeliveryEnabled = false,
+    this.storeDeliveryFee = 0.0,
     this.storePickupEnabled = true,
     this.storeDineInEnabled = false,
     this.storeShippingEnabled = false,
@@ -449,6 +451,7 @@ class ListingModel {
       storeUrl: json['storeUrl'] ?? '',
       storeCurrencyCode: json['storeCurrencyCode'] ?? json['currencyCode'] ?? 'USD',
       storeDeliveryEnabled: json['storeDeliveryEnabled'] ?? false,
+      storeDeliveryFee: (json['storeDeliveryFee'] ?? 0).toDouble(),
       storePickupEnabled: json['storePickupEnabled'] ?? true,
       storeDineInEnabled: json['storeDineInEnabled'] ?? false,
       storeShippingEnabled: json['storeShippingEnabled'] ?? false,
@@ -551,6 +554,7 @@ class ListingModel {
       'storeUrl': storeUrl,
       'storeCurrencyCode': storeCurrencyCode,
       'storeDeliveryEnabled': storeDeliveryEnabled,
+      'storeDeliveryFee': storeDeliveryFee,
       'storePickupEnabled': storePickupEnabled,
       'storeDineInEnabled': storeDineInEnabled,
       'storeShippingEnabled': storeShippingEnabled,

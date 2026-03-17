@@ -39,9 +39,9 @@ import 'package:caribtap/listings/model/rental_config.dart';
 import 'package:caribtap/listings/ui/rentals/rental_bookings_screen.dart';
 import 'package:caribtap/screens/rentals/rental_catalog_manager_screen.dart';
 import 'package:caribtap/listings/ui/photo_enhancement/photo_enhancement.dart';
-import 'package:caribtap/listings/listings_module/booking_services/booking_services_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:geocoding/geocoding.dart' as geocoding;
 import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
 
 class AddListingWrappingWidget extends StatelessWidget {
@@ -143,6 +143,8 @@ class AddListingScreen extends StatefulWidget {
 }
 
 class _AddListingScreenState extends State<AddListingScreen> {
+  static const String _expansionStatePrefsKey =
+      'add_listing_expansion_state_v1';
   final TextEditingController _serviceDescriptionController =
       TextEditingController();
   // Supported currencies for Caribbean markets
@@ -197,6 +199,22 @@ class _AddListingScreenState extends State<AddListingScreen> {
   bool _photosExpanded = true;
   bool _videosExpanded = false;
 
+  Map<String, bool> _expansionStateDefaults() => {
+        'basicInfoExpanded': true,
+        'detailsHoursExpanded': false,
+        'contactSocialExpanded': false,
+        'businessDetailsExpanded': false,
+        'menuExpanded': false,
+        'storeExpanded': false,
+        'rentalsExpanded': false,
+        'servicesExpanded': false,
+        'mediaExpanded': false,
+        'bookingExpanded': false,
+        'logoExpanded': false,
+        'photosExpanded': true,
+        'videosExpanded': false,
+      };
+
   final TextEditingController _openingHoursController = TextEditingController();
   final TextEditingController _bookingUrlController = TextEditingController();
 
@@ -205,6 +223,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final TextEditingController _servicePriceController = TextEditingController();
   final TextEditingController _serviceDurationController =
       TextEditingController();
+    final TextEditingController _serviceQuantityController =
+      TextEditingController(text: '1');
   final TextEditingController _keywordController = TextEditingController();
 
   Map<String, String>? _filters = {};
@@ -278,6 +298,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       _isPublished = false; // New listings start as draft
     }
     super.initState();
+    _loadExpansionState();
     currentUser = widget.currentUser;
     _refreshUserSubscription();
     context.read<AddListingBloc>().add(GetCategoriesEvent());
@@ -285,6 +306,117 @@ class _AddListingScreenState extends State<AddListingScreen> {
     if (isEdit) {
       _initializeEditListing();
     }
+  }
+
+  Future<void> _loadExpansionState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rawState = prefs.getString(_expansionStatePrefsKey);
+    final defaults = _expansionStateDefaults();
+
+    if (rawState == null || rawState.isEmpty) {
+      return;
+    }
+
+    try {
+      final decoded = jsonDecode(rawState);
+      if (decoded is! Map<String, dynamic> || !mounted) {
+        return;
+      }
+
+      setState(() {
+        _basicInfoExpanded =
+            (decoded['basicInfoExpanded'] as bool?) ?? defaults['basicInfoExpanded']!;
+        _detailsHoursExpanded =
+            (decoded['detailsHoursExpanded'] as bool?) ?? defaults['detailsHoursExpanded']!;
+        _contactSocialExpanded =
+            (decoded['contactSocialExpanded'] as bool?) ?? defaults['contactSocialExpanded']!;
+        _businessDetailsExpanded = (decoded['businessDetailsExpanded'] as bool?) ??
+            defaults['businessDetailsExpanded']!;
+        _menuExpanded = (decoded['menuExpanded'] as bool?) ?? defaults['menuExpanded']!;
+        _storeExpanded = (decoded['storeExpanded'] as bool?) ?? defaults['storeExpanded']!;
+        _rentalsExpanded =
+            (decoded['rentalsExpanded'] as bool?) ?? defaults['rentalsExpanded']!;
+        _servicesExpanded =
+            (decoded['servicesExpanded'] as bool?) ?? defaults['servicesExpanded']!;
+        _mediaExpanded = (decoded['mediaExpanded'] as bool?) ?? defaults['mediaExpanded']!;
+        _bookingExpanded =
+            (decoded['bookingExpanded'] as bool?) ?? defaults['bookingExpanded']!;
+        _logoExpanded = (decoded['logoExpanded'] as bool?) ?? defaults['logoExpanded']!;
+        _photosExpanded = (decoded['photosExpanded'] as bool?) ?? defaults['photosExpanded']!;
+        _videosExpanded = (decoded['videosExpanded'] as bool?) ?? defaults['videosExpanded']!;
+      });
+    } catch (_) {
+      // Ignore malformed stored JSON and keep defaults.
+    }
+  }
+
+  Future<void> _saveExpansionState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _expansionStatePrefsKey,
+      jsonEncode({
+        'basicInfoExpanded': _basicInfoExpanded,
+        'detailsHoursExpanded': _detailsHoursExpanded,
+        'contactSocialExpanded': _contactSocialExpanded,
+        'businessDetailsExpanded': _businessDetailsExpanded,
+        'menuExpanded': _menuExpanded,
+        'storeExpanded': _storeExpanded,
+        'rentalsExpanded': _rentalsExpanded,
+        'servicesExpanded': _servicesExpanded,
+        'mediaExpanded': _mediaExpanded,
+        'bookingExpanded': _bookingExpanded,
+        'logoExpanded': _logoExpanded,
+        'photosExpanded': _photosExpanded,
+        'videosExpanded': _videosExpanded,
+      }),
+    );
+  }
+
+  void _setExpansionState({required String sectionKey, required bool expanded}) {
+    setState(() {
+      switch (sectionKey) {
+        case 'basicInfoExpanded':
+          _basicInfoExpanded = expanded;
+          break;
+        case 'detailsHoursExpanded':
+          _detailsHoursExpanded = expanded;
+          break;
+        case 'contactSocialExpanded':
+          _contactSocialExpanded = expanded;
+          break;
+        case 'businessDetailsExpanded':
+          _businessDetailsExpanded = expanded;
+          break;
+        case 'menuExpanded':
+          _menuExpanded = expanded;
+          break;
+        case 'storeExpanded':
+          _storeExpanded = expanded;
+          break;
+        case 'rentalsExpanded':
+          _rentalsExpanded = expanded;
+          break;
+        case 'servicesExpanded':
+          _servicesExpanded = expanded;
+          break;
+        case 'mediaExpanded':
+          _mediaExpanded = expanded;
+          break;
+        case 'bookingExpanded':
+          _bookingExpanded = expanded;
+          break;
+        case 'logoExpanded':
+          _logoExpanded = expanded;
+          break;
+        case 'photosExpanded':
+          _photosExpanded = expanded;
+          break;
+        case 'videosExpanded':
+          _videosExpanded = expanded;
+          break;
+      }
+    });
+    _saveExpansionState();
   }
 
   Future<void> _initializeEditListing() async {
@@ -349,6 +481,26 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
     _countryCode = (l.countryCode ?? '').trim().isEmpty ? null : l.countryCode;
     _verified = l.verified;
+
+    // Restore category selection. Try to match from already-loaded list first,
+    // then fall back to rebuilding from the listing's stored category fields so
+    // that Save is never blocked by a null _categoryValue on an existing listing
+    // (e.g. when categories haven't finished loading yet).
+    if (_categories.isNotEmpty) {
+      try {
+        _categoryValue = _categories.firstWhere((c) => c.id == l.categoryID);
+      } catch (_) {}
+    }
+    if (_categoryValue == null && l.categoryID.isNotEmpty) {
+      _categoryValue = CategoriesModel(
+        id: l.categoryID,
+        title: l.categoryTitle,
+        photo: l.categoryPhoto,
+        isActive: true,
+        sortOrder: 0,
+      );
+    }
+
     _bookingEnabled = l.bookingEnabled;
     _allowQuantitySelection = l.allowQuantitySelection;
     _useTimeBlocks = l.useTimeBlocks;
@@ -479,8 +631,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
 
   bool _canUseBooking() {
-    if (currentUser.isAdmin) return true;
-    const bookingTiers = {'professional', 'premium', 'business'};
+    if (currentUser.isAdmin || currentUser.hasBookingServices) return true;
+    const bookingTiers = {'pro', 'professional', 'premium'};
     return bookingTiers.contains(currentUser.subscriptionTier.toLowerCase());
   }
 
@@ -518,6 +670,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
             )
           : null,
       child: ExpansionTile(
+        key: ValueKey('$title-$isExpanded'),
         title: Text(
           title,
           style: TextStyle(
@@ -581,211 +734,232 @@ class _AddListingScreenState extends State<AddListingScreen> {
       );
     }
 
-    if (isEdit && !_bookingEnabled) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Turn on "Booking Services" from the Activate Booking screen.'
-                  .tr(),
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: dark ? Colors.white : Colors.black,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Booking options are disabled here to avoid conflicting settings.'
-                  .tr(),
-              style: TextStyle(
-                color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  push(
-                    context,
-                    BookingServicesScreen(currentUser: currentUser),
-                  );
-                },
-                icon: const Icon(Icons.settings),
-                label: Text('Open Booking Services'.tr()),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Color(colorPrimary),
-                  side: BorderSide(color: Color(colorPrimary)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (isEdit) {
-      return const SizedBox.shrink();
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SwitchListTile(
+        _buildBookingToggleTile(
+          dark: dark,
           value: _bookingEnabled,
+          title: 'Require booking'.tr(),
+          subtitle: 'Show a "Book Now" button on your listing.'.tr(),
           onChanged: (value) => setState(() => _bookingEnabled = value),
-          title: Text(
-            'Require booking'.tr(),
-            style: TextStyle(
-              color: dark ? Colors.white : Colors.black,
-            ),
-          ),
-          subtitle: Text(
-            'Show a "Book Now" button on your listing.'.tr(),
-            style: TextStyle(
-              color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
-            ),
-          ),
-          activeColor: Color(colorPrimary),
-          activeTrackColor: Color(colorPrimary).withOpacity(0.5),
-          inactiveThumbColor:
-              dark ? Colors.grey.shade600 : Colors.grey.shade400,
-          inactiveTrackColor:
-              dark ? Colors.grey.shade800 : Colors.grey.shade300,
         ),
-        if (_bookingEnabled)
-          SwitchListTile(
-            value: _allowQuantitySelection,
-            onChanged: (value) =>
-                setState(() => _allowQuantitySelection = value),
-            title: Text(
-              'Allow quantity selection'.tr(),
-              style: TextStyle(
-                color: dark ? Colors.white : Colors.black,
+        if (_bookingEnabled) ...[
+          const SizedBox(height: 8),
+          _buildBookingSubset(
+            dark: dark,
+            children: [
+              _buildBookingToggleTile(
+                dark: dark,
+                value: _allowQuantitySelection,
+                title: 'Allow quantity selection'.tr(),
+                subtitle:
+                    'Customers can select quantity when booking services.'.tr(),
+                onChanged: (value) =>
+                    setState(() => _allowQuantitySelection = value),
               ),
-            ),
-            subtitle: Text(
-              'Customers can select quantity when booking services.'.tr(),
-              style: TextStyle(
-                color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+              _buildBookingToggleTile(
+                dark: dark,
+                value: _enableCustomQuestions,
+                title: 'Custom Booking Questions'.tr(),
+                subtitle:
+                    'Ask extra questions during booking and review answers with each request.'
+                        .tr(),
+                onChanged: (value) =>
+                    setState(() => _enableCustomQuestions = value),
               ),
-            ),
-            activeColor: Color(colorPrimary),
-            activeTrackColor: Color(colorPrimary).withOpacity(0.5),
-            inactiveThumbColor:
-                dark ? Colors.grey.shade600 : Colors.grey.shade400,
-            inactiveTrackColor:
-                dark ? Colors.grey.shade800 : Colors.grey.shade300,
-          ),
-        if (_bookingEnabled)
-          SwitchListTile(
-            value: _useTimeBlocks,
-            onChanged: (value) => setState(() => _useTimeBlocks = value),
-            title: Text(
-              'Use time blocks'.tr(),
-              style: TextStyle(
-                color: dark ? Colors.white : Colors.black,
-              ),
-            ),
-            subtitle: Text(
-              'Enable hourly time slot bookings instead of full day bookings.'
-                  .tr(),
-              style: TextStyle(
-                color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
-              ),
-            ),
-            activeColor: Color(colorPrimary),
-            activeTrackColor: Color(colorPrimary).withOpacity(0.5),
-            inactiveThumbColor:
-                dark ? Colors.grey.shade600 : Colors.grey.shade400,
-            inactiveTrackColor:
-                dark ? Colors.grey.shade800 : Colors.grey.shade300,
-          ),
-        if (_bookingEnabled && _useTimeBlocks)
-          SwitchListTile(
-            value: _allowMultipleBookingsPerDay,
-            onChanged: (value) =>
-                setState(() => _allowMultipleBookingsPerDay = value),
-            title: Text(
-              'Allow multiple bookings per day'.tr(),
-              style: TextStyle(
-                color: dark ? Colors.white : Colors.black,
-              ),
-            ),
-            subtitle: Text(
-              'Multiple customers can book different time slots on the same day.'
-                  .tr(),
-              style: TextStyle(
-                color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
-              ),
-            ),
-            activeColor: Color(colorPrimary),
-            activeTrackColor: Color(colorPrimary).withOpacity(0.5),
-            inactiveThumbColor:
-                dark ? Colors.grey.shade600 : Colors.grey.shade400,
-            inactiveTrackColor:
-                dark ? Colors.grey.shade800 : Colors.grey.shade300,
-          ),
-        if (_bookingEnabled && _useTimeBlocks)
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Available Time Blocks'.tr(),
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: dark ? Colors.white : Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Define hourly time slots (e.g., 09:00-10:00, 10:00-11:00)'
-                      .tr(),
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+              if (_enableCustomQuestions)
+                _buildBookingSubset(
+                  dark: dark,
+                  title: 'Custom questions'.tr(),
+                  compact: true,
                   children: [
-                    ..._timeBlocks.map((block) => Chip(
-                          label: Text(block),
-                          deleteIcon: Icon(Icons.close, size: 18),
-                          onDeleted: () =>
-                              setState(() => _timeBlocks.remove(block)),
-                          backgroundColor: dark
-                              ? Colors.grey.shade800
-                              : Colors.grey.shade200,
-                          labelStyle: TextStyle(
-                              color: dark ? Colors.white : Colors.black87),
-                        )),
-                    ActionChip(
-                      label: Text('+ Add Time Block'.tr()),
-                      onPressed: () => _showAddTimeBlockDialog(dark),
-                      backgroundColor: Color(colorPrimary).withOpacity(0.1),
-                      labelStyle: TextStyle(color: Color(colorPrimary)),
+                    _buildCustomQuestionsEditor(dark),
+                  ],
+                ),
+              _buildBookingToggleTile(
+                dark: dark,
+                value: _useTimeBlocks,
+                title: 'Use time blocks'.tr(),
+                subtitle:
+                    'Enable hourly time slot bookings instead of full day bookings.'
+                        .tr(),
+                onChanged: (value) => setState(() => _useTimeBlocks = value),
+              ),
+              if (_useTimeBlocks)
+                _buildBookingSubset(
+                  dark: dark,
+                  title: 'Time block settings'.tr(),
+                  compact: true,
+                  children: [
+                    _buildBookingToggleTile(
+                      dark: dark,
+                      value: _allowMultipleBookingsPerDay,
+                      title: 'Allow multiple bookings per day'.tr(),
+                      subtitle:
+                          'Multiple customers can book different time slots on the same day.'
+                              .tr(),
+                      onChanged: (value) =>
+                          setState(() => _allowMultipleBookingsPerDay = value),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Available Time Blocks'.tr(),
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: dark ? Colors.white : Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Define hourly time slots (e.g., 09:00-10:00, 10:00-11:00)'
+                                .tr(),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: dark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ..._timeBlocks.map((block) => Chip(
+                                      label: Text(_formatTimeBlockForDisplay(block)),
+                                    deleteIcon: Icon(Icons.close, size: 18),
+                                    onDeleted: () =>
+                                        setState(() => _timeBlocks.remove(block)),
+                                    backgroundColor: dark
+                                        ? Colors.grey.shade800
+                                        : Colors.grey.shade200,
+                                    labelStyle: TextStyle(
+                                      color: dark
+                                          ? Colors.white
+                                          : Colors.black87,
+                                    ),
+                                  )),
+                              ActionChip(
+                                label: Text('+ Add Time Block'.tr()),
+                                onPressed: () => _showAddTimeBlockDialog(dark),
+                                backgroundColor:
+                                    Color(colorPrimary).withOpacity(0.1),
+                                labelStyle:
+                                    TextStyle(color: Color(colorPrimary)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Block Out Periods'.tr(),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: dark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Mark dates when you are unavailable for bookings.'.tr(),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color:
+                            dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildBlockedDatesEditor(dark),
+                  ],
+                ),
+              ),
+            ],
           ),
+        ],
       ],
+    );
+  }
+
+  Widget _buildBookingToggleTile({
+    required bool dark,
+    required bool value,
+    required String title,
+    required String subtitle,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return SwitchListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+      value: value,
+      onChanged: onChanged,
+      title: Text(
+        title,
+        style: TextStyle(
+          color: dark ? Colors.white : Colors.black,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+        ),
+      ),
+      activeColor: Color(colorPrimary),
+      activeTrackColor: Color(colorPrimary).withOpacity(0.5),
+      inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
+      inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
+    );
+  }
+
+  Widget _buildBookingSubset({
+    required bool dark,
+    required List<Widget> children,
+    String? title,
+    bool compact = false,
+  }) {
+    return Container(
+      margin: EdgeInsets.fromLTRB(compact ? 18 : 12, 4, 0, 8),
+      decoration: BoxDecoration(
+        color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (title != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
+                  ),
+                ),
+              ),
+            ...children,
+          ],
+        ),
+      ),
     );
   }
 
@@ -833,14 +1007,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     ],
                   ),
                   subtitle: Text(
-                    s.duration.isNotEmpty &&
-                            (s.price != 0.0 && s.price.toString().isNotEmpty)
-                        ? '${s.duration} • ${s.price} $_selectedCurrencyCode'
-                        : s.duration.isNotEmpty
-                            ? s.duration
-                            : (s.price != 0.0 && s.price.toString().isNotEmpty)
-                                ? '${s.price} $_selectedCurrencyCode'
-                                : '',
+                    [
+                      if (s.duration.isNotEmpty) s.duration,
+                      if (s.price != 0.0 && s.price.toString().isNotEmpty)
+                        '${s.price} $_selectedCurrencyCode',
+                      if (_allowQuantitySelection) 'Qty: ${s.quantity}',
+                    ].join(' • '),
                     style: TextStyle(
                         color:
                             dark ? Colors.grey.shade400 : Colors.grey.shade700),
@@ -856,6 +1028,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           _servicePriceController.text =
                               s.price != 0.0 ? s.price.toString() : '';
                           _serviceDurationController.text = s.duration;
+                          _serviceQuantityController.text =
+                              (s.quantity > 0 ? s.quantity : 1).toString();
                           setState(() {
                             _services.removeAt(index);
                           });
@@ -890,6 +1064,17 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     label: 'Service Name', hint: 'e.g. Consultation'),
               ),
               const SizedBox(height: 12),
+              TextField(
+                controller: _serviceDescriptionController,
+                minLines: 2,
+                maxLines: 4,
+                style: TextStyle(color: dark ? Colors.white : Colors.black),
+                decoration: _getInputDecoration(
+                  label: 'Service Description'.tr(),
+                  hint: 'Add a short description for this service'.tr(),
+                ),
+              ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -914,6 +1099,18 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   ),
                 ],
               ),
+              if (_allowQuantitySelection) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _serviceQuantityController,
+                  keyboardType: TextInputType.number,
+                  style: TextStyle(color: dark ? Colors.white : Colors.black),
+                  decoration: _getInputDecoration(
+                    label: 'Available Quantity'.tr(),
+                    hint: '1',
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
@@ -923,14 +1120,20 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     setState(() {
                       _services.add(ServiceItem(
                         name: _serviceNameController.text.trim(),
+                        description: _serviceDescriptionController.text.trim(),
                         price: double.tryParse(
                                 _servicePriceController.text.trim()) ??
                             0.0,
                         duration: _serviceDurationController.text.trim(),
+                        quantity: _allowQuantitySelection
+                            ? _parseServiceQuantity()
+                            : 1,
                       ));
                       _serviceNameController.clear();
+                      _serviceDescriptionController.clear();
                       _servicePriceController.clear();
                       _serviceDurationController.clear();
+                      _serviceQuantityController.text = '1';
                     });
                   },
                   icon: const Icon(Icons.add),
@@ -944,6 +1147,96 @@ class _AddListingScreenState extends State<AddListingScreen> {
             ],
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildCustomQuestionsEditor(bool dark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Custom questions'.tr(),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: dark ? Colors.white : Colors.black,
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () async {
+                String questionText = '';
+                final result = await showDialog<String>(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    title: Text('Add question'.tr()),
+                    content: TextField(
+                      autofocus: true,
+                      onChanged: (value) => questionText = value,
+                      onSubmitted: (_) =>
+                          Navigator.pop(dialogContext, questionText.trim()),
+                      decoration: InputDecoration(
+                        hintText: 'e.g. Do you have allergies?'.tr(),
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: Text('Cancel'.tr()),
+                      ),
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pop(dialogContext, questionText.trim()),
+                        child: Text('Add'.tr()),
+                      ),
+                    ],
+                  ),
+                );
+                if (result == null || result.isEmpty) return;
+                setState(() {
+                  _customQuestions.add(result);
+                });
+              },
+              icon: const Icon(Icons.add),
+              label: Text('Add question'.tr()),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_customQuestions.isEmpty)
+          Text(
+            'No questions added yet.'.tr(),
+            style: TextStyle(
+              color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+              fontSize: 12,
+            ),
+          )
+        else
+          Column(
+            children: _customQuestions
+                .map(
+                  (question) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      question,
+                      style: TextStyle(
+                        color: dark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      onPressed: () {
+                        setState(() {
+                          _customQuestions.remove(question);
+                        });
+                      },
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
       ],
     );
   }
@@ -966,6 +1259,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
       }
       _keywordController.clear();
     });
+  }
+
+  int _parseServiceQuantity() {
+    final parsedQuantity = int.tryParse(_serviceQuantityController.text.trim());
+    if (parsedQuantity == null || parsedQuantity < 1) {
+      return 1;
+    }
+    return parsedQuantity;
   }
 
   Widget _buildKeywordEditor(bool dark) {
@@ -1749,9 +2050,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
-    final tier = currentUser.subscriptionTier.toLowerCase();
-    final bool canUseBooking = currentUser.isAdmin ||
-        const ['pro', 'premium', 'business'].contains(tier);
+    final bool canUseBooking = _canUseBooking();
 
     return BlocListener<AddListingBloc, AddListingState>(
       listener: (listenerContext, state) async {
@@ -1876,7 +2175,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 title: 'Basic Information'.tr(),
                 isExpanded: _basicInfoExpanded,
                 onExpansionChanged: (expanded) {
-                  setState(() => _basicInfoExpanded = expanded);
+                  _setExpansionState(
+                    sectionKey: 'basicInfoExpanded',
+                    expanded: expanded,
+                  );
                 },
                 children: [
                   TextField(
@@ -2041,6 +2343,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       if (prediction != null) {
                         setState(() {
                           _selectedPrediction = prediction;
+                          // Clear any stale location from previous listing state
+                          // so the newly selected place can be saved.
+                          _placeDetail = null;
                           _isFetchingPlaceDetails = true;
                           _placeManuallySelected = true;
                         });
@@ -2138,7 +2443,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 title: 'Details & Hours'.tr(),
                 isExpanded: _detailsHoursExpanded,
                 onExpansionChanged: (expanded) {
-                  setState(() => _detailsHoursExpanded = expanded);
+                  _setExpansionState(
+                    sectionKey: 'detailsHoursExpanded',
+                    expanded: expanded,
+                  );
                 },
                 children: [
                   InkWell(
@@ -2248,7 +2556,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   title: 'Booking Services'.tr(),
                   isExpanded: _bookingExpanded,
                   onExpansionChanged: (expanded) {
-                    setState(() => _bookingExpanded = expanded);
+                    _setExpansionState(
+                      sectionKey: 'bookingExpanded',
+                      expanded: expanded,
+                    );
                   },
                   children: [
                     _buildBookingSection(isDarkMode(context), _canUseBooking()),
@@ -2261,7 +2572,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 title: 'Contact Information'.tr(),
                 isExpanded: _contactSocialExpanded,
                 onExpansionChanged: (expanded) {
-                  setState(() => _contactSocialExpanded = expanded);
+                  _setExpansionState(
+                    sectionKey: 'contactSocialExpanded',
+                    expanded: expanded,
+                  );
                 },
                 children: [
                   TextField(
@@ -2293,7 +2607,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 title: 'Social Media'.tr(),
                 isExpanded: _mediaExpanded,
                 onExpansionChanged: (expanded) {
-                  setState(() => _mediaExpanded = expanded);
+                  _setExpansionState(
+                    sectionKey: 'mediaExpanded',
+                    expanded: expanded,
+                  );
                 },
                 children: [
                   TextField(
@@ -2341,7 +2658,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 title: 'Business Details'.tr(),
                 isExpanded: _businessDetailsExpanded,
                 onExpansionChanged: (expanded) {
-                  setState(() => _businessDetailsExpanded = expanded);
+                  _setExpansionState(
+                    sectionKey: 'businessDetailsExpanded',
+                    expanded: expanded,
+                  );
                 },
                 children: [
                   Padding(
@@ -2379,7 +2699,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   title: 'Menu (Food & Beverage)'.tr(),
                   isExpanded: _menuExpanded,
                   onExpansionChanged: (expanded) {
-                    setState(() => _menuExpanded = expanded);
+                    _setExpansionState(
+                      sectionKey: 'menuExpanded',
+                      expanded: expanded,
+                    );
                   },
                   children: [
                     MenuEditSectionWidget(
@@ -2397,7 +2720,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 title: 'Store / Ecommerce (Optional)'.tr(),
                 isExpanded: _storeExpanded,
                 onExpansionChanged: (expanded) {
-                  setState(() => _storeExpanded = expanded);
+                  _setExpansionState(
+                    sectionKey: 'storeExpanded',
+                    expanded: expanded,
+                  );
                 },
                 children: [
                   SwitchListTile(
@@ -2626,7 +2952,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   title: 'Rentals'.tr(),
                   isExpanded: _rentalsExpanded,
                   onExpansionChanged: (expanded) {
-                    setState(() => _rentalsExpanded = expanded);
+                    _setExpansionState(
+                      sectionKey: 'rentalsExpanded',
+                      expanded: expanded,
+                    );
                   },
                   children: [
                     SwitchListTile(
@@ -2696,7 +3025,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 title: 'Services'.tr(),
                 isExpanded: _servicesExpanded,
                 onExpansionChanged: (expanded) {
-                  setState(() => _servicesExpanded = expanded);
+                  _setExpansionState(
+                    sectionKey: 'servicesExpanded',
+                    expanded: expanded,
+                  );
                 },
                 children: [
                   _buildServiceMenuEditor(isDarkMode(context)),
@@ -2709,7 +3041,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 title: 'Logo (Optional)'.tr(),
                 isExpanded: _logoExpanded,
                 onExpansionChanged: (expanded) {
-                  setState(() => _logoExpanded = expanded);
+                  _setExpansionState(
+                    sectionKey: 'logoExpanded',
+                    expanded: expanded,
+                  );
                 },
                 children: [
                   _buildLogoUpload(),
@@ -2722,7 +3057,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 title: 'Photos'.tr(),
                 isExpanded: _photosExpanded,
                 onExpansionChanged: (expanded) {
-                  setState(() => _photosExpanded = expanded);
+                  _setExpansionState(
+                    sectionKey: 'photosExpanded',
+                    expanded: expanded,
+                  );
                 },
                 children: [
                   BlocBuilder<AddListingBloc, AddListingState>(
@@ -2734,7 +3072,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       final normalizedTier =
                           currentUser.subscriptionTier.toLowerCase();
                       final canUsePhotoEnhancement = currentUser.isAdmin ||
-                          const ['professional', 'pro', 'premium', 'business']
+                          const ['professional', 'pro', 'premium']
                               .contains(normalizedTier);
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2813,7 +3151,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 title: 'Videos (max 3)'.tr(),
                 isExpanded: _videosExpanded,
                 onExpansionChanged: (expanded) {
-                  setState(() => _videosExpanded = expanded);
+                  _setExpansionState(
+                    sectionKey: 'videosExpanded',
+                    expanded: expanded,
+                  );
                 },
                 children: [
                   BlocBuilder<AddListingBloc, AddListingState>(
@@ -2856,23 +3197,60 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _serviceNameController.dispose();
     _servicePriceController.dispose();
     _serviceDurationController.dispose();
+    _serviceQuantityController.dispose();
     _keywordController.dispose();
     _storeUrlController.dispose();
     super.dispose();
   }
 
-  // Add missing _postListing stub if not present
   Future<void> _postListing() async {
-    final allowed = await checkAndHandleBookingAccess(
-      context: context,
-      listerId: currentUser.userID,
-    );
-    if (!allowed || !mounted) return;
-
     // Validate required fields before posting
     if (_titleController.text.trim().isEmpty || _categoryValue == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please fill in all required fields'.tr())),
+      );
+      return;
+    }
+
+    final selectedPredictionAddress = _selectedPrediction?.description?.trim();
+    final hasSelectedPrediction =
+      selectedPredictionAddress != null && selectedPredictionAddress.isNotEmpty;
+
+    final place = (_placeDetail?.formattedAddress?.trim().isNotEmpty ?? false)
+      ? _placeDetail!.formattedAddress!.trim()
+      : (hasSelectedPrediction
+        ? selectedPredictionAddress
+        : (isEdit ? widget.listingToEdit?.place ?? '' : ''));
+
+    // If user selected a new place but details lookup fails, avoid persisting
+    // stale coordinates from the previous saved location.
+    double latitude = _placeDetail?.geometry?.location.lat ??
+      (hasSelectedPrediction
+        ? 0.0
+        : (isEdit ? widget.listingToEdit?.latitude ?? 0 : 0));
+    double longitude = _placeDetail?.geometry?.location.lng ??
+      (hasSelectedPrediction
+        ? 0.0
+        : (isEdit ? widget.listingToEdit?.longitude ?? 0 : 0));
+
+    // Resolve coordinates from address when Places details are unavailable.
+    if (hasSelectedPrediction && (latitude == 0.0 || longitude == 0.0)) {
+      final resolved = await _resolveCoordinatesFromAddress(place);
+      if (resolved != null) {
+        latitude = resolved.latitude;
+        longitude = resolved.longitude;
+      }
+    }
+
+    if (hasSelectedPrediction && (latitude == 0.0 || longitude == 0.0)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not resolve map coordinates for this location. Please select it again from the suggestions.'
+                .tr(),
+          ),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
@@ -2888,13 +3266,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
           false,
           Color(colorPrimary),
         );
-
-    final place = _placeDetail?.formattedAddress ??
-        (isEdit ? widget.listingToEdit?.place ?? '' : '');
-    final latitude = _placeDetail?.geometry?.location.lat ??
-        (isEdit ? widget.listingToEdit?.latitude ?? 0 : 0);
-    final longitude = _placeDetail?.geometry?.location.lng ??
-        (isEdit ? widget.listingToEdit?.longitude ?? 0 : 0);
 
     // Auto-disable bookings for Free tier users (cannot use bookings)
     final bookingEnabledValue = _canUseBooking() ? _bookingEnabled : false;
@@ -3011,8 +3382,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           items: List.generate(24, (i) => i).map((hour) {
                             return DropdownMenuItem(
                               value: hour,
-                              child:
-                                  Text('${hour.toString().padLeft(2, '0')}:00'),
+                              child: Text(_formatHourTo12Hour(hour)),
                             );
                           }).toList(),
                           onChanged: (value) {
@@ -3042,8 +3412,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           items: List.generate(24, (i) => i).map((hour) {
                             return DropdownMenuItem(
                               value: hour,
-                              child:
-                                  Text('${hour.toString().padLeft(2, '0')}:00'),
+                              child: Text(_formatHourTo12Hour(hour)),
                             );
                           }).toList(),
                           onChanged: (value) {
@@ -3057,7 +3426,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Time block:  ${startHour.toString().padLeft(2, '0')}:00 - ${endHour.toString().padLeft(2, '0')}:00',
+                    '${'Time block'.tr()}: ${_formatHourTo12Hour(startHour)} - ${_formatHourTo12Hour(endHour)}',
                     style: TextStyle(
                       fontSize: 13,
                       color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -3094,6 +3463,31 @@ class _AddListingScreenState extends State<AddListingScreen> {
       if (!_timeBlocks.contains(timeBlock)) {
         setState(() => _timeBlocks.add(timeBlock));
       }
+    }
+  }
+
+  String _formatHourTo12Hour(int hour) {
+    final normalizedHour = hour % 24;
+    final period = normalizedHour >= 12 ? 'PM' : 'AM';
+    final hour12 = normalizedHour % 12 == 0 ? 12 : normalizedHour % 12;
+    return '$hour12:00 $period';
+  }
+
+  String _formatTimeBlockForDisplay(String block) {
+    try {
+      final parts = block.split('-');
+      if (parts.length != 2) return block;
+
+      final startParts = parts[0].trim().split(':');
+      final endParts = parts[1].trim().split(':');
+      if (startParts.length < 2 || endParts.length < 2) return block;
+
+      final startHour = int.parse(startParts[0]);
+      final endHour = int.parse(endParts[0]);
+
+      return '${_formatHourTo12Hour(startHour)} - ${_formatHourTo12Hour(endHour)}';
+    } catch (_) {
+      return block;
     }
   }
 
@@ -3167,6 +3561,20 @@ class _AddListingScreenState extends State<AddListingScreen> {
       formattedAddress: safeAddress,
       geometry: Geometry(location: Location(lat: lat, lng: lng)),
     );
+  }
+
+  Future<geocoding.Location?> _resolveCoordinatesFromAddress(
+      String address) async {
+    final input = address.trim();
+    if (input.isEmpty) return null;
+
+    try {
+      final results = await geocoding.locationFromAddress(input);
+      if (results.isEmpty) return null;
+      return results.first;
+    } catch (_) {
+      return null;
+    }
   }
 
 // <-- The class closing bracket should be here, after all methods
@@ -3654,6 +4062,8 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
               ],
             ),
             const SizedBox(height: 8),
+            _buildWeekdayHeader(),
+            const SizedBox(height: 8),
             _buildCalendar(),
             const SizedBox(height: 16),
             Text(
@@ -3710,8 +4120,8 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
     final lastDay =
         DateTime(_displayedMonth.year, _displayedMonth.month + 1, 0);
     final daysInMonth = lastDay.day;
-    final startingDayOfWeek = firstDay.weekday;
-    final totalCells = startingDayOfWeek - 1 + daysInMonth;
+    final startingDayOffset = firstDay.weekday % 7;
+    final totalCells = startingDayOffset + daysInMonth;
 
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -3723,11 +4133,11 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemBuilder: (context, index) {
-        if (index < startingDayOfWeek - 1) {
+        if (index < startingDayOffset) {
           return const SizedBox.shrink();
         }
 
-        final day = index - (startingDayOfWeek - 1) + 1;
+        final day = index - startingDayOffset + 1;
         final date = DateTime(_displayedMonth.year, _displayedMonth.month, day);
         final today = DateTime.now();
         final isPast =
@@ -3765,6 +4175,30 @@ class _MultiDatePickerDialogState extends State<_MultiDatePickerDialog> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildWeekdayHeader() {
+    const labels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+    return Row(
+      children: labels
+          .map(
+            (label) => Expanded(
+              child: Center(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color:
+                        widget.dark ? Colors.grey.shade400 : Colors.grey.shade700,
+                  ),
+                ),
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 }

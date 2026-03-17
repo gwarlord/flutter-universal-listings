@@ -607,6 +607,7 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
   late DateTime _startDate;
   late DateTime _endDate;
   bool _isChecking = false;
+  String? _availabilityError;
   int _photoIndex = 0;
 
   @override
@@ -964,6 +965,40 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
                         : Text('Add to Cart'.tr()),
                   ),
                 ),
+                if (_availabilityError != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: (dark ? Colors.red.shade900 : Colors.red.shade50),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: dark ? Colors.red.shade400 : Colors.red.shade300,
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 18,
+                          color: dark ? Colors.red.shade200 : Colors.red.shade700,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _availabilityError!,
+                            style: TextStyle(
+                              color: dark ? Colors.red.shade100 : Colors.red.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1003,6 +1038,7 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
 
     if (picked != null) {
       setState(() {
+        _availabilityError = null;
         if (isStart) {
           _startDate = picked;
           if (_startDate.isAfter(_endDate)) {
@@ -1018,7 +1054,10 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
   }
 
   void _addToCart() async {
-    setState(() => _isChecking = true);
+    setState(() {
+      _isChecking = true;
+      _availabilityError = null;
+    });
 
     final available = await _rentalService.isAvailableForDates(
       widget.item.listingId,
@@ -1029,12 +1068,9 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
 
     if (!available) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Not available for selected dates'.tr()),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() {
+          _availabilityError = 'Not available for selected dates'.tr();
+        });
       }
       setState(() => _isChecking = false);
       return;

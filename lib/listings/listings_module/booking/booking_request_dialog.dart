@@ -43,6 +43,9 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
   // ✅ Track selected services with quantities
   final Map<ServiceItem, int> _selectedServicesQuantity = {};
 
+  // Guard to prevent double-submission (e.g. double-tap during async guard)
+  bool _isSubmitting = false;
+
   @override
   void dispose() {
     _guestsController.dispose();
@@ -59,6 +62,9 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
     _guestsController = TextEditingController(text: _numberOfGuests.toString());
     _guestsInputController = TextEditingController(text: _numberOfGuests.toString());
     _initQuestionControllers();
+    context
+        .read<BookingBloc>()
+        .add(GetBookedDatesEvent(listingId: widget.listing.id));
   }
 
   void _initQuestionControllers() {
@@ -79,6 +85,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
   }
 
   void _submitBooking() {
+    if (_isSubmitting) return;
     if (_selectedDateRange == null) {
       showAlertDialog(context, 'Select dates'.tr(), 'Please select check-in and check-out dates.'.tr());
       return;
@@ -90,6 +97,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
       return;
     }
 
+    setState(() => _isSubmitting = true);
     // Run the booking access guard before submitting.
     _runGuardThenSubmit();
   }
@@ -99,7 +107,10 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
       context: context,
       listerId: widget.listing.authorID,
     );
-    if (!allowed || !mounted) return;
+    if (!allowed || !mounted) {
+      if (mounted) setState(() => _isSubmitting = false);
+      return;
+    }
     _doSubmitBooking();
   }
 
@@ -268,6 +279,9 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                         final service = widget.listing.services[index];
                         final isSelected = _selectedServicesQuantity.containsKey(service);
                         final quantity = _selectedServicesQuantity[service] ?? 1;
+                        final maxQuantity = service.quantity > 0
+                            ? service.quantity
+                            : 1;
                         
                         return Container(
                           color: isSelected ? (dark ? Colors.grey.shade800.withOpacity(0.5) : Colors.blue.shade50) : Colors.transparent,
@@ -391,7 +405,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                         onChanged: (value) {
                                           if (value.isNotEmpty) {
                                             int? newValue = int.tryParse(value);
-                                            if (newValue != null && newValue > 0 && newValue <= 99) {
+                                            if (newValue != null && newValue > 0 && newValue <= maxQuantity) {
                                               setState(() {
                                                 _selectedServicesQuantity[service] = newValue;
                                               });
@@ -403,7 +417,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                     Material(
                                       color: Colors.transparent,
                                       child: InkWell(
-                                        onTap: quantity < 99 ? () {
+                                        onTap: quantity < maxQuantity ? () {
                                           setState(() {
                                             _selectedServicesQuantity[service] = quantity + 1;
                                             _serviceQuantityControllers[service]?.text = (quantity + 1).toString();
@@ -414,7 +428,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                           child: Icon(
                                             Icons.add,
                                             size: 14,
-                                            color: quantity < 99 ? Color(colorPrimary) : Colors.grey,
+                                            color: quantity < maxQuantity ? Color(colorPrimary) : Colors.grey,
                                           ),
                                         ),
                                       ),
@@ -422,7 +436,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                                     const SizedBox(width: 8),
                                     Flexible(
                                       child: Text(
-                                        '${'Subtotal'.tr()}: ${(service.price * quantity).toStringAsFixed(2)} ${widget.listing.currencyCode}',
+                                        '${'Subtotal'.tr()}: ${(service.price * quantity).toStringAsFixed(2)} ${widget.listing.currencyCode} • ${'Max'.tr()}: $maxQuantity',
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w600,
@@ -521,7 +535,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                       children: _availableTimeBlocks.map((block) {
                         final isSelected = _selectedTimeBlock == block;
                         return ChoiceChip(
-                          label: Text(block),
+                          label: Text(_formatTimeBlockForDisplay(block)),
                           selected: isSelected,
                           onSelected: (selected) {
                             setState(() {
@@ -708,7 +722,7 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: isLoading || _selectedDateRange == null
+                            onPressed: isLoading || _isSubmitting || _selectedDateRange == null
                                 ? null
                                 : _submitBooking,
                             style: ElevatedButton.styleFrom(
@@ -737,5 +751,27 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
         ),
       ),
     );
+  }
+
+  String _formatTimeBlockForDisplay(String block) {
+    try {
+      final parts = block.split('-');
+      if (parts.length != 2) return block;
+
+      String formatTime(String value) {
+        final timeParts = value.trim().split(':');
+        if (timeParts.length < 2) return value;
+
+        final hour24 = int.parse(timeParts[0]);
+        final minute = int.parse(timeParts[1]);
+        final period = hour24 >= 12 ? 'PM' : 'AM';
+        final hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
+        return '$hour12:${minute.toString().padLeft(2, '0')} $period';
+      }
+
+      return '${formatTime(parts[0])} - ${formatTime(parts[1])}';
+    } catch (_) {
+      return block;
+    }
   }
 }

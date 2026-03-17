@@ -9,6 +9,7 @@ import 'package:flutter_google_places_hoc081098/google_maps_webservice_places.da
 import 'package:caribtap/listings/listings_module/add_listing/add_listing_event.dart';
 import 'package:caribtap/listings/listings_module/add_listing/add_listing_state.dart';
 import 'package:caribtap/listings/listings_module/api/listings_repository.dart';
+import 'package:caribtap/listings/listings_module/api/collaboration_api_manager.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 
@@ -19,8 +20,20 @@ const Set<String> kCaribbeanCountryCodes = {
   'VC', 'SX', 'SR', 'TT', 'TC', 'VI',
 };
 
-const Set<String> kBookingEligibleTiers = {'professional', 'premium'};
+const Set<String> kBookingEligibleTiers = {
+  'pro',
+  'professional',
+  'premium',
+};
 const Set<String> kStoreEligibleTiers = {'premium'};
+
+bool _hasBookingAccess({
+  required String tier,
+  required bool isAdmin,
+  required bool hasBookingServices,
+}) {
+  return isAdmin || hasBookingServices || kBookingEligibleTiers.contains(tier);
+}
 
 class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
   final ListingsUser currentUser;
@@ -174,18 +187,28 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
             .collection('users')
             .doc(currentUser.userID)
             .get();
-        final String tier = (userDoc.data()?['subscriptionTier'] as String? ?? 'free').toLowerCase();
+        final String tier =
+            (userDoc.data()?['subscriptionTier'] as String? ?? 'free')
+                .toLowerCase();
         final bool isAdmin = userDoc.data()?['isAdmin'] as bool? ?? false;
+        final bool hasBookingServices =
+            userDoc.data()?['hasBookingServices'] as bool? ??
+                currentUser.hasBookingServices;
 
         // Gating for bookings
-        if (event.bookingEnabled && !isAdmin) {
-          if (!kBookingEligibleTiers.contains(tier)) {
-            emit(AddListingErrorState(
-              errorTitle: 'Upgrade required'.tr(),
-              errorMessage: 'Bookings are available on paid plans. Upgrade to enable bookings.'.tr(),
-            ));
-            return;
-          }
+        if (event.bookingEnabled &&
+            !_hasBookingAccess(
+              tier: tier,
+              isAdmin: isAdmin,
+              hasBookingServices: hasBookingServices,
+            )) {
+          emit(AddListingErrorState(
+            errorTitle: 'Upgrade required'.tr(),
+            errorMessage:
+                'Bookings are available on paid plans. Upgrade to enable bookings.'
+                    .tr(),
+          ));
+          return;
         }
 
         // Gating for store
@@ -201,10 +224,17 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
       } catch (e) {
         // Fallback to cached data if Firestore fetch fails
         final String tier = currentUser.subscriptionTier.toLowerCase();
-        if (event.bookingEnabled && !currentUser.isAdmin && !kBookingEligibleTiers.contains(tier)) {
+        if (event.bookingEnabled &&
+            !_hasBookingAccess(
+              tier: tier,
+              isAdmin: currentUser.isAdmin,
+              hasBookingServices: currentUser.hasBookingServices,
+            )) {
           emit(AddListingErrorState(
             errorTitle: 'Upgrade required'.tr(),
-            errorMessage: 'Bookings are available on paid plans. Upgrade to enable bookings.'.tr(),
+            errorMessage:
+                'Bookings are available on paid plans. Upgrade to enable bookings.'
+                    .tr(),
           ));
           return;
         }
@@ -411,9 +441,24 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
 
       emit(AddListingProgressState(progressMessage: 'Updating Listing...'.tr()));
       try {
-        // Determine if user can use professional features (bookings, custom questions, services)
-        final userTierLower = currentUser.subscriptionTier.toLowerCase();
-        final canUseBookings = currentUser.isAdmin || kBookingEligibleTiers.contains(userTierLower);
+        // Resolve booking access from the latest user document so edits do not
+        // clear booking data when cached user state is stale.
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUser.userID)
+            .get();
+        final userData = userDoc.data();
+        final userTierLower =
+            (userData?['subscriptionTier'] as String? ?? currentUser.subscriptionTier)
+                .toLowerCase();
+        final isAdmin = userData?['isAdmin'] as bool? ?? currentUser.isAdmin;
+        final hasBookingServices =
+            userData?['hasBookingServices'] as bool? ?? currentUser.hasBookingServices;
+        final canUseBookings = _hasBookingAccess(
+          tier: userTierLower,
+          isAdmin: isAdmin,
+          hasBookingServices: hasBookingServices,
+        );
         
         final updateData = <String, dynamic>{
           'title': event.listingModel.title,
@@ -485,7 +530,7 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
 
         print('DEBUG [PublishListingEvent]: uid=${FirebaseAuth.instance.currentUser?.uid}');
         print('DEBUG [PublishListingEvent]: projectId=${FirebaseFirestore.instance.app.options.projectId}');
-        print('DEBUG [PublishListingEvent]: tier=$userTierLower isAdmin=${currentUser.isAdmin} canUseBookings=$canUseBookings');
+        print('DEBUG [PublishListingEvent]: tier=$userTierLower isAdmin=$isAdmin hasBookingServices=$hasBookingServices canUseBookings=$canUseBookings');
         print('DEBUG [PublishListingEvent]: updateData keys=${updateData.keys.toList()}');
         print('DEBUG [PublishListingEvent]: bookingEnabled=${updateData['bookingEnabled']} useTimeBlocks=${updateData['useTimeBlocks']} servicesCount=${(updateData['services'] as List).length}');
 
@@ -511,6 +556,19 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
 
         // Set the ID for the updated listing
         event.listingModel.id = event.listingIdToUpdate!;
+
+        // Log activity (fire-and-forget)
+        collaborationApiManager.logActivity(
+          listingId: event.listingIdToUpdate!,
+          actorUid: currentUser.userID,
+          actorName: currentUser.fullName(),
+          actorRole: 'OWNER',
+          actionType: 'LISTING_EDITED',
+          targetType: 'LISTING',
+          targetId: event.listingIdToUpdate!,
+          targetName: event.listingModel.title,
+        );
+
         emit(ListingUpdatedState(updatedListing: event.listingModel));
       } on FirebaseException catch (e, stackTrace) {
         print('ERROR [PublishListingEvent]: code=${e.code} message=${e.message}');

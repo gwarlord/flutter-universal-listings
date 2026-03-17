@@ -1037,5 +1037,11 @@
   "Vouched": "Respaldado",
   "You vouched": "Respaldaste",
   "Community Taps": "Respaldos de la comunidad",
-  "Tap to vouch for this business": "Toca para respaldar este negocio"
+  "Tap to vouch for this business": "Toca para respaldar este negocio",
+  "store_fulfillment_info_tooltip": "Cual es la diferencia?",
+  "store_fulfillment_info_title": "Entrega vs Envio",
+  "store_fulfillment_info_body": "Entrega: entregas localmente por tu cuenta.\nEnvio: se envia con transportista, seguimiento y tarifa de envio opcional.",
+  "Delivery Fee (Optional)": "Tarifa de entrega (opcional)",
+  "Leave empty or 0 for free delivery": "Deja vacio o 0 para entrega gratis",
+  "Delivery Fee": "Tarifa de entrega"
 }

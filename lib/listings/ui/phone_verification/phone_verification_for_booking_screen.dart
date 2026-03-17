@@ -3,9 +3,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
-import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:caribtap/constants.dart';
+import 'package:caribtap/core/utils/phone_number_utils.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/listings/services/phone_verification_service.dart';
 
@@ -28,6 +29,7 @@ class _PhoneVerificationForBookingScreenState
   // ── State ─────────────────────────────────────────────────────────────────
   _Step _step = _Step.enterPhone;
   bool _isLoading = false;
+  bool _isResolvingInitialPhone = true;
   String? _errorText;
 
   // Phone input
@@ -120,25 +122,20 @@ class _PhoneVerificationForBookingScreenState
       setState(() {
         _initialPhoneNumber = initialPhone;
         _fullPhoneNumber = initialPhone.phoneNumber ?? '';
-        _isPhoneValid = _fullPhoneNumber.isNotEmpty;
+        _isPhoneValid = isLikelyVerifiablePhone(_fullPhoneNumber);
+        _isResolvingInitialPhone = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _initialPhoneNumber = initialPhone;
+        _isResolvingInitialPhone = false;
       });
     }
   }
 
   String _normalizePhoneNumber(String rawPhoneNumber) {
-    final trimmed = rawPhoneNumber.trim();
-    if (trimmed.isEmpty) return '';
-    if (trimmed.startsWith('+')) return trimmed;
-
-    final digitsOnly = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digitsOnly.isEmpty) return '';
-
-    return '+$digitsOnly';
+    return normalizePhoneForVerification(rawPhoneNumber);
   }
 
   String? _extractProfileIsoCode(Map<String, dynamic>? data) {
@@ -164,7 +161,11 @@ class _PhoneVerificationForBookingScreenState
 
   Future<void> _sendCode() async {
     if (!_isPhoneValid || _fullPhoneNumber.isEmpty) {
-      setState(() => _errorText = 'Please enter a valid phone number.'.tr());
+      setState(() {
+        _errorText =
+            'No saved phone number found. Update it in Profile > Account Details > Phone Number and try again.'
+                .tr();
+      });
       return;
     }
 
@@ -173,16 +174,33 @@ class _PhoneVerificationForBookingScreenState
       _errorText = null;
     });
 
+    var callbackReceived = false;
+    void markCallbackHandled() {
+      callbackReceived = true;
+    }
+
+    final requestTimeout = Timer(const Duration(seconds: 30), () {
+      if (!mounted || callbackReceived) return;
+      setState(() {
+        _isLoading = false;
+        _errorText =
+            'This is taking longer than expected on iOS. Please try again in a moment.'
+                .tr();
+      });
+    });
+
     try {
       await auth.FirebaseAuth.instance.verifyPhoneNumber(
         phoneNumber: _fullPhoneNumber,
         forceResendingToken: _resendToken,
         timeout: const Duration(seconds: 60),
         verificationCompleted: (auth.PhoneAuthCredential credential) async {
+          markCallbackHandled();
           // Automatic verification (Android SMS-autofill).
           await _confirmCredential(credential);
         },
         verificationFailed: (auth.FirebaseAuthException e) {
+          markCallbackHandled();
           if (!mounted) return;
           setState(() {
             _isLoading = false;
@@ -190,6 +208,7 @@ class _PhoneVerificationForBookingScreenState
           });
         },
         codeSent: (String verificationId, int? resendToken) {
+          markCallbackHandled();
           if (!mounted) return;
           setState(() {
             _verificationId = verificationId;
@@ -205,11 +224,14 @@ class _PhoneVerificationForBookingScreenState
         },
       );
     } catch (e) {
+      markCallbackHandled();
       if (!mounted) return;
       setState(() {
         _isLoading = false;
         _errorText = 'Failed to send verification code. Please try again.'.tr();
       });
+    } finally {
+      requestTimeout.cancel();
     }
   }
 
@@ -253,16 +275,38 @@ class _PhoneVerificationForBookingScreenState
       return;
     }
 
-    // Try to link the phone credential to the current account.
-    // If the phone is already associated with a different (or same) account,
-    // the OTP was still valid — we still treat that as successfully verified.
+    var otpConfirmed = false;
+
+    // First attempt linking. If this account already has a linked phone
+    // provider, require re-authentication with the submitted OTP so wrong
+    // codes cannot be treated as successful verification.
     try {
       await currentUser.linkWithCredential(credential);
+      otpConfirmed = true;
     } on auth.FirebaseAuthException catch (e) {
-      if (e.code != 'credential-already-in-use' &&
-          e.code != 'provider-already-linked' &&
-          e.code != 'account-exists-with-different-credential') {
-        // Genuinely invalid OTP.
+      if (e.code == 'provider-already-linked') {
+        try {
+          await currentUser.reauthenticateWithCredential(credential);
+          otpConfirmed = true;
+        } on auth.FirebaseAuthException catch (reauthError) {
+          if (!mounted) return;
+          setState(() {
+            _isLoading = false;
+            _errorText = _friendlyError(reauthError);
+          });
+          return;
+        }
+      } else if (e.code == 'credential-already-in-use' ||
+          e.code == 'account-exists-with-different-credential') {
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _errorText =
+              'This phone number is linked to another account. Use your own account phone number and try again.'
+                  .tr();
+        });
+        return;
+      } else {
         if (!mounted) return;
         setState(() {
           _isLoading = false;
@@ -270,7 +314,15 @@ class _PhoneVerificationForBookingScreenState
         });
         return;
       }
-      // Phone is already linked / used by another account — the OTP was valid.
+    }
+
+    if (!otpConfirmed) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorText = 'Verification failed. Please try again.'.tr();
+      });
+      return;
     }
 
     // Mark verified in Firestore.
@@ -287,23 +339,8 @@ class _PhoneVerificationForBookingScreenState
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    // Show brief success banner then pop with true.
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Phone verified successfully!'.tr()),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-    await Future.delayed(const Duration(milliseconds: 600));
+    // Return success to the caller; caller decides how/where to surface toast.
     if (!mounted) return;
-    Navigator.of(context).pop(true);
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    // Clear any snackbars and pop immediately to avoid animating snackbars
-    // on a deactivated scaffold (causes ValueListenableBuilder build scope errors).
-    ScaffoldMessenger.of(context).clearSnackBars();
     Navigator.of(context).pop(true);
   }
 
@@ -348,17 +385,33 @@ class _PhoneVerificationForBookingScreenState
     final primary = Color(colorPrimary);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final content = _step == _Step.enterPhone
+        ? _buildPhoneStep(primary, isDark)
+        : _buildCodeStep(primary, isDark);
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Verify Phone Number'.tr()),
         centerTitle: true,
       ),
       body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator.adaptive())
-            : _step == _Step.enterPhone
-                ? _buildPhoneStep(primary, isDark)
-                : _buildCodeStep(primary, isDark),
+        child: Stack(
+          children: [
+            IgnorePointer(
+              ignoring: _isLoading,
+              child: content,
+            ),
+            if (_isLoading)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: (isDark ? Colors.black : Colors.white).withValues(alpha: 0.45),
+                  child: const Center(
+                    child: CircularProgressIndicator.adaptive(),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -398,32 +451,85 @@ class _PhoneVerificationForBookingScreenState
                 ),
           ),
           const SizedBox(height: 32),
-          InternationalPhoneNumberInput(
-            key: ValueKey(
-              '${_initialPhoneNumber.isoCode ?? ''}:${_initialPhoneNumber.phoneNumber ?? ''}',
-            ),
-            onInputChanged: (PhoneNumber number) {
-              _fullPhoneNumber = number.phoneNumber ?? '';
-            },
-            onInputValidated: (bool valid) {
-              setState(() => _isPhoneValid = valid);
-            },
-            selectorConfig: const SelectorConfig(
-              selectorType: PhoneInputSelectorType.DIALOG,
-            ),
-            ignoreBlank: false,
-            autoValidateMode: AutovalidateMode.disabled,
-            initialValue: _initialPhoneNumber,
-            textStyle: TextStyle(
-              color: isDark ? Colors.white : Colors.black87,
-            ),
-            inputDecoration: InputDecoration(
-              labelText: 'Phone number'.tr(),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+          AbsorbPointer(
+            absorbing: true,
+            child: InternationalPhoneNumberInput(
+              key: ValueKey(
+                '${_initialPhoneNumber.isoCode ?? ''}:${_initialPhoneNumber.phoneNumber ?? ''}',
+              ),
+              onInputChanged: (PhoneNumber number) {
+                _fullPhoneNumber = number.phoneNumber ?? '';
+              },
+              onInputValidated: (bool valid) {
+                setState(() => _isPhoneValid = valid);
+              },
+              selectorConfig: const SelectorConfig(
+                selectorType: PhoneInputSelectorType.DIALOG,
+              ),
+              ignoreBlank: false,
+              autoValidateMode: AutovalidateMode.disabled,
+              initialValue: _initialPhoneNumber,
+              textStyle: TextStyle(
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+              inputDecoration: InputDecoration(
+                labelText: 'Phone number'.tr(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
+          const SizedBox(height: 10),
+          if (_isResolvingInitialPhone)
+            Row(
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: isDark ? Colors.white54 : Colors.black45,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Your saved number will automatically appear in a few seconds.'.tr(),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: isDark ? Colors.white54 : Colors.black45,
+                          height: 1.4,
+                        ),
+                  ),
+                ),
+              ],
+            )
+          else
+            Text(
+              'Your saved number is auto-filled here and cannot be edited on this screen.'.tr(),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: isDark ? Colors.white54 : Colors.black45,
+                    height: 1.4,
+                  ),
+            ),
+          const SizedBox(height: 8),
+          Text(
+            'If this number is incorrect, update it in Profile > Account Details > Phone Number, then return to verify.'.tr(),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: isDark ? Colors.white54 : Colors.black45,
+                  height: 1.4,
+                ),
+          ),
+          if (!_isResolvingInitialPhone && _fullPhoneNumber.isEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'No saved phone number found. Go to Profile > Account Details and add your phone number first.'.tr(),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.redAccent,
+                    height: 1.4,
+                  ),
+            ),
+          ],
           if (_errorText != null) ...[
             const SizedBox(height: 12),
             Text(
@@ -470,38 +576,50 @@ class _PhoneVerificationForBookingScreenState
           ),
           const SizedBox(height: 12),
           Text(
-            'We sent a 6-digit code to $_fullPhoneNumber'.tr(),
+            'We sent a 6-digit code to {}'.tr(args: [_fullPhoneNumber]),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: isDark ? Colors.white70 : Colors.black54,
                   height: 1.5,
                 ),
           ),
           const SizedBox(height: 32),
-          PinCodeTextField(
-            appContext: context,
+          TextField(
             controller: _codeController,
-            length: 6,
             keyboardType: TextInputType.number,
-            animationType: AnimationType.fade,
-            pinTheme: PinTheme(
-              shape: PinCodeFieldShape.box,
-              borderRadius: BorderRadius.circular(8),
-              fieldHeight: 56,
-              fieldWidth: 46,
-              activeFillColor: isDark ? Colors.grey[800] : Colors.white,
-              selectedFillColor:
-                  isDark ? Colors.grey[700] : Colors.grey.shade100,
-              inactiveFillColor:
-                  isDark ? Colors.grey[850] : Colors.grey.shade50,
-              activeColor: primary,
-              selectedColor: primary,
-              inactiveColor:
-                  isDark ? Colors.grey[600]! : Colors.grey.shade300,
+            textInputAction: TextInputAction.done,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(6),
+            ],
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.black87,
+              letterSpacing: 10,
+              fontWeight: FontWeight.w600,
             ),
-            enableActiveFill: true,
-            onCompleted: _verifyCode,
-            onChanged: (_) {
+            decoration: InputDecoration(
+              hintText: '000000',
+              counterText: '',
+              filled: true,
+              fillColor: isDark ? Colors.grey[850] : Colors.grey.shade50,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(
+                  color: isDark ? Colors.grey[600]! : Colors.grey.shade300,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: primary, width: 1.5),
+              ),
+            ),
+            onChanged: (value) {
               if (_errorText != null) setState(() => _errorText = null);
+              if (value.length == 6) {
+                _verifyCode(value);
+              }
             },
           ),
           if (_errorText != null) ...[
@@ -515,7 +633,9 @@ class _PhoneVerificationForBookingScreenState
           Center(
             child: _cooldownSeconds > 0
                 ? Text(
-                    'Resend code in $_cooldownSeconds s'.tr(),
+                    'Resend code in {} s'.tr(
+                      args: [_cooldownSeconds.toString()],
+                    ),
                     style: TextStyle(
                       color: isDark ? Colors.white54 : Colors.black38,
                       fontSize: 13,

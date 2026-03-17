@@ -65,6 +65,20 @@ class _RentalItemEditorScreenState extends State<RentalItemEditorScreen> {
   bool _isUploading = false;
   bool _isSaving = false;
 
+  String _resolveListingCurrencyCode() {
+    final storeCurrency = (widget.listing.storeCurrencyCode ?? '').trim();
+    if (storeCurrency.isNotEmpty) {
+      return storeCurrency;
+    }
+
+    final listingCurrency = widget.listing.currencyCode.trim();
+    if (listingCurrency.isNotEmpty) {
+      return listingCurrency;
+    }
+
+    return 'USD';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -779,6 +793,7 @@ class _RentalItemEditorScreenState extends State<RentalItemEditorScreen> {
       }
 
       // Create/update item
+      final existingCurrency = widget.item?.currencyCode.trim();
       final item = RentalCatalogItem(
         id: itemId,
         listingId: widget.listing.id,
@@ -789,6 +804,9 @@ class _RentalItemEditorScreenState extends State<RentalItemEditorScreen> {
         category: _categoryController.text.trim(),
         basePrice: double.parse(_basePriceController.text),
         pricingUnit: _pricingUnit,
+        currencyCode: (existingCurrency != null && existingCurrency.isNotEmpty)
+          ? existingCurrency
+          : _resolveListingCurrencyCode(),
         photos: [..._photos, ...uploadedPhotos].take(6).toList(),
         videos: [..._videos, ...uploadedVideos].take(2).toList(),
         stockQty: int.parse(_stockQtyController.text),

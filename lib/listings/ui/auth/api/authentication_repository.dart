@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart' as auth;
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
 import 'package:the_apple_sign_in/the_apple_sign_in.dart' as apple;
@@ -12,10 +11,6 @@ abstract class AuthenticationRepository {
   /// Try to log in using user [email] and [password]
   /// Returns [ListingsUser] if user if logged in, or [String] error message if failed
   Future<dynamic> loginWithEmailAndPassword(String email, String password);
-
-  /// Try to login with Facebook
-  /// Returns [ListingsUser] if user if logged in, or [String] error message if failed
-  loginWithFacebook();
 
   /// Try to login with Apple
   /// Returns [ListingsUser] if user if logged in, or [String] error message if failed
@@ -82,7 +77,6 @@ abstract class AuthenticationRepository {
   /// [password] only required when is [provider] == [AuthProviders.password]
   /// [smsCode] only required when is [provider] == [AuthProviders.phone]
   /// [verificationId] only required when is [provider] == [AuthProviders.phone]
-  /// [accessToken] only required is when [provider] == [AuthProviders.facebook]
   /// [appleCredential] only required is when [provider] == [AuthProviders.apple]
   /// Returns false if delete/update is successful
   Future<bool> updateOrDeleteAuthUser(AuthProviders provider,
@@ -92,7 +86,6 @@ abstract class AuthenticationRepository {
       String? password,
       String? smsCode,
       String? verificationId,
-      AccessToken? accessToken,
       apple.AuthorizationResult? appleCredential});
 
   ///update phone number used for phone auth using [credential]
@@ -104,7 +97,6 @@ abstract class AuthenticationRepository {
       String? password,
       String? smsCode,
       String? verificationId,
-      AccessToken? accessToken,
       apple.AuthorizationResult? appleCredential});
 
   /// Resets user password using this [emailAddress]

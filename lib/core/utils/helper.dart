@@ -9,12 +9,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter/services.dart';
 import 'package:caribtap/core/ui/theme/app_theme.dart';
+import 'package:caribtap/core/utils/phone_number_utils.dart';
 
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:location/location.dart' as loc;
 
 bool get _isIOSPlatform =>
   !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+final GlobalKey<ScaffoldMessengerState> appScaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
 
 
 String? validateName(String? value) {
@@ -29,13 +33,15 @@ String? validateName(String? value) {
 }
 
 String? validateMobile(String? value) {
-  String pattern = r'(^\+?[0-9]*$)';
-  RegExp regExp = RegExp(pattern);
   if (value?.isEmpty ?? true) {
     return 'Mobile is required'.tr();
-  } else if (!regExp.hasMatch(value ?? '')) {
-    return 'Mobile Number must be digits'.tr();
   }
+
+  final normalized = normalizePhoneForVerification(value ?? '');
+  if (!isLikelyVerifiablePhone(normalized)) {
+    return 'Enter a valid phone number with country code (for example +18682565666).'.tr();
+  }
+
   return null;
 }
 
@@ -492,12 +498,24 @@ InputDecoration getInputDecoration(
 }
 
 showSnackBar(BuildContext context, String message) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
+  final rootMessenger = appScaffoldMessengerKey.currentState;
+  if (rootMessenger != null) {
+    rootMessenger
+      ..removeCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    return;
+  }
+
+  if (!context.mounted) return;
+  final localMessenger = ScaffoldMessenger.maybeOf(context);
+  if (localMessenger == null) return;
+
+  localMessenger
+    ..removeCurrentSnackBar()
     ..showSnackBar(
-      SnackBar(
-        content: Text(message),
-      ),
+      SnackBar(content: Text(message)),
     );
 }
 

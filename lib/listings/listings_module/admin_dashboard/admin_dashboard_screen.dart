@@ -23,6 +23,7 @@ import 'package:caribtap/core/ui/loading/loading_cubit.dart';
 import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:caribtap/constants.dart';
+import 'package:caribtap/listings/listings_module/admin_dashboard/global_notification_screen.dart';
 
 class AdminDashboardWrappingWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -88,6 +89,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   bool vHighRating = false;
   String vCountryCode = '';
 
+  // Moderation & Feedback segment state
+  String _moderationMode = 'verification';
+  String _feedbackMode = 'suggestions';
+
   // Review removal requests
   final ReviewRemovalRequestService _reviewRequestService =
       ReviewRemovalRequestService();
@@ -96,18 +101,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   @override
   void initState() {
     super.initState();
-    final safeInitialIndex = widget.initialTabIndex.clamp(0, 5);
+    final safeInitialIndex = widget.initialTabIndex.clamp(0, 3);
     _tabController =
-        TabController(length: 6, vsync: this, initialIndex: safeInitialIndex);
+      TabController(length: 4, vsync: this, initialIndex: safeInitialIndex);
     currentUser = widget.currentUser;
     _loadAllData();
     _loadPendingRequestsCount();
 
     _tabController.addListener(() {
-      if (_tabController.index == 2 && unverifiedListings.isEmpty) {
-        _loadUnverifiedListings();
-      }
-      if (_tabController.index == 3) {
+      if (_tabController.index == 2) {
+        // Pre-load both sections when Moderation tab is opened
+        if (unverifiedListings.isEmpty) _loadUnverifiedListings();
         context.read<AdminBloc>().add(GetReportedListingsEvent());
       }
     });
@@ -180,6 +184,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             style: const TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
+          // Global Notification broadcast button
+          IconButton(
+            icon: const Icon(Icons.campaign_outlined),
+            tooltip: 'Send Global Notification'.tr(),
+            onPressed: () => push(
+              context,
+              GlobalNotificationScreen(currentUser: currentUser),
+            ),
+          ),
           // Review Removal Requests Button with Badge
           Stack(
             children: [
@@ -227,11 +240,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           tabs: [
             Tab(text: 'Users'.tr()),
             Tab(text: 'Listings'.tr()),
-            Tab(text: 'Verification'.tr()),
-            Tab(text: 'Reports'.tr()),
-            Tab(text: 'Suggestions'.tr()),
-            Tab(text: 'Featured'.tr()),
+            Tab(text: 'Moderation'.tr()),
+            Tab(text: 'Feedback'.tr()),
           ],
+          isScrollable: false,
         ),
       ),
       body: BlocConsumer<AdminBloc, AdminState>(
@@ -267,14 +279,94 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             children: [
               _buildAllUsersTab(),
               _buildAllListingsTab(),
-              _buildVerificationTab(),
-              _buildReportsTab(),
-              _buildSuggestionsTab(),
-              _buildFeaturedTab(),
+              _buildModerationTab(),
+              _buildFeedbackTab(),
             ],
           );
         },
       ),
+    );
+  }
+
+// ---- Combined Moderation tab (Verification Queue + Reports) ----
+  Widget _buildModerationTab() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+          child: SegmentedButton<String>(
+            style: SegmentedButton.styleFrom(
+              selectedBackgroundColor: Color(colorPrimary),
+              selectedForegroundColor: Colors.white,
+              textStyle: const TextStyle(fontSize: 13),
+            ),
+            segments: [
+              ButtonSegment(
+                value: 'verification',
+                label: Text('Queue'.tr()),
+                icon: const Icon(Icons.verified_outlined, size: 16),
+              ),
+              ButtonSegment(
+                value: 'reports',
+                label: Text('Reports'.tr()),
+                icon: const Icon(Icons.flag_outlined, size: 16),
+              ),
+            ],
+            selected: {_moderationMode},
+            onSelectionChanged: (Set<String> sel) {
+              setState(() => _moderationMode = sel.first);
+              if (_moderationMode == 'reports') {
+                context.read<AdminBloc>().add(GetReportedListingsEvent());
+              } else if (unverifiedListings.isEmpty) {
+                _loadUnverifiedListings();
+              }
+            },
+          ),
+        ),
+        Expanded(
+          child: _moderationMode == 'verification'
+              ? _buildVerificationTab()
+              : _buildReportsTab(),
+        ),
+      ],
+    );
+  }
+
+  // ---- Combined Feedback tab (Suggestions + Featured Requests) ----
+  Widget _buildFeedbackTab() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+          child: SegmentedButton<String>(
+            style: SegmentedButton.styleFrom(
+              selectedBackgroundColor: Color(colorPrimary),
+              selectedForegroundColor: Colors.white,
+              textStyle: const TextStyle(fontSize: 13),
+            ),
+            segments: [
+              ButtonSegment(
+                value: 'suggestions',
+                label: Text('Suggestions'.tr()),
+                icon: const Icon(Icons.lightbulb_outline, size: 16),
+              ),
+              ButtonSegment(
+                value: 'featured',
+                label: Text('Featured'.tr()),
+                icon: const Icon(Icons.star_outline, size: 16),
+              ),
+            ],
+            selected: {_feedbackMode},
+            onSelectionChanged: (Set<String> sel) =>
+                setState(() => _feedbackMode = sel.first),
+          ),
+        ),
+        Expanded(
+          child: _feedbackMode == 'suggestions'
+              ? _buildSuggestionsTab()
+              : _buildFeaturedTab(),
+        ),
+      ],
     );
   }
 

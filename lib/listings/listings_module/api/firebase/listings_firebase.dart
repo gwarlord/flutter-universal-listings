@@ -10,6 +10,7 @@ import 'package:flutter_native_image_v2/flutter_native_image_v2.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
+import 'package:caribtap/constants.dart' as app_constants;
 import 'package:caribtap/listings/listings_module/api/listings_repository.dart';
 import 'package:caribtap/listings/model/categories_model.dart';
 import 'package:caribtap/listings/model/filter_model.dart';
@@ -33,6 +34,8 @@ class ListingsFirebaseUtils extends ListingsRepository {
   late final GoogleMapsPlaces _places = GoogleMapsPlaces(
     apiKey: cfg.googleMapsApiKey,
   );
+
+  static const String _iosBundleId = 'com.caribtap.ios';
 
   // ---------------------------
   // Helpers
@@ -77,10 +80,20 @@ class ListingsFirebaseUtils extends ListingsRepository {
         .delete();
 
     for (final imageUrl in (listingModel.photos)) {
-      await deleteImageFromStorage(imageUrl);
+      try {
+        await deleteImageFromStorage(imageUrl);
+      } catch (e, s) {
+        debugPrint('deleteListing: failed to delete image: $imageUrl');
+        debugPrint('$e $s');
+      }
     }
     for (final videoUrl in (listingModel.videos ?? const <String>[])) {
-      await deleteVideoFromStorage(videoUrl);
+      try {
+        await deleteVideoFromStorage(videoUrl);
+      } catch (e, s) {
+        debugPrint('deleteListing: failed to delete video: $videoUrl');
+        debugPrint('$e $s');
+      }
     }
   }
 
@@ -683,62 +696,98 @@ class ListingsFirebaseUtils extends ListingsRepository {
 
     // 1) RAW HTTP call (best debugging + avoids plugin JSON decode crash)
     try {
-      final key = cfg.googleMapsApiKey;
-      final uri = Uri.https(
-        'maps.googleapis.com',
-        '/maps/api/place/details/json',
-        <String, String>{
-          'place_id': placeId,
-          'key': key,
-          'fields': 'place_id,name,formatted_address,geometry',
-          'language': 'en',
-        },
-      );
-      debugPrint('*** DEBUG: getPlaceDetails HTTP URI: $uri');
+      final keyCandidates = <MapEntry<String, String>>[];
+      void addKey(String source, String key) {
+        final trimmed = key.trim();
+        if (trimmed.isEmpty) return;
+        if (keyCandidates.any((e) => e.value == trimmed)) return;
+        keyCandidates.add(MapEntry(source, trimmed));
+      }
+
+      // Try platform-restricted key first for that platform, then web-service keys.
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+        addKey('GOOGLE_IOS_API_KEY', app_constants.googleIosApiKey);
+      }
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        addKey('GOOGLE_ANDROID_API_KEY', app_constants.googleAndroidApiKey);
+      }
+      addKey('GOOGLE_PLACES_API_KEY', app_constants.googlePlacesApiKey);
+      addKey('GOOGLE_API_KEY/GOOGLE_MAPS_API_KEY', app_constants.googleApiKey);
+
+      if (keyCandidates.isEmpty) {
+        debugPrint('getPlaceDetails(): no API keys available for details lookup');
+        return null;
+      }
+
       final headers = <String, String>{};
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
         headers['X-Android-Package'] = 'com.caribtap.instaflutter.android';
         headers['X-Android-Cert'] =
             '2edc5d5e857233914f8335c5d4ee9e09fc8f61f9';
       }
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+        headers['X-Ios-Bundle-Identifier'] = _iosBundleId;
+      }
 
-      final res = await http.get(uri, headers: headers);
-      debugPrint('*** DEBUG: getPlaceDetails HTTP status: ${res.statusCode} body: ${res.body}');
-      final decoded = jsonDecode(res.body);
-      if (decoded is Map<String, dynamic>) {
+      for (final candidate in keyCandidates) {
+        final uri = Uri.https(
+          'maps.googleapis.com',
+          '/maps/api/place/details/json',
+          <String, String>{
+            'place_id': placeId,
+            'key': candidate.value,
+            'fields': 'place_id,name,formatted_address,geometry',
+            'language': 'en',
+          },
+        );
+
+        debugPrint('*** DEBUG: getPlaceDetails HTTP try source=${candidate.key}');
+        final res = await http.get(uri, headers: headers);
+        debugPrint('*** DEBUG: getPlaceDetails HTTP status: ${res.statusCode} body: ${res.body}');
+        final decoded = jsonDecode(res.body);
+        if (decoded is! Map<String, dynamic>) {
+          continue;
+        }
+
         final status = (decoded['status'] ?? '').toString();
         debugPrint('*** DEBUG: getPlaceDetails HTTP decoded status: $status');
         if (status != 'OK') {
-          debugPrint('*** DEBUG: getPlaceDetails HTTP not OK; falling back to plugin lookup');
-        } else {
-          final result = decoded['result'];
-          if (result is! Map<String, dynamic>) return null;
-
-          final formattedAddress = (result['formatted_address'] ?? '').toString();
-          final name = (result['name'] ?? formattedAddress).toString();
-          final pid = (result['place_id'] ?? placeId).toString();
-
-          final geometry = result['geometry'];
-          final location =
-          (geometry is Map<String, dynamic>) ? geometry['location'] : null;
-          final lat = (location is Map<String, dynamic>) ? location['lat'] : null;
-          final lng = (location is Map<String, dynamic>) ? location['lng'] : null;
-
-          final latD = (lat is num) ? lat.toDouble() : null;
-          final lngD = (lng is num) ? lng.toDouble() : null;
-
-          if (latD == null || lngD == null) return null;
-
-          return PlaceDetails(
-            placeId: pid,
-            name: name,
-            formattedAddress: formattedAddress.isEmpty
-                ? (prediction.description ?? 'Unknown location')
-                : formattedAddress,
-            geometry: Geometry(location: Location(lat: latD, lng: lngD)),
-          );
+          continue;
         }
+
+        final result = decoded['result'];
+        if (result is! Map<String, dynamic>) {
+          continue;
+        }
+
+        final formattedAddress = (result['formatted_address'] ?? '').toString();
+        final name = (result['name'] ?? formattedAddress).toString();
+        final pid = (result['place_id'] ?? placeId).toString();
+
+        final geometry = result['geometry'];
+        final location =
+            (geometry is Map<String, dynamic>) ? geometry['location'] : null;
+        final lat = (location is Map<String, dynamic>) ? location['lat'] : null;
+        final lng = (location is Map<String, dynamic>) ? location['lng'] : null;
+
+        final latD = (lat is num) ? lat.toDouble() : null;
+        final lngD = (lng is num) ? lng.toDouble() : null;
+
+        if (latD == null || lngD == null) {
+          continue;
+        }
+
+        return PlaceDetails(
+          placeId: pid,
+          name: name,
+          formattedAddress: formattedAddress.isEmpty
+              ? (prediction.description ?? 'Unknown location')
+              : formattedAddress,
+          geometry: Geometry(location: Location(lat: latD, lng: lngD)),
+        );
       }
+
+      debugPrint('*** DEBUG: getPlaceDetails HTTP not OK for all key candidates; falling back to plugin lookup');
     } catch (e, st) {
       debugPrint('getPlaceDetails(): RAW HTTP decode/build failed: $e');
       debugPrint('$st');
@@ -819,14 +868,36 @@ class ListingsFirebaseUtils extends ListingsRepository {
 
   Future<void> deleteImageFromStorage(String imageURL) async {
     final String fileUrl =
-    Uri.decodeFull(path.basename(imageURL)).replaceAll(RegExp(r'(\?alt).*'), '');
-    await storage.child(fileUrl).delete();
+        Uri.decodeFull(path.basename(imageURL)).replaceAll(RegExp(r'(\?alt).*'), '');
+    if (fileUrl.trim().isEmpty) return;
+
+    try {
+      await storage.child(fileUrl).delete();
+    } on FirebaseException catch (e) {
+      // Deletions should be idempotent; missing objects are safe to ignore.
+      if (e.code == 'object-not-found') {
+        debugPrint('deleteImageFromStorage: object not found, skipping: $fileUrl');
+        return;
+      }
+      rethrow;
+    }
   }
 
   Future<void> deleteVideoFromStorage(String videoURL) async {
     final String fileUrl =
-    Uri.decodeFull(path.basename(videoURL)).replaceAll(RegExp(r'(\?alt).*'), '');
-    await storage.child(fileUrl).delete();
+        Uri.decodeFull(path.basename(videoURL)).replaceAll(RegExp(r'(\?alt).*'), '');
+    if (fileUrl.trim().isEmpty) return;
+
+    try {
+      await storage.child(fileUrl).delete();
+    } on FirebaseException catch (e) {
+      // Deletions should be idempotent; missing objects are safe to ignore.
+      if (e.code == 'object-not-found') {
+        debugPrint('deleteVideoFromStorage: object not found, skipping: $fileUrl');
+        return;
+      }
+      rethrow;
+    }
   }
 
   // ---------------------------

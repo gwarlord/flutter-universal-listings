@@ -44,6 +44,19 @@ abstract class CollaborationRepository {
     int limit = 50,
   });
 
+  /// Write an activity log entry
+  Future<void> logActivity({
+    required String listingId,
+    required String actorUid,
+    String? actorName,
+    required String actorRole,
+    required String actionType,
+    required String targetType,
+    required String targetId,
+    String? targetName,
+    String? note,
+  });
+
   /// Get listings where user is a collaborator
   Future<List<AssignedListingModel>> getAssignedListings({
     required String userId,

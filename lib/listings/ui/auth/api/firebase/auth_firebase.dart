@@ -9,7 +9,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:flutter_native_image_v2/flutter_native_image_v2.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -151,24 +150,6 @@ class AuthFirebaseUtils extends AuthenticationRepository {
         '⚠️ resendEmailVerification called - this is deprecated, use code-based system');
     return 'Please use the "Send verification code" button to receive a verification code.'
         .tr();
-  }
-
-  @override
-  loginWithFacebook() async {
-    FacebookAuth facebookAuth = FacebookAuth.instance;
-    bool isLogged = await facebookAuth.accessToken != null;
-    if (!isLogged) {
-      LoginResult result = await facebookAuth.login();
-      if (result.status == LoginStatus.success) {
-        AccessToken? token = await facebookAuth.accessToken;
-        return await _handleFacebookLogin(
-            await facebookAuth.getUserData(), token!);
-      }
-    } else {
-      AccessToken? token = await facebookAuth.accessToken;
-      return await _handleFacebookLogin(
-          await facebookAuth.getUserData(), token!);
-    }
   }
 
   @override
@@ -348,41 +329,62 @@ class AuthFirebaseUtils extends AuthenticationRepository {
     String? lastName = 'User',
     File? image,
   }) async {
-    auth.UserCredential userCredential =
-        await auth.FirebaseAuth.instance.signInWithCredential(credential);
-    ListingsUser? user = await _getCurrentUser(userCredential.user?.uid ?? '');
-    if (user != null) {
-      user.active = true;
-      user.pushToken = await _resolvePushToken();
-      await _updateCurrentUser(user);
-      return user;
-    } else {
-      String profileImageUrl = '';
-      if (image != null) {
-        profileImageUrl = await _uploadUserImageToServer(
-            image, userCredential.user?.uid ?? '');
-      }
-      ListingsUser user = ListingsUser(
-          firstName: (firstName?.trim().isNotEmpty ?? false)
-              ? firstName!.trim()
-              : 'Anonymous',
-          lastName: (lastName?.trim().isNotEmpty ?? false)
-              ? lastName!.trim()
-              : 'User',
-          pushToken: await _resolvePushToken(),
-          phoneNumber: phoneNumber,
-          active: true,
-          lastOnlineTimestamp: Timestamp.now(),
-          settings: UserSettings(),
-          email: '',
-          profilePictureURL: profileImageUrl,
-          userID: userCredential.user?.uid ?? '');
-      String? errorMessage = await _createNewUser(user);
-      if (errorMessage == null) {
+    try {
+      auth.UserCredential userCredential =
+          await auth.FirebaseAuth.instance.signInWithCredential(credential);
+      ListingsUser? user =
+          await _getCurrentUser(userCredential.user?.uid ?? '');
+      if (user != null) {
+        user.active = true;
+        user.pushToken = await _resolvePushToken();
+        await _updateCurrentUser(user);
         return user;
       } else {
-        return 'Couldn\'t create new user with phone number.'.tr();
+        String profileImageUrl = '';
+        if (image != null) {
+          profileImageUrl = await _uploadUserImageToServer(
+              image, userCredential.user?.uid ?? '');
+        }
+        ListingsUser user = ListingsUser(
+            firstName: (firstName?.trim().isNotEmpty ?? false)
+                ? firstName!.trim()
+                : 'Anonymous',
+            lastName: (lastName?.trim().isNotEmpty ?? false)
+                ? lastName!.trim()
+                : 'User',
+            pushToken: await _resolvePushToken(),
+            phoneNumber: phoneNumber,
+            active: true,
+            lastOnlineTimestamp: Timestamp.now(),
+            settings: UserSettings(),
+            email: '',
+            profilePictureURL: profileImageUrl,
+            userID: userCredential.user?.uid ?? '');
+        String? errorMessage = await _createNewUser(user);
+        if (errorMessage == null) {
+          return user;
+        } else {
+          return 'Couldn\'t create new user with phone number.'.tr();
+        }
       }
+    } on auth.FirebaseAuthException catch (error) {
+      switch (error.code) {
+        case 'invalid-verification-code':
+          return 'Invalid code or has been expired.'.tr();
+        case 'session-expired':
+          return 'Code expired. Please request a new code.'.tr();
+        case 'invalid-credential':
+          return 'Invalid verification code. Please try again.'.tr();
+        case 'too-many-requests':
+          return 'Too many attempts. Please try again later.'.tr();
+        default:
+          return (error.message?.trim().isNotEmpty ?? false)
+              ? error.message!.tr()
+              : 'Phone authentication failed.'.tr();
+      }
+    } catch (e, s) {
+      debugPrint('loginOrCreateUserWithPhoneNumberCredential error: $e $s');
+      return 'Phone authentication failed.'.tr();
     }
   }
 
@@ -524,7 +526,6 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       String? password,
       String? smsCode,
       String? verificationId,
-      AccessToken? accessToken,
       apple.AuthorizationResult? appleCredential}) {
     late auth.AuthCredential credential;
     switch (provider) {
@@ -535,10 +536,6 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       case AuthProviders.phone:
         credential = auth.PhoneAuthProvider.credential(
             smsCode: smsCode!, verificationId: verificationId!);
-        break;
-      case AuthProviders.facebook:
-        credential =
-            auth.FacebookAuthProvider.credential(accessToken!.tokenString);
         break;
       case AuthProviders.apple:
         credential = auth.OAuthProvider('apple.com').credential(
@@ -560,14 +557,12 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       String? password,
       String? smsCode,
       String? verificationId,
-      AccessToken? accessToken,
       apple.AuthorizationResult? appleCredential}) async {
     auth.AuthCredential credential = getUserAuthCredential(provider,
         email: currentEmail,
         password: password,
         smsCode: smsCode,
         verificationId: verificationId,
-        accessToken: accessToken,
         appleCredential: appleCredential);
 
     auth.UserCredential? userCredential = await auth
@@ -660,48 +655,6 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       quality: 25,
     );
     return compressedImage;
-  }
-
-  _handleFacebookLogin(Map<String, dynamic> userData, AccessToken token) async {
-    auth.UserCredential authResult = await auth.FirebaseAuth.instance
-        .signInWithCredential(
-            auth.FacebookAuthProvider.credential(token.tokenString));
-    ListingsUser? user = await _getCurrentUser(authResult.user?.uid ?? '');
-    List<String> fullName = (userData['name'] as String).split(' ');
-    String firstName = '';
-    String lastName = '';
-    if (fullName.isNotEmpty) {
-      firstName = fullName.first;
-      lastName = fullName.skip(1).join(' ');
-    }
-    if (user != null) {
-      user.profilePictureURL = userData['picture']['data']['url'];
-      user.firstName = firstName;
-      user.lastName = lastName;
-      user.email = userData['email'];
-      user.active = true;
-      user.pushToken = await _resolvePushToken();
-      dynamic result = await _updateCurrentUser(user);
-      return result;
-    } else {
-      user = ListingsUser(
-          email: userData['email'] ?? '',
-          firstName: firstName,
-          profilePictureURL: userData['picture']['data']['url'] ?? '',
-          userID: authResult.user?.uid ?? '',
-          lastOnlineTimestamp: Timestamp.now(),
-          lastName: lastName,
-          active: true,
-          pushToken: await _resolvePushToken(),
-          phoneNumber: '',
-          settings: UserSettings());
-      String? errorMessage = await _createNewUser(user);
-      if (errorMessage == null) {
-        return user;
-      } else {
-        return errorMessage;
-      }
-    }
   }
 
   _handleAppleLogin(

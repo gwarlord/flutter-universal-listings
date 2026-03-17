@@ -77,8 +77,12 @@ class BookingFirebase extends BookingRepository {
       final List<BookingModel> bookings = [];
       for (final doc in snapshot.docs) {
         try {
-          final booking = BookingModel.fromJson(doc.data());
+          var booking = BookingModel.fromJson(doc.data());
           booking.id = doc.id; // Ensure ID is set from document ID
+          booking = await _resolveLatestMyBookingStatus(
+            userId: userId,
+            booking: booking,
+          );
           bookings.add(booking);
           debugPrint('🟢 DEBUG [getMyBookings]: Parsed booking ${booking.id} - status=${booking.status}');
         } catch (parseError) {
@@ -96,6 +100,76 @@ class BookingFirebase extends BookingRepository {
     } catch (e) {
       debugPrint('❌ DEBUG [getMyBookings]: Query error: $e');
       throw Exception('Failed to fetch my bookings: $e');
+    }
+  }
+
+  Future<BookingModel> _resolveLatestMyBookingStatus({
+    required String userId,
+    required BookingModel booking,
+  }) async {
+    final bookingId = booking.id.trim();
+    final listingId = booking.listingId.trim();
+    final localStatus = booking.status.toLowerCase().trim();
+
+    if (bookingId.isEmpty || listingId.isEmpty) {
+      return booking;
+    }
+
+    if (localStatus != 'pending' && localStatus != 'confirmed') {
+      return booking;
+    }
+
+    try {
+      final canonicalDoc = await _firestore
+          .collection('listings')
+          .doc(listingId)
+          .collection('bookings')
+          .doc(bookingId)
+          .get();
+
+      if (!canonicalDoc.exists || canonicalDoc.data() == null) {
+        return booking;
+      }
+
+      final canonicalBooking = BookingModel.fromJson(canonicalDoc.data()!);
+      if (canonicalBooking.id.trim().isEmpty) {
+        canonicalBooking.id = bookingId;
+      }
+
+      final canonicalStatus = canonicalBooking.status.toLowerCase().trim();
+      if (canonicalStatus == localStatus) {
+        return booking;
+      }
+
+      debugPrint(
+        '⚠️ DEBUG [getMyBookings]: Detected stale myBookings status for $bookingId '
+        '($localStatus -> $canonicalStatus).',
+      );
+
+      try {
+        await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('myBookings')
+            .doc(bookingId)
+            .update({
+          'status': canonicalBooking.status,
+          'updatedAt': canonicalBooking.updatedAt.toIso8601String(),
+          'cancellationReason': canonicalBooking.cancellationReason,
+          'cancelledBy': canonicalBooking.cancelledBy,
+          'cancelledByUserId': canonicalBooking.cancelledByUserId,
+            'completionTag': canonicalBooking.completionTag,
+            'completionTaggedAt': canonicalBooking.completionTaggedAt?.toIso8601String(),
+            'completionTaggedByUserId': canonicalBooking.completionTaggedByUserId,
+        });
+      } catch (syncError) {
+        debugPrint('⚠️ DEBUG [getMyBookings]: Unable to self-heal myBookings $bookingId: $syncError');
+      }
+
+      return canonicalBooking;
+    } catch (e) {
+      debugPrint('⚠️ DEBUG [getMyBookings]: Canonical status check failed for ${booking.id}: $e');
+      return booking;
     }
   }
 
@@ -170,8 +244,29 @@ class BookingFirebase extends BookingRepository {
     required String listingId,
     required String bookingId,
     required String status,
+    String? cancellationReason,
+    String? cancelledBy,
+    String? cancelledByUserId,
   }) async {
     final now = DateTime.now();
+    final String normalizedStatus = status.toLowerCase();
+    final String? trimmedCancellationReason = cancellationReason?.trim();
+    final Map<String, dynamic> updateData = {
+      'status': status,
+      'updatedAt': now.toIso8601String(),
+    };
+
+    if (normalizedStatus == 'cancelled') {
+      if (trimmedCancellationReason != null && trimmedCancellationReason.isNotEmpty) {
+        updateData['cancellationReason'] = trimmedCancellationReason;
+      }
+      if (cancelledBy != null && cancelledBy.trim().isNotEmpty) {
+        updateData['cancelledBy'] = cancelledBy.trim().toLowerCase();
+      }
+      if (cancelledByUserId != null && cancelledByUserId.trim().isNotEmpty) {
+        updateData['cancelledByUserId'] = cancelledByUserId.trim();
+      }
+    }
 
     try {
       // Update in listing's bookings
@@ -180,10 +275,7 @@ class BookingFirebase extends BookingRepository {
           .doc(listingId)
           .collection('bookings')
           .doc(bookingId)
-          .update({
-        'status': status,
-        'updatedAt': now.toIso8601String(),
-      });
+          .update(updateData);
     } catch (e) {
       throw Exception('Failed to update booking status: $e');
     }
@@ -208,10 +300,7 @@ class BookingFirebase extends BookingRepository {
               .doc(booking.customerId)
               .collection('myBookings')
               .doc(bookingId)
-              .update({
-            'status': status,
-            'updatedAt': now.toIso8601String(),
-          });
+              .update(updateData);
         } catch (e) {
           debugPrint('⚠️ Mirror update skipped for myBookings ($bookingId): $e');
         }
@@ -222,10 +311,7 @@ class BookingFirebase extends BookingRepository {
               .doc(booking.listersUserId)
               .collection('receivedBookings')
               .doc(bookingId)
-              .update({
-            'status': status,
-            'updatedAt': now.toIso8601String(),
-          });
+              .update(updateData);
         } catch (e) {
           debugPrint('⚠️ Mirror update skipped for receivedBookings ($bookingId): $e');
         }
@@ -246,12 +332,87 @@ class BookingFirebase extends BookingRepository {
   Future<void> cancelBooking({
     required String listingId,
     required String bookingId,
+    String? cancellationReason,
+    String? cancelledBy,
+    String? cancelledByUserId,
   }) async {
     await updateBookingStatus(
       listingId: listingId,
       bookingId: bookingId,
       status: 'cancelled',
+      cancellationReason: cancellationReason,
+      cancelledBy: cancelledBy,
+      cancelledByUserId: cancelledByUserId,
     );
+  }
+
+  @override
+  Future<void> updateBookingCompletionTag({
+    required String listingId,
+    required String bookingId,
+    required String completionTag,
+    String? completionTaggedByUserId,
+  }) async {
+    final now = DateTime.now();
+    final normalizedTag = completionTag.trim().toLowerCase();
+    final updateData = <String, dynamic>{
+      'completionTag': normalizedTag,
+      'completionTaggedAt': now.toIso8601String(),
+      'updatedAt': now.toIso8601String(),
+    };
+
+    final taggedBy = completionTaggedByUserId?.trim() ?? '';
+    if (taggedBy.isNotEmpty) {
+      updateData['completionTaggedByUserId'] = taggedBy;
+    }
+
+    try {
+      await _firestore
+          .collection('listings')
+          .doc(listingId)
+          .collection('bookings')
+          .doc(bookingId)
+          .update(updateData);
+    } catch (e) {
+      throw Exception('Failed to update booking completion tag: $e');
+    }
+
+    try {
+      final bookingDoc = await _firestore
+          .collection('listings')
+          .doc(listingId)
+          .collection('bookings')
+          .doc(bookingId)
+          .get();
+
+      if (bookingDoc.exists) {
+        final booking = BookingModel.fromJson(bookingDoc.data()!);
+
+        try {
+          await _firestore
+              .collection('users')
+              .doc(booking.customerId)
+              .collection('myBookings')
+              .doc(bookingId)
+              .update(updateData);
+        } catch (e) {
+          debugPrint('⚠️ Mirror completion tag update skipped for myBookings ($bookingId): $e');
+        }
+
+        try {
+          await _firestore
+              .collection('users')
+              .doc(booking.listersUserId)
+              .collection('receivedBookings')
+              .doc(bookingId)
+              .update(updateData);
+        } catch (e) {
+          debugPrint('⚠️ Mirror completion tag update skipped for receivedBookings ($bookingId): $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Completion tag sync error for booking ($bookingId): $e');
+    }
   }
 
   @override

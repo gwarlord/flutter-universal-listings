@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart' as auth;
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/ui/auth/api/authentication_repository.dart';
 import 'package:caribtap/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
@@ -25,7 +24,6 @@ class AuthLocalData extends AuthenticationRepository {
       String? password,
       String? smsCode,
       String? verificationId,
-      AccessToken? accessToken,
       AuthorizationResult? appleCredential}) {
     // TODO: implement getUserAuthCredential
     throw UnimplementedError();
@@ -64,12 +62,6 @@ class AuthLocalData extends AuthenticationRepository {
   @override
   Future loginWithEmailAndPassword(String email, String password) {
     // TODO: implement loginWithEmailAndPassword
-    throw UnimplementedError();
-  }
-
-  @override
-  loginWithFacebook() {
-    // TODO: implement loginWithFacebook
     throw UnimplementedError();
   }
 
@@ -114,7 +106,6 @@ class AuthLocalData extends AuthenticationRepository {
       String? password,
       String? smsCode,
       String? verificationId,
-      AccessToken? accessToken,
       AuthorizationResult? appleCredential}) {
     // TODO: implement updateOrDeleteAuthUser
     throw UnimplementedError();

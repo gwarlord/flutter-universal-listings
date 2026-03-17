@@ -36,6 +36,16 @@ class BookingModel {
   // Booking Trust System (Phase 1) — snapshotted at request time
   bool requesterPhoneVerified;
 
+  // Cancellation metadata
+  String? cancellationReason;
+  String? cancelledBy; // customer | lister | system
+  String? cancelledByUserId;
+
+  // Lister completion tagging (completed | no_show)
+  String? completionTag;
+  DateTime? completionTaggedAt;
+  String? completionTaggedByUserId;
+
   BookingModel({
     this.id = '',
     this.listingId = '',
@@ -65,6 +75,12 @@ class BookingModel {
     this.proofOfPayment,
     this.listingAcceptsProofOfPayment = false,
     this.requesterPhoneVerified = false,
+    this.cancellationReason,
+    this.cancelledBy,
+    this.cancelledByUserId,
+    this.completionTag,
+    this.completionTaggedAt,
+    this.completionTaggedByUserId,
   })  : createdAt = createdAt ?? DateTime.now(),
       updatedAt = updatedAt ?? DateTime.now(),
       customAnswers = customAnswers ?? {};
@@ -119,6 +135,12 @@ class BookingModel {
       proofOfPayment: json['proofOfPayment'] as Map<String, dynamic>?,
       listingAcceptsProofOfPayment: json['listingAcceptsProofOfPayment'] ?? false,
       requesterPhoneVerified: json['requesterPhoneVerified'] as bool? ?? false,
+      cancellationReason: json['cancellationReason'] as String?,
+      cancelledBy: json['cancelledBy'] as String?,
+      cancelledByUserId: json['cancelledByUserId'] as String?,
+      completionTag: json['completionTag'] as String?,
+      completionTaggedAt: _parseNullableDateTime(json['completionTaggedAt']),
+      completionTaggedByUserId: json['completionTaggedByUserId'] as String?,
     );
   }
 
@@ -152,6 +174,12 @@ class BookingModel {
       'proofOfPayment': proofOfPayment,
       'listingAcceptsProofOfPayment': listingAcceptsProofOfPayment,
       'requesterPhoneVerified': requesterPhoneVerified,
+      'cancellationReason': cancellationReason,
+      'cancelledBy': cancelledBy,
+      'cancelledByUserId': cancelledByUserId,
+      'completionTag': completionTag,
+      'completionTaggedAt': completionTaggedAt?.toIso8601String(),
+      'completionTaggedByUserId': completionTaggedByUserId,
     };
   }
 

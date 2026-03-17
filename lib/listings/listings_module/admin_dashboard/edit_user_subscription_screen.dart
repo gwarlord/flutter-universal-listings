@@ -34,11 +34,10 @@ class _EditUserSubscriptionScreenState
   bool _showSuggestions = false;
   bool _ignoreNextEmailChange = false;
 
-  final List<String> _tiers = ['free', 'professional', 'premium', 'business'];
+  final List<String> _tiers = ['free', 'professional', 'premium'];
 
   int _tierNumberFromName(String tierName) {
     switch (tierName.trim().toLowerCase()) {
-      case 'business':
       case 'premium':
         return 3;
       case 'professional':

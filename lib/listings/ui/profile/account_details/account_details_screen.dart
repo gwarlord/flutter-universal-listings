@@ -3,12 +3,12 @@ import 'package:caribtap/constants.dart';
 import 'package:caribtap/listings/utils/caribbean_countries.dart';
 import 'package:caribtap/listings/utils/country_search_dialog.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/core/utils/phone_number_utils.dart';
 import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:caribtap/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
 import 'package:caribtap/listings/ui/auth/reauth_user/reauth_user_screen.dart';
@@ -47,6 +47,7 @@ class AccountDetailsScreen extends StatefulWidget {
 class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
   late ListingsUser user;
   final GlobalKey<FormState> _key = GlobalKey();
+  final TextEditingController _phoneController = TextEditingController();
   AutovalidateMode _validate = AutovalidateMode.disabled;
   String? firstName, email, mobile, lastName;
   String? _countryCode;
@@ -57,11 +58,59 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     return null;
   }
 
+  String? _validateAccountPhoneInput(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return 'Mobile is required'.tr();
+    }
+
+    final digitCount = digitsOnly(trimmed).length;
+    if (digitCount < 7 || digitCount > 15) {
+      return 'Enter a valid phone number.'.tr();
+    }
+
+    return null;
+  }
+
+  String _phoneFieldGuidance() {
+    return phoneGuidanceMessage(_countryCode ?? user.countryCode);
+  }
+
+  String _countryDisplayName() {
+    return CaribbeanCountries.all
+        .firstWhere(
+          (c) => c.code == _countryCode,
+          orElse: () => const CaribbeanCountry(code: '', name: ''),
+        )
+        .name;
+  }
+
   @override
   void initState() {
     super.initState();
     user = widget.user;
     _countryCode = user.countryCode.isEmpty ? null : user.countryCode;
+    _syncPhoneDisplayText();
+  }
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _syncPhoneDisplayText() async {
+    final rawPhone = user.phoneNumber.trim();
+    final isoCode = (_countryCode ?? user.countryCode).trim();
+
+    if (rawPhone.isEmpty || isoCode.isEmpty) {
+      _phoneController.text = rawPhone;
+      return;
+    }
+
+    final formatted = await formatPhoneForDisplay(rawPhone, isoCode);
+    if (!mounted) return;
+    _phoneController.text = formatted;
   }
 
   Future<void> _refreshUserData() async {
@@ -75,6 +124,8 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
       final freshUser = ListingsUser.fromJson(doc.data()!);
       if (!mounted) return;
       setState(() => user = freshUser);
+      await _syncPhoneDisplayText();
+      if (!mounted) return;
       context.read<AuthenticationBloc>().add(UpdateAuthUserEvent(freshUser));
     } catch (e) {
       if (!mounted) return;
@@ -99,12 +150,15 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
         centerTitle: true,
       ),
       body: BlocConsumer<AccountDetailsBloc, AccountDetailsState>(
-        listener: (context, state) async {
+        listener: (_, state) async {
           if (state is AccountFieldsRequiredState) {
-            showSnackBar(context, 'Some fields are required.'.tr());
+            showSnackBar(this.context, 'Some fields are required.'.tr());
+            _validate = AutovalidateMode.onUserInteraction;
+          } else if (state is AccountValidationErrorState) {
+            showSnackBar(this.context, state.message);
             _validate = AutovalidateMode.onUserInteraction;
           } else if (state is ValidFieldsState) {
-            context.read<AccountDetailsBloc>().add(TryToSubmitDataEvent(
+            this.context.read<AccountDetailsBloc>().add(TryToSubmitDataEvent(
                   firstName: firstName!,
                   lastName: lastName!,
                   emailAddress: email!,
@@ -112,8 +166,10 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                   countryCode: _countryCode ?? '',
                 ));
           } else if (state is ReauthRequiredState) {
+            final authState = this.context.read<AuthenticationBloc>().state;
+            final currentEmail = authState.user?.email;
             bool result = await showDialog(
-              context: context,
+              context: this.context,
               builder: (context) => ReAuthUserScreen(
                 provider: state.authProvider,
                 phoneNumber: state.authProvider == AuthProviders.phone
@@ -123,21 +179,21 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                     ? state.data
                     : null,
                 currentEmail: state.authProvider == AuthProviders.password
-                    ? context.read<AuthenticationBloc>().user!.email
+                    ? currentEmail
                     : null,
                 isDeleteUser: false,
               ),
             );
 
+            if (!mounted) return;
             if (result == true) {
-              if (!mounted) return;
-              context.read<LoadingCubit>().showLoading(
-                    context,
+              this.context.read<LoadingCubit>().showLoading(
+                    this.context,
                     'Saving details...'.tr(),
                     false,
                     Color(colorPrimary),
                   );
-              context.read<AccountDetailsBloc>().add(UpdateUserDataEvent(
+              this.context.read<AccountDetailsBloc>().add(UpdateUserDataEvent(
                     firstName: firstName!,
                     lastName: lastName!,
                     emailAddress: email!,
@@ -146,17 +202,20 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                   ));
             }
           } else if (state is UpdatingDataState) {
-            context.read<LoadingCubit>().showLoading(
-                  context,
+            this.context.read<LoadingCubit>().showLoading(
+                  this.context,
                   'Saving details...'.tr(),
                   false,
                   Color(colorPrimary),
                 );
           } else if (state is UserDataUpdatedState) {
-            context.read<LoadingCubit>().hideLoading();
-            user = state.updatedUser;
-            context.read<AuthenticationBloc>().user = state.updatedUser;
-            showSnackBar(context, 'Details saved successfully'.tr());
+            this.context.read<LoadingCubit>().hideLoading();
+            if (!mounted) return;
+            setState(() => user = state.updatedUser);
+            await _syncPhoneDisplayText();
+            if (!mounted) return;
+            this.context.read<AuthenticationBloc>().user = state.updatedUser;
+            showSnackBar(this.context, 'Details saved successfully'.tr());
           }
         },
         builder: (context, state) {
@@ -226,12 +285,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                             },
                             child: AbsorbPointer(
                               child: TextFormField(
-                                controller: TextEditingController(
-                                  text: CaribbeanCountries.all.firstWhere(
-                                    (c) => c.code == _countryCode,
-                                    orElse: () => CaribbeanCountry(code: '', name: ''),
-                                  ).name,
-                                ),
+                                initialValue: _countryDisplayName(),
                                 validator: (_) => validateCountry(_countryCode),
                                 decoration: InputDecoration(
                                   labelText: 'Country'.tr(),
@@ -303,10 +357,12 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                           _buildTextField(
                             context,
                             label: 'Phone Number'.tr(),
-                            initialValue: user.phoneNumber,
-                            onSaved: (val) => mobile = val,
-                            validator: validateMobile,
+                            controller: _phoneController,
+                            initialValue: '',
+                            onSaved: (val) => mobile = val?.trim(),
+                            validator: _validateAccountPhoneInput,
                             icon: Icons.phone_outlined,
+                            helperText: _phoneFieldGuidance(),
                             keyboardType: TextInputType.phone,
                           ),
                         ],
@@ -378,6 +434,8 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     required FormFieldSetter<String> onSaved,
     required FormFieldValidator<String> validator,
     required IconData icon,
+    TextEditingController? controller,
+    String? helperText,
     TextInputType keyboardType = TextInputType.text,
   }) {
     final isDark = isDarkMode(context);
@@ -397,7 +455,8 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                 ),
               ),
               TextFormField(
-                initialValue: initialValue,
+                controller: controller,
+                initialValue: controller == null ? initialValue : null,
                 onSaved: onSaved,
                 validator: validator,
                 keyboardType: keyboardType,
@@ -412,6 +471,17 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                   contentPadding: EdgeInsets.symmetric(vertical: 4),
                 ),
               ),
+              if (helperText != null && helperText.trim().isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  helperText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white54 : Colors.black45,
+                    height: 1.35,
+                  ),
+                ),
+              ],
             ],
           ),
         ),

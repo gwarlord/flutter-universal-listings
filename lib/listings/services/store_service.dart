@@ -324,6 +324,11 @@ class StoreService {
                   sku: v.sku,
                   size: v.size,
                   color: v.color,
+                  option1Value: v.effectiveOption1Value,
+                  option2Value: v.effectiveOption2Value,
+                  option3Value: v.effectiveOption3Value,
+                  option4Value: v.effectiveOption4Value,
+                  imageUrl: v.imageUrl,
                   price: v.price,
                   stockQty: (v.stockQty - item.qty).clamp(0, 999999),
                 );
@@ -431,6 +436,7 @@ class StoreService {
     required String listingId,
     required bool pickupEnabled,
     required bool deliveryEnabled,
+    required double deliveryFee,
     required bool dineInEnabled,
     required bool shippingEnabled,
     required double shippingFee,
@@ -439,6 +445,7 @@ class StoreService {
     await _firestore.collection('listings').doc(listingId).update({
       'storePickupEnabled': pickupEnabled,
       'storeDeliveryEnabled': deliveryEnabled,
+      'storeDeliveryFee': deliveryFee,
       'storeDineInEnabled': dineInEnabled,
       'storeShippingEnabled': shippingEnabled,
       'storeShippingFee': shippingFee,

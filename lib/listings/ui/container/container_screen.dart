@@ -1013,9 +1013,7 @@ class _ContainerState extends State<ContainerScreen> {
                       );
                     },
                   ),
-                  if (currentUser.isAdmin ||
-                      const ['professional', 'premium']
-                          .contains(currentUser.subscriptionTier.toLowerCase()))
+                    if (currentUser.isAdmin || currentUser.hasBookingServices)
                     BlocBuilder<AttentionCubit, AttentionState>(
                       builder: (context, state) {
                         final badgeCount = state.attentionState
@@ -1148,13 +1146,13 @@ class _ContainerState extends State<ContainerScreen> {
                     title: 'Advanced Analytics'.tr(),
                     icon: Icons.analytics_rounded,
                     trailing: (currentUser.isAdmin ||
-                            ['premium', 'business'].contains(
+                            ['premium'].contains(
                                 currentUser.subscriptionTier.toLowerCase()))
                         ? _tierBadge('PREMIUM', Colors.purple)
                         : _lockIcon(),
                     onTap: () {
                       if (currentUser.isAdmin ||
-                          ['premium', 'business'].contains(
+                          ['premium'].contains(
                               currentUser.subscriptionTier.toLowerCase())) {
                         Navigator.pop(context);
                         push(context,

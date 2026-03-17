@@ -126,8 +126,7 @@ class _AdReviewScreenState extends State<AdReviewScreen> {
     final tier = (rawTier ?? '').trim().toLowerCase();
     return tier.contains('professional') ||
         tier.contains('premium') ||
-        tier == 'pro' ||
-        tier.contains('business');
+        tier == 'pro';
   }
 
   Future<void> _validateSubmitAccess({

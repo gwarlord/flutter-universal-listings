@@ -944,5 +944,11 @@
   "Vouched": "Aanbevolen",
   "You vouched": "Je hebt aanbevolen",
   "Community Taps": "Aanbevelingen uit de community",
-  "Tap to vouch for this business": "Tik om dit bedrijf aan te bevelen"
+  "Tap to vouch for this business": "Tik om dit bedrijf aan te bevelen",
+  "store_fulfillment_info_tooltip": "Wat is het verschil?",
+  "store_fulfillment_info_title": "Bezorging vs Verzending",
+  "store_fulfillment_info_body": "Bezorging: je levert zelf lokaal af.\nVerzending: verstuurd via vervoerder met tracking en optionele verzendkosten.",
+  "Delivery Fee (Optional)": "Bezorgkosten (optioneel)",
+  "Leave empty or 0 for free delivery": "Laat leeg of 0 voor gratis bezorging",
+  "Delivery Fee": "Bezorgkosten"
 }

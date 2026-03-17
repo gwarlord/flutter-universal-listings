@@ -29,8 +29,7 @@ bool isPremiumUser(ListingsUser user) {
   if (user.isAdmin) return true; // Admins have all access
 
   // Prefer user profile state because it is available in Edit Listing flows.
-  // Business tier should inherit premium feature access.
-  if (_hasTierFromUser(user, const {'premium', 'business'})) return true;
+  if (_hasTierFromUser(user, const {'premium'})) return true;
 
   // Fallback to entitlement snapshot if profile values are stale.
   return _hasTierFromEntitlement(user, 3);
@@ -40,7 +39,7 @@ bool isPremiumUser(ListingsUser user) {
 bool isProfessionalUser(ListingsUser user) {
   if (user.isAdmin) return true;
 
-  if (_hasTierFromUser(user, const {'professional', 'pro', 'premium', 'business'})) {
+  if (_hasTierFromUser(user, const {'professional', 'pro', 'premium'})) {
     return true;
   }
 
@@ -51,7 +50,7 @@ bool isProfessionalUser(ListingsUser user) {
 bool isPaidUser(ListingsUser user) {
   if (user.isAdmin) return true;
 
-  if (_hasTierFromUser(user, const {'professional', 'pro', 'premium', 'business'})) {
+  if (_hasTierFromUser(user, const {'professional', 'pro', 'premium'})) {
     return true;
   }
 
@@ -67,8 +66,6 @@ String getSubscriptionTierDisplayName(String tier) {
       return 'Professional';
     case 'premium':
       return 'Premium';
-    case 'business':
-      return 'Business';
     default:
       return 'Free';
   }

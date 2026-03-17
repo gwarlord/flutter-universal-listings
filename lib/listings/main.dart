@@ -37,6 +37,7 @@ import 'package:caribtap/listings/ui/attention/attention_cubit.dart';
 import 'package:caribtap/listings/listings_module/booking/booking_management_screen.dart';
 import 'package:caribtap/listings/location/location_scope_cubit.dart';
 import 'package:caribtap/listings/location/location_scope_service.dart';
+import 'package:caribtap/core/utils/helper.dart';
 
 runListings() {
   appName = 'Flutter Universal Listings';
@@ -179,6 +180,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         final appAccent = Color(colorAccent);
         return MaterialApp(
             navigatorKey: entry.navigatorKey, // Use global entry key
+          scaffoldMessengerKey: appScaffoldMessengerKey,
             localizationsDelegates: [
               ...context.localizationDelegates,
               FlutterQuillLocalizations.delegate,
