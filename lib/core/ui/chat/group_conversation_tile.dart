@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:caribtap/core/model/channel_data_model.dart';
 import 'package:caribtap/core/model/chat_feed_model.dart';
@@ -86,8 +84,7 @@ class _GroupConversationTileState extends State<GroupConversationTile> {
                             : FontWeight.bold,
                         fontSize: 17,
                         color:
-                            isDarkMode(context) ? Colors.white : Colors.black,
-                        fontFamily: Platform.isIOS ? 'sanFran' : 'Roboto',
+                          isDarkMode(context) ? Colors.white : Colors.black,
                       ),
                     ),
                     Padding(

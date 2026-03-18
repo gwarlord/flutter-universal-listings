@@ -230,9 +230,10 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final primaryColor = theme.colorScheme.primary;
+    final accentColor = theme.colorScheme.secondary;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0B141B) : const Color(0xFFE5DDD5),
+      backgroundColor: isDark ? const Color(0xFF09131D) : const Color(0xFFF6FAFC),
       appBar: AppBar(
         elevation: 1,
         centerTitle: true,
@@ -317,11 +318,32 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
       body: Stack(
         children: [
           Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? [
+                          const Color(0xFF08111A),
+                          const Color(0xFF0E1C2A),
+                          const Color(0xFF102331),
+                        ]
+                      : [
+                          const Color(0xFFF9FCFE),
+                          const Color(0xFFF2F8FB),
+                          const Color(0xFFEAF3F8),
+                        ],
+                ),
+              ),
+            ),
+          ),
+          Positioned.fill(
             child: CustomPaint(
               painter: ChatBackgroundPainter(
-                color: isDark
-                    ? Colors.white.withOpacity(0.05)
-                    : Colors.black.withOpacity(0.03),
+                primary: primaryColor,
+                accent: accentColor,
+                isDark: isDark,
                 textDirection: Directionality.of(context),
               ),
             ),
@@ -509,48 +531,81 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
 }
 
 class ChatBackgroundPainter extends CustomPainter {
-  final Color color;
+  final Color primary;
+  final Color accent;
+  final bool isDark;
   final ui.TextDirection textDirection;
-  ChatBackgroundPainter({required this.color, required this.textDirection});
+  ChatBackgroundPainter({
+    required this.primary,
+    required this.accent,
+    required this.isDark,
+    required this.textDirection,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    const List<String> symbols = ['CaribTap', '🌴', '💬', '📱'];
-    const double stepX = 140;
-    const double stepY = 100;
+    final double width = size.width;
+    final double height = size.height;
 
-    for (double x = 0; x < size.width + stepX; x += stepX) {
-      for (double y = 0; y < size.height + stepY; y += stepY) {
-        final index =
-            ((x / stepX).floor() + (y / stepY).floor()) % symbols.length;
+    final blobAlpha = isDark ? 0.18 : 0.12;
+    final lineAlpha = isDark ? 0.16 : 0.11;
+    final dotAlpha = isDark ? 0.14 : 0.1;
 
-        final textSpan = TextSpan(
-          text: symbols[index],
-          style: TextStyle(
-            color: color,
-            fontSize: index == 0 ? 14 : 22,
-            fontWeight: index == 0 ? FontWeight.bold : FontWeight.normal,
-          ),
-        );
+    final Paint topBlob = Paint()
+      ..shader = ui.Gradient.radial(
+        Offset(width * 0.15, height * 0.1),
+        width * 0.45,
+        [
+          primary.withOpacity(blobAlpha),
+          primary.withOpacity(0),
+        ],
+      );
 
-        final textPainter = TextPainter(
-          text: textSpan,
-          textAlign: TextAlign.left,
-          textDirection: textDirection,
-        );
+    final Paint bottomBlob = Paint()
+      ..shader = ui.Gradient.radial(
+        Offset(width * 0.85, height * 0.85),
+        width * 0.5,
+        [
+          accent.withOpacity(blobAlpha * 0.95),
+          accent.withOpacity(0),
+        ],
+      );
 
-        textPainter.layout();
+    canvas.drawRect(Offset.zero & size, topBlob);
+    canvas.drawRect(Offset.zero & size, bottomBlob);
 
-        canvas.save();
-        canvas.translate(x, y);
-        canvas.rotate(-0.25);
-        textPainter.paint(canvas, Offset.zero);
-        canvas.restore();
+    final Paint wavePaint = Paint()
+      ..color = primary.withOpacity(lineAlpha)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+
+    const double spacing = 90;
+    for (double y = -40; y < height + spacing; y += spacing) {
+      final path = Path()..moveTo(-40, y);
+      path.quadraticBezierTo(width * 0.25, y + 26, width * 0.5, y + 10);
+      path.quadraticBezierTo(width * 0.75, y - 12, width + 40, y + 14);
+      canvas.drawPath(path, wavePaint);
+    }
+
+    final Paint dotPaint = Paint()
+      ..color = accent.withOpacity(dotAlpha)
+      ..style = PaintingStyle.fill;
+
+    const double step = 34;
+    for (double x = 12; x < width; x += step) {
+      for (double y = 20; y < height; y += step) {
+        final bool skip = ((x ~/ step) + (y ~/ step)) % 3 == 0;
+        if (!skip) {
+          canvas.drawCircle(Offset(x, y), 1.15, dotPaint);
+        }
       }
     }
   }
 
   @override
   bool shouldRepaint(covariant ChatBackgroundPainter oldDelegate) =>
-      oldDelegate.color != color;
+      oldDelegate.primary != primary ||
+      oldDelegate.accent != accent ||
+      oldDelegate.isDark != isDark ||
+      oldDelegate.textDirection != textDirection;
 }

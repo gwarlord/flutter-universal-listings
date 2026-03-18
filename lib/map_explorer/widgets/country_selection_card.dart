@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/map_explorer/models/country_activity_summary.dart';
 import 'package:caribtap/map_explorer/models/country_map_config.dart';
 
@@ -20,9 +21,10 @@ class CountrySelectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = country.paletteColors.map((hex) => Color(hex)).toList();
-    final accent = palette.isNotEmpty ? palette.first : const Color(0xFF2E8BC0);
-    final accent2 = palette.length > 1 ? palette[1] : accent;
+    final primary = Color(cfg.colorPrimary);
+    final primaryDark = Color(cfg.colorPrimaryDark);
+    final secondary = Color(cfg.colorAccent);
+    final rentalsColor = Color.lerp(primary, secondary, 0.35) ?? primary;
 
     final listings = activity?.listingsCount ?? 0;
     final deals = activity?.dealsCount ?? 0;
@@ -32,10 +34,10 @@ class CountrySelectionCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        color: const Color(0xFF0E1D2C),
+        color: primaryDark,
         boxShadow: [
           BoxShadow(
-            color: accent.withOpacity(0.22),
+            color: secondary.withOpacity(0.18),
             blurRadius: 28,
             offset: const Offset(0, -8),
           ),
@@ -50,7 +52,7 @@ class CountrySelectionCard extends StatelessWidget {
             height: 3,
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              gradient: LinearGradient(colors: [accent, accent2]),
+              gradient: LinearGradient(colors: [primary, secondary]),
             ),
           ),
           Padding(
@@ -81,17 +83,17 @@ class CountrySelectionCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE85009).withOpacity(0.15),
+                          color: secondary.withOpacity(0.16),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: const Color(0xFFFF7832).withOpacity(0.5)),
+                              color: secondary.withOpacity(0.45)),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Trending',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFFFF9048),
+                            color: secondary,
                           ),
                         ),
                       ),
@@ -121,22 +123,22 @@ class CountrySelectionCard extends StatelessWidget {
                       _StatChip(
                           icon: Icons.storefront_outlined,
                           label: '$listings listings',
-                          color: accent),
+                          color: primary),
                     if (deals > 0)
                       _StatChip(
                           icon: Icons.local_offer_outlined,
                           label: '$deals deals',
-                          color: const Color(0xFF27AE60)),
+                          color: secondary),
                     if (rentals > 0)
                       _StatChip(
                           icon: Icons.apartment_outlined,
                           label: '$rentals rentals',
-                          color: const Color(0xFF8E44AD)),
+                          color: rentalsColor),
                     if (listings == 0 && deals == 0 && rentals == 0)
                       _StatChip(
                           icon: Icons.explore_outlined,
                           label: 'Ready to explore',
-                          color: accent),
+                          color: primary),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -148,7 +150,7 @@ class CountrySelectionCard extends StatelessWidget {
                   child: FilledButton.icon(
                     onPressed: onOpenSpotlight,
                     style: FilledButton.styleFrom(
-                      backgroundColor: accent,
+                      backgroundColor: primary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),

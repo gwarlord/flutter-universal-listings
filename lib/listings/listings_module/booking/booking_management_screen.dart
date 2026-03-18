@@ -234,7 +234,7 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Booking Requests'.tr()),
+        title: Text('Manage Bookings'.tr()),
         actions: [
           IconButton(
             icon: Icon(

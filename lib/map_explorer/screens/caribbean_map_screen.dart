@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/map_explorer/models/country_activity_summary.dart';
 import 'package:caribtap/map_explorer/models/country_map_config.dart';
@@ -86,10 +87,13 @@ class _CaribbeanMapScreenState extends State<CaribbeanMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final explorerBackground = Color(cfg.colorPrimaryDark);
+    final explorerAccent = Color(cfg.colorAccent);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0C1E2E),
+      backgroundColor: explorerBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0C1E2E),
+        backgroundColor: explorerBackground,
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
@@ -110,7 +114,7 @@ class _CaribbeanMapScreenState extends State<CaribbeanMapScreen> {
                       })
                     : null,
               child: const Text('Deselect',
-                  style: TextStyle(color: Colors.white54, fontSize: 13)),
+                  style: TextStyle(color: Colors.white70, fontSize: 13)),
             ),
           ),
         ],
@@ -129,7 +133,7 @@ class _CaribbeanMapScreenState extends State<CaribbeanMapScreen> {
                 key: ValueKey(_selected?.id ?? 'idle'),
                 style: const TextStyle(
                     fontSize: 13,
-                    color: Colors.white54,
+                  color: Colors.white70,
                     fontWeight: FontWeight.w500),
               ),
             ),
@@ -141,9 +145,9 @@ class _CaribbeanMapScreenState extends State<CaribbeanMapScreen> {
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
                     child: _loading
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                                color: Colors.white54))
+                      ? Center(
+                        child: CircularProgressIndicator(
+                          color: explorerAccent))
                         : CaribbeanRegionMap(
                             key: const ValueKey('map'),
                             countries: _countries,

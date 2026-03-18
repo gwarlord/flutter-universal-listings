@@ -130,7 +130,7 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
       appBar: AppBar(
         backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
         title: Text(
-          'Order Requests'.tr(),
+          'Manage Orders'.tr(),
           style: TextStyle(color: dark ? Colors.white : Colors.black),
         ),
         iconTheme: IconThemeData(color: dark ? Colors.white : Colors.black),

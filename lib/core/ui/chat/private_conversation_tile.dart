@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:caribtap/core/model/channel_data_model.dart';
 import 'package:caribtap/core/model/chat_feed_model.dart';
@@ -104,8 +102,7 @@ class _PrivateConversationTileState extends State<PrivateConversationTile> {
                             style: TextStyle(
                                 fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
                                 fontSize: 17,
-                                color: isDarkMode(context) ? Colors.white : Colors.black,
-                                fontFamily: Platform.isIOS ? 'sanFran' : 'Roboto'),
+                                color: isDarkMode(context) ? Colors.white : Colors.black),
                           ),
                         ),
                         if (isUnread)

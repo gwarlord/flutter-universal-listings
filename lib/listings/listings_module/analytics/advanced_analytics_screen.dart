@@ -586,7 +586,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
         style: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
-          color: isDarkMode(context) ? Colors.white : Colors.black,
+          color: Color(cfg.colorPrimary),
         ),
       ),
     );

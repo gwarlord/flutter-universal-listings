@@ -9,14 +9,58 @@ import 'package:caribtap/listings/services/entitlement_service.dart';
 import 'package:caribtap/listings/utils/subscription_helper.dart';
 import 'package:caribtap/listings/ui/rentals/rental_booking_detail_screen.dart';
 
+enum RentalOrdersScreenMode { hub, myRentals, manageRentals }
+
+class MyRentalsScreen extends StatelessWidget {
+  final ListingsUser currentUser;
+  final bool showAppBar;
+
+  const MyRentalsScreen({
+    Key? key,
+    required this.currentUser,
+    this.showAppBar = true,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return RentalOrdersHubScreen(
+      currentUser: currentUser,
+      showAppBar: showAppBar,
+      screenMode: RentalOrdersScreenMode.myRentals,
+    );
+  }
+}
+
+class ManageRentalsScreen extends StatelessWidget {
+  final ListingsUser currentUser;
+  final bool showAppBar;
+
+  const ManageRentalsScreen({
+    Key? key,
+    required this.currentUser,
+    this.showAppBar = true,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return RentalOrdersHubScreen(
+      currentUser: currentUser,
+      showAppBar: showAppBar,
+      screenMode: RentalOrdersScreenMode.manageRentals,
+    );
+  }
+}
+
 class RentalOrdersHubScreen extends StatefulWidget {
   final ListingsUser currentUser;
   final bool showAppBar;
+  final RentalOrdersScreenMode screenMode;
 
   const RentalOrdersHubScreen({
     Key? key,
     required this.currentUser,
     this.showAppBar = true,
+    this.screenMode = RentalOrdersScreenMode.hub,
   }) : super(key: key);
 
   @override
@@ -39,20 +83,35 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
   bool _showHistory = false; // Toggle between active orders and all orders
   bool _showListerTab = false;
 
+  bool get _isHubMode => widget.screenMode == RentalOrdersScreenMode.hub;
+  bool get _isManageMode =>
+      widget.screenMode == RentalOrdersScreenMode.manageRentals;
+
+  bool _shouldShowManageContent(bool hasProfessionalAccess) {
+    if (_isHubMode) return hasProfessionalAccess;
+    if (_isManageMode) return hasProfessionalAccess;
+    return false;
+  }
+
   @override
   void initState() {
     super.initState();
-    _showListerTab = isProfessionalUser(widget.currentUser);
-    _tabController = TabController(length: _showListerTab ? 2 : 1, vsync: this);
+    _showListerTab =
+        _shouldShowManageContent(isProfessionalUser(widget.currentUser));
+    final tabLength = _isHubMode ? (_showListerTab ? 2 : 1) : 1;
+    _tabController = TabController(length: tabLength, vsync: this);
 
     _entitlementListener = () {
       final hasAccess = isProfessionalUser(widget.currentUser);
-      if (hasAccess != _showListerTab && mounted) {
+      final shouldShowManageTab = _shouldShowManageContent(hasAccess);
+      if (shouldShowManageTab != _showListerTab && mounted) {
         setState(() {
-          _showListerTab = hasAccess;
-          _tabController.dispose();
-          _tabController =
-              TabController(length: _showListerTab ? 2 : 1, vsync: this);
+          _showListerTab = shouldShowManageTab;
+          if (_isHubMode) {
+            _tabController.dispose();
+            _tabController =
+                TabController(length: _showListerTab ? 2 : 1, vsync: this);
+          }
         });
       }
     };
@@ -74,6 +133,21 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     final surface = theme.colorScheme.surface;
     final isDark = theme.brightness == Brightness.dark;
     final onSurface = theme.colorScheme.onSurface;
+
+    if (!_isHubMode) {
+      final title = _isManageMode ? 'Manage Rentals'.tr() : 'My Rentals'.tr();
+      final body = _isManageMode
+          ? (_showListerTab
+              ? _buildListerTab()
+              : _buildManageAccessRequiredState(theme))
+          : _buildCustomerTab();
+
+      return Scaffold(
+        appBar: widget.showAppBar ? AppBar(title: Text(title)) : null,
+        body: body,
+      );
+    }
+
     final tabBar = TabBar(
       controller: _tabController,
       labelColor: Color(cfg.colorPrimary),
@@ -116,6 +190,35 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _buildManageAccessRequiredState(ThemeData theme) {
+    final onSurface = theme.colorScheme.onSurface;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.lock_outline_rounded,
+              size: 48,
+              color: onSurface.withOpacity(0.55),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Manage Rentals requires Professional access'.tr(),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: onSurface.withOpacity(0.78),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

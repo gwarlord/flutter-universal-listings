@@ -41,9 +41,9 @@ import 'package:caribtap/core/utils/helper.dart';
 
 runListings() {
   appName = 'Flutter Universal Listings';
-  colorAccent = 0xFFff8e94;
-  colorPrimaryDark = 0xFFc61f3c;
-  colorPrimary = 0xFFff5a66;
+  colorAccent = 0xFFC16A26;
+  colorPrimaryDark = 0xFF375872;
+  colorPrimary = 0xFF2A9EB8;
   categoriesCollection = 'categories';
   listingsCollection = 'listings';
   reviewCollection = 'reviews';

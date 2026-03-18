@@ -21,6 +21,8 @@ class EnhanceButtonWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return SizedBox(
       width: width,
       child: ElevatedButton.icon(
@@ -28,7 +30,8 @@ class EnhanceButtonWidget extends StatelessWidget {
         icon: Icon(icon),
         label: Text(label),
         style: ElevatedButton.styleFrom(
-          backgroundColor: enabled ? Colors.blue : Colors.grey[400],
+          backgroundColor: enabled ? scheme.primary : Colors.grey[400],
+          foregroundColor: enabled ? scheme.onPrimary : Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),

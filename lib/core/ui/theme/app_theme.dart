@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 @immutable
 class AppThemeColors extends ThemeExtension<AppThemeColors> {
@@ -20,11 +22,11 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
 
   static const AppThemeColors light = AppThemeColors(
     cardBackground: Colors.white,
-    cardBorder: Color(0xFFE5E7EB),
-    mutedText: Color(0xFF4B5563),
-    subtleBackground: Color(0xFFF3F4F6),
+    cardBorder: Color(0xFFB7DBD9),
+    mutedText: Color(0xFF517C80),
+    subtleBackground: Color(0xFFE2F2F1),
     inputFill: Colors.white,
-    inputHint: Color(0xFF6B7280),
+    inputHint: Color(0xFF517C80),
   );
 
   static const AppThemeColors dark = AppThemeColors(
@@ -73,6 +75,35 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
 }
 
 class AppTheme {
+  static bool get _isIosPlatform => defaultTargetPlatform == TargetPlatform.iOS;
+  static bool get _isAndroidPlatform => defaultTargetPlatform == TargetPlatform.android;
+
+  static TextTheme _platformTextTheme(TextTheme baseTheme) {
+    if (_isAndroidPlatform) {
+      return GoogleFonts.interTextTheme(baseTheme);
+    }
+    if (_isIosPlatform) {
+      return baseTheme.apply(fontFamily: 'SF-Pro-Text');
+    }
+    return baseTheme;
+  }
+
+  static TextStyle _platformAppBarTitleTextStyle() {
+    const base = TextStyle(
+      color: Colors.white,
+      fontSize: 20.0,
+      fontWeight: FontWeight.w500,
+    );
+
+    if (_isAndroidPlatform) {
+      return GoogleFonts.inter(textStyle: base);
+    }
+    if (_isIosPlatform) {
+      return base.copyWith(fontFamily: 'SF-Pro-Text');
+    }
+    return base;
+  }
+
   static ThemeData light({required Color primary, required Color accent, required bool isIos}) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: primary,
@@ -81,13 +112,15 @@ class AppTheme {
       primary: primary,
       secondary: accent,
       surface: Colors.white,
-      onSurface: Colors.black,
+      onSurface: const Color(0xFF1C1C13),
     );
 
     return ThemeData(
       brightness: Brightness.light,
       primaryColor: primary,
+      scaffoldBackgroundColor: const Color(0xFFF1FBFC),
       colorScheme: colorScheme,
+      textTheme: _platformTextTheme(ThemeData.light().textTheme),
       textSelectionTheme: TextSelectionThemeData(cursorColor: primary),
       snackBarTheme: const SnackBarThemeData(
         contentTextStyle: TextStyle(color: Colors.white),
@@ -98,11 +131,7 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: isIos ? 0 : null,
         iconTheme: const IconThemeData(color: Colors.white),
-        titleTextStyle: const TextStyle(
-          color: Colors.white,
-          fontSize: 20.0,
-          fontWeight: FontWeight.w500,
-        ),
+        titleTextStyle: _platformAppBarTitleTextStyle(),
       ),
       extensions: const [AppThemeColors.light],
     );
@@ -124,15 +153,12 @@ class AppTheme {
       primaryColor: primary,
       scaffoldBackgroundColor: const Color(0xFF121212),
       colorScheme: colorScheme,
+      textTheme: _platformTextTheme(ThemeData.dark().textTheme),
       appBarTheme: AppBarTheme(
         centerTitle: true,
         backgroundColor: primary,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: const TextStyle(
-          color: Colors.white,
-          fontSize: 20.0,
-          fontWeight: FontWeight.w500,
-        ),
+        titleTextStyle: _platformAppBarTitleTextStyle(),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       extensions: const [AppThemeColors.dark],

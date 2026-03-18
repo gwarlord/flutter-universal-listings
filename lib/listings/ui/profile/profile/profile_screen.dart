@@ -607,7 +607,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 context,
                                 icon: Icons.event_note_outlined,
                                 iconColor: Theme.of(context).colorScheme.primary,
-                                title: 'Booking Requests'.tr(),
+                                title: 'Manage Bookings'.tr(),
                                 onTap: () => push(context, BookingManagementWrapperWidget(currentUser: currentUser)),
                               ),
                             _modernListTile(

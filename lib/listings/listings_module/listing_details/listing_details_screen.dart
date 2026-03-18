@@ -419,6 +419,14 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     }
   }
 
+  String _formatServicePrice(double price, String currencyCode) {
+    if (!price.isFinite || price <= 0) return '';
+
+    final symbol = _getCurrencySymbol(currencyCode);
+    final compact = NumberFormat('0.##').format(price);
+    return '$symbol$compact $currencyCode';
+  }
+
   String _countryFlagEmoji(String? code) {
     if (code == null || code.trim().isEmpty) return '';
     final upper = code.trim().toUpperCase();
@@ -1087,7 +1095,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       color: menuTextColor,
-                      fontFamily: 'Roboto',
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -1115,7 +1122,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       color: menuTextColor,
-                      fontFamily: 'Roboto',
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -1136,7 +1142,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       color: menuTextColor,
-                      fontFamily: 'Roboto',
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -1170,7 +1175,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       color: menuTextColor,
-                      fontFamily: 'Roboto',
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -1191,7 +1195,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       color: menuTextColor,
-                      fontFamily: 'Roboto',
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -1221,7 +1224,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       color: menuTextColor,
-                      fontFamily: 'Roboto',
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -1252,7 +1254,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       color: menuTextColor,
-                      fontFamily: 'Roboto',
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -1273,7 +1274,6 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       color: menuTextColor,
-                      fontFamily: 'Roboto',
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -1427,17 +1427,20 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
           itemCount: _servicesExpanded ? listing.services.length : (listing.services.length > 3 ? 3 : listing.services.length),
           itemBuilder: (context, index) {
             final service = listing.services[index];
+            final servicePrice = _formatServicePrice(service.price, listing.currencyCode);
             return ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.check_circle_outline, color: primaryColor),
               title: Text(service.name),
-              trailing: Text(
-                '\$${service.price} ${listing.currencyCode}',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
-              ),
+              trailing: servicePrice.isEmpty
+                  ? null
+                  : Text(
+                      servicePrice,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
             );
           },
         ),

@@ -257,6 +257,35 @@ class _AddListingScreenState extends State<AddListingScreen> {
   bool isLoadingCategories = true;
   bool _isLoadingListing = false;
 
+  List<CategoriesModel> _normalizedCategories() {
+    final categoriesById = <String, CategoriesModel>{};
+    for (final category in _categories) {
+      categoriesById[category.id] = category;
+    }
+
+    final normalized = categoriesById.values.toList()
+      ..sort((a, b) => _localizedCategoryName(a.title)
+          .toLowerCase()
+          .compareTo(_localizedCategoryName(b.title).toLowerCase()));
+
+    return normalized;
+  }
+
+  CategoriesModel? _resolvedSelectedCategory(List<CategoriesModel> categories) {
+    final selectedId = _categoryValue?.id;
+    if (selectedId == null || selectedId.isEmpty) {
+      return null;
+    }
+
+    for (final category in categories) {
+      if (category.id == selectedId) {
+        return category;
+      }
+    }
+
+    return null;
+  }
+
   bool get isEdit => widget.listingToEdit != null;
   String? _countryCode;
   bool _verified = false;
@@ -2270,16 +2299,29 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       if (state is CategoriesFetchedState) {
                         isLoadingCategories = false;
                         _categories = state.categories;
+                        final normalizedCategories = _normalizedCategories();
+                        final resolvedCategory =
+                            _resolvedSelectedCategory(normalizedCategories);
+                        if (resolvedCategory != null) {
+                          _categoryValue = resolvedCategory;
+                        }
                         if (isEdit && _categoryValue == null) {
                           final l = widget.listingToEdit!;
                           try {
-                            _categoryValue = _categories
+                            _categoryValue = normalizedCategories
                                 .firstWhere((c) => c.id == l.categoryID);
                           } catch (_) {}
                         }
                       } else if (state is CategorySelectedState) {
-                        _categoryValue = state.category;
+                        _categoryValue = state.category == null
+                            ? null
+                            : _resolvedSelectedCategory(_normalizedCategories()) ??
+                                state.category;
                       }
+
+                      final categories = _normalizedCategories();
+                      final selectedCategory =
+                          _resolvedSelectedCategory(categories);
 
                       return DropdownButtonFormField<CategoriesModel>(
                         isExpanded: true,
@@ -2290,18 +2332,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         ),
                         dropdownColor: dark ? Colors.grey[900] : Colors.white,
                         hint: Text('Choose Category'.tr()),
-                        value: _categoryValue,
-                        items: (_categories.toList()
-                              ..sort((a, b) => _localizedCategoryName(a.title)
-                                  .toLowerCase()
-                                  .compareTo(_localizedCategoryName(b.title)
-                                      .toLowerCase())))
-                            .map((category) =>
-                                DropdownMenuItem<CategoriesModel>(
+                        value: selectedCategory,
+                        items: categories
+                            .map((category) => DropdownMenuItem<CategoriesModel>(
                                   value: category,
                                   child: Text(
-                                      _localizedCategoryName(category.title),
-                                      overflow: TextOverflow.ellipsis),
+                                    _localizedCategoryName(category.title),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ))
                             .toList(),
                         onChanged: isLoadingCategories

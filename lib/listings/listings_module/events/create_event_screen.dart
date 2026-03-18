@@ -703,7 +703,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               ],
             ),
             const SizedBox(height: 24),
-            Text('Committee Members'.tr(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: dark ? Colors.white : Colors.black87)),
+            Text('Committee Members'.tr(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(cfg.colorPrimary))),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -730,7 +730,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               );
             }),
             const SizedBox(height: 24),
-            Text('Ticketing & Links'.tr(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: dark ? Colors.white : Colors.black87)),
+            Text('Ticketing & Links'.tr(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(cfg.colorPrimary))),
             const SizedBox(height: 12),
             TextField(
               controller: _ticketUrlController,
@@ -753,7 +753,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Ticket Types'.tr(), style: TextStyle(fontWeight: FontWeight.bold, color: dark ? Colors.white : Colors.black87)),
+                Text('Ticket Types'.tr(), style: TextStyle(fontWeight: FontWeight.bold, color: Color(cfg.colorPrimary))),
                 TextButton.icon(onPressed: () => _showTicketTypeDialog(), icon: const Icon(Icons.add), label: Text('Add'.tr())),
               ],
             ),

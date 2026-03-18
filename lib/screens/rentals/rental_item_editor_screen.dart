@@ -567,7 +567,7 @@ class _RentalItemEditorScreenState extends State<RentalItemEditorScreen> {
       style: TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.bold,
-        color: dark ? Colors.white : Colors.black,
+        color: Color(cfg.colorPrimary),
       ),
     );
   }

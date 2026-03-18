@@ -95,6 +95,7 @@ class _LocationScopeFloatingButtonState extends State<LocationScopeFloatingButto
         }
 
         final isDark = Theme.of(context).brightness == Brightness.dark;
+        final colorScheme = Theme.of(context).colorScheme;
         final foregroundColor = (isCaribbean || isLocal)
           ? Colors.white
           : (isDark ? Colors.white : Theme.of(context).colorScheme.onSurface);
@@ -151,15 +152,15 @@ class _LocationScopeFloatingButtonState extends State<LocationScopeFloatingButto
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
                         color: isLocal
-                            ? Theme.of(context).colorScheme.primary.withOpacity(0.65)
+                            ? colorScheme.primary.withOpacity(0.65)
                             : Colors.white.withOpacity(0.65),
                         gradient: isCaribbean
                             ? LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  const Color(0xFF9C27B0).withOpacity(0.65),
-                                  const Color(0xFF673AB7).withOpacity(0.65),
+                                  colorScheme.primary.withOpacity(0.82),
+                                  colorScheme.secondary.withOpacity(0.72),
                                 ],
                               )
                             : null,

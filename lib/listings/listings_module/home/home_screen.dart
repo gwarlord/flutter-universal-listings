@@ -575,7 +575,7 @@ class HomeScreenState extends State<HomeScreen> {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
-                color: titleColor ?? (isDark ? Colors.white : Colors.black87),
+                color: titleColor ?? Color(cfg.colorPrimary),
                 letterSpacing: 0.5,
               ),
             ),
@@ -757,6 +757,39 @@ class HomeScreenState extends State<HomeScreen> {
         backgroundColor: dark ? Colors.black : Colors.grey[50],
         body: Stack(
           children: [
+            if (dark)
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        const Color(0xFF070D14),
+                        const Color(0xFF0A1420),
+                        const Color(0xFF0D1823),
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            if (dark)
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(0.85, -0.9),
+                      radius: 1.2,
+                      colors: [
+                        Color(cfg.colorPrimaryDark).withOpacity(0.12),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.68],
+                    ),
+                  ),
+                ),
+              ),
             RefreshIndicator(
               onRefresh: () async {
                 context.read<HomeBloc>().add(LoadingEvent());
@@ -1003,7 +1036,7 @@ class HomeScreenState extends State<HomeScreen> {
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: dark ? Colors.white : Colors.black87,
+                                    color: Color(cfg.colorPrimary),
                                   ),
                                 ),
                                 const SizedBox(height: 12),

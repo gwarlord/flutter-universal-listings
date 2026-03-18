@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:caribtap/core/ui/chat/api/chat_api_manager.dart';
 import 'package:caribtap/core/ui/chat/conversation/archived_conversations_screen.dart';
 import 'package:caribtap/core/ui/chat/conversation/conversation_bloc.dart';
@@ -59,7 +60,8 @@ enum DrawerSelection {
   categories,
   search,
   orders,
-  rentalOrders,
+  myRentals,
+  manageRentals,
   profile
 }
 
@@ -141,6 +143,87 @@ class _ContainerState extends State<ContainerScreen> {
 
   bool _showProfessionalFeatures = false;
   bool _showPremiumFeatures = false;
+  bool _accountExpanded = false;
+  bool _browseExpanded = false;
+  bool _managementExpanded = false;
+  bool _shoppingExpanded = false;
+  bool _advertisingExpanded = false;
+  bool _analyticsExpanded = false;
+  bool _supportExpanded = false;
+
+  Color _shiftLightness(Color color, double delta) {
+    final hsl = HSLColor.fromColor(color);
+    final adjusted = (hsl.lightness + delta).clamp(0.0, 1.0).toDouble();
+    return hsl.withLightness(adjusted).toColor();
+  }
+
+  String _drawerSectionPrefKey(String section) =>
+      'drawer_section_${widget.user.userID}_$section';
+
+  Future<void> _loadDrawerSectionState() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+
+    setState(() {
+      _accountExpanded =
+          prefs.getBool(_drawerSectionPrefKey('account')) ?? false;
+      _browseExpanded = prefs.getBool(_drawerSectionPrefKey('browse')) ?? false;
+      _managementExpanded =
+          prefs.getBool(_drawerSectionPrefKey('management')) ?? false;
+      _shoppingExpanded =
+          prefs.getBool(_drawerSectionPrefKey('shopping')) ?? false;
+      _advertisingExpanded =
+          prefs.getBool(_drawerSectionPrefKey('advertising')) ?? false;
+      _analyticsExpanded =
+          prefs.getBool(_drawerSectionPrefKey('analytics')) ?? false;
+      _supportExpanded =
+          prefs.getBool(_drawerSectionPrefKey('support')) ?? false;
+    });
+  }
+
+  Future<void> _saveDrawerSectionState(String section, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_drawerSectionPrefKey(section), value);
+  }
+
+  void _toggleDrawerSection(String section) {
+    bool updatedValue = false;
+
+    setState(() {
+      switch (section) {
+        case 'account':
+          _accountExpanded = !_accountExpanded;
+          updatedValue = _accountExpanded;
+          break;
+        case 'browse':
+          _browseExpanded = !_browseExpanded;
+          updatedValue = _browseExpanded;
+          break;
+        case 'management':
+          _managementExpanded = !_managementExpanded;
+          updatedValue = _managementExpanded;
+          break;
+        case 'shopping':
+          _shoppingExpanded = !_shoppingExpanded;
+          updatedValue = _shoppingExpanded;
+          break;
+        case 'advertising':
+          _advertisingExpanded = !_advertisingExpanded;
+          updatedValue = _advertisingExpanded;
+          break;
+        case 'analytics':
+          _analyticsExpanded = !_analyticsExpanded;
+          updatedValue = _analyticsExpanded;
+          break;
+        case 'support':
+          _supportExpanded = !_supportExpanded;
+          updatedValue = _supportExpanded;
+          break;
+      }
+    });
+
+    _saveDrawerSectionState(section, updatedValue);
+  }
 
   @override
   void initState() {
@@ -163,6 +246,8 @@ class _ContainerState extends State<ContainerScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _handlePendingDeepLink();
     });
+
+    _loadDrawerSectionState();
   }
 
   /// Handle pending deep link after the screen is built
@@ -464,9 +549,34 @@ class _ContainerState extends State<ContainerScreen> {
             },
             builder: (context, state) {
               final isDark = isDarkMode(context);
+              final theme = Theme.of(context);
+              final appBarBase = theme.appBarTheme.backgroundColor ?? theme.colorScheme.primary;
+              final appBarTop = isDark
+                  ? _shiftLightness(appBarBase, 0.05)
+                  : _shiftLightness(appBarBase, 0.08);
+              final appBarBottom = isDark
+                  ? _shiftLightness(appBarBase, -0.03)
+                  : _shiftLightness(appBarBase, -0.04);
+
               return Scaffold(
                 drawer: _buildModernDrawer(context, currentUser, isDark),
                 appBar: AppBar(
+                  surfaceTintColor: Colors.transparent,
+                  flexibleSpace: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [appBarTop, appBarBottom],
+                      ),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: isDark ? Colors.white10 : Colors.black12,
+                          width: 0.6,
+                        ),
+                      ),
+                    ),
+                  ),
                   leadingWidth: 96,
                   leading: SizedBox(
                     width: 96,
@@ -685,8 +795,7 @@ class _ContainerState extends State<ContainerScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // BROWSE SECTION
-                  _drawerSectionLabel('Browse'.tr(), isDark),
+                  // HOME (standalone)
                   _drawerTile(
                     title: 'Home'.tr(),
                     icon: Icons.home_rounded,
@@ -704,6 +813,73 @@ class _ContainerState extends State<ContainerScreen> {
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
+
+                  const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Divider()),
+                  // ACCOUNT SECTION
+                  _drawerSectionLabel(
+                    'Account'.tr(),
+                    isDark,
+                    primaryColorValue,
+                    _accountExpanded,
+                    () => _toggleDrawerSection('account'),
+                  ),
+                  if (_accountExpanded) ...[
+                  _drawerTile(
+                    title: 'Profile'.tr(),
+                    icon: Icons.person_rounded,
+                    isSelected: _drawerSelection == DrawerSelection.profile,
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.read<ContainerBloc>().add(TabSelectedEvent(
+                            appBarTitle: 'Profile'.tr(),
+                            currentTabIndex: 3,
+                            drawerSelection: DrawerSelection.profile,
+                            currentWidget: ProfileScreen(
+                              currentUser: currentUser,
+                              showAppBar: false,
+                            ),
+                          ));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'My Listings'.tr(),
+                    icon: Icons.list_alt_rounded,
+                    onTap: () {
+                      Navigator.pop(context);
+                      push(context,
+                          MyListingsWrapperWidget(currentUser: currentUser));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'My Brands/Branches'.tr(),
+                    icon: Icons.storefront_rounded,
+                    onTap: () {
+                      Navigator.pop(context);
+                      push(context, MyBrandsScreen(currentUser: currentUser));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  ],
+
+                  const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Divider()),
+                  // BROWSE SECTION
+                  _drawerSectionLabel(
+                    'Browse'.tr(),
+                    isDark,
+                    primaryColorValue,
+                    _browseExpanded,
+                    () => _toggleDrawerSection('browse'),
+                  ),
+                  if (_browseExpanded) ...[
                   _drawerTile(
                     title: 'Categories'.tr(),
                     icon: Icons.category_rounded,
@@ -783,12 +959,228 @@ class _ContainerState extends State<ContainerScreen> {
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
+                  ],
+
+                  const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Divider()),
+                  // MANAGEMENT SECTION
+                  _drawerSectionLabel(
+                    'Management'.tr(),
+                    isDark,
+                    primaryColorValue,
+                    _managementExpanded,
+                    () => _toggleDrawerSection('management'),
+                  ),
+                  if (_managementExpanded) ...[
+                  _drawerTile(
+                    title: 'Activate Booking'.tr(),
+                    icon: Icons.room_service_rounded,
+                    trailing: !currentUser.hasBookingServices
+                        ? _lockIcon()
+                        : _tierBadge('PRO', Colors.blue),
+                    onTap: () {
+                      if (currentUser.hasBookingServices) {
+                        _navigateToListingServices(context);
+                      } else {
+                        Navigator.pop(context);
+                        _showUpgradeDialog(
+                            context, 'Activate Booking', 'Professional');
+                      }
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'Activate Chat'.tr(),
+                    icon: Icons.chat_rounded,
+                    trailing: !isProfessionalUser(currentUser)
+                        ? _lockIcon()
+                        : _tierBadge('PRO', Colors.blue),
+                    onTap: () {
+                      Navigator.pop(context);
+                      if (isProfessionalUser(currentUser)) {
+                        push(
+                            context,
+                            ChatSettingsScreen(
+                                currentUser: currentUser,
+                                listingsRepository:
+                                    listings_api.listingApiManager));
+                      } else {
+                        _showUpgradeDialog(
+                            context, 'Activate Chat', 'Professional');
+                      }
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'Manage Rentals'.tr(),
+                    icon: Icons.manage_accounts_rounded,
+                    isSelected:
+                        _drawerSelection == DrawerSelection.manageRentals,
+                    trailing: !isProfessionalUser(currentUser)
+                        ? _lockIcon()
+                        : _tierBadge('PRO', Colors.blue),
+                    onTap: () {
+                      if (!isProfessionalUser(currentUser)) {
+                        Navigator.pop(context);
+                        _showUpgradeDialog(
+                            context, 'Manage Rentals', 'Professional');
+                        return;
+                      }
+
+                      context
+                          .read<AttentionCubit>()
+                          .markModuleAsSeen(AttentionModule.rentals);
+                      Navigator.pop(context);
+                      context.read<ContainerBloc>().add(TabSelectedEvent(
+                            appBarTitle: 'Manage Rentals'.tr(),
+                            currentTabIndex: 4,
+                            drawerSelection: DrawerSelection.manageRentals,
+                            currentWidget: ManageRentalsScreen(
+                              currentUser: currentUser,
+                              showAppBar: false,
+                            ),
+                          ));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  if (currentUser.isAdmin || currentUser.hasBookingServices)
+                    BlocBuilder<AttentionCubit, AttentionState>(
+                      builder: (context, state) {
+                        final badgeCount = state.attentionState
+                                ?.getCountForModule(
+                                    AttentionModule.bookingRequests) ??
+                            0;
+                        return _drawerTile(
+                          title: 'Manage Bookings'.tr(),
+                          icon: Icons.event_note_rounded,
+                          trailing: badgeCount > 0
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                          color: Color(cfg.colorPrimary),
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                      child: Text(
+                                        badgeCount > 99
+                                            ? '99+'
+                                            : badgeCount.toString(),
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    _tierBadge('PRO', Colors.blue),
+                                  ],
+                                )
+                              : _tierBadge('PRO', Colors.blue),
+                          onTap: () {
+                            context.read<AttentionCubit>().markModuleAsSeen(
+                                AttentionModule.bookingRequests);
+                            Navigator.pop(context);
+                            push(
+                                context,
+                                BookingManagementWrapperWidget(
+                                    currentUser: currentUser));
+                          },
+                          isDark: isDark,
+                          primaryColor: primaryColorValue,
+                        );
+                      },
+                    ),
+                  if (isPremiumUser(currentUser))
+                    BlocBuilder<AttentionCubit, AttentionState>(
+                      builder: (context, state) {
+                        final badgeCount = state.attentionState
+                                ?.getCountForModule(
+                                    AttentionModule.orderRequests) ??
+                            0;
+                        return _drawerTile(
+                          title: 'Manage Orders'.tr(),
+                          icon: Icons.event_note_rounded,
+                          trailing: badgeCount > 0
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                          color: Color(cfg.colorPrimary),
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                      child: Text(
+                                        badgeCount > 99
+                                            ? '99+'
+                                            : badgeCount.toString(),
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    _tierBadge('PREMIUM', Colors.purple),
+                                  ],
+                                )
+                              : _tierBadge('PREMIUM', Colors.purple),
+                          onTap: () {
+                            context.read<AttentionCubit>().markModuleAsSeen(
+                                AttentionModule.orderRequests);
+                            Navigator.pop(context);
+                            push(
+                                context,
+                                OrdersManagementScreen(
+                                    currentUser: currentUser));
+                          },
+                          isDark: isDark,
+                          primaryColor: primaryColorValue,
+                        );
+                      },
+                    ),
+                  _drawerTile(
+                    title: 'Quotes & Invoices'.tr(),
+                    icon: Icons.receipt_long_rounded,
+                    trailing: isPremiumUser(currentUser)
+                        ? _tierBadge('PREMIUM', Colors.purple)
+                        : _lockIcon(),
+                    onTap: () {
+                      if (isPremiumUser(currentUser)) {
+                        Navigator.pop(context);
+                        push(
+                            context, QuoteListScreen(currentUser: currentUser));
+                      } else {
+                        Navigator.pop(context);
+                        _showUpgradeDialog(
+                            context, 'Quotes & Invoices', 'Premium');
+                      }
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  ],
 
                   const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Divider()),
                   // SHOPPING SECTION
-                  _drawerSectionLabel('Shopping'.tr(), isDark),
+                  _drawerSectionLabel(
+                    'Shopping'.tr(),
+                    isDark,
+                    primaryColorValue,
+                    _shoppingExpanded,
+                    () => _toggleDrawerSection('shopping'),
+                  ),
+                  if (_shoppingExpanded) ...[
                   BlocBuilder<AttentionCubit, AttentionState>(
                     builder: (context, state) {
                       final badgeCount = state.attentionState
@@ -834,144 +1226,6 @@ class _ContainerState extends State<ContainerScreen> {
                       );
                     },
                   ),
-                  if (isPremiumUser(currentUser))
-                    BlocBuilder<AttentionCubit, AttentionState>(
-                      builder: (context, state) {
-                        final badgeCount = state.attentionState
-                                ?.getCountForModule(
-                                    AttentionModule.orderRequests) ??
-                            0;
-                        return _drawerTile(
-                          title: 'Order Requests'.tr(),
-                          icon: Icons.event_note_rounded,
-                          trailing: badgeCount > 0
-                              ? Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      margin: const EdgeInsets.only(right: 8),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                          color: Color(cfg.colorPrimary),
-                                          borderRadius:
-                                              BorderRadius.circular(10)),
-                                      child: Text(
-                                        badgeCount > 99
-                                            ? '99+'
-                                            : badgeCount.toString(),
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                    _tierBadge('PREMIUM', Colors.purple),
-                                  ],
-                                )
-                              : _tierBadge('PREMIUM', Colors.purple),
-                          onTap: () {
-                            context.read<AttentionCubit>().markModuleAsSeen(
-                                AttentionModule.orderRequests);
-                            Navigator.pop(context);
-                            push(
-                                context,
-                                OrdersManagementScreen(
-                                    currentUser: currentUser));
-                          },
-                          isDark: isDark,
-                          primaryColor: primaryColorValue,
-                        );
-                      },
-                    ),
-                  BlocBuilder<AttentionCubit, AttentionState>(
-                    builder: (context, state) {
-                      final badgeCount = state.attentionState
-                              ?.getCountForModule(AttentionModule.rentals) ??
-                          0;
-                      return _drawerTile(
-                        title: 'Rentals'.tr(),
-                        icon: Icons.calendar_month_rounded,
-                        isSelected:
-                            _drawerSelection == DrawerSelection.rentalOrders,
-                        trailing: badgeCount > 0
-                            ? Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                    color: Color(cfg.colorPrimary),
-                                    borderRadius: BorderRadius.circular(10)),
-                                child: Text(
-                                  badgeCount > 99
-                                      ? '99+'
-                                      : badgeCount.toString(),
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              )
-                            : null,
-                        onTap: () {
-                          context
-                              .read<AttentionCubit>()
-                              .markModuleAsSeen(AttentionModule.rentals);
-                          Navigator.pop(context);
-                          context.read<ContainerBloc>().add(TabSelectedEvent(
-                                appBarTitle: 'Rentals'.tr(),
-                                currentTabIndex: 4,
-                                drawerSelection: DrawerSelection.rentalOrders,
-                                currentWidget: RentalOrdersHubScreen(
-                                    currentUser: currentUser,
-                                    showAppBar: false),
-                              ));
-                        },
-                        isDark: isDark,
-                        primaryColor: primaryColorValue,
-                      );
-                    },
-                  ),
-
-                  const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: Divider()),
-                  // SELLING SECTION
-                  _drawerSectionLabel('Selling'.tr(), isDark),
-                  _drawerTile(
-                    title: 'My Listings'.tr(),
-                    icon: Icons.list_alt_rounded,
-                    onTap: () {
-                      Navigator.pop(context);
-                      push(context,
-                          MyListingsWrapperWidget(currentUser: currentUser));
-                    },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
-                  ),
-                  _drawerTile(
-                    title: 'Post Event'.tr(),
-                    icon: Icons.event_rounded,
-                    trailing:
-                        (currentUser.isAdmin || currentUser.hasBookingServices)
-                            ? _tierBadge('PRO', Colors.blue)
-                            : _lockIcon(),
-                    onTap: () async {
-                      Navigator.pop(context);
-                      await _openCreateEventScreen(currentUser);
-                    },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
-                  ),
-                  _drawerTile(
-                    title: 'My Brands/Branches'.tr(),
-                    icon: Icons.storefront_rounded,
-                    onTap: () {
-                      Navigator.pop(context);
-                      push(context, MyBrandsScreen(currentUser: currentUser));
-                    },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
-                  ),
                   BlocBuilder<AttentionCubit, AttentionState>(
                     builder: (context, state) {
                       final badgeCount = state.attentionState
@@ -1013,70 +1267,77 @@ class _ContainerState extends State<ContainerScreen> {
                       );
                     },
                   ),
-                    if (currentUser.isAdmin || currentUser.hasBookingServices)
-                    BlocBuilder<AttentionCubit, AttentionState>(
-                      builder: (context, state) {
-                        final badgeCount = state.attentionState
-                                ?.getCountForModule(
-                                    AttentionModule.bookingRequests) ??
-                            0;
-                        return _drawerTile(
-                          title: 'Booking Requests'.tr(),
-                          icon: Icons.event_note_rounded,
-                          trailing: badgeCount > 0
-                              ? Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      margin: const EdgeInsets.only(right: 8),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                          color: Color(cfg.colorPrimary),
-                                          borderRadius:
-                                              BorderRadius.circular(10)),
-                                      child: Text(
-                                        badgeCount > 99
-                                            ? '99+'
-                                            : badgeCount.toString(),
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                    _tierBadge('PRO', Colors.blue),
-                                  ],
-                                )
-                              : _tierBadge('PRO', Colors.blue),
-                          onTap: () {
-                            context.read<AttentionCubit>().markModuleAsSeen(
-                                AttentionModule.bookingRequests);
-                            Navigator.pop(context);
-                            push(
-                                context,
-                                BookingManagementWrapperWidget(
-                                    currentUser: currentUser));
-                          },
-                          isDark: isDark,
-                          primaryColor: primaryColorValue,
-                        );
-                      },
-                    ),
+                  BlocBuilder<AttentionCubit, AttentionState>(
+                    builder: (context, state) {
+                      final badgeCount = state.attentionState
+                              ?.getCountForModule(AttentionModule.rentals) ??
+                          0;
+                      return _drawerTile(
+                        title: 'My Rentals'.tr(),
+                        icon: Icons.calendar_month_rounded,
+                        isSelected:
+                            _drawerSelection == DrawerSelection.myRentals,
+                        trailing: badgeCount > 0
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                    color: Color(cfg.colorPrimary),
+                                    borderRadius: BorderRadius.circular(10)),
+                                child: Text(
+                                  badgeCount > 99
+                                      ? '99+'
+                                      : badgeCount.toString(),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              )
+                            : null,
+                        onTap: () {
+                          context
+                              .read<AttentionCubit>()
+                              .markModuleAsSeen(AttentionModule.rentals);
+                          Navigator.pop(context);
+                          context.read<ContainerBloc>().add(TabSelectedEvent(
+                                appBarTitle: 'My Rentals'.tr(),
+                                currentTabIndex: 4,
+                                drawerSelection: DrawerSelection.myRentals,
+                                currentWidget: MyRentalsScreen(
+                                    currentUser: currentUser,
+                                    showAppBar: false),
+                              ));
+                        },
+                        isDark: isDark,
+                        primaryColor: primaryColorValue,
+                      );
+                    },
+                  ),
+                  ],
+
+                  const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Divider()),
+                  // SELLING SECTION
+                  _drawerSectionLabel(
+                    'Advertising'.tr(),
+                    isDark,
+                    primaryColorValue,
+                    _advertisingExpanded,
+                    () => _toggleDrawerSection('advertising'),
+                  ),
+                  if (_advertisingExpanded) ...[
                   _drawerTile(
-                    title: 'Activate Booking'.tr(),
-                    icon: Icons.room_service_rounded,
-                    trailing: !currentUser.hasBookingServices
-                        ? _lockIcon()
-                        : _tierBadge('PRO', Colors.blue),
-                    onTap: () {
-                      if (currentUser.hasBookingServices) {
-                        _navigateToListingServices(context);
-                      } else {
-                        Navigator.pop(context);
-                        _showUpgradeDialog(
-                            context, 'Activate Booking', 'Professional');
-                      }
+                    title: 'Post Event'.tr(),
+                    icon: Icons.event_rounded,
+                    trailing:
+                        (currentUser.isAdmin || currentUser.hasBookingServices)
+                            ? _tierBadge('PRO', Colors.blue)
+                            : _lockIcon(),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await _openCreateEventScreen(currentUser);
                     },
                     isDark: isDark,
                     primaryColor: primaryColorValue,
@@ -1096,32 +1357,20 @@ class _ContainerState extends State<ContainerScreen> {
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
-                  _drawerTile(
-                    title: 'Quotes & Invoices'.tr(),
-                    icon: Icons.receipt_long_rounded,
-                    trailing: isPremiumUser(currentUser)
-                        ? _tierBadge('PREMIUM', Colors.purple)
-                        : _lockIcon(),
-                    onTap: () {
-                      if (isPremiumUser(currentUser)) {
-                        Navigator.pop(context);
-                        push(
-                            context, QuoteListScreen(currentUser: currentUser));
-                      } else {
-                        Navigator.pop(context);
-                        _showUpgradeDialog(
-                            context, 'Quotes & Invoices', 'Premium');
-                      }
-                    },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
-                  ),
+                  ],
 
                   const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Divider()),
                   // ANALYTICS SECTION
-                  _drawerSectionLabel('Analytics'.tr(), isDark),
+                  _drawerSectionLabel(
+                    'Analytics'.tr(),
+                    isDark,
+                    primaryColorValue,
+                    _analyticsExpanded,
+                    () => _toggleDrawerSection('analytics'),
+                  ),
+                  if (_analyticsExpanded) ...[
                   _drawerTile(
                     title: 'Analytics'.tr(),
                     icon: Icons.bar_chart_rounded,
@@ -1166,53 +1415,20 @@ class _ContainerState extends State<ContainerScreen> {
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
+                  ],
 
                   const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Divider()),
-                  // ACCOUNT SECTION
-                  _drawerSectionLabel('Account'.tr(), isDark),
-                  _drawerTile(
-                    title: 'Profile'.tr(),
-                    icon: Icons.person_rounded,
-                    isSelected: _drawerSelection == DrawerSelection.profile,
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.read<ContainerBloc>().add(TabSelectedEvent(
-                            appBarTitle: 'Profile'.tr(),
-                            currentTabIndex: 3,
-                            drawerSelection: DrawerSelection.profile,
-                            currentWidget: ProfileScreen(
-                              currentUser: currentUser,
-                              showAppBar: false,
-                            ),
-                          ));
-                    },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
+                  // SUPPORT & SUBSCRIPTION SECTION
+                  _drawerSectionLabel(
+                    'Support & Subscription'.tr(),
+                    isDark,
+                    primaryColorValue,
+                    _supportExpanded,
+                    () => _toggleDrawerSection('support'),
                   ),
-                  _drawerTile(
-                    title: 'Activate Chat'.tr(),
-                    icon: Icons.chat_rounded,
-                    trailing: !currentUser.hasDirectMessaging
-                        ? _lockIcon()
-                        : _tierBadge('PREMIUM', Colors.purple),
-                    onTap: () {
-                      Navigator.pop(context);
-                      if (currentUser.hasDirectMessaging) {
-                        push(
-                            context,
-                            ChatSettingsScreen(
-                                currentUser: currentUser,
-                                listingsRepository:
-                                    listings_api.listingApiManager));
-                      } else {
-                        _showUpgradeDialog(context, 'Activate Chat', 'Premium');
-                      }
-                    },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
-                  ),
+                  if (_supportExpanded) ...[
                   _drawerTile(
                     title: 'Help & Tutorials'.tr(),
                     icon: Icons.menu_book_rounded,
@@ -1245,6 +1461,7 @@ class _ContainerState extends State<ContainerScreen> {
                       isDark: isDark,
                       primaryColor: primaryColorValue,
                     ),
+                  ],
 
                   const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
@@ -1276,20 +1493,26 @@ class _ContainerState extends State<ContainerScreen> {
 
   Widget _buildDrawerHeader(
       ListingsUser user, bool isDark, Color primaryColor) {
+    final List<Color> headerGradient = isDark
+        ? [
+            const Color(0xFF0A1A28),
+            Color(cfg.colorPrimaryDark),
+            const Color(0xFF18435F),
+          ]
+        : [
+            const Color(0xFF1E8FB2),
+            primaryColor,
+            const Color(0xFF56C1EC),
+          ];
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
       decoration: BoxDecoration(
-        color: primaryColor,
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            primaryColor,
-            primaryColor
-                .withBlue(primaryColor.blue + 30)
-                .withRed(primaryColor.red + 20),
-          ],
+          colors: headerGradient,
         ),
       ),
       child: Column(
@@ -1354,16 +1577,39 @@ class _ContainerState extends State<ContainerScreen> {
     );
   }
 
-  Widget _drawerSectionLabel(String title, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
-      child: Text(
-        title.toUpperCase(),
-        style: TextStyle(
-          color: isDark ? Colors.white38 : Colors.black45,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
+  Widget _drawerSectionLabel(
+    String title,
+    bool isDark,
+    Color primaryColor,
+    bool isExpanded,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                title.toUpperCase(),
+                style: TextStyle(
+                  color: isDark ? Colors.white38 : Colors.black45,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+            Icon(
+              isExpanded
+                  ? Icons.keyboard_arrow_up_rounded
+                  : Icons.keyboard_arrow_down_rounded,
+              color: primaryColor,
+              size: 20,
+            ),
+          ],
         ),
       ),
     );
