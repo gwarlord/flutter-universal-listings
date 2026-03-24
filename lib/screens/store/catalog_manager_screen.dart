@@ -300,6 +300,8 @@ class _CatalogManagerScreenState extends State<CatalogManagerScreen> {
                         width: 80,
                         height: 80,
                         fit: BoxFit.cover,
+                        cacheWidth: 160,
+                        cacheHeight: 160,
                         errorBuilder: (_, __, ___) => _placeholderImage(),
                       )
                     : _placeholderImage(),

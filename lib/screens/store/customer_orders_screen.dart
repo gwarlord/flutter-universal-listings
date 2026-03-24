@@ -290,6 +290,8 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                               ? Image.network(
                                   firstItemImage,
                                   fit: BoxFit.cover,
+                                  cacheWidth: 112,
+                                  cacheHeight: 112,
                                   errorBuilder: (context, error, stackTrace) {
                                     return Icon(
                                       Icons.shopping_bag,

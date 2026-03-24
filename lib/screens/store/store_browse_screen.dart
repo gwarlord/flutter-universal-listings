@@ -368,6 +368,7 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
                       height: 120,
                       width: double.infinity,
                       fit: BoxFit.cover,
+                      cacheWidth: 600,
                       errorBuilder: (_, __, ___) => _placeholderImage())
                   : _placeholderImage(),
             ),
@@ -867,6 +868,7 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (context, scrollController) {
+        final bottomInset = MediaQuery.of(context).viewPadding.bottom;
         return Container(
           decoration: BoxDecoration(
               color: dark ? Colors.grey.shade900 : Colors.white,
@@ -874,7 +876,7 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
                   const BorderRadius.vertical(top: Radius.circular(20))),
           child: ListView(
             controller: scrollController,
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
             children: [
               Center(
                   child: Container(
@@ -909,6 +911,7 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
                         child: Image.network(
                           galleryImages[index],
                           fit: BoxFit.cover,
+                          cacheWidth: 800,
                           errorBuilder: (_, __, ___) => Container(
                             color: Colors.grey.shade300,
                             child: const Icon(Icons.image, size: 60),

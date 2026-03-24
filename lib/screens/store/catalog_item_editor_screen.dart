@@ -183,6 +183,8 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
         width: 72,
         height: 72,
         fit: BoxFit.cover,
+        cacheWidth: 144,
+        cacheHeight: 144,
         errorBuilder: (_, __, ___) => preview,
       ),
     );
@@ -190,7 +192,10 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
 
   Future<String?> _pickVariantImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
     if (pickedFile == null) return null;
     return 'file://${pickedFile.path}';
   }
@@ -897,7 +902,7 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: url != null ? Image.network(url, fit: BoxFit.cover) : (file != null && isPhotos ? Image.file(file, fit: BoxFit.cover) : Icon(Icons.videocam, size: 40, color: Colors.grey.shade600)),
+            child: url != null ? Image.network(url, fit: BoxFit.cover, cacheWidth: 200, cacheHeight: 200) : (file != null && isPhotos ? Image.file(file, fit: BoxFit.cover) : Icon(Icons.videocam, size: 40, color: Colors.grey.shade600)),
           ),
         ),
         Positioned(top: 4, right: 4, child: GestureDetector(onTap: onRemove, child: Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle), child: const Icon(Icons.close, size: 16, color: Colors.white)))),
@@ -924,7 +929,7 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
   Future<void> _pickMedia({required bool isPhotos}) async {
     final picker = ImagePicker();
     if (isPhotos) {
-      final pickedFiles = await picker.pickMultiImage();
+      final pickedFiles = await picker.pickMultiImage(imageQuality: 85);
       if (pickedFiles.isNotEmpty) {
         setState(() {
           _newPhotoFiles.addAll(pickedFiles.map((xFile) => File(xFile.path)));

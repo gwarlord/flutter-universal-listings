@@ -423,6 +423,8 @@ class _CartScreenState extends State<CartScreen> {
                   width: 60,
                   height: 60,
                   fit: BoxFit.cover,
+                  cacheWidth: 120,
+                  cacheHeight: 120,
                   errorBuilder: (_, __, ___) => Container(
                     width: 60,
                     height: 60,

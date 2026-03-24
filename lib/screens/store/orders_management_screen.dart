@@ -229,7 +229,8 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
                 controller: _tabController,
                 isScrollable: true,
                 labelColor: Color(cfg.colorPrimary),
-                unselectedLabelColor: dark ? Colors.white54 : Colors.black45,
+                unselectedLabelColor: dark ? Colors.white54 : Colors.black,
+                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
                 indicatorColor: Color(cfg.colorPrimary),
                 tabs: _buildTabLabels(),
               ),
@@ -677,6 +678,8 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
                               ? Image.network(
                                   firstItemImage,
                                   fit: BoxFit.cover,
+                                  cacheWidth: 112,
+                                  cacheHeight: 112,
                                   errorBuilder: (context, error, stackTrace) {
                                     return Icon(
                                       Icons.shopping_bag,
