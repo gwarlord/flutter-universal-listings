@@ -1,5 +1,122 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import sgMail from "@sendgrid/mail";
+import { sendgridKeySecret } from "./common/secrets";
+
+const BOOKING_EMAIL_FROM = { email: "admin@caribtap.com", name: "CaribTap Bookings" };
+
+type EmailOnceMarker =
+  | "createRequest"
+  | "statusConfirmed"
+  | "statusRejected"
+  | "statusCancelled";
+
+function normalizeEmailForKey(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  const atIndex = normalized.indexOf("@");
+  if (atIndex <= 0 || atIndex === normalized.length - 1) {
+    return normalized;
+  }
+
+  const local = normalized.substring(0, atIndex);
+  const domain = normalized.substring(atIndex + 1);
+
+  // Canonicalize common Gmail alias forms so role emails don't duplicate
+  // into the same physical inbox (dots and plus-tags are ignored by Gmail).
+  if (domain === "gmail.com" || domain === "googlemail.com") {
+    const localWithoutPlus = local.split("+")[0];
+    const localWithoutDots = localWithoutPlus.replace(/\./g, "");
+    return `${localWithoutDots}@gmail.com`;
+  }
+
+  return normalized;
+}
+
+function sanitizeKeyPart(value: string): string {
+  return value.replace(/[^a-z0-9._-]/gi, "_");
+}
+
+async function claimEmailSendMarker(
+  bookingRef: FirebaseFirestore.DocumentReference,
+  marker: EmailOnceMarker,
+  bookingId: string
+): Promise<boolean> {
+  try {
+    const db = admin.firestore();
+    return await db.runTransaction(async (tx) => {
+      const snap = await tx.get(bookingRef);
+      if (!snap.exists) {
+        return false;
+      }
+
+      const data = snap.data() || {};
+      const existing = (data.emailDeliveryState || {}) as Record<string, unknown>;
+      if (existing[marker]) {
+        return false;
+      }
+
+      tx.set(
+        bookingRef,
+        {
+          emailDeliveryState: {
+            [marker]: admin.firestore.FieldValue.serverTimestamp(),
+          },
+        },
+        { merge: true }
+      );
+
+      return true;
+    });
+  } catch (error) {
+    functions.logger.warn("Email send marker claim failed", {
+      bookingId,
+      marker,
+      error: (error as any)?.message || String(error),
+    });
+    return false;
+  }
+}
+
+async function claimEmailMessageKey(
+  bookingRef: FirebaseFirestore.DocumentReference,
+  messageKey: string,
+  bookingId: string
+): Promise<boolean> {
+  try {
+    const db = admin.firestore();
+    return await db.runTransaction(async (tx) => {
+      const snap = await tx.get(bookingRef);
+      if (!snap.exists) {
+        return false;
+      }
+
+      const data = snap.data() || {};
+      const existing = (data.emailDeliveryState || {}) as Record<string, unknown>;
+      if (existing[messageKey]) {
+        return false;
+      }
+
+      tx.set(
+        bookingRef,
+        {
+          emailDeliveryState: {
+            [messageKey]: admin.firestore.FieldValue.serverTimestamp(),
+          },
+        },
+        { merge: true }
+      );
+
+      return true;
+    });
+  } catch (error) {
+    functions.logger.warn("Email message key claim failed", {
+      bookingId,
+      messageKey,
+      error: (error as any)?.message || String(error),
+    });
+    return false;
+  }
+}
 
 async function resolveBookingListerId(
   db: FirebaseFirestore.Firestore,
@@ -46,7 +163,9 @@ function asNonEmptyString(value: unknown, fallback = ""): string {
 }
 
 async function sendToTokensIndividually(
+  db: FirebaseFirestore.Firestore,
   messaging: admin.messaging.Messaging,
+  userId: string,
   tokens: string[],
   payload: Omit<admin.messaging.TokenMessage, "token">
 ): Promise<{ successCount: number; failureCount: number }> {
@@ -62,7 +181,11 @@ async function sendToTokensIndividually(
       successCount += 1;
     } catch (error) {
       failureCount += 1;
+      if (isStaleMessagingTokenError(error)) {
+        await removeTokenFromUser(db, userId, token);
+      }
       functions.logger.warn("Booking notification token failure", {
+        userId,
         tokenSuffix: token.slice(-8),
         error: (error as any)?.message || String(error),
       });
@@ -72,11 +195,59 @@ async function sendToTokensIndividually(
   return { successCount, failureCount };
 }
 
+function isStaleMessagingTokenError(error: unknown): boolean {
+  const code = ((error as any)?.code || "").toString().toLowerCase();
+  const message = ((error as any)?.message || "").toString().toLowerCase();
+
+    return code.includes("registration-token-not-registered") ||
+      code.includes("invalid-registration-token") ||
+      message.includes("requested entity was not found") ||
+      message.includes("registration token is not a valid fcm registration token") ||
+      message.includes("not a valid fcm registration token") ||
+      message.includes("not registered");
+}
+
+async function removeTokenFromUser(
+  db: FirebaseFirestore.Firestore,
+  userId: string,
+  token: string
+): Promise<void> {
+  if (!userId || !token) return;
+
+  try {
+    const userRef = db.collection("users").doc(userId);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) return;
+
+    const userData = userSnap.data() || {};
+    const updates: Record<string, unknown> = {
+      fcmTokens: admin.firestore.FieldValue.arrayRemove(token),
+    };
+
+    if (typeof userData.pushToken === "string" && userData.pushToken.trim() === token) {
+      updates.pushToken = admin.firestore.FieldValue.delete();
+    }
+
+    await userRef.set(updates, { merge: true });
+
+    functions.logger.info("Removed stale booking notification token", {
+      userId,
+      tokenSuffix: token.slice(-8),
+    });
+  } catch (cleanupError) {
+    functions.logger.warn("Failed to remove stale booking notification token", {
+      userId,
+      tokenSuffix: token.slice(-8),
+      error: (cleanupError as any)?.message || String(cleanupError),
+    });
+  }
+}
+
 /**
  * Send notification when a new booking is created
  * Watches: listings/{listingId}/bookings/{bookingId}
  */
-export const onBookingCreated = functions.firestore
+export const onBookingCreated = functions.runWith({ secrets: [sendgridKeySecret] }).firestore
   .document("listings/{listingId}/bookings/{bookingId}")
   .onCreate(async (snap, context) => {
     const booking = snap.data();
@@ -91,79 +262,95 @@ export const onBookingCreated = functions.firestore
         context.params.listingId
       );
 
+      let successCount = 0;
+      let failureCount = 0;
+      let tokenCount = 0;
+
       if (!listerId) {
         functions.logger.warn("Booking created without a resolvable lister", {
           bookingId,
           listingId: context.params.listingId,
           bookingListerId: booking?.listersUserId,
         });
-        return null;
+      } else {
+        const listerDoc = await db.collection("users").doc(listerId).get();
+        if (!listerDoc.exists) {
+          functions.logger.warn("Lister document not found for booking notification", {
+            bookingId,
+            listingId: context.params.listingId,
+            listerId,
+          });
+        } else {
+          const listerData = listerDoc.data();
+          if (listerData?.settings?.allowPushNotifications === false) {
+            functions.logger.info("Lister has push notifications disabled", {
+              bookingId,
+              listingId: context.params.listingId,
+              listerId,
+            });
+          } else {
+            const listerTokens = getTokens(listerData);
+            tokenCount = listerTokens.length;
+            if (listerTokens.length === 0) {
+              functions.logger.warn("Lister has no push tokens for booking notification", {
+                bookingId,
+                listingId: context.params.listingId,
+                listerId,
+                hasPushToken: !!listerData?.pushToken,
+                hasFcmTokens: Array.isArray(listerData?.fcmTokens) && listerData.fcmTokens.length > 0,
+              });
+            } else {
+              const listingTitle = booking.listingTitle || "Your listing";
+              const customerName = booking.customerName || "Guest";
+              const dataListingId = asNonEmptyString(booking?.listingId, context.params.listingId);
+
+              const messagePayload: Omit<admin.messaging.TokenMessage, "token"> = {
+                notification: {
+                  title: "📅 New Booking Request",
+                  body: `${customerName} requested to book "${listingTitle}"`,
+                },
+                data: {
+                  type: "new_booking",
+                  bookingId: bookingId,
+                  listingId: dataListingId,
+                  status: "pending",
+                  click_action: "FLUTTER_NOTIFICATION_CLICK",
+                },
+                android: { priority: "high", notification: { sound: "default", channelId: "bookings" } },
+                apns: { payload: { aps: { sound: "default", badge: 1 } } },
+              };
+
+              const response = await sendToTokensIndividually(
+                db,
+                messaging,
+                listerId,
+                listerTokens,
+                messagePayload
+              );
+              successCount = response.successCount;
+              failureCount = response.failureCount;
+            }
+          }
+        }
       }
 
-      const listerDoc = await db.collection("users").doc(listerId).get();
-      if (!listerDoc.exists) {
-        functions.logger.warn("Lister document not found for booking notification", {
+      try {
+        await sendBookingEmailsOnCreate(snap.ref, booking, bookingId);
+      } catch (emailError) {
+        functions.logger.error("Booking create email send failed", {
           bookingId,
           listingId: context.params.listingId,
-          listerId,
+          error: (emailError as any)?.message || String(emailError),
         });
-        return null;
       }
 
-      const listerData = listerDoc.data();
-      if (listerData?.settings?.allowPushNotifications === false) {
-        functions.logger.info("Lister has push notifications disabled", {
-          bookingId,
-          listingId: context.params.listingId,
-          listerId,
-        });
-        return null;
-      }
-
-      const listerTokens = getTokens(listerData);
-      if (listerTokens.length === 0) {
-        functions.logger.warn("Lister has no push tokens for booking notification", {
-          bookingId,
-          listingId: context.params.listingId,
-          listerId,
-          hasPushToken: !!listerData?.pushToken,
-          hasFcmTokens: Array.isArray(listerData?.fcmTokens) && listerData.fcmTokens.length > 0,
-        });
-        return null;
-      }
-
-      const listingTitle = booking.listingTitle || "Your listing";
-      const customerName = booking.customerName || "Guest";
-      const dataListingId = asNonEmptyString(booking?.listingId, context.params.listingId);
-
-      const messagePayload: Omit<admin.messaging.TokenMessage, "token"> = {
-        notification: {
-          title: "📅 New Booking Request",
-          body: `${customerName} requested to book "${listingTitle}"`,
-        },
-        data: {
-          type: "new_booking",
-          bookingId: bookingId,
-          listingId: dataListingId,
-          status: "pending",
-          click_action: "FLUTTER_NOTIFICATION_CLICK",
-        },
-        android: { priority: "high", notification: { sound: "default", channelId: "bookings" } },
-        apns: { payload: { aps: { sound: "default", badge: 1 } } },
-      };
-
-      const response = await sendToTokensIndividually(
-        messaging,
-        listerTokens,
-        messagePayload
-      );
       functions.logger.info("Standard booking notification sent to lister", {
         bookingId,
         listingId: context.params.listingId,
         listerId,
-        tokenCount: listerTokens.length,
-        successCount: response.successCount,
-        failureCount: response.failureCount,
+        tokenCount,
+        successCount,
+        failureCount,
       });
       return null;
     } catch (error) {
@@ -176,7 +363,7 @@ export const onBookingCreated = functions.firestore
  * Send notification when booking status changes
  * Watches: listings/{listingId}/bookings/{bookingId}
  */
-export const onBookingUpdated = functions.firestore
+export const onBookingUpdated = functions.runWith({ secrets: [sendgridKeySecret] }).firestore
   .document("listings/{listingId}/bookings/{bookingId}")
   .onUpdate(async (change, context) => {
     const before = change.before.data();
@@ -238,7 +425,9 @@ export const onBookingUpdated = functions.firestore
             const tokens = getTokens(customerDoc.data());
             if (tokens.length > 0) {
               const customerResponse = await sendToTokensIndividually(
+                db,
                 messaging,
+                customerId,
                 tokens,
                 {
                 notification: { title: customerTitle, body: customerBody },
@@ -276,7 +465,9 @@ export const onBookingUpdated = functions.firestore
             const tokens = getTokens(listerDoc.data());
             if (tokens.length > 0) {
               const listerResponse = await sendToTokensIndividually(
+                db,
                 messaging,
+                listerId,
                 tokens,
                 {
                 notification: { title: listerTitle, body: listerBody },
@@ -300,6 +491,17 @@ export const onBookingUpdated = functions.firestore
         }
       }
 
+      try {
+        await sendBookingEmailsOnStatusChange(change.after.ref, after, bookingId, nextStatus);
+      } catch (emailError) {
+        functions.logger.error("Booking status email send failed", {
+          bookingId,
+          listingId: context.params.listingId,
+          nextStatus,
+          error: (emailError as any)?.message || String(emailError),
+        });
+      }
+
       return null;
     } catch (error) {
       console.error("Error in onBookingUpdated:", error);
@@ -321,4 +523,341 @@ function getTokens(userData: any): string[] {
     }
   }
   return Array.from(new Set(tokens));
+}
+
+async function sendBookingEmailsOnCreate(
+  bookingRef: FirebaseFirestore.DocumentReference,
+  booking: FirebaseFirestore.DocumentData,
+  bookingId: string
+): Promise<void> {
+  const sendgridKey = await sendgridKeySecret.value();
+  if (!sendgridKey) {
+    functions.logger.warn("Booking create email skipped because SENDGRID_KEY is not configured", {
+      bookingId,
+    });
+    return;
+  }
+
+  const customerEmail = asNonEmptyString(booking?.customerEmail);
+  const listerEmail = asNonEmptyString(booking?.listersEmail);
+  if (!customerEmail && !listerEmail) {
+    functions.logger.warn("Booking create email skipped because no recipient emails were found", {
+      bookingId,
+    });
+    return;
+  }
+
+  const shouldSend = await claimEmailSendMarker(bookingRef, "createRequest", bookingId);
+  if (!shouldSend) {
+    functions.logger.info("Booking create email skipped because it was already sent", {
+      bookingId,
+    });
+    return;
+  }
+
+  sgMail.setApiKey(sendgridKey);
+
+  const listingTitle = asNonEmptyString(booking?.listingTitle, "Listing");
+  const customerName = asNonEmptyString(booking?.customerName, "Guest");
+  const listerName = asNonEmptyString(booking?.listersName, "Lister");
+  const startDateStr = formatBookingDate(booking?.checkInDate);
+  const endDateStr = formatBookingDate(booking?.checkOutDate);
+  const qnaHtml = buildCustomAnswersHtml(booking?.customAnswers);
+
+  const subject = `Booking Request: ${listingTitle}`;
+
+  const sends: Promise<unknown>[] = [];
+
+  const normalizedCustomerEmail = normalizeEmailForKey(customerEmail);
+  const normalizedListerEmail = normalizeEmailForKey(listerEmail);
+
+  if (customerEmail) {
+    const customerKey = `createRequest_customer_${sanitizeKeyPart(normalizeEmailForKey(customerEmail))}`;
+    const shouldSendCustomer = await claimEmailMessageKey(bookingRef, customerKey, bookingId);
+    if (!shouldSendCustomer) {
+      functions.logger.info("Booking create email to customer skipped because it was already sent", {
+        bookingId,
+        customerEmail,
+        messageKey: customerKey,
+      });
+    } else {
+    sends.push(
+      sgMail.send({
+        to: customerEmail,
+        from: BOOKING_EMAIL_FROM,
+        subject,
+        html: `
+          <h3>Hello ${escapeHtml(customerName)},</h3>
+          <p>We've received your booking request for <b>${escapeHtml(listingTitle)}</b>.</p>
+          <p><b>Start Date:</b> ${escapeHtml(startDateStr)}</p>
+          <p><b>End Date:</b> ${escapeHtml(endDateStr)}</p>
+          ${qnaHtml}
+          <p>The lister will review your request and you will receive another email once it's confirmed or rejected.</p>
+          <br><p>Best regards,<br>CaribTap Team</p>
+        `,
+      })
+    );
+    }
+  }
+
+  if (listerEmail && normalizedListerEmail !== normalizedCustomerEmail) {
+    const listerKey = `createRequest_lister_${sanitizeKeyPart(normalizeEmailForKey(listerEmail))}`;
+    const shouldSendLister = await claimEmailMessageKey(bookingRef, listerKey, bookingId);
+    if (!shouldSendLister) {
+      functions.logger.info("Booking create email to lister skipped because it was already sent", {
+        bookingId,
+        listerEmail,
+        messageKey: listerKey,
+      });
+    } else {
+    sends.push(
+      sgMail.send({
+        to: listerEmail,
+        from: BOOKING_EMAIL_FROM,
+        subject,
+        html: `
+          <h3>Hello ${escapeHtml(listerName)},</h3>
+          <p>You have a new booking request for your listing: <b>${escapeHtml(listingTitle)}</b>.</p>
+          <p><b>Customer:</b> ${escapeHtml(customerName)}</p>
+          <p><b>Start Date:</b> ${escapeHtml(startDateStr)}</p>
+          <p><b>End Date:</b> ${escapeHtml(endDateStr)}</p>
+          ${qnaHtml}
+          <p>Please log in to the app to confirm or reject this request.</p>
+          <br><p>Best regards,<br>CaribTap Team</p>
+        `,
+      })
+    );
+    }
+  }
+
+  await Promise.all(sends);
+}
+
+async function sendBookingEmailsOnStatusChange(
+  bookingRef: FirebaseFirestore.DocumentReference,
+  booking: FirebaseFirestore.DocumentData,
+  bookingId: string,
+  nextStatus: string
+): Promise<void> {
+  const sendgridKey = await sendgridKeySecret.value();
+  if (!sendgridKey) {
+    functions.logger.warn("Booking status email skipped because SENDGRID_KEY is not configured", {
+      bookingId,
+      nextStatus,
+    });
+    return;
+  }
+
+  const customerEmail = asNonEmptyString(booking?.customerEmail);
+  const listerEmail = asNonEmptyString(booking?.listersEmail);
+  if (!customerEmail && !listerEmail) {
+    functions.logger.warn("Booking status email skipped because no recipient emails were found", {
+      bookingId,
+      nextStatus,
+    });
+    return;
+  }
+
+  const statusMarkerMap: Record<string, EmailOnceMarker | undefined> = {
+    confirmed: "statusConfirmed",
+    approved: "statusConfirmed",
+    rejected: "statusRejected",
+    declined: "statusRejected",
+    cancelled: "statusCancelled",
+  };
+
+  const marker = statusMarkerMap[nextStatus];
+  if (marker) {
+    const shouldSend = await claimEmailSendMarker(bookingRef, marker, bookingId);
+    if (!shouldSend) {
+      functions.logger.info("Booking status email skipped because it was already sent", {
+        bookingId,
+        nextStatus,
+        marker,
+      });
+      return;
+    }
+  }
+
+  sgMail.setApiKey(sendgridKey);
+
+  const listingTitle = asNonEmptyString(booking?.listingTitle, "Listing");
+  const customerName = asNonEmptyString(booking?.customerName, "Guest");
+  const cancelledByRole = asNonEmptyString(booking?.cancelledBy).toLowerCase();
+  const qnaHtml = buildCustomAnswersHtml(booking?.customAnswers);
+  const sends: Promise<unknown>[] = [];
+  const normalizedCustomerEmail = normalizeEmailForKey(customerEmail);
+  const normalizedListerEmail = normalizeEmailForKey(listerEmail);
+
+  const sendToCustomerWithKey = async (subject: string, html: string): Promise<void> => {
+    if (!customerEmail) return;
+    const key = `${nextStatus}_customer_${sanitizeKeyPart(normalizeEmailForKey(customerEmail))}`;
+    const shouldSend = await claimEmailMessageKey(bookingRef, key, bookingId);
+    if (!shouldSend) {
+      functions.logger.info("Booking status email to customer skipped because it was already sent", {
+        bookingId,
+        nextStatus,
+        customerEmail,
+        messageKey: key,
+      });
+      return;
+    }
+    sends.push(
+      sgMail.send({
+        to: customerEmail,
+        from: BOOKING_EMAIL_FROM,
+        subject,
+        html,
+      })
+    );
+  };
+
+  const sendToListerWithKey = async (subject: string, html: string): Promise<void> => {
+    if (!listerEmail) return;
+    const key = `${nextStatus}_lister_${sanitizeKeyPart(normalizeEmailForKey(listerEmail))}`;
+    const shouldSend = await claimEmailMessageKey(bookingRef, key, bookingId);
+    if (!shouldSend) {
+      functions.logger.info("Booking status email to lister skipped because it was already sent", {
+        bookingId,
+        nextStatus,
+        listerEmail,
+        messageKey: key,
+      });
+      return;
+    }
+    sends.push(
+      sgMail.send({
+        to: listerEmail,
+        from: BOOKING_EMAIL_FROM,
+        subject,
+        html,
+      })
+    );
+  };
+
+  if (nextStatus === "confirmed" && customerEmail) {
+    await sendToCustomerWithKey(
+      `Booking CONFIRMED: ${listingTitle}`,
+      `
+          <h3>Congratulations ${escapeHtml(customerName)}!</h3>
+          <p>Your booking for <b>${escapeHtml(listingTitle)}</b> has been <b>CONFIRMED</b>.</p>
+          ${qnaHtml}
+          <p>Thank you for your business!</p>
+          <br><p>Best regards,<br>CaribTap Team</p>
+        `
+    );
+  }
+
+  if ((nextStatus === "rejected" || nextStatus === "declined") && customerEmail) {
+    await sendToCustomerWithKey(
+      `Booking Update: ${listingTitle}`,
+      `
+          <h3>Hello ${escapeHtml(customerName)},</h3>
+          <p>We're sorry, but your booking request for <b>${escapeHtml(listingTitle)}</b> was not accepted at this time.</p>
+          ${qnaHtml}
+          <p>Please feel free to browse other listings on CaribTap.</p>
+          <br><p>Best regards,<br>CaribTap Team</p>
+        `
+    );
+  }
+
+  if (nextStatus === "cancelled") {
+    if (cancelledByRole === "lister") {
+      // Lister cancelled -> notify customer only.
+      if (customerEmail) {
+        await sendToCustomerWithKey(
+          `Booking CANCELLED: ${listingTitle}`,
+          `
+            <h3>Hello ${escapeHtml(customerName)},</h3>
+            <p>Your booking for <b>${escapeHtml(listingTitle)}</b> has been cancelled by the lister.</p>
+            ${qnaHtml}
+            <br><p>Best regards,<br>CaribTap Team</p>
+          `
+        );
+      }
+    } else if (cancelledByRole === "customer") {
+      // Customer cancelled -> notify lister only.
+      if (listerEmail && normalizedListerEmail !== normalizedCustomerEmail) {
+        await sendToListerWithKey(
+          `Booking CANCELLED: ${listingTitle}`,
+          `
+            <h3>Hello ${escapeHtml(asNonEmptyString(booking?.listersName, "Lister"))},</h3>
+            <p>${escapeHtml(customerName)} cancelled their booking for <b>${escapeHtml(listingTitle)}</b>.</p>
+            ${qnaHtml}
+            <br><p>Best regards,<br>CaribTap Team</p>
+          `
+        );
+      }
+    } else {
+      // Unknown role fallback: notify customer only to avoid role-crossed mails.
+      functions.logger.warn("Booking cancellation role missing/unknown, using customer-only fallback", {
+        bookingId,
+        cancelledByRole,
+      });
+      if (customerEmail) {
+        await sendToCustomerWithKey(
+          `Booking CANCELLED: ${listingTitle}`,
+          `
+            <h3>Hello ${escapeHtml(customerName)},</h3>
+            <p>Your booking for <b>${escapeHtml(listingTitle)}</b> has been cancelled.</p>
+            ${qnaHtml}
+            <br><p>Best regards,<br>CaribTap Team</p>
+          `
+        );
+      }
+    }
+  }
+
+  if (sends.length == 0) {
+    return;
+  }
+
+  await Promise.all(sends);
+}
+
+function formatBookingDate(value: unknown): string {
+  try {
+    if (value instanceof admin.firestore.Timestamp) {
+      return value.toDate().toISOString().split("T")[0];
+    }
+    if (typeof value === "string" && value.trim().length > 0) {
+      const parsed = new Date(value);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toISOString().split("T")[0];
+      }
+    }
+  } catch (error) {
+    functions.logger.warn("Unable to format booking date", { value, error });
+  }
+  return "";
+}
+
+function buildCustomAnswersHtml(value: unknown): string {
+  if (!value || typeof value !== "object") {
+    return "";
+  }
+
+  const entries = Object.entries(value as Record<string, unknown>);
+  if (entries.length === 0) {
+    return "";
+  }
+
+  return (
+    "<h4>Custom Questions</h4>" +
+    entries
+      .map(([question, answer]) => {
+        const answerText = typeof answer === "string" && answer.trim().length > 0 ? answer : "-";
+        return `<p><b>${escapeHtml(question)}</b><br>${escapeHtml(answerText)}</p>`;
+      })
+      .join("")
+  );
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

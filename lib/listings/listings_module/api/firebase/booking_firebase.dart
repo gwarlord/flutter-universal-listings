@@ -38,8 +38,7 @@ class BookingFirebase extends BookingRepository {
           .doc(bookingId)
           .set(bookingData);
 
-      // ✅ Trigger Email Notification
-      await _triggerBookingEmail(booking, 'pending');
+      // Email notifications are handled server-side by Cloud Functions.
 
       return bookingId;
     } catch (e) {
@@ -316,12 +315,7 @@ class BookingFirebase extends BookingRepository {
           debugPrint('⚠️ Mirror update skipped for receivedBookings ($bookingId): $e');
         }
 
-        // Best-effort email trigger.
-        try {
-          await _triggerBookingEmail(booking, status);
-        } catch (e) {
-          debugPrint('⚠️ Email trigger skipped for booking status change ($bookingId): $e');
-        }
+        // Email notifications are handled server-side by Cloud Functions.
       }
     } catch (e) {
       debugPrint('⚠️ Post-update sync error for booking ($bookingId): $e');
@@ -470,112 +464,4 @@ class BookingFirebase extends BookingRepository {
     }
   }
 
-  /// ✅ Internal helper to create email trigger documents in the 'mail' collection
-  Future<void> _triggerBookingEmail(BookingModel booking, String status) async {
-    try {
-      String subject = '';
-      String customerHtml = '';
-      String listerHtml = '';
-
-      final startDateStr = booking.checkInDate.toLocal().toString().split(' ')[0];
-      final endDateStr = booking.checkOutDate.toLocal().toString().split(' ')[0];
-        final String qnaHtml = booking.customAnswers.isNotEmpty
-          ? '<h4>Custom Questions</h4>' +
-            booking.customAnswers.entries
-              .map((e) => '<p><b>${e.key}</b><br>${e.value.isEmpty ? '-' : e.value}</p>')
-              .join('')
-          : '';
-
-      switch (status) {
-        case 'pending':
-          subject = 'Booking Request: ${booking.listingTitle}';
-          customerHtml = '''
-            <h3>Hello ${booking.customerName},</h3>
-            <p>We've received your booking request for <b>${booking.listingTitle}</b>.</p>
-            <p><b>Start Date:</b> $startDateStr</p>
-            <p><b>End Date:</b> $endDateStr</p>
-            $qnaHtml
-            <p>The lister will review your request and you will receive another email once it's confirmed or rejected.</p>
-            <br><p>Best regards,<br>CaribTap Team</p>
-          ''';
-          listerHtml = '''
-            <h3>Hello ${booking.listersName},</h3>
-            <p>You have a new booking request for your listing: <b>${booking.listingTitle}</b>.</p>
-            <p><b>Customer:</b> ${booking.customerName}</p>
-            <p><b>Start Date:</b> $startDateStr</p>
-            <p><b>End Date:</b> $endDateStr</p>
-            $qnaHtml
-            <p>Please log in to the app to confirm or reject this request.</p>
-            <br><p>Best regards,<br>CaribTap Team</p>
-          ''';
-          break;
-
-        case 'confirmed':
-          subject = 'Booking CONFIRMED: ${booking.listingTitle}';
-          customerHtml = '''
-            <h3>Congratulations ${booking.customerName}!</h3>
-            <p>Your booking for <b>${booking.listingTitle}</b> has been <b>CONFIRMED</b>.</p>
-            <p><b>Start Date:</b> $startDateStr</p>
-            <p><b>End Date:</b> $endDateStr</p>
-            $qnaHtml
-            <p>Thank you for your business!</p>
-            <br><p>Best regards,<br>CaribTap Team</p>
-          ''';
-          break;
-
-        case 'rejected':
-          subject = 'Booking Update: ${booking.listingTitle}';
-          customerHtml = '''
-            <h3>Hello ${booking.customerName},</h3>
-            <p>We're sorry, but your booking request for <b>${booking.listingTitle}</b> was not accepted at this time.</p>
-            $qnaHtml
-            <p>Please feel free to browse other listings on CaribTap.</p>
-            <br><p>Best regards,<br>CaribTap Team</p>
-          ''';
-          break;
-
-        case 'cancelled':
-          subject = 'Booking CANCELLED: ${booking.listingTitle}';
-          customerHtml = '''
-            <h3>Hello ${booking.customerName},</h3>
-            <p>Your booking for <b>${booking.listingTitle}</b> has been successfully cancelled.</p>
-            $qnaHtml
-            <br><p>Best regards,<br>CaribTap Team</p>
-          ''';
-          listerHtml = '''
-            <h3>Hello ${booking.listersName},</h3>
-            <p>The booking request from ${booking.customerName} for <b>${booking.listingTitle}</b> has been cancelled by the customer.</p>
-            $qnaHtml
-            <br><p>Best regards,<br>CaribTap Team</p>
-          ''';
-          break;
-      }
-
-      // Send to Customer
-      if (customerHtml.isNotEmpty && booking.customerEmail.isNotEmpty) {
-        await _firestore.collection('mail').add({
-          'to': booking.customerEmail,
-          'from': 'CaribTap <no-reply@caribtap.com>', // ✅ Added explicit FROM name
-          'message': {
-            'subject': subject,
-            'html': customerHtml,
-          },
-        });
-      }
-
-      // Send to Lister
-      if (listerHtml.isNotEmpty && booking.listersEmail.isNotEmpty) {
-        await _firestore.collection('mail').add({
-          'to': booking.listersEmail,
-          'from': 'CaribTap <no-reply@caribtap.com>', // ✅ Added explicit FROM name
-          'message': {
-            'subject': subject,
-            'html': listerHtml,
-          },
-        });
-      }
-    } catch (e) {
-      print('Error triggering booking email: $e');
-    }
-  }
 }
