@@ -6,6 +6,40 @@ import 'package:caribtap/listings/listings_module/api/booking_repository.dart';
 class BookingFirebase extends BookingRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  DateTime? _parseDateTimeSafe(dynamic value) {
+    if (value is DateTime) return value;
+    if (value is Timestamp) return value.toDate();
+    if (value is String && value.isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
+  }
+
+  bool _isCustomerCancellationLocked(Map<String, dynamic> bookingData) {
+    final completionTag =
+        (bookingData['completionTag'] ?? '').toString().trim().toLowerCase();
+    if (completionTag == 'completed' || completionTag == 'no_show') {
+      return true;
+    }
+
+    final checkOut = _parseDateTimeSafe(bookingData['checkOutDate']);
+    if (checkOut == null) {
+      return false;
+    }
+
+    final endOfDay = DateTime(
+      checkOut.year,
+      checkOut.month,
+      checkOut.day,
+      23,
+      59,
+      59,
+      999,
+    );
+
+    return DateTime.now().isAfter(endOfDay);
+  }
+
   @override
   Future<String> createBooking({required BookingModel booking}) async {
     try {
@@ -256,6 +290,26 @@ class BookingFirebase extends BookingRepository {
     };
 
     if (normalizedStatus == 'cancelled') {
+      final cancelledByRole = (cancelledBy ?? '').trim().toLowerCase();
+      if (cancelledByRole == 'customer') {
+        final currentBookingDoc = await _firestore
+            .collection('listings')
+            .doc(listingId)
+            .collection('bookings')
+            .doc(bookingId)
+            .get();
+
+        if (!currentBookingDoc.exists || currentBookingDoc.data() == null) {
+          throw Exception('Booking not found');
+        }
+
+        if (_isCustomerCancellationLocked(currentBookingDoc.data()!)) {
+          throw Exception(
+            'Cancellation is no longer available for this booking.',
+          );
+        }
+      }
+
       if (trimmedCancellationReason != null && trimmedCancellationReason.isNotEmpty) {
         updateData['cancellationReason'] = trimmedCancellationReason;
       }

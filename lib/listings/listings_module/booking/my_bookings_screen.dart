@@ -141,7 +141,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,
-          unselectedLabelColor: isDarkMode(context) ? Colors.white70 : Colors.black54,
+          unselectedLabelColor: isDarkMode(context) ? Colors.white70 : Colors.black,
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
           tabs: [
             Tab(text: 'Pending'.tr()),
             Tab(text: 'Confirmed'.tr()),
@@ -271,7 +272,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
   Widget _buildBookingsList(List<dynamic> bookings, String status) {
     if (bookings.isEmpty) {
-      return Center(child: Text(_emptyBookingsLabel(status)));
+      return _buildEmptyState(status);
     }
 
     return ListView.builder(
@@ -447,13 +448,22 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 },
               ),
             ],
-            if (booking.isPending) ...[
+            if (booking.isPending && !_isCustomerCancellationLocked(booking)) ...[
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
                   onPressed: () => _cancelBooking(booking),
                   child: Text('Cancel request'.tr()),
+                ),
+              ),
+            ] else if (booking.isPending && _isCustomerCancellationLocked(booking)) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Cancellation is no longer available for this booking.'.tr(),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: dark ? Colors.white70 : Colors.black87,
                 ),
               ),
             ] else if (booking.isConfirmed) ...[
@@ -466,15 +476,27 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                       child: Text('Contact host'.tr()),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => _cancelBooking(booking),
-                      child: Text('Cancel booking'.tr()),
+                  if (!_isCustomerCancellationLocked(booking)) ...[
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => _cancelBooking(booking),
+                        child: Text('Cancel booking'.tr()),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
+              if (_isCustomerCancellationLocked(booking)) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Cancellation is no longer available for this booking.'.tr(),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: dark ? Colors.white70 : Colors.black87,
+                  ),
+                ),
+              ],
             ] else if (booking.isCancelled && (booking.cancellationReason ?? '').trim().isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
@@ -515,6 +537,69 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     }
   }
 
+  Widget _buildEmptyState(String status) {
+    final dark = isDarkMode(context);
+    final label = _emptyBookingsLabel(status);
+
+    if (status == 'pending' && _searchQuery.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.inbox_outlined,
+                size: 52,
+                color: dark ? Colors.white24 : Colors.black26,
+              ),
+              const SizedBox(height: 14),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: dark ? Colors.white70 : Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Your booking may have been confirmed or rejected by the host — check the other tabs.'.tr(),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: dark ? Colors.white54 : Colors.black54,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: () => _tabController.animateTo(1),
+                icon: const Icon(Icons.check_circle_outline, size: 16),
+                label: Text('Check Confirmed'.tr()),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Color(cfg.colorPrimary),
+                  side: BorderSide(color: Color(cfg.colorPrimary).withOpacity(0.5)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Center(
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 14,
+          color: dark ? Colors.white54 : Colors.black54,
+        ),
+      ),
+    );
+  }
+
   String _emptyBookingsLabel(String status) {
     switch (status) {
       case 'pending':
@@ -545,7 +630,48 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     }
   }
 
+  DateTime? _asDateTime(dynamic value) {
+    if (value is DateTime) return value;
+    if (value is String && value.isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
+  }
+
+  bool _hasTerminalCompletionTag(dynamic booking) {
+    final completionTag = (booking.completionTag ?? '').toString().trim().toLowerCase();
+    return completionTag == 'completed' || completionTag == 'no_show';
+  }
+
+  bool _hasBookingPeriodEnded(dynamic booking) {
+    final checkOut = _asDateTime(booking.checkOutDate);
+    if (checkOut == null) return false;
+    final endOfDay = DateTime(
+      checkOut.year,
+      checkOut.month,
+      checkOut.day,
+      23,
+      59,
+      59,
+      999,
+    );
+    return DateTime.now().isAfter(endOfDay);
+  }
+
+  bool _isCustomerCancellationLocked(dynamic booking) {
+    return _hasTerminalCompletionTag(booking) || _hasBookingPeriodEnded(booking);
+  }
+
   void _cancelBooking(dynamic booking) {
+    if (_isCustomerCancellationLocked(booking)) {
+      showAlertDialog(
+        context,
+        'Cancellation unavailable'.tr(),
+        'This booking can no longer be cancelled.'.tr(),
+      );
+      return;
+    }
+
     final bookingBloc = context.read<BookingBloc>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isConfirmed = (booking.status ?? '').toString().toLowerCase() == 'confirmed';
@@ -560,35 +686,37 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             color: isDark ? Colors.white : Colors.black,
           ),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              isConfirmed
-                  ? 'Please let the host know why you are cancelling this confirmed booking.'.tr()
-                  : 'Are you sure you want to cancel this booking request?'.tr(),
-              style: TextStyle(
-                color: isDark ? Colors.white70 : Colors.black87,
-              ),
-            ),
-            if (isConfirmed) ...[
-              const SizedBox(height: 12),
-              TextField(
-                controller: reasonController,
-                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-                maxLines: 3,
-                maxLength: 250,
-                decoration: InputDecoration(
-                  labelText: 'Cancellation reason'.tr(),
-                  hintText: 'Enter your reason'.tr(),
-                  labelStyle: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
-                  hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
-                  border: const OutlineInputBorder(),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isConfirmed
+                    ? 'Please let the host know why you are cancelling this confirmed booking.'.tr()
+                    : 'Are you sure you want to cancel this booking request?'.tr(),
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : Colors.black87,
                 ),
               ),
+              if (isConfirmed) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: reasonController,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                  maxLines: 3,
+                  maxLength: 250,
+                  decoration: InputDecoration(
+                    labelText: 'Cancellation reason'.tr(),
+                    hintText: 'Enter your reason'.tr(),
+                    labelStyle: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+                    hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
         actions: [
           TextButton(
@@ -655,45 +783,46 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             color: isDark ? Colors.white : Colors.black,
           ),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              listersName,
-              style: TextStyle(
-                color: isDark ? Colors.white : Colors.black,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                listersName,
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            if (listersEmail.isNotEmpty)
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Email: $listersEmail',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? Colors.grey[300] : Colors.black87,
+              const SizedBox(height: 8),
+              if (listersEmail.isNotEmpty)
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Email: $listersEmail',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.grey[300] : Colors.black87,
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.copy, size: 20),
-                    tooltip: 'Copy Email',
-                    color: Theme.of(context).colorScheme.primary,
-                    onPressed: () {
-                      Clipboard.setData(const ClipboardData(text: '')); // dummy to ensure import
-                      Clipboard.setData(ClipboardData(text: listersEmail));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Email copied'.tr())),
-                      );
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.email, size: 20),
-                    tooltip: 'Send Email',
-                    color: Theme.of(context).colorScheme.primary,
+                    IconButton(
+                      icon: const Icon(Icons.copy, size: 20),
+                      tooltip: 'Copy Email',
+                      color: Theme.of(context).colorScheme.primary,
+                      onPressed: () {
+                        Clipboard.setData(const ClipboardData(text: '')); // dummy to ensure import
+                        Clipboard.setData(ClipboardData(text: listersEmail));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Email copied'.tr())),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.email, size: 20),
+                      tooltip: 'Send Email',
+                      color: Theme.of(context).colorScheme.primary,
                     onPressed: () async {
                       final uri = Uri(
                         scheme: 'mailto',
@@ -755,6 +884,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 ],
               ),
           ],
+        ),
         ),
         actions: [
           TextButton(
