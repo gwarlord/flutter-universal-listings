@@ -28,7 +28,6 @@ class MyBookingsScreen extends StatefulWidget {
   @override
   State<MyBookingsScreen> createState() => _MyBookingsScreenState();
 }
-
 class _MyBookingsScreenState extends State<MyBookingsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
@@ -38,7 +37,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     context
         .read<BookingBloc>()
         .add(GetMyBookingsEvent(userId: widget.currentUser.userID));
@@ -140,12 +139,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         title: Text('My Bookings'.tr()),
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
+          labelPadding: const EdgeInsets.symmetric(horizontal: 18),
           labelColor: Colors.white,
           unselectedLabelColor: isDarkMode(context) ? Colors.white70 : Colors.black,
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
           tabs: [
             Tab(text: 'Pending'.tr()),
             Tab(text: 'Confirmed'.tr()),
+            Tab(text: 'Past'.tr()),
             Tab(text: 'Rejected'.tr()),
             Tab(text: 'Cancelled'.tr()),
           ],
@@ -167,12 +169,23 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
             final filteredPendingBookings =
                 pendingBookings.where(_matchesBookingSearch).toList();
-            final filteredConfirmedBookings =
-                confirmedBookings.where(_matchesBookingSearch).toList();
             final filteredRejectedBookings =
                 rejectedBookings.where(_matchesBookingSearch).toList();
             final filteredCancelledBookings =
                 cancelledBookings.where(_matchesBookingSearch).toList();
+           
+       // Split confirmed bookings into upcoming and past
+       final upcomingConfirmedBookings = confirmedBookings
+         .where((b) => !_isBookingInPast(b))
+         .toList();
+       final pastConfirmedBookings = confirmedBookings
+         .where((b) => _isBookingInPast(b))
+         .toList();
+           
+       final filteredUpcomingConfirmedBookings =
+         upcomingConfirmedBookings.where(_matchesBookingSearch).toList();
+       final filteredPastConfirmedBookings =
+         pastConfirmedBookings.where(_matchesBookingSearch).toList();
 
             return Column(
               children: [
@@ -209,11 +222,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                     controller: _tabController,
                     children: [
                       _buildBookingsList(filteredPendingBookings, 'pending'),
-                      _buildBookingsList(
-                          filteredConfirmedBookings, 'confirmed'),
-                      _buildBookingsList(filteredRejectedBookings, 'rejected'),
-                      _buildBookingsList(
-                          filteredCancelledBookings, 'cancelled'),
+                          _buildBookingsList(filteredUpcomingConfirmedBookings, 'confirmed'),
+                          _buildBookingsList(filteredPastConfirmedBookings, 'past'),
+                                         _buildBookingsList(filteredRejectedBookings, 'rejected'),
+                                         _buildBookingsList(filteredCancelledBookings, 'cancelled'),
                     ],
                   ),
                 ),
@@ -268,6 +280,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     ].join(' ').toLowerCase();
 
     return haystack.contains(_searchQuery);
+  }
+
+  bool _isBookingInPast(dynamic booking) {
+    if (booking.checkOutDate is! DateTime) return false;
+    final checkOutDate = booking.checkOutDate as DateTime;
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    return DateTime(checkOutDate.year, checkOutDate.month, checkOutDate.day)
+        .isBefore(todayOnly);
   }
 
   Widget _buildBookingsList(List<dynamic> bookings, String status) {
@@ -606,6 +627,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         return 'No pending bookings'.tr();
       case 'confirmed':
         return 'No confirmed bookings'.tr();
+      case 'past':
+        return 'No past bookings'.tr();
       case 'rejected':
         return 'No rejected bookings'.tr();
       case 'cancelled':

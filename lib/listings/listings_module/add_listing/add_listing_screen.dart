@@ -85,11 +85,15 @@ class AddListingWrappingWidget extends StatelessWidget {
 class EditListingWrappingWidget extends StatelessWidget {
   final ListingsUser currentUser;
   final ListingModel listingToEdit;
+  /// When true the editor opens in view-only mode — fields are visible but
+  /// saving is disabled. Used for demo listings viewed by non-admin users.
+  final bool readOnly;
 
   const EditListingWrappingWidget({
     super.key,
     required this.currentUser,
     required this.listingToEdit,
+    this.readOnly = false,
   });
 
   @override
@@ -120,6 +124,7 @@ class EditListingWrappingWidget extends StatelessWidget {
             child: AddListingScreen(
               currentUser: currentUser,
               listingToEdit: listingToEdit,
+              readOnly: readOnly,
             ),
           ),
         );
@@ -131,11 +136,14 @@ class EditListingWrappingWidget extends StatelessWidget {
 class AddListingScreen extends StatefulWidget {
   final ListingsUser currentUser;
   final ListingModel? listingToEdit;
+  /// When true the editor is view-only: fields are visible but save is blocked.
+  final bool readOnly;
 
   const AddListingScreen({
     super.key,
     required this.currentUser,
     this.listingToEdit,
+    this.readOnly = false,
   });
 
   @override
@@ -223,9 +231,11 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final TextEditingController _servicePriceController = TextEditingController();
   final TextEditingController _serviceDurationController =
       TextEditingController();
-    final TextEditingController _serviceQuantityController =
+  final TextEditingController _serviceQuantityController =
       TextEditingController(text: '1');
   final TextEditingController _keywordController = TextEditingController();
+    final TextEditingController _otherSubcategoryController =
+      TextEditingController();
 
   Map<String, String>? _filters = {};
   PlaceDetails? _placeDetail;
@@ -253,6 +263,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final List<String> _searchKeywords = [];
 
   List<CategoriesModel> _categories = [];
+  String? _selectedPrimaryCategoryId;
   late ListingsUser currentUser;
   bool isLoadingCategories = true;
   bool _isLoadingListing = false;
@@ -263,22 +274,143 @@ class _AddListingScreenState extends State<AddListingScreen> {
       categoriesById[category.id] = category;
     }
 
+    final categoriesBySlug = <String, CategoriesModel>{};
+    for (final category in categoriesById.values) {
+      final slug = category.slug.trim();
+      if (slug.isNotEmpty) {
+        categoriesBySlug[slug] = category;
+      }
+    }
+
     final normalized = categoriesById.values.toList()
-      ..sort((a, b) => _localizedCategoryName(a.title)
+      ..sort((a, b) => _categoryDisplayLabel(a, categoriesBySlug)
           .toLowerCase()
-          .compareTo(_localizedCategoryName(b.title).toLowerCase()));
+          .compareTo(_categoryDisplayLabel(b, categoriesBySlug).toLowerCase()));
 
     return normalized;
   }
 
+  String _categoryDisplayLabel(
+    CategoriesModel category,
+    Map<String, CategoriesModel> categoriesBySlug,
+  ) {
+    final title = _localizedCategoryName(category.title);
+    final parentSlug = category.parentSlug;
+    if (parentSlug == null || parentSlug.isEmpty) {
+      return title;
+    }
+
+    final parent = categoriesBySlug[parentSlug];
+    if (parent == null) {
+      return title;
+    }
+
+    final parentTitle = _localizedCategoryName(parent.title);
+    return '$parentTitle - $title';
+  }
+
   CategoriesModel? _resolvedSelectedCategory(List<CategoriesModel> categories) {
     final selectedId = _categoryValue?.id;
-    if (selectedId == null || selectedId.isEmpty) {
+    if (selectedId != null && selectedId.isNotEmpty) {
+      for (final category in categories) {
+        if (category.id == selectedId) {
+          return category;
+        }
+      }
+    }
+
+    final selectedSlug = _categoryValue?.slug.trim() ?? '';
+    if (selectedSlug.isNotEmpty) {
+      for (final category in categories) {
+        if (category.slug.trim() == selectedSlug) {
+          return category;
+        }
+      }
+    }
+
+    final selectedTitle = _normalizeCategoryValue(_categoryValue?.title);
+    if (selectedTitle.isNotEmpty) {
+      for (final category in categories) {
+        if (_normalizeCategoryValue(category.title) == selectedTitle) {
+          return category;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  String _normalizeCategoryValue(String? value) {
+    return (value ?? '').trim().toLowerCase();
+  }
+
+  bool _isOtherCategoryValue(CategoriesModel category) {
+    final slug = _normalizeCategoryValue(category.slug);
+    final title = _normalizeCategoryValue(category.title);
+    return slug == 'other' || title == 'other' || title == 'order';
+  }
+
+  int _categoryAlphaWithOtherLastCompare(
+    CategoriesModel a,
+    CategoriesModel b,
+  ) {
+    final aIsOther = _isOtherCategoryValue(a);
+    final bIsOther = _isOtherCategoryValue(b);
+    if (aIsOther != bIsOther) {
+      return aIsOther ? 1 : -1;
+    }
+
+    final titleCompare = _normalizeCategoryValue(_localizedCategoryName(a.title))
+      .compareTo(_normalizeCategoryValue(_localizedCategoryName(b.title)));
+    if (titleCompare != 0) return titleCompare;
+
+    return _normalizeCategoryValue(a.slug)
+        .compareTo(_normalizeCategoryValue(b.slug));
+  }
+
+  String _slugifyCategoryValue(String? value) {
+    return _normalizeCategoryValue(value)
+        .replaceAll('&', 'and')
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'-+'), '-')
+        .replaceAll(RegExp(r'^-|-$'), '');
+  }
+
+  CategoriesModel? _matchCategoryForListing(
+    ListingModel listing,
+    List<CategoriesModel> categories,
+  ) {
+    for (final category in categories) {
+      if (listing.categoryID.isNotEmpty && category.id == listing.categoryID) {
+        return category;
+      }
+    }
+
+    final subcategorySlug = listing.subcategorySlug.trim();
+    if (subcategorySlug.isNotEmpty) {
+      for (final category in categories) {
+        if (category.slug.trim() == subcategorySlug) {
+          return category;
+        }
+      }
+    }
+
+    final primaryCategorySlug = listing.primaryCategorySlug.trim();
+    if (primaryCategorySlug.isNotEmpty) {
+      for (final category in categories) {
+        if (category.slug.trim() == primaryCategorySlug) {
+          return category;
+        }
+      }
+    }
+
+    final normalizedTitle = _normalizeCategoryValue(listing.categoryTitle);
+    if (normalizedTitle.isEmpty) {
       return null;
     }
 
     for (final category in categories) {
-      if (category.id == selectedId) {
+      if (_normalizeCategoryValue(category.title) == normalizedTitle) {
         return category;
       }
     }
@@ -298,6 +430,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final List<String> _timeBlocks = [];
   final List<String> _customQuestions = [];
   final List<DateTime> _blockedDates = [];
+
+  String _demoEditNotAllowedMessage() =>
+      'This is a demo listing. Edits are not allowed.'.tr();
 
   // Store/Ecommerce
   bool _storeEnabled = false;
@@ -472,6 +607,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
 
   void _populateListingData(ListingModel l) {
+        final isOtherPrimary = l.primaryCategorySlug.trim().toLowerCase() == 'other';
+        if (isOtherPrimary) {
+          final listingTitle = l.categoryTitle.trim();
+          if (listingTitle.isNotEmpty && listingTitle.toLowerCase() != 'other') {
+            _otherSubcategoryController.text = listingTitle;
+          }
+        }
     _titleController.text = l.title;
     _description = l.description;
     _priceController.text = l.price.toString();
@@ -516,17 +658,21 @@ class _AddListingScreenState extends State<AddListingScreen> {
     // that Save is never blocked by a null _categoryValue on an existing listing
     // (e.g. when categories haven't finished loading yet).
     if (_categories.isNotEmpty) {
-      try {
-        _categoryValue = _categories.firstWhere((c) => c.id == l.categoryID);
-      } catch (_) {}
+      _categoryValue = _matchCategoryForListing(l, _normalizedCategories());
     }
     if (_categoryValue == null && l.categoryID.isNotEmpty) {
       _categoryValue = CategoriesModel(
         id: l.categoryID,
+        slug: l.subcategorySlug.isNotEmpty
+            ? l.subcategorySlug
+            : l.primaryCategorySlug,
         title: l.categoryTitle,
         photo: l.categoryPhoto,
         isActive: true,
         sortOrder: 0,
+        parentSlug: l.subcategorySlug.isNotEmpty && l.primaryCategorySlug.isNotEmpty
+            ? l.primaryCategorySlug
+            : null,
       );
     }
 
@@ -1702,6 +1848,16 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
 
   void _showPhotoEnhancementModal(BuildContext context) {
+    // Demo listings in read-only mode should not allow enhancement/saving flows.
+    if (widget.readOnly) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_demoEditNotAllowedMessage()),
+        ),
+      );
+      return;
+    }
+
     // Validate listing is saved before enhancement
     if (widget.listingToEdit?.id == null || widget.listingToEdit!.id.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2035,6 +2191,70 @@ class _AddListingScreenState extends State<AddListingScreen> {
     }
   }
 
+  Future<void> _showManualLocationFallbackDialog() async {
+    final initialValue = (_placeDetail?.formattedAddress?.trim().isNotEmpty ?? false)
+        ? _placeDetail!.formattedAddress!.trim()
+        : (isEdit ? (widget.listingToEdit?.place ?? '').trim() : '');
+    final controller = TextEditingController(text: initialValue);
+
+    final submittedAddress = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('Enter location manually'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: InputDecoration(
+              hintText: 'e.g. Bridgetown, Barbados',
+            ),
+            onSubmitted: (value) => Navigator.of(dialogContext).pop(value.trim()),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text('Cancel'.tr()),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
+              child: Text('Use location'),
+            ),
+          ],
+        );
+      },
+    );
+
+    final placeText = submittedAddress?.trim() ?? '';
+    if (placeText.isEmpty) return;
+
+    final resolved = await _resolveCoordinatesFromAddress(placeText);
+    final fallbackLat = isEdit ? widget.listingToEdit?.latitude ?? 0.0 : 0.0;
+    final fallbackLng = isEdit ? widget.listingToEdit?.longitude ?? 0.0 : 0.0;
+    final lat = resolved?.latitude ?? fallbackLat;
+    final lng = resolved?.longitude ?? fallbackLng;
+
+    if (!mounted) return;
+    setState(() {
+      _placeDetail = _fakePlaceDetailsFromExisting(
+        _titleController.text.trim(),
+        placeText,
+        lat,
+        lng,
+      );
+      _selectedPrediction = null;
+      _isFetchingPlaceDetails = false;
+      _placeManuallySelected = true;
+    });
+
+    if (resolved == null) {
+      showSnackBar(
+        context,
+        'Location saved without precise coordinates. You can refine it later.',
+      );
+    }
+  }
+
   Future<void> _showAIDescriptionDialog(BuildContext context, bool dark) async {
     final title = _titleController.text.trim();
     final category = _categoryValue?.title ?? '';
@@ -2086,8 +2306,20 @@ class _AddListingScreenState extends State<AddListingScreen> {
         if (state is AddListingErrorState) {
           context.read<LoadingCubit>().hideLoading();
           if (!mounted) return;
-          showAlertDialog(
-              listenerContext, state.errorTitle, state.errorMessage);
+          final isReadOnlyDemoEdit =
+              widget.readOnly ||
+              ((widget.listingToEdit?.isDemo ?? false) &&
+                  !widget.currentUser.isAdmin);
+          if (isReadOnlyDemoEdit) {
+            showAlertDialog(
+              listenerContext,
+              'Edits Not Allowed'.tr(),
+              _demoEditNotAllowedMessage(),
+            );
+          } else {
+            showAlertDialog(
+                listenerContext, state.errorTitle, state.errorMessage);
+          }
         } else if (state is PlaceDetailsState) {
           debugPrint('*** DEBUG: PlaceDetailsState received: '
               '${state.placeDetails?.formattedAddress ?? state.placeDetails?.toString()}');
@@ -2132,6 +2364,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
           ),
           elevation: 0,
           actions: [
+            if (!widget.readOnly)
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: ElevatedButton.icon(
@@ -2162,42 +2395,71 @@ class _AddListingScreenState extends State<AddListingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Publish toggle
-              if (_basicInfoExpanded)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+              // Read-only demo banner
+              if (widget.readOnly)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Color(colorPrimary).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: Color(colorPrimary).withValues(alpha: 0.3)),
+                  ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        _isPublished ? 'Public'.tr() : 'Draft'.tr(),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: _isPublished ? Colors.green : Colors.grey,
+                      Icon(Icons.visibility_outlined,
+                          color: Color(colorPrimary), size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'This is a demo listing — you can explore the configuration below, but changes cannot be saved.'
+                              .tr(),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(colorPrimary),
+                          ),
                         ),
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Publish'.tr(),
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          const SizedBox(width: 8),
-                          Switch(
-                            value: _isPublished,
-                            onChanged: (value) {
-                              setState(() => _isPublished = value);
-                            },
-                            activeColor: Colors.green,
-                            inactiveThumbColor: Colors.grey,
-                          ),
-                        ],
                       ),
                     ],
                   ),
                 ),
+              // Publish toggle (always visible at top)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _isPublished ? 'Public'.tr() : 'Draft'.tr(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: _isPublished ? Colors.green : Colors.grey,
+                      ),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Publish'.tr(),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        const SizedBox(width: 8),
+                        Switch(
+                          value: _isPublished,
+                          onChanged: (value) {
+                            setState(() => _isPublished = value);
+                          },
+                          activeColor: Colors.green,
+                          inactiveThumbColor: Colors.grey,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
 
               // Basic Information Section
               _buildCollapsibleSection(
@@ -2300,17 +2562,19 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         isLoadingCategories = false;
                         _categories = state.categories;
                         final normalizedCategories = _normalizedCategories();
-                        final resolvedCategory =
-                            _resolvedSelectedCategory(normalizedCategories);
+                        final resolvedCategory = isEdit && widget.listingToEdit != null
+                            ? _matchCategoryForListing(
+                                widget.listingToEdit!,
+                                normalizedCategories,
+                              )
+                            : _resolvedSelectedCategory(normalizedCategories);
                         if (resolvedCategory != null) {
                           _categoryValue = resolvedCategory;
                         }
                         if (isEdit && _categoryValue == null) {
                           final l = widget.listingToEdit!;
-                          try {
-                            _categoryValue = normalizedCategories
-                                .firstWhere((c) => c.id == l.categoryID);
-                          } catch (_) {}
+                          _categoryValue =
+                              _matchCategoryForListing(l, normalizedCategories);
                         }
                       } else if (state is CategorySelectedState) {
                         _categoryValue = state.category == null
@@ -2320,34 +2584,226 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       }
 
                       final categories = _normalizedCategories();
+                      final categoriesBySlug = <String, CategoriesModel>{
+                        for (final category in categories)
+                          if (category.slug.trim().isNotEmpty)
+                            category.slug.trim(): category,
+                      };
                       final selectedCategory =
                           _resolvedSelectedCategory(categories);
 
-                      return DropdownButtonFormField<CategoriesModel>(
-                        isExpanded: true,
-                        decoration: _getInputDecoration(
-                          label: 'Category'.tr(),
-                          icon: Icons.category,
-                          isRequired: true,
-                        ),
-                        dropdownColor: dark ? Colors.grey[900] : Colors.white,
-                        hint: Text('Choose Category'.tr()),
-                        value: selectedCategory,
-                        items: categories
-                            .map((category) => DropdownMenuItem<CategoriesModel>(
-                                  value: category,
-                                  child: Text(
-                                    _localizedCategoryName(category.title),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ))
-                            .toList(),
-                        onChanged: isLoadingCategories
-                            ? null
-                            : (CategoriesModel? model) => context
-                                .read<AddListingBloc>()
-                                .add(CategorySelectedEvent(
-                                    categoriesModel: model)),
+                      final hasHierarchy = categories.any((c) {
+                        final parent = c.parentSlug;
+                        return parent != null && parent.trim().isNotEmpty;
+                      });
+
+                      final primaryCategories = categories
+                          .where((c) {
+                            final parent = c.parentSlug;
+                            return parent == null || parent.trim().isEmpty;
+                          })
+                          .toList()
+                        ..sort(_categoryAlphaWithOtherLastCompare);
+
+                      CategoriesModel? selectedPrimaryCategory;
+                      if (selectedCategory != null) {
+                        final parentSlug = selectedCategory.parentSlug;
+                        if (parentSlug != null && parentSlug.trim().isNotEmpty) {
+                          for (final primary in primaryCategories) {
+                            if (primary.slug.trim() == parentSlug.trim()) {
+                              selectedPrimaryCategory = primary;
+                              break;
+                            }
+                          }
+                        } else {
+                          selectedPrimaryCategory = selectedCategory;
+                        }
+                      }
+
+                      if (selectedPrimaryCategory == null &&
+                          _selectedPrimaryCategoryId != null) {
+                        for (final primary in primaryCategories) {
+                          if (primary.id == _selectedPrimaryCategoryId) {
+                            selectedPrimaryCategory = primary;
+                            break;
+                          }
+                        }
+                      }
+
+                      List<CategoriesModel> subcategoriesForPrimary = [];
+                      if (selectedPrimaryCategory != null) {
+                        final primarySlug = selectedPrimaryCategory.slug.trim();
+                        if (primarySlug.isNotEmpty) {
+                          subcategoriesForPrimary = categories.where((c) {
+                            final parent = c.parentSlug?.trim() ?? '';
+                            return parent.isNotEmpty && parent == primarySlug;
+                          }).toList()
+                            ..sort((a, b) => _normalizeCategoryValue(
+                                    _localizedCategoryName(a.title))
+                                .compareTo(_normalizeCategoryValue(
+                                    _localizedCategoryName(b.title))));
+                        }
+                      }
+
+                      final isOtherPrimarySelected =
+                          selectedPrimaryCategory?.slug.trim().toLowerCase() ==
+                              'other';
+
+                      CategoriesModel? selectedSubcategory;
+                      if (selectedCategory != null &&
+                          subcategoriesForPrimary.any((c) => c.id == selectedCategory.id)) {
+                        selectedSubcategory = selectedCategory;
+                      }
+
+                      if (!hasHierarchy) {
+                        final flatCategories = [...categories]
+                          ..sort(_categoryAlphaWithOtherLastCompare);
+
+                        return DropdownButtonFormField<CategoriesModel>(
+                          isExpanded: true,
+                          decoration: _getInputDecoration(
+                            label: 'Category'.tr(),
+                            icon: Icons.category,
+                            isRequired: true,
+                          ),
+                          dropdownColor: dark ? Colors.grey[900] : Colors.white,
+                          hint: Text('Choose Category'.tr()),
+                          value: selectedCategory,
+                          items: flatCategories
+                              .map((category) => DropdownMenuItem<CategoriesModel>(
+                                    value: category,
+                                    child: Text(
+                                      _categoryDisplayLabel(
+                                        category,
+                                        categoriesBySlug,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ))
+                              .toList(),
+                          onChanged: isLoadingCategories
+                              ? null
+                              : (CategoriesModel? model) => context
+                                  .read<AddListingBloc>()
+                                  .add(CategorySelectedEvent(
+                                      categoriesModel: model)),
+                        );
+                      }
+
+                      return Column(
+                        children: [
+                          DropdownButtonFormField<CategoriesModel>(
+                            isExpanded: true,
+                            decoration: _getInputDecoration(
+                              label: 'Primary Category'.tr(),
+                              icon: Icons.category,
+                              isRequired: true,
+                            ),
+                            dropdownColor: dark ? Colors.grey[900] : Colors.white,
+                            hint: Text('Choose Primary Category'.tr()),
+                            value: selectedPrimaryCategory,
+                            items: primaryCategories
+                                .map((category) => DropdownMenuItem<CategoriesModel>(
+                                      value: category,
+                                      child: Text(
+                                        _localizedCategoryName(category.title),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ))
+                                .toList(),
+                            onChanged: isLoadingCategories
+                                ? null
+                                : (CategoriesModel? model) {
+                                    setState(() {
+                                      _selectedPrimaryCategoryId = model?.id;
+                                      if (model == null ||
+                                          model.slug.trim().toLowerCase() !=
+                                              'other') {
+                                        _otherSubcategoryController.clear();
+                                      }
+                                    });
+
+                                    if (model == null) {
+                                      context.read<AddListingBloc>().add(
+                                            CategorySelectedEvent(
+                                                categoriesModel: null),
+                                          );
+                                      return;
+                                    }
+
+                                    final modelSlug = model.slug.trim();
+                                    if (modelSlug.toLowerCase() == 'other') {
+                                      context.read<AddListingBloc>().add(
+                                            CategorySelectedEvent(
+                                                categoriesModel: model),
+                                          );
+                                      return;
+                                    }
+
+                                    final hasChildren = categories.any((c) {
+                                      final parent = c.parentSlug?.trim() ?? '';
+                                      return parent.isNotEmpty && parent == modelSlug;
+                                    });
+
+                                    if (!hasChildren) {
+                                      context.read<AddListingBloc>().add(
+                                            CategorySelectedEvent(
+                                                categoriesModel: model),
+                                          );
+                                      return;
+                                    }
+
+                                    context.read<AddListingBloc>().add(
+                                          CategorySelectedEvent(
+                                              categoriesModel: null),
+                                        );
+                                  },
+                          ),
+                          if (isOtherPrimarySelected) ...[
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _otherSubcategoryController,
+                              textInputAction: TextInputAction.done,
+                              decoration: _getInputDecoration(
+                                label: 'Other Subcategory'.tr(),
+                                hint: 'e.g. Street Vending'.tr(),
+                                icon: Icons.edit_note,
+                                isRequired: true,
+                              ),
+                              onChanged: (_) => setState(() {}),
+                            ),
+                          ] else if (subcategoriesForPrimary.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<CategoriesModel>(
+                              isExpanded: true,
+                              decoration: _getInputDecoration(
+                                label: 'Subcategory'.tr(),
+                                icon: Icons.subdirectory_arrow_right,
+                                isRequired: true,
+                              ),
+                              dropdownColor:
+                                  dark ? Colors.grey[900] : Colors.white,
+                              hint: Text('Choose Subcategory'.tr()),
+                              value: selectedSubcategory,
+                              items: subcategoriesForPrimary
+                                  .map((category) =>
+                                      DropdownMenuItem<CategoriesModel>(
+                                        value: category,
+                                        child: Text(
+                                          _localizedCategoryName(category.title),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ))
+                                  .toList(),
+                              onChanged: isLoadingCategories
+                                  ? null
+                                  : (CategoriesModel? model) => context
+                                      .read<AddListingBloc>()
+                                      .add(CategorySelectedEvent(
+                                          categoriesModel: model)),
+                            ),
+                          ],
+                        ],
                       );
                     },
                   ),
@@ -2360,22 +2816,29 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       );
                       if (key.trim().isEmpty) {
                         if (!mounted) return;
-                        showSnackBar(
-                          context,
-                          'Google Places API key is missing. Please check .env configuration.'
-                              .tr(),
-                        );
+                        await _showManualLocationFallbackDialog();
                         return;
                       }
 
                       await _debugProbePlacesAutocomplete();
-
-                      final prediction = await PlacesAutocomplete.show(
-                        context: context,
-                        apiKey: key,
-                        mode: Mode.fullscreen,
-                        language: 'en',
-                      );
+                      Prediction? prediction;
+                      try {
+                        prediction = await PlacesAutocomplete.show(
+                          context: context,
+                          apiKey: key,
+                          mode: Mode.fullscreen,
+                          language: 'en',
+                        );
+                      } catch (e) {
+                        debugPrint('[Places] Add Listing autocomplete failed: $e');
+                        if (!mounted) return;
+                        showSnackBar(
+                          context,
+                          'Autocomplete unavailable right now. Enter location manually.',
+                        );
+                        await _showManualLocationFallbackDialog();
+                        return;
+                      }
                       debugPrint('*** DEBUG: Place selected from autocomplete: '
                           '${prediction?.description ?? prediction?.toString()}');
                       if (prediction != null) {
@@ -2445,31 +2908,43 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         : 'listing_description_draft_new',
                   ),
                   const SizedBox(height: 8),
-                  // AI Enhancement Buttons
-                  if (GeminiAIService().isReady)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.auto_awesome, size: 18),
-                            label: Text(
-                              _description.trim().isEmpty
-                                  ? 'Generate with AI'.tr()
-                                  : 'Enhance with AI'.tr(),
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Color(colorPrimary),
-                              side: BorderSide(
-                                  color: Color(colorPrimary).withOpacity(0.5)),
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                            ),
-                            onPressed: () =>
-                                _showAIDescriptionDialog(context, dark),
+                  // AI Enhancement Button (always visible, disabled with guidance when key is missing)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.auto_awesome, size: 18),
+                          label: Text(
+                            _description.trim().isEmpty
+                                ? 'Generate with AI'.tr()
+                                : 'Enhance with AI'.tr(),
+                            style: const TextStyle(fontSize: 13),
                           ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: GeminiAIService().isReady
+                                ? Color(colorPrimary)
+                                : Colors.grey,
+                            side: BorderSide(
+                              color: GeminiAIService().isReady
+                                  ? Color(colorPrimary).withOpacity(0.5)
+                                  : Colors.grey.withOpacity(0.5),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                          onPressed: () {
+                            if (!GeminiAIService().isReady) {
+                              showSnackBar(
+                                context,
+                                'AI is unavailable in this run. Launch with dart-defines so GEMINI_API_KEY is provided.',
+                              );
+                              return;
+                            }
+                            _showAIDescriptionDialog(context, dark);
+                          },
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 16),
                   _buildKeywordEditor(dark),
                 ],
@@ -2525,8 +3000,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           borderRadius:
                               BorderRadius.vertical(top: Radius.circular(20)),
                         ),
-                        builder: (context) =>
-                            FilterWrappingWidget(filtersValue: _filters ?? {}),
+                        builder: (context) => FilterWrappingWidget(
+                          filtersValue: _filters ?? {},
+                          titleText: 'Business Type & Features'.tr(),
+                          saveButtonText: 'Save Business Type & Features'.tr(),
+                          instructionText:
+                              'Only select what applies to your listing.'.tr(),
+                          includeListingDefaults: true,
+                        ),
                       );
                       if (filters != null) {
                         if (!mounted) return;
@@ -2537,7 +3018,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     },
                     child: InputDecorator(
                       decoration: _getInputDecoration(
-                        label: 'Filters'.tr(),
+                        label: 'Business Type & Features'.tr(),
                         icon: Icons.filter_list,
                       ),
                       child: BlocBuilder<AddListingBloc, AddListingState>(
@@ -2549,7 +3030,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           return Text(
                             _filters?.isEmpty ?? true
                                 ? 'Optional'.tr()
-                                : 'Edit Filters'.tr(),
+                                : 'Edit Business Type & Features'.tr(),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           );
@@ -3236,16 +3717,41 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _servicePriceController.dispose();
     _serviceDurationController.dispose();
     _serviceQuantityController.dispose();
+    _otherSubcategoryController.dispose();
     _keywordController.dispose();
     _storeUrlController.dispose();
     super.dispose();
   }
 
   Future<void> _postListing() async {
+    // Block save when in read-only demo mode
+    if (widget.readOnly) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_demoEditNotAllowedMessage()),
+        ),
+      );
+      return;
+    }
     // Validate required fields before posting
     if (_titleController.text.trim().isEmpty || _categoryValue == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please fill in all required fields'.tr())),
+      );
+      return;
+    }
+
+    final selectedPrimarySlug =
+        (_categoryValue!.parentSlug?.trim().isNotEmpty == true
+                ? _categoryValue!.parentSlug!.trim()
+                : _categoryValue!.slug.trim())
+            .toLowerCase();
+    final isOtherCategory = selectedPrimarySlug == 'other';
+    final otherSubcategoryText = _otherSubcategoryController.text.trim();
+
+    if (isOtherCategory && otherSubcategoryText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter an Other subcategory'.tr())),
       );
       return;
     }
@@ -3312,8 +3818,18 @@ class _AddListingScreenState extends State<AddListingScreen> {
       title: _titleController.text.trim(),
       description: _description.trim(),
       categoryID: _categoryValue!.id,
-      categoryTitle: _categoryValue!.title,
+      categoryTitle:
+          isOtherCategory ? otherSubcategoryText : _categoryValue!.title,
       categoryPhoto: _categoryValue!.photo,
+      primaryCategorySlug:
+          _categoryValue!.parentSlug?.trim().isNotEmpty == true
+              ? _categoryValue!.parentSlug!.trim()
+              : _categoryValue!.slug.trim(),
+      subcategorySlug: isOtherCategory
+          ? _slugifyCategoryValue(otherSubcategoryText)
+          : (_categoryValue!.parentSlug?.trim().isNotEmpty == true
+              ? _categoryValue!.slug.trim()
+              : ''),
       price: _priceController.text.trim(),
       currencyCode: _selectedCurrencyCode,
       phone: _phoneController.text.trim(),

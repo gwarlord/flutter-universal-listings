@@ -65,6 +65,7 @@ __exportStar(require("./pro_docs/quote_acceptance"), exports);
 __exportStar(require("./subscriptions"), exports);
 __exportStar(require("./featured_functions"), exports);
 __exportStar(require("./admin_notifications"), exports);
+__exportStar(require("./review_removal_notifications"), exports);
 // Note: Logic for onBookingCreated, onBookingUpdated, etc.
 // is now contained within their respective source files (e.g., ./booking_notifications.ts)
 // to avoid duplication and path mismatches.

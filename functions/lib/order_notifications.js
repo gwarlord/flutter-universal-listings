@@ -36,6 +36,31 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.onOrderStatusChanged = exports.onOrderCreated = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
+async function getUserTokens(uid) {
+    const userDoc = await admin.firestore().collection("users").doc(uid).get();
+    if (!userDoc.exists)
+        return [];
+    const user = userDoc.data() || {};
+    const tokens = [];
+    if (Array.isArray(user.fcmTokens)) {
+        tokens.push(...user.fcmTokens.map((t) => String(t || "").trim()));
+    }
+    if (typeof user.pushToken === "string") {
+        tokens.push(user.pushToken.trim());
+    }
+    if (typeof user.fcmToken === "string") {
+        tokens.push(user.fcmToken.trim());
+    }
+    return [...new Set(tokens.filter((t) => t.length > 0))];
+}
+async function sendToUserTokens(tokens, message) {
+    if (tokens.length === 0)
+        return;
+    await Promise.allSettled(tokens.map((token) => admin.messaging().send({
+        ...message,
+        token,
+    })));
+}
 /**
  * Send notification when a new order is placed
  */
@@ -46,20 +71,9 @@ exports.onOrderCreated = functions.firestore
     const orderId = context.params.orderId;
     const orderNumber = orderId.slice(0, 8).toUpperCase();
     try {
-        // Get lister's user document to fetch FCM token
-        const listerDoc = await admin
-            .firestore()
-            .collection("users")
-            .doc(order.listerId)
-            .get();
-        if (!listerDoc.exists) {
-            console.log("Lister not found:", order.listerId);
-            return null;
-        }
-        const lister = listerDoc.data();
-        const fcmToken = lister?.pushToken;
-        if (!fcmToken) {
-            console.log("Lister has no FCM token:", order.listerId);
+        const listerTokens = await getUserTokens(order.listerId);
+        if (listerTokens.length === 0) {
+            console.log("Lister has no FCM tokens:", order.listerId);
             return null;
         }
         // Get listing details for notification
@@ -73,7 +87,6 @@ exports.onOrderCreated = functions.firestore
             : "Your listing";
         // Send notification
         const message = {
-            token: fcmToken,
             notification: {
                 title: "🛒 New Order Request",
                 body: `Order #${orderNumber}: ${listingTitle}`,
@@ -102,7 +115,7 @@ exports.onOrderCreated = functions.firestore
                 },
             },
         };
-        await admin.messaging().send(message);
+        await sendToUserTokens(listerTokens, message);
         console.log("Order notification sent to lister:", order.listerId);
         return null;
     }
@@ -143,8 +156,26 @@ exports.onOrderStatusChanged = functions.firestore
         switch (after.status) {
             case "confirmed":
                 emoji = "✅";
-                title = "Order Confirmed";
-                body = `Order #${orderNumber} for ${listingTitle} has been confirmed!`;
+                title = "Order Active";
+                body = `Order #${orderNumber} for ${listingTitle} is now active.`;
+                recipientId = after.customerId;
+                break;
+            case "preparing":
+                emoji = "👨‍🍳";
+                title = "Order Preparing";
+                body = `Order #${orderNumber} for ${listingTitle} is being prepared.`;
+                recipientId = after.customerId;
+                break;
+            case "ready":
+                emoji = "🔔";
+                title = "Order Ready";
+                body = `Order #${orderNumber} for ${listingTitle} is ready.`;
+                recipientId = after.customerId;
+                break;
+            case "served":
+                emoji = "🍽️";
+                title = "Order Served";
+                body = `Order #${orderNumber} for ${listingTitle} has been served.`;
                 recipientId = after.customerId;
                 break;
             case "declined":
@@ -177,25 +208,13 @@ exports.onOrderStatusChanged = functions.firestore
             default:
                 return null;
         }
-        // Get the recipient's FCM token
-        const recipientDoc = await admin
-            .firestore()
-            .collection("users")
-            .doc(recipientId)
-            .get();
-        if (!recipientDoc.exists) {
-            console.log("Recipient not found:", recipientId);
-            return null;
-        }
-        const recipient = recipientDoc.data();
-        const recipientFcmToken = recipient?.pushToken;
-        if (!recipientFcmToken) {
-            console.log("Recipient has no FCM token:", recipientId);
+        const recipientTokens = await getUserTokens(recipientId);
+        if (recipientTokens.length === 0) {
+            console.log("Recipient has no FCM tokens:", recipientId);
             return null;
         }
         // Send notification
         const message = {
-            token: recipientFcmToken,
             notification: {
                 title: `${emoji} ${title}`,
                 body: body,
@@ -225,7 +244,7 @@ exports.onOrderStatusChanged = functions.firestore
                 },
             },
         };
-        await admin.messaging().send(message);
+        await sendToUserTokens(recipientTokens, message);
         console.log(`Order status notification sent to ${recipientId}, status: ${after.status}`);
         return null;
     }

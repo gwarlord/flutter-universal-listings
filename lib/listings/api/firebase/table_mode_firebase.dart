@@ -44,7 +44,12 @@ class TableModeFirebase implements TableModeRepository {
       if (!doc.exists) return null;
 
       final data = doc.data();
-      return TableModeSettings.fromJson(data?['tableMode']);
+      final tableModeData =
+          Map<String, dynamic>.from(data?['tableMode'] as Map<String, dynamic>? ?? {});
+      if (!tableModeData.containsKey('enabled')) {
+        tableModeData['enabled'] = data?['tableModeEnabled'] == true;
+      }
+      return TableModeSettings.fromJson(tableModeData);
     } catch (e, s) {
       debugPrint('TableModeFirebase.getTableModeSettings error: $e $s');
       return null;
@@ -261,6 +266,25 @@ class TableModeFirebase implements TableModeRepository {
       });
     } catch (e, s) {
       debugPrint('TableModeFirebase.closeTableSession error: $e $s');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> freeBlockedCustomer({
+    required String listingId,
+    required String customerUid,
+    int minutes = 60,
+  }) async {
+    try {
+      final callable = _functions.httpsCallable('freeBlockedCustomer');
+      await callable.call({
+        'listingId': listingId,
+        'customerUid': customerUid,
+        'minutes': minutes,
+      });
+    } catch (e, s) {
+      debugPrint('TableModeFirebase.freeBlockedCustomer error: $e $s');
       rethrow;
     }
   }

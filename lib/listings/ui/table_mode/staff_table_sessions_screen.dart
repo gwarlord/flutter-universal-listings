@@ -171,6 +171,8 @@ class _StaffTableSessionsScreenState extends State<StaffTableSessionsScreen>
           isPending: isPending,
           isActive: isActive,
           onAssignWaiter: () => _assignWaiter(session),
+          onCancelSession: () => _cancelSession(session),
+          onUnblockCustomer: () => _unblockCustomer(session),
           onAcknowledgeSummon: () => _acknowledgeSummon(session),
           onCloseSession: () => _closeSession(session),
         );
@@ -352,6 +354,117 @@ class _StaffTableSessionsScreenState extends State<StaffTableSessionsScreen>
       showSnackBar(context, e.toString().replaceAll('Exception: ', ''));
     }
   }
+
+  Future<void> _cancelSession(TableSessionModel session) async {
+    final isDark = isDarkMode(context);
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        title: Text(
+          'Cancel Session?'.tr(),
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+        content: Text(
+          'Cancel ${session.tableName} session for ${session.customerName}?'.tr(),
+          style: TextStyle(
+            color: isDark ? Colors.grey[300] : Colors.black87,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Keep'.tr()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Cancel Session'.tr(),
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    showProgress(context, 'Cancelling session...'.tr(), false, Color(colorPrimary));
+
+    try {
+      await _repository.closeTableSession(sessionId: session.sessionId);
+      await _repository.freeBlockedCustomer(
+        listingId: widget.listing.id,
+        customerUid: session.customerUid,
+        minutes: 60,
+      );
+
+      hideProgress();
+      showSnackBar(context, 'Session cancelled and customer unblocked'.tr());
+    } catch (e) {
+      hideProgress();
+      showSnackBar(context, e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<void> _unblockCustomer(TableSessionModel session) async {
+    final isDark = isDarkMode(context);
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        title: Text(
+          'Unblock Customer?'.tr(),
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+        content: Text(
+          'Allow ${session.customerName} to retry table-mode order/session creation now?'.tr(),
+          style: TextStyle(
+            color: isDark ? Colors.grey[300] : Colors.black87,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('No'.tr()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Unblock'.tr(),
+              style: const TextStyle(color: Colors.green),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    showProgress(context, 'Unblocking customer...'.tr(), false, Color(colorPrimary));
+
+    try {
+      await _repository.freeBlockedCustomer(
+        listingId: widget.listing.id,
+        customerUid: session.customerUid,
+        minutes: 60,
+      );
+
+      hideProgress();
+      showSnackBar(context, 'Customer unblocked'.tr());
+    } catch (e) {
+      hideProgress();
+      showSnackBar(context, e.toString().replaceAll('Exception: ', ''));
+    }
+  }
 }
 
 // ============================================================================
@@ -363,6 +476,8 @@ class _SessionCard extends StatefulWidget {
   final bool isPending;
   final bool isActive;
   final VoidCallback onAssignWaiter;
+  final VoidCallback onCancelSession;
+  final VoidCallback onUnblockCustomer;
   final VoidCallback onAcknowledgeSummon;
   final VoidCallback onCloseSession;
 
@@ -371,6 +486,8 @@ class _SessionCard extends StatefulWidget {
     this.isPending = false,
     this.isActive = false,
     required this.onAssignWaiter,
+    required this.onCancelSession,
+    required this.onUnblockCustomer,
     required this.onAcknowledgeSummon,
     required this.onCloseSession,
   });
@@ -544,6 +661,26 @@ class _SessionCardState extends State<_SessionCard> {
                     label: Text('Assign Waiter'.tr()),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                if (widget.isPending)
+                  OutlinedButton.icon(
+                    onPressed: widget.onCancelSession,
+                    icon: const Icon(Icons.cancel_outlined, size: 16),
+                    label: Text('Cancel Session'.tr()),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      foregroundColor: Colors.red,
+                    ),
+                  ),
+                if (widget.isPending || widget.isActive)
+                  OutlinedButton.icon(
+                    onPressed: widget.onUnblockCustomer,
+                    icon: const Icon(Icons.lock_open, size: 16),
+                    label: Text('Unblock Customer'.tr()),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      foregroundColor: Colors.green,
                     ),
                   ),
                 if (widget.isActive) ...[

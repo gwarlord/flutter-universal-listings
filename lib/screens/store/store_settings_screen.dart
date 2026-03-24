@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:caribtap/constants.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/api/firebase/table_mode_firebase.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/services/store_service.dart';
@@ -38,6 +39,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
   late bool _shippingEnabled;
   late double _shippingFee;
   late int _leadTimeHours;
+  late bool _tableModeEnabled;
   
   bool _isSaving = false;
   bool _canManageTableMode = false;
@@ -52,9 +54,11 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
     _shippingEnabled = widget.listing.storeShippingEnabled;
     _shippingFee = widget.listing.storeShippingFee;
     _leadTimeHours = widget.listing.storeLeadTimeHours;
+    _tableModeEnabled = false; // Will load from Firestore
     _deliveryFeeController = TextEditingController(text: _deliveryFee > 0 ? _deliveryFee.toString() : '');
     _shippingFeeController = TextEditingController(text: _shippingFee > 0 ? _shippingFee.toString() : '');
     _checkTableModePermissions();
+    _loadTableModeSettings();
   }
 
   Future<void> _checkTableModePermissions() async {
@@ -89,6 +93,52 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
       }
     } catch (e) {
       debugPrint('Error checking table mode permissions: $e');
+    }
+  }
+
+  Future<void> _loadTableModeSettings() async {
+    try {
+      final settings = await tableModeRepository.getTableModeSettings(
+        listingId: widget.listing.id,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _tableModeEnabled = settings?.enabled ?? false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading table mode settings: $e');
+    }
+  }
+
+  Future<void> _toggleTableMode(bool value) async {
+    setState(() => _tableModeEnabled = value);
+    
+    showProgress(
+      context,
+      value ? 'Enabling Table Mode...'.tr() : 'Disabling Table Mode...'.tr(),
+      false,
+      Color(cfg.colorPrimary),
+    );
+
+    try {
+      await tableModeRepository.setTableModeSettings(
+        listingId: widget.listing.id,
+        tableModeEnabled: value,
+        summonCooldownSeconds: 120,
+        sessionMaxMinutes: 180,
+      );
+      
+      hideProgress();
+      showSnackBar(
+        context,
+        value ? 'Table Mode enabled!'.tr() : 'Table Mode disabled!'.tr(),
+      );
+    } catch (e) {
+      hideProgress();
+      setState(() => _tableModeEnabled = !value);
+      showSnackBar(context, e.toString().replaceAll('Exception: ', ''));
     }
   }
 
@@ -574,6 +624,35 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                 color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
                 child: ListTile(
                   leading: Icon(
+                    Icons.toggle_on,
+                    color: Color(cfg.colorPrimary),
+                  ),
+                  title: Text(
+                    'Enable Table Mode'.tr(),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: dark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Allow customers to scan QR codes for dine-in tables'.tr(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    ),
+                  ),
+                  trailing: Switch(
+                    value: _tableModeEnabled,
+                    onChanged: _toggleTableMode,
+                    activeColor: Color(cfg.colorPrimary),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+                child: ListTile(
+                  leading: Icon(
                     Icons.table_restaurant,
                   color: Color(cfg.colorPrimary),
                 ),
@@ -595,17 +674,24 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
                   Icons.chevron_right,
                   color: dark ? Colors.white70 : Colors.black54,
                 ),
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => StaffTablesScreen(
-                        listing: widget.listing,
-                        currentUser: widget.currentUser,
-                      ),
-                    ),
-                  );
-                },
+                onTap: _tableModeEnabled
+                    ? () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => StaffTablesScreen(
+                              listing: widget.listing,
+                              currentUser: widget.currentUser,
+                            ),
+                          ),
+                        );
+                      }
+                    : () {
+                        showSnackBar(
+                          context,
+                          'Please enable Table Mode first to manage tables'.tr(),
+                        );
+                      },
               ),
             ),
               const SizedBox(height: 32),

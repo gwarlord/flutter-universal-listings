@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.closeTableSession = exports.requestBill = exports.acknowledgeSummon = exports.summonWaiter = exports.assignWaiterToSession = exports.createTableSession = exports.deactivateTable = exports.upsertTable = exports.setTableModeSettings = void 0;
+exports.closeTableSession = exports.requestBill = exports.acknowledgeSummon = exports.summonWaiter = exports.assignWaiterToSession = exports.freeBlockedCustomer = exports.createTableSession = exports.deactivateTable = exports.upsertTable = exports.setTableModeSettings = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const crypto = __importStar(require("crypto"));
@@ -49,6 +49,8 @@ const messaging = admin.messaging();
 const MAX_SESSIONS_PER_USER_PER_HOUR = 3;
 const MAX_SUMMONS_PER_SESSION_PER_HOUR = 20;
 const BILL_REQUEST_COOLDOWN_SECONDS = 60;
+const DEFAULT_SUMMON_COOLDOWN_SECONDS = 20;
+const RATE_LIMIT_UNBLOCK_COLLECTION = "table_mode_rate_limit_overrides";
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
@@ -198,21 +200,56 @@ async function sendPushNotification(recipientUid, title, body, data = {}) {
         else if (userData?.pushToken && typeof userData.pushToken === "string" && userData.pushToken.trim().length > 0) {
             fcmTokens = [userData.pushToken];
         }
+        // Extra compatibility for deployments that stored singular fcmToken.
+        if (fcmTokens.length === 0 && userData?.fcmToken && typeof userData.fcmToken === "string" && userData.fcmToken.trim().length > 0) {
+            fcmTokens = [userData.fcmToken];
+        }
+        // Normalize + dedupe token list.
+        fcmTokens = [...new Set(fcmTokens.map((t) => String(t).trim()).filter((t) => t.length > 0))];
         if (fcmTokens.length === 0) {
             functions.logger.info("No FCM tokens for user", { recipientUid, hasLegacyToken: !!userData?.pushToken, hasNewTokens: !!userData?.fcmTokens });
             return;
         }
-        const message = {
+        let successCount = 0;
+        let failureCount = 0;
+        const invalidTokens = [];
+        const sendResults = await Promise.allSettled(fcmTokens.map((token) => messaging.send({
+            token,
             notification: { title, body },
             data,
-            tokens: fcmTokens,
-        };
-        const response = await messaging.sendMulticast(message);
+        })));
+        sendResults.forEach((result, index) => {
+            if (result.status === "fulfilled") {
+                successCount += 1;
+            }
+            else {
+                failureCount += 1;
+                const errMessage = (result.reason?.message || String(result.reason || "")).toLowerCase();
+                if (errMessage.includes("registration-token-not-registered") ||
+                    errMessage.includes("invalid-registration-token") ||
+                    errMessage.includes("invalid argument")) {
+                    invalidTokens.push(fcmTokens[index]);
+                }
+            }
+        });
+        if (invalidTokens.length > 0) {
+            // Remove invalid tokens so future notifications are less likely to fail.
+            await db.collection("users").doc(recipientUid).set({
+                fcmTokens: admin.firestore.FieldValue.arrayRemove(...invalidTokens),
+                pushToken: userData?.pushToken && invalidTokens.includes(userData.pushToken)
+                    ? admin.firestore.FieldValue.delete()
+                    : userData?.pushToken,
+                fcmToken: userData?.fcmToken && invalidTokens.includes(userData.fcmToken)
+                    ? admin.firestore.FieldValue.delete()
+                    : userData?.fcmToken,
+            }, { merge: true });
+        }
         functions.logger.info("Push sent", {
             recipientUid,
             tokenCount: fcmTokens.length,
-            successCount: response.successCount,
-            failureCount: response.failureCount,
+            successCount,
+            failureCount,
+            invalidTokenCount: invalidTokens.length,
         });
     }
     catch (error) {
@@ -281,18 +318,20 @@ exports.setTableModeSettings = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError("permission-denied", "Premium subscription required to enable Table Mode");
         }
         // Validate settings
-        const cooldown = summonCooldownSeconds || 120;
+        const cooldown = Number(summonCooldownSeconds || DEFAULT_SUMMON_COOLDOWN_SECONDS);
         const maxMinutes = sessionMaxMinutes || 180;
-        if (cooldown < 30 || cooldown > 600) {
-            throw new functions.https.HttpsError("invalid-argument", "summonCooldownSeconds must be between 30 and 600");
+        if (cooldown < DEFAULT_SUMMON_COOLDOWN_SECONDS || cooldown > 600) {
+            throw new functions.https.HttpsError("invalid-argument", "summonCooldownSeconds must be between 20 and 600");
         }
         // Update listing settings
+        const enabled = tableModeEnabled === true;
         await db
             .collection("listings")
             .doc(listingId)
             .update({
-            tableModeEnabled: tableModeEnabled || false,
+            tableModeEnabled: enabled,
             tableMode: {
+                enabled,
                 summonCooldownSeconds: cooldown,
                 sessionMaxMinutes: maxMinutes,
             },
@@ -451,25 +490,43 @@ exports.createTableSession = functions.https.onCall(async (data, context) => {
         if (!listingId || !mode) {
             throw new functions.https.HttpsError("invalid-argument", "listingId and mode are required");
         }
-        // Check if table mode is enabled
+        // Check if table mode is enabled.
+        // Backward-compatible fallback: if the listing has active tables configured,
+        // allow customer sessions even when the boolean flag is missing/out-of-sync.
         const listingSnap = await db.collection("listings").doc(listingId).get();
         if (!listingSnap.exists) {
             throw new functions.https.HttpsError("not-found", "Listing not found");
         }
-        const listingData = listingSnap.data();
-        if (!listingData?.tableModeEnabled) {
+        const listingData = listingSnap.data() || {};
+        const tableModeEnabled = listingData.tableModeEnabled === true;
+        if (!tableModeEnabled) {
             throw new functions.https.HttpsError("failed-precondition", "Table Mode is not enabled for this listing");
         }
+        // Lister/staff can temporarily unblock a specific customer from this limiter.
+        const overrideId = `${listingId}_${context.auth.uid}`;
+        const overrideSnap = await db.collection(RATE_LIMIT_UNBLOCK_COLLECTION).doc(overrideId).get();
+        const overrideData = overrideSnap.data();
+        const overrideExpiresAt = overrideData?.expiresAt?.toDate?.();
+        const now = new Date();
+        const hasActiveOverride = overrideSnap.exists &&
+            overrideExpiresAt instanceof Date &&
+            overrideExpiresAt.getTime() > now.getTime();
+        if (!hasActiveOverride && overrideSnap.exists) {
+            // Clean up stale overrides.
+            await db.collection(RATE_LIMIT_UNBLOCK_COLLECTION).doc(overrideId).delete();
+        }
         // Rate limiting: check sessions created in the last hour
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-        const recentSessionsSnap = await db
-            .collection("table_sessions")
-            .where("customerUid", "==", context.auth.uid)
-            .where("listingId", "==", listingId)
-            .where("createdAt", ">", oneHourAgo)
-            .get();
-        if (recentSessionsSnap.size >= MAX_SESSIONS_PER_USER_PER_HOUR) {
-            throw new functions.https.HttpsError("resource-exhausted", "Too many attempts. Please ask staff for help.");
+        if (!hasActiveOverride) {
+            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+            const recentSessionsSnap = await db
+                .collection("table_sessions")
+                .where("customerUid", "==", context.auth.uid)
+                .where("listingId", "==", listingId)
+                .where("createdAt", ">", oneHourAgo)
+                .get();
+            if (recentSessionsSnap.size >= MAX_SESSIONS_PER_USER_PER_HOUR) {
+                throw new functions.https.HttpsError("resource-exhausted", "Too many attempts. Please ask staff for help.");
+            }
         }
         // Validate table and get table data
         let validatedTableId;
@@ -527,7 +584,7 @@ exports.createTableSession = functions.https.onCall(async (data, context) => {
         // Create session
         const sessionId = db.collection("table_sessions").doc().id;
         const tableMode = listingData.tableMode || {};
-        const summonCooldownSeconds = tableMode.summonCooldownSeconds || 120;
+        const summonCooldownSeconds = tableMode.summonCooldownSeconds || DEFAULT_SUMMON_COOLDOWN_SECONDS;
         await db
             .collection("table_sessions")
             .doc(sessionId)
@@ -563,6 +620,53 @@ exports.createTableSession = functions.https.onCall(async (data, context) => {
             throw error;
         }
         throw new functions.https.HttpsError("internal", `Failed to create table session: ${error.message || String(error)}`);
+    }
+});
+/**
+ * 4b. Free a blocked customer from createTableSession rate-limit (staff only)
+ */
+exports.freeBlockedCustomer = functions.https.onCall(async (data, context) => {
+    try {
+        if (!context.auth) {
+            throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
+        }
+        const { listingId, customerUid, minutes } = data;
+        if (!listingId || !customerUid) {
+            throw new functions.https.HttpsError("invalid-argument", "listingId and customerUid are required");
+        }
+        const canManage = await canManageTableMode(listingId, context.auth.uid);
+        if (!canManage) {
+            throw new functions.https.HttpsError("permission-denied", "Permission denied");
+        }
+        const unblockMinutes = Math.max(1, Math.min(240, Number(minutes || 60)));
+        const expiresAt = admin.firestore.Timestamp.fromDate(new Date(Date.now() + unblockMinutes * 60 * 1000));
+        const overrideId = `${listingId}_${customerUid}`;
+        await db.collection(RATE_LIMIT_UNBLOCK_COLLECTION).doc(overrideId).set({
+            listingId,
+            customerUid,
+            grantedByUid: context.auth.uid,
+            reason: "staff_unblock",
+            expiresAt,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        functions.logger.info("Customer unblocked for table mode rate limit", {
+            listingId,
+            customerUid,
+            grantedByUid: context.auth.uid,
+            unblockMinutes,
+        });
+        return { success: true, expiresAt: expiresAt.toDate().toISOString() };
+    }
+    catch (error) {
+        functions.logger.error("freeBlockedCustomer error", {
+            error: error.message || String(error),
+            code: error.code,
+        });
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        throw new functions.https.HttpsError("internal", `Failed to free blocked customer: ${error.message || String(error)}`);
     }
 });
 /**
@@ -688,7 +792,7 @@ exports.summonWaiter = functions.https.onCall(async (data, context) => {
                 functions.logger.warn("Failed to parse lastSummonAt", { lastSummonAt: sessionData.lastSummonAt });
             }
         }
-        const cooldownSeconds = sessionData.summonCooldownSeconds || 120;
+        const cooldownSeconds = Math.min(Number(sessionData.summonCooldownSeconds || DEFAULT_SUMMON_COOLDOWN_SECONDS), DEFAULT_SUMMON_COOLDOWN_SECONDS);
         if (lastSummonAt && lastSummonAt instanceof Date) {
             const elapsed = (Date.now() - lastSummonAt.getTime()) / 1000;
             if (elapsed < cooldownSeconds) {
@@ -698,14 +802,17 @@ exports.summonWaiter = functions.https.onCall(async (data, context) => {
         }
         // Rate limit summons per session per hour
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-        const recentSummonsSnap = await db
+        const recentEventsSnap = await db
             .collection("table_sessions")
             .doc(sessionId)
             .collection("events")
-            .where("type", "==", "WAITER_SUMMONED")
             .where("createdAt", ">", oneHourAgo)
             .get();
-        if (recentSummonsSnap.size >= MAX_SUMMONS_PER_SESSION_PER_HOUR) {
+        const recentSummonsCount = recentEventsSnap.docs.filter((doc) => {
+            const data = doc.data();
+            return data?.type === "WAITER_SUMMONED";
+        }).length;
+        if (recentSummonsCount >= MAX_SUMMONS_PER_SESSION_PER_HOUR) {
             throw new functions.https.HttpsError("resource-exhausted", "Too many summons. Please ask staff directly.");
         }
         // Update lastSummonAt

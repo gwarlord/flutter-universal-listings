@@ -97,6 +97,13 @@ abstract class TableModeRepository {
     required String sessionId,
   });
 
+  /// Free a customer blocked by table-session rate limit (staff only)
+  Future<void> freeBlockedCustomer({
+    required String listingId,
+    required String customerUid,
+    int minutes = 60,
+  });
+
   /// Get a specific session
   Future<TableSessionModel?> getTableSession({
     required String sessionId,

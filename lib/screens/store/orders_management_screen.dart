@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -36,6 +38,8 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
   final Map<String, ListingModel> _listingCache = {};
   final TextEditingController _orderSearchController = TextEditingController();
   String _orderSearchQuery = '';
+  int _tableSessionBadgeCount = 0;
+  Timer? _tableSessionBadgeTimer;
 
   // Toggle between food and general orders
   bool _isShowingFoodOrders = true;
@@ -75,6 +79,11 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
     _ensurePremiumAccess();
 
     _tabController = TabController(length: _statusFilters.length, vsync: this, initialIndex: 0);
+    _refreshTableSessionBadge();
+    _tableSessionBadgeTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _refreshTableSessionBadge(),
+    );
   }
 
   Future<void> _ensurePremiumAccess() async {
@@ -94,9 +103,61 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
 
   @override
   void dispose() {
+    _tableSessionBadgeTimer?.cancel();
     _orderSearchController.dispose();
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _refreshTableSessionBadge() async {
+    try {
+      final listingsQuery = await FirebaseFirestore.instance
+          .collection('listings')
+          .where('authorID', isEqualTo: widget.currentUser.userID)
+          .get();
+
+      if (listingsQuery.docs.isEmpty) {
+        if (mounted && _tableSessionBadgeCount != 0) {
+          setState(() => _tableSessionBadgeCount = 0);
+        }
+        return;
+      }
+
+      final counts = await Future.wait(
+        listingsQuery.docs.map((listingDoc) async {
+          final sessionsSnap = await FirebaseFirestore.instance
+              .collection('table_sessions')
+              .where('listingId', isEqualTo: listingDoc.id)
+              .where('status', whereIn: ['PENDING', 'ACTIVE'])
+              .get();
+          return sessionsSnap.size;
+        }),
+      );
+
+      final sessionCount = counts.fold<int>(0, (acc, item) => acc + item);
+
+      // Also include new table-mode dine-in orders that are still requested.
+      final requestedOrdersSnap = await FirebaseFirestore.instance
+          .collection('order_requests')
+          .where('listerId', isEqualTo: widget.currentUser.userID)
+          .where('status', isEqualTo: 'requested')
+          .get();
+
+      final pendingTableOrderCount = requestedOrdersSnap.docs.where((doc) {
+        final data = doc.data();
+        final tableSessionId = (data['tableSessionId'] ?? '').toString().trim();
+        final fulfillment = (data['fulfillment'] as Map<String, dynamic>?) ?? {};
+        final method = (fulfillment['method'] ?? '').toString().trim().toLowerCase();
+        return tableSessionId.isNotEmpty && method == 'dine_in';
+      }).length;
+
+      final totalCount = sessionCount + pendingTableOrderCount;
+      if (mounted && totalCount != _tableSessionBadgeCount) {
+        setState(() => _tableSessionBadgeCount = totalCount);
+      }
+    } catch (_) {
+      // Keep existing count on transient read failures.
+    }
   }
 
   void _switchOrderType(bool isFoodOrders) {
@@ -215,9 +276,16 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.table_restaurant),
+            icon: Badge(
+              isLabelVisible: _tableSessionBadgeCount > 0,
+              backgroundColor: Colors.red,
+              child: const Icon(Icons.table_restaurant),
+            ),
             tooltip: 'Table Sessions'.tr(),
-            onPressed: () => _navigateToTableSessions(context, dark),
+            onPressed: () async {
+              await _navigateToTableSessions(context, dark);
+              await _refreshTableSessionBadge();
+            },
           ),
         ],
         bottom: PreferredSize(
@@ -622,7 +690,11 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
       future: _getOrderPreviewData(order),
       builder: (context, previewSnapshot) {
         final previewData = previewSnapshot.data ?? {};
-        final firstItemImage = previewData['firstItemImage'] as String?;
+        final previewImages = (previewData['previewImages'] as List?)
+          ?.whereType<String>()
+          .where((url) => url.trim().isNotEmpty)
+          .toList() ??
+            const <String>[];
         final listingTitle = previewData['listingTitle'] as String? ?? 'Order ${order.id.substring(0, 8)}';
         final isTableMode = previewData['isTableMode'] as bool? ?? false;
         final tableName = previewData['tableName'] as String?;
@@ -674,23 +746,7 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
                           width: 56,
                           height: 56,
                           color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
-                          child: firstItemImage != null && firstItemImage.isNotEmpty
-                              ? Image.network(
-                                  firstItemImage,
-                                  fit: BoxFit.cover,
-                                  cacheWidth: 112,
-                                  cacheHeight: 112,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Icon(
-                                      Icons.shopping_bag,
-                                      color: dark ? Colors.white38 : Colors.black38,
-                                    );
-                                  },
-                                )
-                              : Icon(
-                                  Icons.shopping_bag,
-                                  color: dark ? Colors.white38 : Colors.black38,
-                                ),
+                          child: _buildOrderThumbnail(previewImages, dark),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -931,9 +987,93 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
     );
   }
 
+  Widget _buildOrderThumbnail(List<String> previewImages, bool dark) {
+    if (previewImages.isEmpty) {
+      return Icon(
+        Icons.shopping_bag,
+        color: dark ? Colors.white38 : Colors.black38,
+      );
+    }
+
+    if (previewImages.length == 1) {
+      return Image.network(
+        previewImages.first,
+        fit: BoxFit.cover,
+        cacheWidth: 112,
+        cacheHeight: 112,
+        errorBuilder: (context, error, stackTrace) {
+          return Icon(
+            Icons.shopping_bag,
+            color: dark ? Colors.white38 : Colors.black38,
+          );
+        },
+      );
+    }
+
+    final tiles = previewImages.take(4).toList();
+    final topLeft = tiles.isNotEmpty ? tiles[0] : null;
+    final topRight = tiles.length > 1 ? tiles[1] : null;
+    final bottomLeft = tiles.length > 2 ? tiles[2] : null;
+    final bottomRight = tiles.length > 3 ? tiles[3] : null;
+
+    return Column(
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(child: _buildThumbnailTile(topLeft, dark)),
+              const SizedBox(width: 1),
+              Expanded(child: _buildThumbnailTile(topRight, dark)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 1),
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(child: _buildThumbnailTile(bottomLeft, dark)),
+              const SizedBox(width: 1),
+              Expanded(child: _buildThumbnailTile(bottomRight, dark)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildThumbnailTile(String? imageUrl, bool dark) {
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return Container(
+        color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+        child: Icon(
+          Icons.shopping_bag,
+          size: 12,
+          color: dark ? Colors.white30 : Colors.black26,
+        ),
+      );
+    }
+
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      cacheWidth: 56,
+      cacheHeight: 56,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+          child: Icon(
+            Icons.shopping_bag,
+            size: 12,
+            color: dark ? Colors.white30 : Colors.black26,
+          ),
+        );
+      },
+    );
+  }
+
   String _formatCurrency(double amount, String currencyCode) {
     final symbol = _getCurrencySymbol(currencyCode);
-    return '$symbol${amount.toStringAsFixed(2)}';
+    return '${currencyCode.toUpperCase()} $symbol${amount.toStringAsFixed(2)}';
   }
 
   String _getCurrencySymbol(String code) {
@@ -1016,23 +1156,27 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
       // Ignore error
     }
     
-    // Get first item image
-    if (order.items.isNotEmpty) {
+    // Build a preview set from up to 4 ordered items so mixed catalogs can show image collage.
+    final previewItemIds = order.items
+        .map((item) => item.itemId)
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .take(4)
+        .toList();
+
+    if (previewItemIds.isNotEmpty) {
       try {
-        final firstItemId = order.items.first.itemId;
-        final itemDoc = await FirebaseFirestore.instance
-            .collection('listings')
-            .doc(order.listingId)
-            .collection('catalog_items')
-            .doc(firstItemId)
-            .get();
-        
-        if (itemDoc.exists) {
-          final itemData = itemDoc.data();
-          final photos = itemData?['photos'] as List?;
-          if (photos != null && photos.isNotEmpty) {
-            result['firstItemImage'] = photos.first;
-          }
+        final imageResults = await Future.wait(
+          previewItemIds.map((itemId) => _fetchCatalogItemPreviewImage(order.listingId, itemId)),
+        );
+        final previewImages = imageResults
+            .whereType<String>()
+            .where((url) => url.trim().isNotEmpty)
+            .toList();
+
+        if (previewImages.isNotEmpty) {
+          result['previewImages'] = previewImages;
+          result['firstItemImage'] = previewImages.first;
         }
       } catch (e) {
         // Ignore error, will show default icon
@@ -1040,6 +1184,27 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
     }
     
     return result;
+  }
+
+  Future<String?> _fetchCatalogItemPreviewImage(String listingId, String itemId) async {
+    final itemDoc = await FirebaseFirestore.instance
+        .collection('listings')
+        .doc(listingId)
+        .collection('catalog_items')
+        .doc(itemId)
+        .get();
+
+    if (!itemDoc.exists) return null;
+    final itemData = itemDoc.data();
+    final photos = itemData?['photos'] as List?;
+    if (photos == null || photos.isEmpty) return null;
+
+    for (final photo in photos) {
+      final url = photo?.toString().trim() ?? '';
+      if (url.isNotEmpty) return url;
+    }
+
+    return null;
   }
 
   void _viewOrderDetail(OrderRequest order) {
