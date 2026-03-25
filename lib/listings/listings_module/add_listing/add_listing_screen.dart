@@ -457,7 +457,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
       _selectedCurrencyCode = widget.listingToEdit?.currencyCode ?? 'USD';
       _isLoadingListing = true;
       _rentalConfig = widget.listingToEdit?.rentalConfig;
-      _isPublished = true; // Existing listings are public by default
+      // Reflect persisted visibility for edit flow.
+      _isPublished = !(widget.listingToEdit?.hidden ?? false);
     } else {
       _isPublished = false; // New listings start as draft
     }
@@ -652,6 +653,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
     _countryCode = (l.countryCode ?? '').trim().isEmpty ? null : l.countryCode;
     _verified = l.verified;
+    _isPublished = !l.hidden;
 
     // Restore category selection. Try to match from already-loaded list first,
     // then fall back to rebuilding from the listing's stored category fields so
@@ -3869,6 +3871,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
           .toList(),
       countryCode: _countryCode ?? '',
       verified: _verified,
+      hidden: !_isPublished,
       authorID: currentUser.userID,
       photo: '', // Will be set by backend
       id: '', // Will be set by backend

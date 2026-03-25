@@ -293,6 +293,12 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
         categoryID: event.category!.id,
         categoryTitle: event.category!.title,
         categoryPhoto: event.category!.photo,
+        primaryCategorySlug: event.category!.parentSlug?.trim().isNotEmpty == true
+          ? event.category!.parentSlug!.trim()
+          : event.category!.slug.trim(),
+        subcategorySlug: event.category!.parentSlug?.trim().isNotEmpty == true
+          ? event.category!.slug.trim()
+          : '',
 
         // Author / timestamps
         authorID: event.isEdit
@@ -431,6 +437,16 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
       }
 
       // EDIT flow (update Firestore directly to avoid repo refactor)
+
+      // Guard: demo listings cannot be modified by non-admin users.
+      if (event.listingModel.isDemo && !currentUser.isAdmin) {
+        emit(AddListingErrorState(
+          errorTitle: 'Read-Only'.tr(),
+          errorMessage: 'Demo listings cannot be edited.'.tr(),
+        ));
+        return;
+      }
+
       if (event.listingIdToUpdate == null || event.listingIdToUpdate!.trim().isEmpty) {
         emit(AddListingErrorState(
           errorTitle: 'Update Failed'.tr(),
@@ -467,6 +483,9 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           'categoryID': event.listingModel.categoryID,
           'categoryPhoto': event.listingModel.categoryPhoto,
           'categoryTitle': event.listingModel.categoryTitle,
+          'primaryCategorySlug': event.listingModel.primaryCategorySlug,
+          'subcategorySlug': event.listingModel.subcategorySlug,
+          'categoryTags': event.listingModel.categoryTags,
           'filters': event.listingModel.filters,
           'searchKeywords': event.listingModel.searchKeywords,
           'place': event.listingModel.place,
@@ -516,6 +535,7 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           'currencyCode': event.listingModel.currencyCode,
           'countryCode': (event.listingModel.countryCode).toUpperCase(),
           'verified': event.listingModel.verified,
+          'hidden': event.listingModel.hidden,
           // Premium Rentals (Premium+ only)
           'rentalConfig': event.listingModel.rentalConfig?.toJson(),
         };
