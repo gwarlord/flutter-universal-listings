@@ -19,19 +19,17 @@ import 'package:caribtap/listings/listings_module/admin_dashboard/edit_user_subs
 import 'package:caribtap/listings/listings_module/favorite_listings/favorite_listings_screen.dart';
 import 'package:caribtap/listings/listings_module/my_listings/my_listings_screen.dart';
 import 'package:caribtap/listings/listings_module/home/home_screen.dart';
-import 'package:caribtap/listings/listings_module/booking/my_bookings_screen.dart';
-import 'package:caribtap/listings/listings_module/booking/booking_management_screen.dart';
 import 'package:caribtap/listings/ui/container/container_screen.dart';
 import 'package:caribtap/core/ui/loading/loading_cubit.dart';
 import 'package:caribtap/listings/ui/profile/account_details/account_details_screen.dart';
 import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:caribtap/listings/ui/profile/contact_us/contact_us_screen.dart';
+import 'package:caribtap/listings/ui/profile/payment_details/payment_details_screen.dart';
 import 'package:caribtap/listings/ui/profile/settings/settings_screen.dart';
 import 'package:caribtap/listings/ui/profile/profile/profile_bloc.dart';
 import 'package:caribtap/core/ui/theme/theme_cubit.dart';
 import 'package:caribtap/listings/screens/listing_freshness_dashboard.dart';
 import 'package:caribtap/listings/ui/phone_verification/phone_verification_for_booking_screen.dart';
-import 'package:caribtap/listings/utils/populate_test_data.dart';
 import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
 import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
 import 'package:caribtap/listings/listings_module/api/collaboration_api_manager.dart';
@@ -310,14 +308,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             SizedBox(
                               width: 175,
                               child: FloatingActionButton(
-                                  backgroundColor: Color(colorAccent),
+                                  backgroundColor:
+                                      Theme.of(context).colorScheme.primary,
                                   mini: true,
                                   onPressed: () => _onCameraClick(context),
-                                  child: Icon(
+                                  child: const Icon(
                                     Icons.camera_alt,
-                                    color: isDarkMode(context)
-                                        ? Colors.black
-                                        : Colors.white,
+                                    color: Colors.white,
                                   )),
                             )
                           ],
@@ -438,115 +435,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               const Divider(height: 32, indent: 32, endIndent: 32),
                             ],
-                            if (currentUser.isAdmin) ...[
-                              _modernListTile(
-                                context,
-                                icon: Icons.playlist_add_rounded,
-                                iconColor: Colors.orange,
-                                title: 'Populate Test Data'.tr(),
-                                onTap: () async {
-                                  context.read<LoadingCubit>().showLoading(
-                                    context,
-                                    'Generating test content...'.tr(),
-                                    false,
-                                    Color(colorPrimary),
-                                  );
-                                  try {
-                                    await TestDataPopulator.populateAll();
-                                    if (context.mounted) {
-                                      context.read<LoadingCubit>().hideLoading();
-                                      showSnackBar(context, 'Test data generated successfully!'.tr());
-                                    }
-                                  } catch (e) {
-                                    if (context.mounted) {
-                                      context.read<LoadingCubit>().hideLoading();
-                                      showSnackBar(context, 'Error populating data. Check Firestore rules.'.tr());
-                                    }
-                                  }
-                                },
-                              ),
-                              _modernListTile(
-                                context,
-                                icon: Icons.delete_sweep_rounded,
-                                iconColor: Colors.redAccent,
-                                title: 'Purge Test Data'.tr(),
-                                onTap: () async {
-                                  final isDark = isDarkMode(context);
-                                  final confirm = await showDialog<bool>(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      backgroundColor: isDark ? Colors.grey[900] : Colors.white,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                      title: Row(
-                                        children: [
-                                          const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
-                                          const SizedBox(width: 12),
-                                          Text(
-                                            'Purge Data?'.tr(),
-                                            style: TextStyle(
-                                              color: isDark ? Colors.white : Colors.black,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      content: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Are you sure you want to remove all test data?'.tr(),
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: isDark ? Colors.white : Colors.black87,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Text(
-                                            'This will permanently delete all demo/test data from the database.'.tr(),
-                                            style: TextStyle(
-                                              color: isDark ? Colors.grey[400] : Colors.grey[600],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context, false),
-                                          child: Text('No'.tr(), style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
-                                        ),
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context, true),
-                                          child: Text('Yes'.tr(), style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                  if (confirm == true && context.mounted) {
-                                    context.read<LoadingCubit>().showLoading(
-                                      context,
-                                      'Purging test content...'.tr(),
-                                      false,
-                                      Color(colorPrimary),
-                                    );
-                                    try {
-                                      await TestDataPopulator.purgeTestData();
-                                      if (context.mounted) {
-                                        context.read<LoadingCubit>().hideLoading();
-                                        showSnackBar(context, 'Test data purged successfully!'.tr());
-                                      }
-                                    } catch (e) {
-                                      if (context.mounted) {
-                                        context.read<LoadingCubit>().hideLoading();
-                                        showSnackBar(context, 'Error purging data. Check Firestore rules.'.tr());
-                                      }
-                                    }
-                                  }
-                                },
-                              ),
-                              const Divider(height: 32, indent: 32, endIndent: 32),
-                            ],
                             if (currentUser.isAdmin)
                               StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                                 stream: FirebaseFirestore.instance
@@ -597,18 +485,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             _modernListTile(
                               context,
-                              icon: Icons.calendar_month_outlined,
+                              icon: Icons.account_balance_wallet_outlined,
                               iconColor: Theme.of(context).colorScheme.primary,
-                              title: 'My Bookings'.tr(),
-                              onTap: () => push(context, MyBookingsWrapperWidget(currentUser: currentUser)),
-                            ),
-                            if (currentUser.isAdmin || const ['professional', 'premium'].contains(currentUser.subscriptionTier.toLowerCase()))
-                              _modernListTile(
-                                context,
-                                icon: Icons.event_note_outlined,
-                                iconColor: Theme.of(context).colorScheme.primary,
-                                title: 'Manage Bookings'.tr(),
-                                onTap: () => push(context, BookingManagementWrapperWidget(currentUser: currentUser)),
+                              title: 'Payment Details'.tr(),
+                              subtitle: 'Control payment options shown to customers'.tr(),
+                              onTap: () => push(context, PaymentDetailsScreen(user: currentUser)),
                               ),
                             _modernListTile(
                               context,

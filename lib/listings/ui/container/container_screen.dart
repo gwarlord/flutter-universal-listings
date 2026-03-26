@@ -20,7 +20,6 @@ import 'package:caribtap/listings/listings_module/search/search_screen.dart';
 import 'package:caribtap/listings/listings_module/my_listings/my_listings_screen.dart';
 import 'package:caribtap/listings/listings_module/events/create_event_screen.dart';
 import 'package:caribtap/listings/listings_module/events/event_details_screen.dart';
-import 'package:caribtap/listings/listings_module/booking_services/booking_services_screen.dart';
 import 'package:caribtap/listings/listings_module/booking/my_bookings_screen.dart';
 import 'package:caribtap/listings/listings_module/booking/booking_management_screen.dart';
 import 'package:caribtap/listings/ui/rentals/rental_orders_hub_screen.dart';
@@ -39,6 +38,8 @@ import 'package:caribtap/listings/ui/pro_docs/public_quote_view_screen.dart';
 import 'package:caribtap/listings/ui/pro_docs/quote_list_screen.dart';
 import 'package:caribtap/listings/ui/help/tutorials_hub_screen.dart';
 import 'package:caribtap/listings/ui/legal/legal_center_screen.dart';
+import 'package:caribtap/listings/ui/suggestion/suggestion_box_screen.dart';
+import 'package:caribtap/listings/ui/demo/demo_listings_screen.dart';
 import 'package:caribtap/screens/brand/my_brands_screen.dart';
 import 'package:caribtap/main.dart' as main_entry;
 import 'package:caribtap/listings/ui/widgets/attention_badge.dart'; // Import the new widget
@@ -74,19 +75,35 @@ class ContainerWrapperWidget extends StatefulWidget {
   State<ContainerWrapperWidget> createState() => _ContainerWrapperState();
 }
 
-class _ContainerWrapperState extends State<ContainerWrapperWidget> {
+class _ContainerWrapperState extends State<ContainerWrapperWidget>
+    with WidgetsBindingObserver {
   late final AttentionCubit _attentionCubit;
+  bool _didApplyUserLanguage = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Initialize attention service with user ID
     _attentionCubit = context.read<AttentionCubit>();
     _attentionCubit.attentionService.initialize(widget.currentUser.userID);
     // Start listening to attention state
     _attentionCubit.startListening();
+    _attentionCubit.refreshOnce();
+  }
 
-    // Set user's preferred language
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _attentionCubit.refreshOnce();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didApplyUserLanguage) return;
+    _didApplyUserLanguage = true;
     _setUserLanguage();
   }
 
@@ -102,6 +119,7 @@ class _ContainerWrapperState extends State<ContainerWrapperWidget> {
   @override
   void dispose() {
     // Stop listening when widget is disposed - use saved reference
+    WidgetsBinding.instance.removeObserver(this);
     _attentionCubit.stopListening();
     super.dispose();
   }
@@ -359,79 +377,281 @@ class _ContainerState extends State<ContainerScreen> {
     }
   }
 
-  void _navigateToListingServices(BuildContext context) {
-    Navigator.pop(context); // Close drawer
-    final currentUser =
-        context.read<AuthenticationBloc>().state.user ?? widget.user;
-    push(context, BookingServicesWrapperWidget(currentUser: currentUser));
-  }
-
   Future<void> _showCreateOptions(ListingsUser currentUser) async {
     final isDark = isDarkMode(context);
+    final primaryColor = Color(cfg.colorPrimary);
+    final backgroundColor = isDark ? const Color(0xFF11161B) : Colors.white;
+    final cardColor = isDark ? const Color(0xFF182028) : const Color(0xFFF7FBFD);
+    final borderColor = isDark ? Colors.white10 : const Color(0xFFD9E6EC);
+    final titleColor = isDark ? Colors.white : const Color(0xFF16222B);
+    final subtitleColor = isDark ? Colors.white70 : const Color(0xFF5E7482);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final compactSheet = screenHeight < 760;
+
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: isDark ? Colors.grey[900] : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (sheetContext) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : Colors.black12,
-                    borderRadius: BorderRadius.circular(999),
+            padding: EdgeInsets.fromLTRB(
+              12,
+              compactSheet ? 6 : 12,
+              12,
+              compactSheet ? 8 : 12,
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                border: Border.all(color: borderColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.35 : 0.12),
+                    blurRadius: 24,
+                    offset: const Offset(0, -8),
                   ),
+                ],
+              ),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  compactSheet ? 10 : 12,
+                  16,
+                  compactSheet ? 16 : 24,
                 ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(Icons.add_business_outlined),
-                  title: Text('Add Listing'.tr()),
-                  onTap: () async {
-                    Navigator.pop(sheetContext);
-                    final allowed = await checkAndHandleBookingAccess(
-                      context: context,
-                      listerId: currentUser.userID,
-                    );
-                    if (!allowed || !context.mounted) return;
-                    push(
-                      context,
-                      AddListingWrappingWidget(currentUser: currentUser),
-                    );
-                  },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: compactSheet ? 42 : 48,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white24 : Colors.black12,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: compactSheet ? 12 : 18),
+                    Row(
+                      children: [
+                        Container(
+                          width: compactSheet ? 40 : 44,
+                          height: compactSheet ? 40 : 44,
+                          decoration: BoxDecoration(
+                            color: primaryColor.withOpacity(isDark ? 0.18 : 0.12),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(Icons.add_circle_outline_rounded,
+                              color: primaryColor, size: compactSheet ? 22 : 24),
+                        ),
+                        SizedBox(width: compactSheet ? 10 : 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Create'.tr(),
+                                style: TextStyle(
+                                  fontSize: compactSheet ? 20 : 22,
+                                  fontWeight: FontWeight.w800,
+                                  color: titleColor,
+                                ),
+                              ),
+                              SizedBox(height: compactSheet ? 1 : 2),
+                              Text(
+                                'Choose what you want to publish next.'.tr(),
+                                style: TextStyle(
+                                  fontSize: compactSheet ? 12 : 13,
+                                  color: subtitleColor,
+                                  height: 1.25,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: compactSheet ? 14 : 18),
+                    _buildCreateOptionAction(
+                      context: sheetContext,
+                      title: 'Add Listing'.tr(),
+                      subtitle: 'Create a new listing for your business or service.'.tr(),
+                      icon: Icons.add_business_outlined,
+                      accentColor: primaryColor,
+                      cardColor: cardColor,
+                      borderColor: borderColor,
+                      titleColor: titleColor,
+                      subtitleColor: subtitleColor,
+                      compact: compactSheet,
+                      onTap: () async {
+                        Navigator.pop(sheetContext);
+                        final allowed = await checkAndHandleBookingAccess(
+                          context: context,
+                          listerId: currentUser.userID,
+                        );
+                        if (!allowed || !context.mounted) return;
+                        push(
+                          context,
+                          AddListingWrappingWidget(currentUser: currentUser),
+                        );
+                      },
+                    ),
+                    SizedBox(height: compactSheet ? 10 : 12),
+                    _buildCreateOptionAction(
+                      context: sheetContext,
+                      title: 'Post Event'.tr(),
+                      subtitle: 'Publish an event and drive visibility quickly.'.tr(),
+                      icon: Icons.event_outlined,
+                      accentColor: const Color(0xFF1C9A77),
+                      badgeText: 'PRO',
+                      badgeColor: const Color(0xFF1C9A77),
+                      cardColor: cardColor,
+                      borderColor: borderColor,
+                      titleColor: titleColor,
+                      subtitleColor: subtitleColor,
+                      compact: compactSheet,
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        _openCreateEventScreen(currentUser);
+                      },
+                    ),
+                    SizedBox(height: compactSheet ? 10 : 12),
+                    _buildCreateOptionAction(
+                      context: sheetContext,
+                      title: 'Upload New Ad'.tr(),
+                      subtitle: 'Launch a promotion to reach more customers.'.tr(),
+                      icon: Icons.campaign_outlined,
+                      accentColor: const Color(0xFFE67E22),
+                      badgeText: 'BOOST',
+                      badgeColor: const Color(0xFFE67E22),
+                      cardColor: cardColor,
+                      borderColor: borderColor,
+                      titleColor: titleColor,
+                      subtitleColor: subtitleColor,
+                      compact: compactSheet,
+                      onTap: () async {
+                        Navigator.pop(sheetContext);
+                        final allowed = await checkAndHandleBookingAccess(
+                          context: context,
+                          listerId: currentUser.userID,
+                        );
+                        if (!allowed || !context.mounted) return;
+                        push(context, DealsPromotionScreen());
+                      },
+                    ),
+                  ],
                 ),
-                ListTile(
-                  leading: const Icon(Icons.event_outlined),
-                  title: Text('Post Event'.tr()),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _openCreateEventScreen(currentUser);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.campaign_outlined),
-                  title: Text('Upload New Ad'.tr()),
-                  onTap: () async {
-                    Navigator.pop(sheetContext);
-                    final allowed = await checkAndHandleBookingAccess(
-                      context: context,
-                      listerId: currentUser.userID,
-                    );
-                    if (!allowed || !context.mounted) return;
-                    push(context, DealsPromotionScreen());
-                  },
-                ),
-              ],
+              ),
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildCreateOptionAction({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color accentColor,
+    required Color cardColor,
+    required Color borderColor,
+    required Color titleColor,
+    required Color subtitleColor,
+    required VoidCallback onTap,
+    bool compact = false,
+    String? badgeText,
+    Color? badgeColor,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: borderColor),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(compact ? 12 : 14),
+            child: Row(
+              children: [
+                Container(
+                  width: compact ? 46 : 52,
+                  height: compact ? 46 : 52,
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(icon, color: accentColor, size: compact ? 24 : 26),
+                ),
+                SizedBox(width: compact ? 12 : 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: TextStyle(
+                                fontSize: compact ? 16 : 18,
+                                fontWeight: FontWeight.w700,
+                                color: titleColor,
+                              ),
+                            ),
+                          ),
+                          if (badgeText != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: (badgeColor ?? accentColor).withOpacity(0.14),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                badgeText,
+                                style: TextStyle(
+                                  color: badgeColor ?? accentColor,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: compact ? 12 : 13,
+                          height: 1.3,
+                          color: subtitleColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: compact ? 8 : 10),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: compact ? 14 : 16,
+                  color: subtitleColor,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -872,12 +1092,21 @@ class _ContainerState extends State<ContainerScreen> {
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Divider()),
                   // BROWSE SECTION
-                  _drawerSectionLabel(
-                    'Browse'.tr(),
-                    isDark,
-                    primaryColorValue,
-                    _browseExpanded,
-                    () => _toggleDrawerSection('browse'),
+                  BlocBuilder<AttentionCubit, AttentionState>(
+                    builder: (context, state) {
+                      final browseBadgeCount = state.attentionState
+                              ?.getCountForModule(
+                                  AttentionModule.conversations) ??
+                          0;
+                      return _drawerSectionLabel(
+                        'Browse'.tr(),
+                        isDark,
+                        primaryColorValue,
+                        _browseExpanded,
+                        () => _toggleDrawerSection('browse'),
+                        badgeCount: browseBadgeCount,
+                      );
+                    },
                   ),
                   if (_browseExpanded) ...[
                   _drawerTile(
@@ -965,32 +1194,30 @@ class _ContainerState extends State<ContainerScreen> {
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Divider()),
                   // MANAGEMENT SECTION
-                  _drawerSectionLabel(
-                    'Management'.tr(),
-                    isDark,
-                    primaryColorValue,
-                    _managementExpanded,
-                    () => _toggleDrawerSection('management'),
+                  BlocBuilder<AttentionCubit, AttentionState>(
+                    builder: (context, state) {
+                      final attentionState = state.attentionState;
+                      final managementBadgeCount =
+                          (attentionState?.getCountForModule(
+                                      AttentionModule.bookingRequests) ??
+                                  0) +
+                              (attentionState?.getCountForModule(
+                                      AttentionModule.orderRequests) ??
+                                  0) +
+                              (attentionState?.getCountForModule(
+                                      AttentionModule.rentals) ??
+                                  0);
+                      return _drawerSectionLabel(
+                        'Management'.tr(),
+                        isDark,
+                        primaryColorValue,
+                        _managementExpanded,
+                        () => _toggleDrawerSection('management'),
+                        badgeCount: managementBadgeCount,
+                      );
+                    },
                   ),
                   if (_managementExpanded) ...[
-                  _drawerTile(
-                    title: 'Activate Booking'.tr(),
-                    icon: Icons.room_service_rounded,
-                    trailing: !currentUser.hasBookingServices
-                        ? _lockIcon()
-                        : _tierBadge('PRO', Colors.blue),
-                    onTap: () {
-                      if (currentUser.hasBookingServices) {
-                        _navigateToListingServices(context);
-                      } else {
-                        Navigator.pop(context);
-                        _showUpgradeDialog(
-                            context, 'Activate Booking', 'Professional');
-                      }
-                    },
-                    isDark: isDark,
-                    primaryColor: primaryColorValue,
-                  ),
                   _drawerTile(
                     title: 'Activate Chat'.tr(),
                     icon: Icons.chat_rounded,
@@ -1173,12 +1400,28 @@ class _ContainerState extends State<ContainerScreen> {
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Divider()),
                   // SHOPPING SECTION
-                  _drawerSectionLabel(
-                    'Shopping'.tr(),
-                    isDark,
-                    primaryColorValue,
-                    _shoppingExpanded,
-                    () => _toggleDrawerSection('shopping'),
+                  BlocBuilder<AttentionCubit, AttentionState>(
+                    builder: (context, state) {
+                      final attentionState = state.attentionState;
+                      final shoppingBadgeCount =
+                          (attentionState?.getCountForModule(
+                                      AttentionModule.myOrders) ??
+                                  0) +
+                              (attentionState?.getCountForModule(
+                                      AttentionModule.myBookings) ??
+                                  0) +
+                              (attentionState?.getCountForModule(
+                                      AttentionModule.rentals) ??
+                                  0);
+                      return _drawerSectionLabel(
+                        'Shopping'.tr(),
+                        isDark,
+                        primaryColorValue,
+                        _shoppingExpanded,
+                        () => _toggleDrawerSection('shopping'),
+                        badgeCount: shoppingBadgeCount,
+                      );
+                    },
                   ),
                   if (_shoppingExpanded) ...[
                   BlocBuilder<AttentionCubit, AttentionState>(
@@ -1449,6 +1692,26 @@ class _ContainerState extends State<ContainerScreen> {
                     isDark: isDark,
                     primaryColor: primaryColorValue,
                   ),
+                  _drawerTile(
+                    title: 'Suggestion Box'.tr(),
+                    icon: Icons.lightbulb_outline_rounded,
+                    onTap: () {
+                      Navigator.pop(context);
+                      push(context, SuggestionBoxScreen(currentUser: currentUser));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
+                  _drawerTile(
+                    title: 'Demo Listings'.tr(),
+                    icon: Icons.storefront_outlined,
+                    onTap: () {
+                      Navigator.pop(context);
+                      push(context, DemoListingsScreen(currentUser: currentUser));
+                    },
+                    isDark: isDark,
+                    primaryColor: primaryColorValue,
+                  ),
                   if (currentUser.subscriptionTier.toLowerCase() != 'free')
                     _drawerTile(
                       title: 'Manage Subscription'.tr(),
@@ -1583,6 +1846,7 @@ class _ContainerState extends State<ContainerScreen> {
     Color primaryColor,
     bool isExpanded,
     VoidCallback onTap,
+    {int badgeCount = 0}
   ) {
     return InkWell(
       onTap: onTap,
@@ -1595,13 +1859,18 @@ class _ContainerState extends State<ContainerScreen> {
               child: Text(
                 title.toUpperCase(),
                 style: TextStyle(
-                  color: isDark ? Colors.white38 : Colors.black45,
+                  color: isDark ? Colors.white70 : Colors.black87,
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.2,
                 ),
               ),
             ),
+            if (badgeCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: _drawerCountBadge(badgeCount),
+              ),
             Icon(
               isExpanded
                   ? Icons.keyboard_arrow_up_rounded
@@ -1610,6 +1879,24 @@ class _ContainerState extends State<ContainerScreen> {
               size: 20,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _drawerCountBadge(int count) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Color(cfg.colorPrimary),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        count > 99 ? '99+' : count.toString(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );

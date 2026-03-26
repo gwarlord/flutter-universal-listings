@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:caribtap/core/ui/full_screen_image_viewer/full_screen_image_viewer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:caribtap/constants.dart';
 import 'package:caribtap/core/model/user.dart';
 import 'package:caribtap/core/ui/chat/chat/firestore_chat_screen_v2.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
@@ -568,7 +569,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 const SizedBox(height: 12),
                 Divider(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
                 const SizedBox(height: 12),
-                if (_currentOrder.status == OrderStatus.requested)
+                if (widget.viewAsLister &&
+                    _currentOrder.status == OrderStatus.requested)
                   SizedBox(
                     width: double.infinity,
                     child: Text(
@@ -1016,7 +1018,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   String _formatCurrency(double amount) {
     final symbol = _getCurrencySymbol(_currentOrder.currencyCode);
-    return '$symbol${amount.toStringAsFixed(2)}';
+    return '${_currentOrder.currencyCode.toUpperCase()} $symbol${amount.toStringAsFixed(2)}';
   }
 
   String _getCurrencySymbol(String code) {
@@ -1893,6 +1895,66 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     _loadListingForChat();
   }
 
+  User _toChatUser(ListingsUser user) {
+    return User(
+      userID: user.userID,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      profilePictureURL: user.profilePictureURL,
+      pushToken: user.pushToken,
+    );
+  }
+
+  Future<void> _ensureChatParticipants({
+    required ListingModel listing,
+    required List<User> participants,
+  }) async {
+    final channelId = _currentOrder.channelId;
+    if (channelId == null || channelId.trim().isEmpty) return;
+
+    final Map<String, User> participantsById = {
+      for (final participant in participants)
+        if (participant.userID.trim().isNotEmpty) participant.userID.trim(): participant,
+    };
+
+    if (participantsById.isEmpty) return;
+
+    final participantIds = participantsById.keys.toList();
+    final channelRef = FirebaseFirestore.instance
+        .collection(chatChannelsCollection)
+        .doc(channelId);
+    final serverTimestamp = FieldValue.serverTimestamp();
+
+    await channelRef.set({
+      'id': channelId,
+      'channelID': channelId,
+      'listingId': listing.id,
+      'listingTitle': listing.title,
+      'listingImage': listing.photo,
+      'participantIds': participantIds,
+      'participants': participantsById.values.map((user) => user.toJson()).toList(),
+      'createdAt': serverTimestamp,
+    }, SetOptions(merge: true));
+
+    for (final participantId in participantIds) {
+      await FirebaseFirestore.instance
+          .collection(socialFeedsCollection)
+          .doc(participantId)
+          .collection(chatFeedLiveCollection)
+          .doc(channelId)
+          .set({
+        'id': channelId,
+        'createdAt': serverTimestamp,
+        'listingTitle': listing.title,
+        'listingImage': listing.photo,
+        'participantIds': participantIds,
+        'markedAsRead': participantId == widget.currentUser.userID,
+      }, SetOptions(merge: true));
+    }
+  }
+
   Future<void> _loadListingForChat() async {
     try {
       // Load the listing
@@ -1908,25 +1970,73 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
       final listing = ListingModel.fromJson(listingDoc.data()!);
 
-      // Load the lister details
       final listerDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.order.listerId)
           .get();
+      final customerDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.order.customerId)
+          .get();
 
-      late List<User> otherParticipants;
+      final List<User> otherParticipants = [];
+      final List<User> channelParticipants = [_toChatUser(widget.currentUser)];
+
+      void addOtherParticipant(User user) {
+        if (user.userID.trim().isEmpty) return;
+        if (otherParticipants.any((existing) => existing.userID == user.userID)) {
+          return;
+        }
+        otherParticipants.add(user);
+      }
+
+      void addChannelParticipant(User user) {
+        if (user.userID.trim().isEmpty) return;
+        if (channelParticipants.any((existing) => existing.userID == user.userID)) {
+          return;
+        }
+        channelParticipants.add(user);
+      }
+
+      User? listerUser;
       if (listerDoc.exists) {
         final listerData = listerDoc.data()!;
-        otherParticipants = [
-          User(
-            userID: listerData['userId'] ?? _currentOrder.listerId,
-            firstName: listerData['firstName'] ?? listerData['name'] ?? 'Lister',
-            profilePictureURL: listerData['profilePictureURL'] ?? '',
-          ),
-        ];
-      } else {
-        otherParticipants = const [];
+        listerUser = User(
+          userID: listerData['userId'] ?? listerData['userID'] ?? _currentOrder.listerId,
+          firstName: listerData['firstName'] ?? listerData['name'] ?? 'Lister',
+          lastName: listerData['lastName'] ?? '',
+          email: listerData['email'] ?? '',
+          phoneNumber: listerData['phoneNumber'] ?? '',
+          profilePictureURL: listerData['profilePictureURL'] ?? '',
+          pushToken: listerData['pushToken'] ?? '',
+        );
       }
+
+      User? customerUser;
+      if (customerDoc.exists) {
+        customerUser = User.fromJson(customerDoc.data()!);
+      }
+
+      if (widget.viewAsLister) {
+        if (customerUser != null) {
+          addOtherParticipant(customerUser);
+          addChannelParticipant(customerUser);
+        }
+        if (widget.currentUser.userID != _currentOrder.listerId && listerUser != null) {
+          addOtherParticipant(listerUser);
+          addChannelParticipant(listerUser);
+        }
+      } else {
+        if (listerUser != null) {
+          addOtherParticipant(listerUser);
+          addChannelParticipant(listerUser);
+        }
+      }
+
+      await _ensureChatParticipants(
+        listing: listing,
+        participants: channelParticipants,
+      );
 
       // Post order details summary to chat for lister reference
       await _postOrderSummaryToChat();
@@ -1940,8 +2050,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           builder: (context) => FirestoreChatScreenV2(
             channelId: _currentOrder.channelId!,
             currentUserId: widget.currentUser.userID,
+            currentUser: _toChatUser(widget.currentUser),
             listingTitle: listing.title,
-            listingImage: listing.photo ?? '',
+            listingImage: listing.photo,
             otherParticipants: otherParticipants,
           ),
         ),

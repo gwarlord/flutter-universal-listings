@@ -1075,23 +1075,34 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
 
     return Container(
       margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.black45 : Colors.white.withOpacity(0.9),
-        shape: BoxShape.circle,
-      ),
       child: PopupMenuButton(
         color: menuBackgroundColor,
-        icon: Icon(Icons.more_horiz, color: isDark ? Colors.white : Colors.black, size: 20),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 56, minHeight: 56),
+        icon: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.black45 : Colors.white.withOpacity(0.9),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.more_horiz,
+            color: isDark ? Colors.white : Colors.black,
+            size: 20,
+          ),
+        ),
         itemBuilder: (BuildContext context) {
           return [
-            if (_canEditOrDelete)
+            if (_canEditOrDelete || listing.isDemo)
               PopupMenuItem(
                 child: ListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(Icons.edit, color: Color(cfg.colorPrimary)),
                   title: Text(
-                    'Edit Listing'.tr(),
+                    listing.isDemo && !currentUser.isAdmin
+                        ? 'View Configuration'.tr()
+                        : 'Edit Listing'.tr(),
                     style: TextStyle(
                       fontSize: 16,
                       color: menuTextColor,
@@ -1105,6 +1116,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
                       EditListingWrappingWidget(
                         currentUser: currentUser,
                         listingToEdit: listing,
+                        readOnly: listing.isDemo && !currentUser.isAdmin,
                       ),
                     );
                     if (updated is ListingModel) setState(() => listing = updated);
@@ -2989,6 +3001,7 @@ class _ContactHoursCard extends StatelessWidget {
       contactRows: contactRows,
       maxToShow: maxToShow,
       openingHours: listing.openingHours,
+      countryCode: listing.countryCode,
       colorPrimary: colorPrimary,
       isDark: isDark,
     );
@@ -3001,12 +3014,14 @@ class _ContactRowsExpander extends StatefulWidget {
   final List<Widget> contactRows;
   final int maxToShow;
   final String openingHours;
+  final String countryCode;
   final Color colorPrimary;
   final bool isDark;
   const _ContactRowsExpander({
     required this.contactRows,
     required this.maxToShow,
     required this.openingHours,
+    required this.countryCode,
     required this.colorPrimary,
     required this.isDark,
   });
@@ -3032,7 +3047,12 @@ class _ContactRowsExpanderState extends State<_ContactRowsExpander> {
           if (widget.openingHours.isNotEmpty)
             ...[
               if (visibleRows.isNotEmpty) Divider(height: 1, indent: 56, color: widget.isDark ? Colors.white10 : Colors.black12),
-              _OpeningHoursRow(value: widget.openingHours, accent: widget.colorPrimary, isDark: widget.isDark),
+              _OpeningHoursRow(
+                value: widget.openingHours,
+                countryCode: widget.countryCode,
+                accent: widget.colorPrimary,
+                isDark: widget.isDark,
+              ),
             ],
         ],
       ),
@@ -3042,10 +3062,17 @@ class _ContactRowsExpanderState extends State<_ContactRowsExpander> {
 
 class _OpeningHoursRow extends StatefulWidget {
   final String value;
+  final String countryCode;
   final Color accent;
   final bool isDark;
 
-  const _OpeningHoursRow({super.key, required this.value, required this.accent, required this.isDark});
+  const _OpeningHoursRow({
+    super.key,
+    required this.value,
+    required this.countryCode,
+    required this.accent,
+    required this.isDark,
+  });
 
   @override
   State<_OpeningHoursRow> createState() => _OpeningHoursRowState();
@@ -3054,9 +3081,70 @@ class _OpeningHoursRow extends StatefulWidget {
 class _OpeningHoursRowState extends State<_OpeningHoursRow> {
   bool _isExpanded = false;
 
+  static const Map<String, int> _timezoneOffsetMinutesByCountry = {
+    'AI': -4 * 60,
+    'AG': -4 * 60,
+    'AW': -4 * 60,
+    'BS': -5 * 60,
+    'BB': -4 * 60,
+    'BZ': -6 * 60,
+    'BM': -4 * 60,
+    'VG': -4 * 60,
+    'BQ': -4 * 60,
+    'KY': -5 * 60,
+    'CU': -5 * 60,
+    'CW': -4 * 60,
+    'DM': -4 * 60,
+    'DO': -4 * 60,
+    'GF': -3 * 60,
+    'GD': -4 * 60,
+    'GP': -4 * 60,
+    'GY': -4 * 60,
+    'HT': -5 * 60,
+    'JM': -5 * 60,
+    'MQ': -4 * 60,
+    'MS': -4 * 60,
+    'PR': -4 * 60,
+    'BL': -4 * 60,
+    'KN': -4 * 60,
+    'LC': -4 * 60,
+    'MF': -4 * 60,
+    'VC': -4 * 60,
+    'SX': -4 * 60,
+    'SR': -3 * 60,
+    'TT': -4 * 60,
+    'TC': -5 * 60,
+    'VI': -4 * 60,
+  };
+
   final List<String> daysOfWeek = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
   ];
+
+  DateTime _listingLocalNow() {
+    final normalizedCountryCode = widget.countryCode.trim().toUpperCase();
+    final offsetMinutes = _timezoneOffsetMinutesByCountry[normalizedCountryCode];
+    if (offsetMinutes == null) {
+      return DateTime.now();
+    }
+    return DateTime.now().toUtc().add(Duration(minutes: offsetMinutes));
+  }
+
+  List<String> _splitTimeRange(String rawHours) {
+    final trimmed = rawHours.trim();
+    if (trimmed.isEmpty) return const [];
+
+    final parts = trimmed
+        .split(RegExp(r'\s*(?:→|-|–|—)\s*'))
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (parts.length == 2) {
+      return parts;
+    }
+
+    return const [];
+  }
 
   DateTime? _parseTimeOfDayStringToDateTime(String timeStr, DateTime now) {
     timeStr = timeStr.trim();
@@ -3096,7 +3184,7 @@ class _OpeningHoursRowState extends State<_OpeningHoursRow> {
       return 'Closed'.tr();
     }
 
-    final timeParts = rawHours.split('→');
+    final timeParts = _splitTimeRange(rawHours);
     if (timeParts.length == 2) {
       // It's an explicit time range
       final open = _parseTimeOfDayStringToDateTime(timeParts[0], now);
@@ -3195,16 +3283,15 @@ class _OpeningHoursRowState extends State<_OpeningHoursRow> {
   Widget build(BuildContext context) {
     final parsedHours = _parseOpeningHoursString(widget.value);
 
-    final now = DateTime.now();
-    final todayDayName = DateFormat('EEEE').format(now);
+    final now = _listingLocalNow();
+    final todayDayName = daysOfWeek[now.weekday - 1];
     String rawTodayHours = parsedHours[todayDayName] ?? 'Closed'; // Get today's raw hours from the parsed map
     bool isOpen = false;
 
     if (rawTodayHours.toLowerCase() != 'closed') {
-      final format = DateFormat('h:mm a'); // Changed from DateFormat.jm()
-      if (rawTodayHours.contains('→')) {
+      final timeParts = _splitTimeRange(rawTodayHours);
+      if (timeParts.length == 2) {
         try {
-          final timeParts = rawTodayHours.split('→');
           final openTime = _parseTimeOfDayStringToDateTime(timeParts[0], now);
           final closeTime = _parseTimeOfDayStringToDateTime(timeParts[1], now);
 

@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:caribtap/constants.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/core/ui/loading/loading_cubit.dart';
@@ -27,6 +31,7 @@ class MyBrandsScreen extends StatefulWidget {
 class _MyBrandsScreenState extends State<MyBrandsScreen> {
   final BrandService _brandService = BrandService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   Widget build(BuildContext context) {
@@ -258,133 +263,182 @@ class _MyBrandsScreenState extends State<MyBrandsScreen> {
   void _showCreateBrandDialog() {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
+    XFile? selectedLogoFile;
 
     showDialog(
       context: context,
       builder: (context) {
         final dark = isDarkMode(context);
-        return AlertDialog(
-          backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
-          title: Text(
-            'Create New Brand'.tr(),
-            style: TextStyle(color: dark ? Colors.white : Colors.black),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                style: TextStyle(color: dark ? Colors.white : Colors.black),
-                decoration: InputDecoration(
-                  labelText: 'Brand Name *'.tr(),
-                  labelStyle: TextStyle(
-                    color: dark ? Colors.white70 : Colors.black54,
-                  ),
-                  hintText: 'e.g., KFC, Subway',
-                  hintStyle: TextStyle(
-                    color: dark ? Colors.white70 : Colors.black54,
-                  ),
-                  border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: dark ? Colors.grey.shade700 : Colors.grey.shade300,
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+            backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
+            title: Text(
+              'Create New Brand'.tr(),
+              style: TextStyle(color: dark ? Colors.white : Colors.black),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  InkWell(
+                    onTap: () async {
+                      final picked = await _imagePicker.pickImage(
+                        source: ImageSource.gallery,
+                        imageQuality: 85,
+                        maxWidth: 1200,
+                      );
+                      if (picked != null) {
+                        setDialogState(() => selectedLogoFile = picked);
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      width: 84,
+                      height: 84,
+                      decoration: BoxDecoration(
+                        color: Color(cfg.colorPrimary).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: selectedLogoFile == null
+                          ? Icon(Icons.add_a_photo_outlined, color: Color(cfg.colorPrimary), size: 30)
+                          : ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: kIsWeb
+                                  ? Image.network(selectedLogoFile!.path, fit: BoxFit.cover)
+                                  : Image.file(File(selectedLogoFile!.path), fit: BoxFit.cover),
+                            ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  Text(
+                    selectedLogoFile == null ? 'Add logo (optional)'.tr() : 'Logo selected'.tr(),
+                    style: TextStyle(fontSize: 12, color: dark ? Colors.white70 : Colors.black54),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nameController,
+                    style: TextStyle(color: dark ? Colors.white : Colors.black),
+                    decoration: InputDecoration(
+                      labelText: 'Brand Name *'.tr(),
+                      labelStyle: TextStyle(
+                        color: dark ? Colors.white70 : Colors.black54,
+                      ),
+                      hintText: 'e.g., KFC, Subway',
+                      hintStyle: TextStyle(
+                        color: dark ? Colors.white70 : Colors.black54,
+                      ),
+                      border: const OutlineInputBorder(),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: dark ? Colors.grey.shade700 : Colors.grey.shade300,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descriptionController,
+                    style: TextStyle(color: dark ? Colors.white : Colors.black),
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: 'Description (Optional)'.tr(),
+                      labelStyle: TextStyle(
+                        color: dark ? Colors.white70 : Colors.black54,
+                      ),
+                      hintText: 'Describe your brand',
+                      hintStyle: TextStyle(
+                        color: dark ? Colors.white70 : Colors.black54,
+                      ),
+                      border: const OutlineInputBorder(),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: dark ? Colors.grey.shade700 : Colors.grey.shade300,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: descriptionController,
-                style: TextStyle(color: dark ? Colors.white : Colors.black),
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: 'Description (Optional)'.tr(),
-                  labelStyle: TextStyle(
-                    color: dark ? Colors.white70 : Colors.black54,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancel'.tr()),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (nameController.text.trim().isEmpty) {
+                    showSnackBar(context, 'Brand name is required'.tr());
+                    return;
+                  }
+
+                  try {
+                    final loadingCubit = context.read<LoadingCubit>();
+
+                    Navigator.pop(context);
+
+                    if (!mounted) return;
+                    loadingCubit.showLoading(
+                      context,
+                      'Creating brand...'.tr(),
+                      false,
+                      Color(cfg.colorPrimary),
+                    );
+
+                    String? logoUrl;
+                    if (selectedLogoFile != null) {
+                      logoUrl = await _brandService.uploadBrandLogo(
+                        logoFile: selectedLogoFile!,
+                        ownerUid: widget.currentUser.userID,
+                      );
+                    }
+
+                    await _brandService.createBrand(
+                      name: nameController.text.trim(),
+                      logoUrl: logoUrl,
+                      description: descriptionController.text.trim().isEmpty
+                          ? null
+                          : descriptionController.text.trim(),
+                    ).timeout(
+                      const Duration(seconds: 15),
+                      onTimeout: () => throw Exception('Brand creation timed out. Cloud Function may not be deployed.'),
+                    );
+
+                    await Future.delayed(const Duration(milliseconds: 500));
+
+                    if (mounted) {
+                      loadingCubit.hideLoading();
+                      await Future.delayed(const Duration(milliseconds: 200));
+                      if (mounted) {
+                        showSnackBar(context, 'Brand created successfully!'.tr());
+                      }
+                    }
+                  } catch (e) {
+                    print('Error creating brand: $e');
+                    if (mounted) {
+                      try {
+                        context.read<LoadingCubit>().hideLoading();
+                      } catch (_) {}
+                      await Future.delayed(const Duration(milliseconds: 200));
+                      if (mounted) {
+                        showSnackBar(context, 'Error: ${e.toString()}');
+                      }
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(cfg.colorPrimary),
+                  foregroundColor: Colors.white,
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
                   ),
-                  hintText: 'Describe your brand',
-                  hintStyle: TextStyle(
-                    color: dark ? Colors.white70 : Colors.black54,
-                  ),
-                  border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: dark ? Colors.grey.shade700 : Colors.grey.shade300,
-                    ),
-                  ),
+                  minimumSize: const Size(110, 48),
                 ),
+                child: Text('Create'.tr()),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'.tr()),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (nameController.text.trim().isEmpty) {
-                  showSnackBar(context, 'Brand name is required'.tr());
-                  return;
-                }
-
-                try {
-                  // Save reference to LoadingCubit BEFORE closing dialog
-                  final loadingCubit = context.read<LoadingCubit>();
-                  
-                  Navigator.pop(context); // Close the create dialog first
-                  
-                  // Show loading overlay using saved reference
-                  if (!mounted) return;
-                  loadingCubit.showLoading(
-                    context,
-                    'Creating brand...'.tr(),
-                    false,
-                    Color(cfg.colorPrimary),
-                  );
-
-                  final brandId = await _brandService.createBrand(
-                    name: nameController.text.trim(),
-                    description: descriptionController.text.trim().isEmpty 
-                        ? null 
-                        : descriptionController.text.trim(),
-                  ).timeout(
-                    const Duration(seconds: 15),
-                    onTimeout: () => throw Exception('Brand creation timed out. Cloud Function may not be deployed.'),
-                  );
-
-                  // Small delay to ensure loading is visible
-                  await Future.delayed(const Duration(milliseconds: 500));
-
-                  if (mounted) {
-                    loadingCubit.hideLoading();
-                    await Future.delayed(const Duration(milliseconds: 200));
-                    if (mounted) {
-                      showSnackBar(context, 'Brand created successfully!'.tr());
-                    }
-                  }
-                } catch (e) {
-                  print('Error creating brand: $e');
-                  if (mounted) {
-                    try {
-                      context.read<LoadingCubit>().hideLoading();
-                    } catch (_) {
-                      // Ignore if context is no longer valid
-                    }
-                    await Future.delayed(const Duration(milliseconds: 200));
-                    if (mounted) {
-                      showSnackBar(context, 'Error: ${e.toString()}');
-                    }
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(cfg.colorPrimary),
-                foregroundColor: Colors.white,
-              ),
-              child: Text('Create'.tr()),
-            ),
-          ],
         );
       },
     );
@@ -409,6 +463,7 @@ class BrandDetailScreen extends StatefulWidget {
 class _BrandDetailScreenState extends State<BrandDetailScreen> {
   final BrandService _brandService = BrandService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   Widget build(BuildContext context) {
@@ -735,83 +790,154 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
   void _showEditBrandDialog(BuildContext context, bool dark) {
     final nameController = TextEditingController(text: widget.brand.name);
     final descController = TextEditingController(text: widget.brand.description ?? '');
+    XFile? selectedLogoFile;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
-        title: Text('Edit Brand'.tr(), style: TextStyle(color: dark ? Colors.white : Colors.black)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              style: TextStyle(color: dark ? Colors.white : Colors.black),
-              decoration: InputDecoration(
-                labelText: 'Brand Name'.tr(),
-                labelStyle: TextStyle(color: dark ? Colors.white70 : Colors.black54),
-                border: const OutlineInputBorder(),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
+      builder: (context) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
+          title: Text('Edit Brand'.tr(), style: TextStyle(color: dark ? Colors.white : Colors.black)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                InkWell(
+                  onTap: () async {
+                    final picked = await _imagePicker.pickImage(
+                      source: ImageSource.gallery,
+                      imageQuality: 85,
+                      maxWidth: 1200,
+                    );
+                    if (picked != null) {
+                      setDialogState(() => selectedLogoFile = picked);
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    width: 84,
+                    height: 84,
+                    decoration: BoxDecoration(
+                      color: Color(cfg.colorPrimary).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: selectedLogoFile != null
+                          ? (kIsWeb
+                              ? Image.network(selectedLogoFile!.path, fit: BoxFit.cover)
+                              : Image.file(File(selectedLogoFile!.path), fit: BoxFit.cover))
+                          : ((widget.brand.logoUrl ?? '').isNotEmpty
+                              ? Image.network(
+                                  widget.brand.logoUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => Icon(
+                                    Icons.store,
+                                    color: Color(cfg.colorPrimary),
+                                    size: 30,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.add_a_photo_outlined,
+                                  color: Color(cfg.colorPrimary),
+                                  size: 30,
+                                )),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 8),
+                Text(
+                  selectedLogoFile == null ? 'Tap to change logo'.tr() : 'Logo selected'.tr(),
+                  style: TextStyle(fontSize: 12, color: dark ? Colors.white70 : Colors.black54),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameController,
+                  style: TextStyle(color: dark ? Colors.white : Colors.black),
+                  decoration: InputDecoration(
+                    labelText: 'Brand Name'.tr(),
+                    labelStyle: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                    border: const OutlineInputBorder(),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descController,
+                  style: TextStyle(color: dark ? Colors.white : Colors.black),
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: 'Description'.tr(),
+                    labelStyle: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                    border: const OutlineInputBorder(),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: descController,
-              style: TextStyle(color: dark ? Colors.white : Colors.black),
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: 'Description'.tr(),
-                labelStyle: TextStyle(color: dark ? Colors.white70 : Colors.black54),
-                border: const OutlineInputBorder(),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: dark ? Colors.grey.shade700 : Colors.grey.shade300),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'.tr()),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  final loadingCubit = context.read<LoadingCubit>();
+                  Navigator.pop(context);
+                  loadingCubit.showLoading(
+                    context,
+                    'Updating brand...'.tr(),
+                    false,
+                    Color(cfg.colorPrimary),
+                  );
+
+                  String? logoUrl;
+                  if (selectedLogoFile != null) {
+                    logoUrl = await _brandService.uploadBrandLogo(
+                      logoFile: selectedLogoFile!,
+                      ownerUid: widget.currentUser.userID,
+                    );
+                  }
+
+                  await _brandService.updateBrand(
+                    brandId: widget.brand.id,
+                    name: nameController.text.trim(),
+                    logoUrl: logoUrl,
+                    description: descController.text.trim().isEmpty ? null : descController.text.trim(),
+                  );
+
+                  if (mounted) {
+                    loadingCubit.hideLoading();
+                    showSnackBar(context, 'Brand updated successfully!'.tr());
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    try {
+                      context.read<LoadingCubit>().hideLoading();
+                    } catch (_) {}
+                    showSnackBar(context, 'Error: ${e.toString()}');
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(cfg.colorPrimary),
+                foregroundColor: Colors.white,
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
                 ),
+                minimumSize: const Size(110, 48),
               ),
+              child: Text('Save'.tr()),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'.tr()),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                final loadingCubit = context.read<LoadingCubit>();
-                Navigator.pop(context);
-                loadingCubit.showLoading(
-                  context,
-                  'Updating brand...'.tr(),
-                  false,
-                  Color(cfg.colorPrimary),
-                );
-
-                await _brandService.updateBrand(
-                  brandId: widget.brand.id,
-                  name: nameController.text.trim(),
-                  description: descController.text.trim().isEmpty ? null : descController.text.trim(),
-                );
-
-                if (mounted) {
-                  loadingCubit.hideLoading();
-                  showSnackBar(context, 'Brand updated successfully!'.tr());
-                }
-              } catch (e) {
-                if (mounted) {
-                  try {
-                    context.read<LoadingCubit>().hideLoading();
-                  } catch (_) {}
-                  showSnackBar(context, 'Error: ${e.toString()}');
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Color(cfg.colorPrimary)),
-            child: Text('Update'.tr()),
-          ),
-        ],
       ),
     );
   }

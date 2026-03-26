@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:caribtap/listings/model/brand_model.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 
@@ -10,6 +14,34 @@ class BrandService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseFunctions _functions = FirebaseFunctions.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+
+  /// Upload a brand logo and return a public download URL.
+  Future<String> uploadBrandLogo({
+    required XFile logoFile,
+    required String ownerUid,
+  }) async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'brand_logo_$timestamp.jpg';
+      final ref = _storage.ref().child('brands/$ownerUid/logos/$fileName');
+
+      final metadata = SettableMetadata(contentType: 'image/jpeg');
+      UploadTask uploadTask;
+
+      if (kIsWeb) {
+        final bytes = await logoFile.readAsBytes();
+        uploadTask = ref.putData(bytes, metadata);
+      } else {
+        uploadTask = ref.putFile(File(logoFile.path), metadata);
+      }
+
+      final snapshot = await uploadTask;
+      return snapshot.ref.getDownloadURL();
+    } catch (e) {
+      throw Exception('Failed to upload brand logo: $e');
+    }
+  }
 
   /// Get a brand by ID
   Future<BrandModel?> getBrand(String brandId) async {
