@@ -1,3 +1,4 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
 #include "Generated.xcconfig"
+GMS_PLACES_API_KEY=$(GMS_API_KEY)
 #include? "LocalSecrets.xcconfig"

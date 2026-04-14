@@ -1,5 +1,9 @@
 {
   "dependencies": {
-    "firebase-admin": "^13.6.0"
+    "@google-cloud/firestore": "^8.3.0",
+    "@grpc/grpc-js": "^1.14.3",
+    "@opentelemetry/api": "^1.9.0",
+    "firebase-admin": "^13.7.0",
+    "google-auth-library": "^10.6.2"
   }
 }

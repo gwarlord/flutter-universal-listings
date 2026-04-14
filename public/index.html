@@ -19,11 +19,11 @@
   />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://caribtap.com/" />
-  <meta property="og:image" content="https://caribtap.com/logo.png" />
-  <meta property="og:image:secure_url" content="https://caribtap.com/logo.png" />
+  <meta property="og:image" content="https://caribtap.com/og-image.png?v=20260323b" />
+  <meta property="og:image:secure_url" content="https://caribtap.com/og-image.png?v=20260323b" />
   <meta property="og:image:type" content="image/png" />
-  <meta property="og:image:width" content="512" />
-  <meta property="og:image:height" content="512" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="CaribTap logo" />
 
   <meta name="twitter:card" content="summary" />
@@ -33,11 +33,17 @@
     name="twitter:description"
     content="Find businesses, deals, rentals, and services across the Caribbean with CaribTap."
   />
-  <meta name="twitter:image" content="https://caribtap.com/logo.png" />
+  <meta name="twitter:image" content="https://caribtap.com/og-image.png?v=20260323b" />
   <meta name="twitter:image:alt" content="CaribTap logo" />
 
-  <link rel="icon" type="image/png" href="/favicon.png" />
-  <link rel="apple-touch-icon" href="/logo.png" />
+  <link rel="icon" type="image/png" href="/favicon.png?v=20260327a" />
+  <link rel="apple-touch-icon" href="/logo.png?v=20260327a" />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
 
   <style>
     :root {
@@ -107,7 +113,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      min-height: 76px;
+      min-height: 84px;
     }
 
     .brand {
@@ -120,8 +126,8 @@
     }
 
     .brand-logo {
-      width: 42px;
-      height: 42px;
+      width: 64px;
+      height: 64px;
       object-fit: contain;
       border-radius: 12px;
       flex-shrink: 0;
@@ -310,8 +316,8 @@
     }
 
     .phone-brand img {
-      width: 24px;
-      height: 24px;
+      width: 30px;
+      height: 30px;
       object-fit: contain;
       border-radius: 8px;
     }
@@ -493,6 +499,270 @@
       align-items: stretch;
     }
 
+    .island-shell {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .island-map-card,
+    .island-side-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .island-map-card {
+      padding: 18px;
+    }
+
+    .island-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .island-status {
+      color: var(--muted-2);
+      font-size: 0.9rem;
+    }
+
+    .island-map-stage {
+      position: relative;
+      min-height: 520px;
+      border-radius: 24px;
+      overflow: hidden;
+      background: #10365a;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .island-map-canvas {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+    }
+
+    .island-map-pin-wrap {
+      background: transparent;
+      border: 0;
+    }
+
+    .island-map-pin {
+      position: relative;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: radial-gradient(circle, #54b8ff 0%, #2d8ddc 66%, #1263a8 100%);
+      border: 2px solid rgba(184, 226, 255, 0.88);
+      box-shadow: 0 0 0 9px rgba(57, 155, 235, 0.22), 0 0 24px rgba(95, 193, 255, 0.52);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .island-map-pin::after {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border-radius: 999px;
+      background: #0c4e8a;
+      opacity: 0.7;
+    }
+
+    .island-map-pin.active {
+      transform: scale(1.16);
+      box-shadow: 0 0 0 11px rgba(57, 155, 235, 0.28), 0 0 34px rgba(110, 205, 255, 0.66);
+    }
+
+    .island-map-tooltip {
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      color: #dfeaf5;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.65);
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      padding: 0;
+    }
+
+    .island-map-tooltip::before {
+      display: none;
+    }
+
+    .leaflet-control-zoom {
+      border: 1px solid rgba(255,255,255,0.14) !important;
+      box-shadow: 0 10px 22px rgba(0,0,0,0.18) !important;
+      overflow: hidden;
+    }
+
+    .leaflet-control-zoom a {
+      background: rgba(10, 26, 43, 0.86) !important;
+      color: #d9ecf7 !important;
+      border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+    }
+
+    .leaflet-control-attribution {
+      background: rgba(8, 18, 31, 0.62) !important;
+      color: rgba(214, 230, 241, 0.75) !important;
+      font-size: 0.64rem !important;
+    }
+
+    .leaflet-control-attribution a {
+      color: rgba(214, 230, 241, 0.88) !important;
+    }
+
+    .island-node-popover {
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 10px);
+      min-width: 156px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(6, 18, 33, 0.82);
+      color: var(--text);
+      box-shadow: 0 20px 34px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(14px);
+      text-align: left;
+      transform: translateX(-50%);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.18s ease, visibility 0.18s ease;
+      z-index: 3;
+    }
+
+    .island-node-popover::after {
+      display: none;
+    }
+
+    .island-node:hover .island-node-popover,
+    .island-node.active .island-node-popover {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .island-node-name,
+    .island-node-metrics,
+    .island-node-label,
+    .island-node-badge {
+      display: none;
+    }
+
+    .metric-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      background: rgba(255,255,255,0.08);
+      color: var(--muted);
+    }
+
+    .metric-pill strong {
+      color: var(--text);
+      font-size: 0.78rem;
+    }
+
+    .island-side-card {
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+      align-content: start;
+    }
+
+    .island-selected {
+      padding: 18px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(42, 158, 184, 0.16), rgba(193, 106, 38, 0.12));
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .island-selected h3 {
+      margin: 0 0 6px;
+      font-size: 1.5rem;
+    }
+
+    .island-selected p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .island-selected-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .island-stat-card {
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(6, 18, 33, 0.34);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .island-stat-card span {
+      display: block;
+      color: var(--muted-2);
+      font-size: 0.84rem;
+      margin-bottom: 6px;
+    }
+
+    .island-stat-card strong {
+      font-size: 1.5rem;
+    }
+
+    .island-toplist {
+      display: grid;
+      gap: 10px;
+    }
+
+    .island-topitem {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .island-topitem button {
+      all: unset;
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .island-topitem-meta {
+      color: var(--muted-2);
+      font-size: 0.84rem;
+      white-space: nowrap;
+    }
+
+    .island-loading,
+    .island-error {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 120px;
+      text-align: center;
+      color: var(--muted);
+      border-radius: 20px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      padding: 18px;
+    }
+
     .journey-card {
       padding: 28px;
     }
@@ -663,6 +933,7 @@
     @media (max-width: 980px) {
       .hero-grid,
       .split,
+      .island-shell,
       .cta-panel,
       .faq-grid {
         grid-template-columns: 1fr;
@@ -714,6 +985,24 @@
       .btn {
         width: 100%;
       }
+
+      .island-map-stage {
+        min-height: 460px;
+      }
+
+      .island-node-popover {
+        min-width: 138px;
+        padding: 9px 10px;
+      }
+
+      .island-node-name,
+      .metric-pill {
+        font-size: 0.78rem;
+      }
+
+      .island-selected-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -721,14 +1010,16 @@
   <nav class="nav">
     <div class="container nav-inner">
       <a class="brand" href="/">
-        <img src="/logo.png" alt="CaribTap logo" class="brand-logo" />
+        <img src="/logo.png?v=20260323d" alt="CaribTap logo" class="brand-logo" />
         <span>CaribTap</span>
       </a>
 
       <div class="nav-links">
         <a href="#features">Features</a>
+        <a href="#islands">Island Map</a>
         <a href="#why">Why CaribTap</a>
         <a href="#download">Download</a>
+        <a href="/delete-account.html">Delete Account</a>
         <a href="/privacy.html">Privacy</a>
         <a href="/terms.html">Terms</a>
       </div>
@@ -801,7 +1092,7 @@
                 <div class="screen-nav">
                   <span>☰</span>
                   <div class="phone-brand">
-                    <img src="/logo.png" alt="CaribTap logo" />
+                    <img src="/logo.png?v=20260323d" alt="CaribTap logo" />
                     <span>CaribTap</span>
                   </div>
                   <span>⌕</span>
@@ -829,7 +1120,7 @@
 
                 <div class="ad-card">
                   <div class="ad-thumb">
-                    <img src="/logo.png" alt="CaribTap logo" />
+                    <img src="/logo.png?v=20260323d" alt="CaribTap logo" />
                   </div>
                   <div>
                     <div class="ad-copy-top">Sponsored</div>
@@ -931,6 +1222,45 @@
       </div>
     </section>
 
+    <section class="section" id="islands">
+      <div class="container">
+        <div class="section-head">
+          <h2>Live Island Activity Across The Caribbean</h2>
+          <p>
+            See where CaribTap is active right now with live listing and user totals by island and territory.
+          </p>
+        </div>
+
+        <div class="island-shell">
+          <article class="island-map-card">
+            <div class="island-toolbar">
+              <div>
+                <strong>Explore by island</strong>
+                <div class="island-status" id="island-map-status">Loading live Caribbean counts…</div>
+              </div>
+              <div class="island-status" id="island-map-updated"></div>
+            </div>
+
+            <div class="island-map-stage" id="island-map-stage">
+              <div id="island-map-canvas" class="island-map-canvas" aria-label="Caribbean island activity map"></div>
+            </div>
+          </article>
+
+          <aside class="island-side-card">
+            <div class="island-selected" id="island-selected-panel">
+              <h3>Loading…</h3>
+              <p>Fetching live island activity from CaribTap.</p>
+            </div>
+
+            <div>
+              <strong>Most active islands</strong>
+              <div class="island-toplist" id="island-toplist" style="margin-top: 12px;"></div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
     <section class="section" id="why">
       <div class="container split">
         <article class="journey-card">
@@ -990,7 +1320,7 @@
           </div>
 
           <div class="qr-box">
-            <img src="/logo.png" alt="CaribTap logo" />
+            <img src="/logo.png?v=20260323d" alt="CaribTap logo" />
           </div>
         </div>
       </div>
@@ -1032,11 +1362,38 @@
     <div class="container footer-inner">
       <div>© 2026 CaribTap. All rights reserved.</div>
       <div class="footer-links">
+        <a href="/delete-account.html">Delete Account</a>
         <a href="/privacy.html">Privacy Policy</a>
         <a href="/terms.html">Terms of Service</a>
       </div>
     </div>
   </footer>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-functions-compat.js"></script>
+  <script>
+    (function () {
+      const firebaseConfig = {
+        apiKey: "AIzaSyD_qHAIpnPymA4X_h0BtJYqxAwk1UG_mTg",
+        authDomain: "caribtap.firebaseapp.com",
+        projectId: "caribtap",
+        storageBucket: "caribtap.firebasestorage.app",
+        messagingSenderId: "17296052844",
+        appId: "1:17296052844:web:e4f14e33763ac26931fe49",
+        measurementId: "G-GCEVP9HB0B"
+      };
+
+      if (window.firebase && !window.firebase.apps.length) {
+        window.firebase.initializeApp(firebaseConfig);
+      }
+    })();
+  </script>
 
   <script>
     (function () {
@@ -1070,10 +1427,11 @@
           copy.textContent = "This shared " + label.toLowerCase() + " is ready in the app. Open CaribTap for the full details.";
         }
 
+        const appSchemeUrl = "caribtap://" + sharedItemType + "/" + encodeURIComponent(sharedItemId);
+        const fallbackStore = isiOS ? appStoreLink : playStoreLink;
+
         if (ctaRow) {
           const openAppBtn = document.createElement("a");
-          const fallbackStore = isiOS ? appStoreLink : playStoreLink;
-          const appSchemeUrl = "caribtap://" + sharedItemType + "/" + encodeURIComponent(sharedItemId);
 
           openAppBtn.className = "btn btn-primary";
           openAppBtn.href = appSchemeUrl;
@@ -1093,6 +1451,30 @@
         }
 
         document.title = "Open " + label + " | CaribTap";
+
+        // Auto-launch the app when the page loads from a QR scan or shared link.
+        // Track whether the app opened successfully (page loses focus/visibility).
+        var appDidOpen = false;
+        var markOpened = function () { appDidOpen = true; };
+        document.addEventListener("visibilitychange", function () { if (document.hidden) markOpened(); });
+        window.addEventListener("pagehide", markOpened);
+        window.addEventListener("blur", markOpened);
+
+        window.setTimeout(function () {
+          if (appDidOpen) return;
+          if (isAndroid) {
+            // intent:// is the most reliable Android deep-link trigger:
+            // opens the app if installed, falls through to Play Store if not.
+            var intentUrl =
+              "intent://" + sharedItemType + "/" + encodeURIComponent(sharedItemId) +
+              "#Intent;scheme=caribtap;package=com.caribtap.instaflutter.android;" +
+              "S.browser_fallback_url=" + encodeURIComponent(playStoreLink) + ";end";
+            window.location.href = intentUrl;
+          } else if (isiOS) {
+            // Custom scheme attempt; if the app isn't installed the page simply stays.
+            window.location.href = appSchemeUrl;
+          }
+        }, 500);
       }
 
       const primaryButtons = document.querySelectorAll('a[href="https://apps.apple.com"], a[href="https://play.google.com/store/apps/details?id=com.caribtap.instaflutter.android"]');
@@ -1114,6 +1496,377 @@
       }
 
       window.caribTapLinks = { appStoreLink, playStoreLink, listingId, eventId };
+    })();
+
+    (function () {
+      const mapCanvas = document.getElementById("island-map-canvas");
+      const selectedPanel = document.getElementById("island-selected-panel");
+      const toplist = document.getElementById("island-toplist");
+      const status = document.getElementById("island-map-status");
+      const updated = document.getElementById("island-map-updated");
+
+      if (!mapCanvas || !selectedPanel || !toplist || !status || !updated) {
+        return;
+      }
+
+      const islandConfig = [
+        { id: "bs", isoCode: "BS", name: "Bahamas", lat: 25.0343, lng: -77.3963, alwaysLabel: true },
+        { id: "bm", isoCode: "BM", name: "Bermuda", lat: 32.3078, lng: -64.7505, alwaysLabel: false, labelMinZoom: 6.4 },
+        { id: "jm", isoCode: "JM", name: "Jamaica", lat: 18.1096, lng: -77.2975, alwaysLabel: true },
+        { id: "ht", isoCode: "HT", name: "Haiti", lat: 18.9712, lng: -72.2852, alwaysLabel: true },
+        { id: "do", isoCode: "DO", name: "Dominican Republic", lat: 18.7357, lng: -70.1627, alwaysLabel: true },
+        { id: "pr", isoCode: "PR", name: "Puerto Rico", lat: 18.2208, lng: -66.5901, alwaysLabel: true },
+        { id: "vi", isoCode: "VI", name: "US Virgin Islands", lat: 18.3358, lng: -64.8963, alwaysLabel: false, labelMinZoom: 6.1 },
+        { id: "vg", isoCode: "VG", name: "BVI", lat: 18.4207, lng: -64.64, alwaysLabel: false, labelMinZoom: 6.1 },
+        { id: "ai", isoCode: "AI", name: "Anguilla", lat: 18.2206, lng: -63.0686, alwaysLabel: false, labelMinZoom: 6.2 },
+        { id: "kn", isoCode: "KN", name: "St Kitts & Nevis", lat: 17.3578, lng: -62.7830, alwaysLabel: true },
+        { id: "ag", isoCode: "AG", name: "Antigua & Barbuda", lat: 17.0608, lng: -61.7964, alwaysLabel: true },
+        { id: "ms", isoCode: "MS", name: "Montserrat", lat: 16.7425, lng: -62.1874, alwaysLabel: false, labelMinZoom: 6.2 },
+        { id: "bl", isoCode: "BL", name: "Saint Barthelemy", lat: 17.9000, lng: -62.8333, alwaysLabel: false, labelMinZoom: 6.3 },
+        { id: "mf", isoCode: "MF", name: "Saint Martin", lat: 18.0708, lng: -63.0501, alwaysLabel: false, labelMinZoom: 6.3 },
+        { id: "sx", isoCode: "SX", name: "Sint Maarten", lat: 18.0425, lng: -63.0548, alwaysLabel: false, labelMinZoom: 6.3 },
+        { id: "gp", isoCode: "GP", name: "Guadeloupe", lat: 16.2650, lng: -61.5510, alwaysLabel: true },
+        { id: "dm", isoCode: "DM", name: "Dominica", lat: 15.4150, lng: -61.3710, alwaysLabel: true },
+        { id: "mq", isoCode: "MQ", name: "Martinique", lat: 14.6415, lng: -61.0242, alwaysLabel: true },
+        { id: "lc", isoCode: "LC", name: "Saint Lucia", lat: 13.9094, lng: -60.9789, alwaysLabel: true },
+        { id: "vc", isoCode: "VC", name: "St Vincent & Grenadines", lat: 12.9843, lng: -61.2872, alwaysLabel: true },
+        { id: "bb", isoCode: "BB", name: "Barbados", lat: 13.1939, lng: -59.5432, alwaysLabel: true },
+        { id: "gd", isoCode: "GD", name: "Grenada", lat: 12.1165, lng: -61.6790, alwaysLabel: true },
+        { id: "tt", isoCode: "TT", name: "Trinidad & Tobago", lat: 10.6918, lng: -61.2225, alwaysLabel: true },
+        { id: "gy", isoCode: "GY", name: "Guyana", lat: 4.8604, lng: -58.9302, alwaysLabel: true },
+        { id: "gf", isoCode: "GF", name: "French Guiana", lat: 3.9339, lng: -53.1258, alwaysLabel: false, labelMinZoom: 5.9 },
+        { id: "sr", isoCode: "SR", name: "Suriname", lat: 3.9193, lng: -56.0278, alwaysLabel: true },
+        { id: "bz", isoCode: "BZ", name: "Belize", lat: 17.1899, lng: -88.4976, alwaysLabel: true },
+        { id: "ky", isoCode: "KY", name: "Cayman Islands", lat: 19.3133, lng: -81.2546, alwaysLabel: false, labelMinZoom: 6.2 },
+        { id: "tc", isoCode: "TC", name: "Turks & Caicos", lat: 21.6940, lng: -71.7979, alwaysLabel: false, labelMinZoom: 6.0 },
+        { id: "cu", isoCode: "CU", name: "Cuba", lat: 21.5218, lng: -77.7812, alwaysLabel: true },
+        { id: "aw", isoCode: "AW", name: "Aruba", lat: 12.5211, lng: -69.9683, alwaysLabel: false, labelMinZoom: 6.0 },
+        { id: "cw", isoCode: "CW", name: "Curaçao", lat: 12.1696, lng: -68.99, alwaysLabel: false, labelMinZoom: 6.0 },
+        { id: "bq", isoCode: "BQ", name: "Caribbean Netherlands", lat: 12.2019, lng: -68.2624, alwaysLabel: false, labelMinZoom: 6.2 }
+      ];
+
+      const state = {
+        selectedId: null,
+        statsById: new Map(),
+        visitorsOutsideCaribbeanUsers: 0,
+        map: null,
+        markerLayers: [],
+      };
+
+      function formatCompact(value) {
+        const num = Number(value || 0);
+        if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
+        if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, "") + "K";
+        return String(num);
+      }
+
+      function formatFull(value) {
+        return new Intl.NumberFormat("en-US").format(Number(value || 0));
+      }
+
+      function totalActivity(data) {
+        return Number(data.listingsCount || 0) + Number(data.usersCount || 0);
+      }
+
+      function createPinIcon(isActive) {
+        return window.L.divIcon({
+          className: "island-map-pin-wrap",
+          html: '<span class="island-map-pin' + (isActive ? ' active' : '') + '"></span>',
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+        });
+      }
+
+      function shouldShowLabel(config, isActive) {
+        if (isActive) return true;
+        if (config.alwaysLabel) return true;
+        if (!state.map) return false;
+        const minZoom = typeof config.labelMinZoom === "number" ? config.labelMinZoom : 6.1;
+        return state.map.getZoom() >= minZoom;
+      }
+
+      function ensureMap() {
+        if (state.map || !window.L) return;
+
+        state.map = window.L.map(mapCanvas, {
+          center: [16.8, -66.8],
+          zoom: 5,
+          minZoom: 4,
+          maxZoom: 8,
+          zoomControl: true,
+          scrollWheelZoom: false,
+          dragging: true,
+          tap: true,
+          attributionControl: true,
+        });
+
+        window.L.tileLayer(
+          "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png",
+          {
+            subdomains: "abcd",
+            maxZoom: 19,
+            attribution: "&copy; OpenStreetMap &copy; CARTO",
+          }
+        ).addTo(state.map);
+
+        window.L.tileLayer(
+          "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png",
+          {
+            subdomains: "abcd",
+            maxZoom: 19,
+            opacity: 0.9,
+            attribution: "",
+          }
+        ).addTo(state.map);
+
+        state.map.on("zoomend", function () {
+          renderMapMarkers();
+        });
+
+        state.map.on("click", function () {
+          if (state.selectedId === null) return;
+          state.selectedId = null;
+          renderSelected();
+          renderToplist();
+          renderMapMarkers();
+        });
+      }
+
+      function renderMapMarkers() {
+        if (!state.map || !window.L) return;
+
+        state.markerLayers.forEach((layer) => {
+          state.map.removeLayer(layer);
+        });
+        state.markerLayers = [];
+
+        islandConfig.forEach((config) => {
+          const data = getCountry(config);
+          const isActive = state.selectedId === config.id;
+          const marker = window.L.marker([config.lat, config.lng], {
+            icon: createPinIcon(isActive),
+            keyboard: false,
+          });
+
+          marker.on("click", function (event) {
+            if (event && event.originalEvent && window.L && window.L.DomEvent) {
+              window.L.DomEvent.stopPropagation(event.originalEvent);
+            }
+
+            state.selectedId = state.selectedId === config.id ? null : config.id;
+            renderSelected();
+            renderToplist();
+            renderMapMarkers();
+          });
+
+          marker.bindTooltip(config.name, {
+            permanent: shouldShowLabel(config, isActive),
+            direction: "right",
+            offset: [10, 0],
+            className: "island-map-tooltip",
+            opacity: 0.96,
+          });
+
+          marker.bindPopup(
+            '<strong>' + config.name + '</strong><br />Listings: ' + formatFull(data.listingsCount) + '<br />Users: ' + formatFull(data.usersCount),
+            {
+              closeButton: false,
+              autoPan: false,
+            }
+          );
+
+          marker.addTo(state.map);
+          if (isActive) {
+            marker.openPopup();
+          }
+          state.markerLayers.push(marker);
+        });
+      }
+
+      function formatUpdated(timestampMs) {
+        if (!timestampMs) return "";
+        const date = new Date(timestampMs);
+        return date.toLocaleString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit"
+        });
+      }
+
+      function getCountry(config) {
+        return state.statsById.get(config.id) || {
+          id: config.id,
+          isoCode: config.isoCode,
+          name: config.name,
+          listingsCount: 0,
+          usersCount: 0
+        };
+      }
+
+      function getAggregateStats() {
+        return islandConfig.reduce((acc, config) => {
+          const data = getCountry(config);
+          acc.listingsCount += Number(data.listingsCount || 0);
+          acc.usersCount += Number(data.usersCount || 0);
+          return acc;
+        }, {
+          listingsCount: 0,
+          usersCount: 0
+        });
+      }
+
+      function renderSelected() {
+        const config = islandConfig.find((item) => item.id === state.selectedId);
+        const data = config ? getCountry(config) : getAggregateStats();
+        const title = config ? config.name : "Caribbean Total";
+        const subtitle = config
+          ? "Live marketplace activity for this island."
+          : "Live marketplace activity across all tracked islands.";
+
+        selectedPanel.innerHTML = ""
+          + '<h3>' + title + '</h3>'
+          + '<p>' + subtitle + '</p>'
+          + '<div class="island-selected-grid">'
+          + '  <div class="island-stat-card"><span>Listings</span><strong>' + formatFull(data.listingsCount) + '</strong></div>'
+          + '  <div class="island-stat-card"><span>Users</span><strong>' + formatFull(data.usersCount) + '</strong></div>'
+          + '</div>';
+      }
+
+      function renderToplist() {
+        const ordered = islandConfig
+          .map((config) => ({ config: config, data: getCountry(config) }))
+          .sort((left, right) => {
+            const rightTotal = totalActivity(right.data);
+            const leftTotal = totalActivity(left.data);
+            if (rightTotal !== leftTotal) {
+              return rightTotal - leftTotal;
+            }
+            if (right.data.listingsCount !== left.data.listingsCount) {
+              return right.data.listingsCount - left.data.listingsCount;
+            }
+            return right.data.usersCount - left.data.usersCount;
+          })
+          .slice(0, 6);
+
+        const islandRows = ordered.map((item) => {
+          return ""
+            + '<div class="island-topitem">'
+            + '  <div>'
+            + '    <button type="button" data-island-pick="' + item.config.id + '">' + item.config.name + '</button>'
+            + '  </div>'
+            + '  <div class="island-topitem-meta">'
+            + formatCompact(item.data.listingsCount) + ' listings · ' + formatCompact(item.data.usersCount) + ' users'
+            + '  </div>'
+            + '</div>';
+        }).join("");
+
+        const visitorsRow = ""
+          + '<div class="island-topitem">'
+          + '  <div>'
+          + '    <span style="font-weight:700; font-size:15px;">Caribbean Visitors</span>'
+          + '  </div>'
+          + '  <div class="island-topitem-meta">'
+          + formatCompact(state.visitorsOutsideCaribbeanUsers) + ' users outside Caribbean'
+          + '  </div>'
+          + '</div>';
+
+        toplist.innerHTML = islandRows + visitorsRow;
+
+        toplist.querySelectorAll("[data-island-pick]").forEach((button) => {
+          button.addEventListener("click", function () {
+            state.selectedId = button.getAttribute("data-island-pick") || state.selectedId;
+            renderSelected();
+            renderToplist();
+            renderMapMarkers();
+
+            const config = islandConfig.find((item) => item.id === state.selectedId);
+            if (config && state.map) {
+              state.map.panTo([config.lat, config.lng], { animate: true, duration: 0.4 });
+            }
+          });
+        });
+      }
+
+      function renderError(message) {
+        status.textContent = message;
+        updated.textContent = "";
+        mapCanvas.innerHTML = '<div class="island-error" style="min-height:100%;">Live island counts are temporarily unavailable.</div>';
+        selectedPanel.innerHTML = '<h3>Island stats unavailable</h3><p>We could not load current listing and user counts right now.</p>';
+        toplist.innerHTML = "";
+      }
+
+      async function loadIslandStats() {
+        if (!window.L) {
+          renderError("Map library is unavailable on this page.");
+          return;
+        }
+
+        ensureMap();
+        renderSelected();
+        renderToplist();
+        renderMapMarkers();
+        status.textContent = "Loading live Caribbean counts…";
+
+        if (!window.firebase || !window.firebase.app) {
+          renderError("Firebase is unavailable on this page.");
+          return;
+        }
+
+        try {
+          const functions = window.firebase.app().functions("us-central1");
+          const callable = functions.httpsCallable("getIslandStats");
+          const result = await callable({
+            countries: islandConfig.map((item) => ({
+              id: item.id,
+              isoCode: item.isoCode,
+              name: item.name
+            }))
+          });
+
+          const payload = result && result.data ? result.data : {};
+          const stats = Array.isArray(payload.stats) ? payload.stats : [];
+          state.statsById.clear();
+          state.visitorsOutsideCaribbeanUsers = Number(payload.visitorsOutsideCaribbeanUsers || 0);
+
+          stats.forEach((item) => {
+            if (!item || !item.id) return;
+            state.statsById.set(String(item.id).toLowerCase(), {
+              id: String(item.id).toLowerCase(),
+              isoCode: item.isoCode || "",
+              name: item.name || "",
+              listingsCount: Number(item.listingsCount || 0),
+              usersCount: Number(item.usersCount || 0)
+            });
+          });
+
+          const busiest = islandConfig
+            .map((config) => ({ config: config, data: getCountry(config) }))
+            .sort((left, right) => (right.data.listingsCount + right.data.usersCount) - (left.data.listingsCount + left.data.usersCount))[0];
+
+          if (busiest && busiest.config) {
+            state.selectedId = busiest.config.id;
+          }
+
+          renderSelected();
+          renderToplist();
+          renderMapMarkers();
+
+          const selectedConfig = islandConfig.find((item) => item.id === state.selectedId);
+          if (selectedConfig && state.map) {
+            state.map.panTo([selectedConfig.lat, selectedConfig.lng], { animate: true, duration: 0.4 });
+          }
+
+          status.textContent = "Live listings and users per island";
+          updated.textContent = payload.updatedAt ? 'Updated ' + formatUpdated(payload.updatedAt) : "";
+        } catch (error) {
+          console.error("Failed to load island stats", error);
+          renderError("Live island counts are temporarily unavailable.");
+        }
+      }
+
+      loadIslandStats();
     })();
   </script>
 </body>

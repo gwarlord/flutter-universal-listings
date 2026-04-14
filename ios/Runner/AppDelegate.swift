@@ -70,6 +70,7 @@ class NativeAdFactoryExample: NSObject, FLTNativeAdFactory {
     #if canImport(GoogleMobileAds) && canImport(google_mobile_ads)
     private let nativeAdFactory = NativeAdFactoryExample()
     #endif
+    private var envChannel: FlutterMethodChannel?
 
     override func application(
         _ application: UIApplication,
@@ -106,6 +107,27 @@ class NativeAdFactoryExample: NSObject, FLTNativeAdFactory {
 
         GeneratedPluginRegistrant.register(with: self)
 
+        if let controller = window?.rootViewController as? FlutterViewController {
+            let channel = FlutterMethodChannel(name: "caribtap/app_env", binaryMessenger: controller.binaryMessenger)
+            channel.setMethodCallHandler { [weak self] call, result in
+                guard let self = self else {
+                    result("")
+                    return
+                }
+                switch call.method {
+                case "getGoogleMapsApiKey":
+                    result(self.readGoogleMapsApiKey())
+                case "getGooglePlacesApiKey":
+                    result(self.readGooglePlacesApiKey())
+                case "getGeminiApiKey":
+                    result(self.readGeminiApiKey())
+                default:
+                    result(FlutterMethodNotImplemented)
+                }
+            }
+            envChannel = channel
+        }
+
         #if canImport(GoogleMobileAds) && canImport(google_mobile_ads)
         FLTGoogleMobileAdsPlugin.registerNativeAdFactory(
             self,
@@ -135,5 +157,29 @@ class NativeAdFactoryExample: NSObject, FLTNativeAdFactory {
 
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         NSLog("DEBUG_IOS: Firebase registration token refreshed: \(fcmToken ?? "nil")")
+    }
+
+    private func readGoogleMapsApiKey() -> String {
+        guard let key = Bundle.main.object(forInfoDictionaryKey: "GMSApiKey") as? String else {
+            return ""
+        }
+        return key.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func readGooglePlacesApiKey() -> String {
+        if let placesKey = Bundle.main.object(forInfoDictionaryKey: "GMSPlacesApiKey") as? String {
+            let trimmedPlaces = placesKey.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmedPlaces.isEmpty {
+                return trimmedPlaces
+            }
+        }
+        return readGoogleMapsApiKey()
+    }
+
+    private func readGeminiApiKey() -> String {
+        guard let key = Bundle.main.object(forInfoDictionaryKey: "GeminiApiKey") as? String else {
+            return ""
+        }
+        return key.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

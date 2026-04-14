@@ -1,7 +1,7 @@
 name: caribtap
 description: CaribTap - Universal Listings Marketplace
 publish_to: 'none'
-version: 1.1.0+4
+version: 1.1.4+12
 environment:
   sdk: '>=3.0.6 <4.0.0'
 dependencies:
@@ -64,6 +64,7 @@ dependencies:
   flutter_rating_bar: ^4.0.1
   flutter_svg: ^2.0.0
   google_maps_flutter: ^2.13.1
+  google_maps_flutter_android: ^2.0.0
   video_thumbnail: ^0.5.6
   flutter_google_places_hoc081098: ^2.0.0
   flutter_staggered_grid_view: ^0.7.0
@@ -93,11 +94,14 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
 flutter_native_splash:
-  image: assets/images/instaflutter.png
-  color: "#e1f5fe"
-  color_dark: "#042a49"
-  image_dark: assets/images/instaflutter.png
+  image: assets/images/caribtap_c_logo.png
+  color: "#121212"
+  color_dark: "#121212"
+  image_dark: assets/images/caribtap_c_logo.png
   android_12:
+    image: assets/app icon/caribtap_icon.png
+    color: "#121212"
+    color_dark: "#121212"
   fullscreen: true
 
 flutter_icons:

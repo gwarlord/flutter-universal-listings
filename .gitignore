@@ -31,6 +31,8 @@ Thumbs.db
 .env
 .env.local
 .env.production
+env/dart_defines*.json
+!env/dart_defines.example.json
 **/google-services.json
 **/GoogleService-Info.plist
 # Archives
