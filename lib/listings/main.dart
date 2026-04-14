@@ -15,6 +15,7 @@ import 'package:caribtap/core/ui/chat/player_widget.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:caribtap/core/model/channel_data_model.dart';
 import 'package:caribtap/core/ui/loading/loading_cubit.dart';
 import 'package:caribtap/core/ui/theme/app_theme.dart';
@@ -38,6 +39,7 @@ import 'package:caribtap/listings/listings_module/booking/booking_management_scr
 import 'package:caribtap/listings/location/location_scope_cubit.dart';
 import 'package:caribtap/listings/location/location_scope_service.dart';
 import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/currency/exchange_rate_service.dart';
 
 runListings() {
   appName = 'Flutter Universal Listings';
@@ -104,6 +106,19 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   StreamSubscription<String>? tokenStream;
   bool _initialized = false;
   bool _error = false;
+  static bool _nativeSplashRemoved = false;
+
+  void _removeNativeSplashSafely() {
+    if (_nativeSplashRemoved) {
+      return;
+    }
+    _nativeSplashRemoved = true;
+    try {
+      FlutterNativeSplash.remove();
+    } catch (_) {
+      // Ignore if already removed or unavailable in this runtime path.
+    }
+  }
 
   initializeFlutterFire() async {
     try {
@@ -144,9 +159,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _removeNativeSplashSafely();
+    });
     SystemChrome.setSystemUIOverlayStyle(
         SystemUiOverlayStyle(statusBarColor: Color(colorPrimaryDark)));
     initializeFlutterFire();
+    unawaited(ExchangeRateService.instance.refreshRatesIfStale());
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -344,7 +363,7 @@ void _handleNotification(Map<String, dynamic> data, GlobalKey<NavigatorState> na
         // Navigate to booking management screen
         navigatorKey.currentState?.push(
           MaterialPageRoute(
-            builder: (_) => BookingManagementScreen(
+            builder: (_) => BookingManagementWrapperWidget(
               currentUser: user,
             ),
           ),

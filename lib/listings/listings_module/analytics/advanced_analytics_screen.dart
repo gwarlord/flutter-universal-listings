@@ -7,6 +7,7 @@ import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/listing_review_model.dart';
+import 'package:caribtap/listings/utils/subscription_helper.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:caribtap/listings/listings_module/analytics/analytics_screen.dart';
 import 'package:caribtap/listings/listings_module/booking/booking_management_screen.dart';
@@ -419,6 +420,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
         .where((l) =>
             l.searchKeywords.isNotEmpty && l.searchKeywords.length < 3)
         .toList();
+    final missingBusinessTypeFeatureListings = listings
+      .where((l) => !_hasBusinessTypeFeatures(l))
+      .toList();
     const targetBookingsForTopLister = 10;
     final bookingsNeeded = (targetBookingsForTopLister - bookingsLast)
         .clamp(0, targetBookingsForTopLister);
@@ -442,13 +446,31 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
         'lowQualityListings': lowQualityListings,
         'missingKeywordListings': missingKeywordListings,
         'weakKeywordListings': weakKeywordListings,
+        'missingBusinessTypeFeatureListings': missingBusinessTypeFeatureListings,
         'bookingsForBadge': bookingsNeeded,
       };
     });
   }
 
+  bool _hasBusinessTypeFeatures(ListingModel listing) {
+    if (listing.filters.isEmpty) return false;
+
+    for (final value in listing.filters.values) {
+      if (value == null) continue;
+      final selections = value
+          .toString()
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+      if (selections.isNotEmpty) return true;
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hasPremiumAccess = isPremiumUser(widget.currentUser);
     final bool isDark = isDarkMode(context);
     final Color scaffoldBackgroundColor =
         isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5);
@@ -463,8 +485,18 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
         backgroundColor: scaffoldBackgroundColor,
         iconTheme: IconThemeData(color: primaryTextColor),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator.adaptive())
+      body: !hasPremiumAccess
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  '🔒 Premium subscription required'.tr(),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+          : _isLoading
+              ? const Center(child: CircularProgressIndicator.adaptive())
           : RefreshIndicator(
               onRefresh: _fetchAnalyticsData,
               child: SingleChildScrollView(
@@ -791,6 +823,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
         _advancedMetrics['missingKeywordListings'] as List<ListingModel>? ?? [];
     final weakKeywordListings =
         _advancedMetrics['weakKeywordListings'] as List<ListingModel>? ?? [];
+    final missingBusinessTypeFeatureListings = _advancedMetrics[
+        'missingBusinessTypeFeatureListings'] as List<ListingModel>? ??
+      [];
 
     return Column(
       children: [
@@ -809,6 +844,14 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
             'Weak Keyword Coverage'.tr(),
             'Listings with fewer than 3 keywords have reduced search visibility. Improve ${weakKeywordListings.length} listing(s).'
                 .tr(args: [weakKeywordListings.length.toString()]),
+          ),
+        if (missingBusinessTypeFeatureListings.isNotEmpty)
+          _buildInsightCard(
+            Icons.tune_rounded,
+            Colors.cyan,
+            'Add Business Type & Features'.tr(),
+            'Complete Business Type & Features for ${missingBusinessTypeFeatureListings.length} listing(s) to improve targeting and discovery.'
+                .tr(args: [missingBusinessTypeFeatureListings.length.toString()]),
           ),
         if (lowQualityListings.isNotEmpty)
           _buildInsightCard(

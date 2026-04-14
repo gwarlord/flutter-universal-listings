@@ -47,10 +47,7 @@ Future<bool> checkAndHandleBookingAccess({
       return verified == true;
 
     case BookingAccessStatus.blockedByLister:
-      showSnackBar(
-        context,
-        'You cannot make requests to this lister at this time.'.tr(),
-      );
+      _showBlockedByListerDialog(context);
       return false;
   }
 }
@@ -73,6 +70,34 @@ void _showLoginRequiredDialog(BuildContext context) {
       ),
       content: Text(
         'Please sign in to send a booking or rental request.'.tr(),
+        style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: Text('OK'.tr()),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showBlockedByListerDialog(BuildContext context) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(
+        'Request unavailable'.tr(),
+        style: TextStyle(
+          color: isDark ? Colors.white : Colors.black87,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: Text(
+        'You cannot make requests to this lister at this time.'.tr(),
         style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
       ),
       actions: [

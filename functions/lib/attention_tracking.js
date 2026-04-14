@@ -322,10 +322,29 @@ exports.onBookingCreatedUpdateAttention = functions.firestore
     const booking = snap.data();
     if (!booking)
         return null;
+    const listingId = context.params.listingId;
     const bookingId = context.params.bookingId;
-    const listerId = booking.listersUserId || booking.listerId || booking.authorID;
+    let listerId = booking.listersUserId || booking.listerId || booking.authorID;
+    // Fallback: resolve owner from listing doc when booking payload doesn't include lister id.
+    if (!listerId && listingId) {
+        try {
+            const listingOwnerDoc = await db.collection("listings").doc(listingId).get();
+            if (listingOwnerDoc.exists) {
+                const listingData = listingOwnerDoc.data();
+                listerId = listingData?.authorID || listingData?.authorId || listingData?.listerId;
+            }
+        }
+        catch (error) {
+            functions.logger.warn("⚠️ Unable to resolve listing owner for booking attention", {
+                bookingId,
+                listingId,
+                error,
+            });
+        }
+    }
     functions.logger.info("🆕 Updating booking requests attention", {
         bookingId,
+        listingId,
         listerId,
     });
     try {
@@ -341,9 +360,10 @@ exports.onBookingCreatedUpdateAttention = functions.firestore
                 },
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             }, { merge: true });
+            const resolvedListingId = booking.listingId || listingId;
             const listingDoc = await db
                 .collection("listings")
-                .doc(booking.listingId)
+                .doc(resolvedListingId)
                 .get();
             if (listingDoc.exists) {
                 const listingData = listingDoc.data();
@@ -366,6 +386,15 @@ exports.onBookingCreatedUpdateAttention = functions.firestore
                     }
                 }
             }
+        }
+        else {
+            functions.logger.warn("⚠️ Skipping booking attention increment because listerId is missing", {
+                bookingId,
+                listingId,
+                bookingListersUserId: booking.listersUserId,
+                bookingListerId: booking.listerId,
+                bookingAuthorId: booking.authorID,
+            });
         }
         functions.logger.info("✅ Booking requests attention updated");
         return null;

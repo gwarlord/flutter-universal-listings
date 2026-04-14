@@ -45,6 +45,16 @@ class BookingFirebase extends BookingRepository {
     try {
       final bookingId = _firestore.collection('listings').doc().id;
       booking.id = bookingId;
+
+      if (!booking.listingAcceptsProofOfPayment) {
+        final listingDoc = await _firestore
+            .collection('listings')
+            .doc(booking.listingId)
+            .get();
+        final listingData = listingDoc.data();
+        booking.listingAcceptsProofOfPayment =
+            listingData?['payments']?['acceptProofOfPayment'] == true;
+      }
       
       final bookingData = booking.toJson();
 

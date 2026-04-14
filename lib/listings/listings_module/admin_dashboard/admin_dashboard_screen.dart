@@ -1,23 +1,24 @@
 import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/model/event_model.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/reported_listing_model.dart';
 import 'package:caribtap/listings/model/suspension_info.dart';
 import 'package:caribtap/core/utils/helper.dart';
-import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:caribtap/listings/listings_module/admin_dashboard/admin_bloc.dart';
 import 'package:caribtap/listings/listings_module/admin_dashboard/suspension_reason_dialog.dart';
 import 'package:caribtap/listings/listings_module/admin_dashboard/review_removal_requests_screen.dart';
+import 'package:caribtap/listings/listings_module/events/event_details_screen.dart';
 import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
 import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
 import 'package:caribtap/listings/services/review_removal_request_service.dart';
 import 'package:caribtap/listings/services/featured_service.dart';
+import 'package:caribtap/listings/utils/suspension_reason_details.dart';
 import 'package:caribtap/listings/utils/category_localization.dart';
 import 'package:caribtap/core/ui/loading/loading_cubit.dart';
 import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
@@ -73,6 +74,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   List<ListingModel> suspendedListings = [];
   List<ReportedListing> reportedListings = [];
   List<ListingModel> allListings = [];
+  List<EventModel> allEvents = [];
   List<ListingModel> unverifiedListings = [];
   late ListingsUser currentUser;
   bool isLoading = true;
@@ -126,6 +128,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     context.read<AdminBloc>().add(GetSuspendedUsersEvent());
     context.read<AdminBloc>().add(GetAllListingsEvent());
     context.read<AdminBloc>().add(GetSuspendedListingsEvent());
+    _loadAllEvents();
+  }
+
+  Future<void> _loadAllEvents() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('events').get();
+      final events = snapshot.docs
+          .map((doc) => EventModel.fromJson(doc.data()..['id'] = doc.id))
+          .toList()
+        ..sort((a, b) => b.createdAtSeconds.compareTo(a.createdAtSeconds));
+
+      if (!mounted) return;
+      setState(() {
+        allEvents = events;
+      });
+    } catch (_) {}
   }
 
   Future<void> _loadPendingRequestsCount() async {
@@ -236,7 +254,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           indicatorColor: Platform.isIOS ? Color(colorPrimary) : Colors.white,
           indicatorWeight: 3,
           labelColor: isDark ? Colors.white : Colors.black87,
-          unselectedLabelColor: isDark ? Colors.white70 : Colors.black54,
+          unselectedLabelColor: isDark ? Colors.white70 : Colors.black,
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
           tabs: [
             Tab(text: 'Users'.tr()),
             Tab(text: 'Listings'.tr()),
@@ -733,6 +752,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             onFilterChanged: (v) => setState(() => showOnlySuspendedUsers = v),
             filterLabel: 'Suspended'.tr(),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: _buildTrialProgramPanel(),
+          ),
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator.adaptive())
@@ -760,15 +783,212 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
+  Future<void> _updateTrialConfig({
+    bool? enabled,
+    bool? requiresPhoneVerified,
+  }) async {
+    try {
+      final update = <String, dynamic>{
+        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedBy': currentUser.userID,
+      };
+      if (enabled != null) {
+        update['professionalTrialEnabled'] = enabled;
+      }
+      if (requiresPhoneVerified != null) {
+        update['professionalTrialRequiresPhoneVerified'] = requiresPhoneVerified;
+      }
+
+      await FirebaseFirestore.instance
+          .collection('settings')
+          .doc('subscription_config')
+          .set(update, SetOptions(merge: true));
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Trial program settings updated.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update trial settings: $e')),
+      );
+    }
+  }
+
+  Widget _buildTrialProgramPanel() {
+    final isDark = isDarkMode(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[900] : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Trial Program',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Control trial rollout and review recent claims.',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 10),
+          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection('settings')
+                .doc('subscription_config')
+                .snapshots(),
+            builder: (context, snapshot) {
+              final data = snapshot.data?.data() ?? const <String, dynamic>{};
+              final enabled = data['professionalTrialEnabled'] != false;
+              final requiresPhone =
+                  data['professionalTrialRequiresPhoneVerified'] == true;
+
+              return Column(
+                children: [
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Enable 30-day Professional trial'),
+                    subtitle: const Text('Global server-side rollout switch'),
+                    value: enabled,
+                    onChanged: (value) => _updateTrialConfig(enabled: value),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Require phone verification'),
+                    subtitle: const Text('Applies when users claim the trial'),
+                    value: requiresPhone,
+                    onChanged: enabled
+                        ? (value) => _updateTrialConfig(
+                            requiresPhoneVerified: value,
+                          )
+                        : null,
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 1),
+          const SizedBox(height: 8),
+          Text(
+            'Recent Trial Claims',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 180,
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('subscription_trial_claims')
+                  .orderBy('claimedAt', descending: true)
+                  .limit(12)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator.adaptive(),
+                  );
+                }
+
+                final docs = snapshot.data?.docs ?? const [];
+                if (docs.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'No trial claims yet.',
+                      style: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  itemCount: docs.length,
+                  separatorBuilder: (_, __) => Divider(
+                    height: 1,
+                    color: isDark ? Colors.grey[800] : Colors.grey[200],
+                  ),
+                  itemBuilder: (context, index) {
+                    final data = docs[index].data();
+                    final email = (data['email'] ?? '').toString();
+                    final tier = (data['tier'] ?? 'professional').toString();
+                    final phoneVerified = data['phoneVerified'] == true;
+                    final claimedAt = data['claimedAt'] as Timestamp?;
+                    final timeLabel = claimedAt != null
+                        ? DateFormat.yMMMd().add_jm().format(claimedAt.toDate())
+                        : '-';
+
+                    return ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        email.isNotEmpty ? email : 'Unknown user',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text('$tier • $timeLabel'),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: phoneVerified
+                              ? Colors.green.withOpacity(0.12)
+                              : Colors.orange.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          phoneVerified ? 'Phone ✓' : 'Phone -',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: phoneVerified ? Colors.green : Colors.orange,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAllListingsTab() {
     final listings = _getFilteredListings();
+    final events = _getFilteredEventsForAdmin();
     final unsuspensionRequestCount = suspendedListings
         .where((l) => l.suspensionInfo?.unsuspensionRequested == true)
         .length;
+    final totalManagedCount = allListings.length + allEvents.length;
     final subtitleText = unsuspensionRequestCount > 0
-        ? '${allListings.length} total listings • $unsuspensionRequestCount unsuspension ${unsuspensionRequestCount == 1 ? 'request' : 'requests'}'
+      ? '$totalManagedCount total items • ${allListings.length} listings • ${allEvents.length} events • $unsuspensionRequestCount unsuspension ${unsuspensionRequestCount == 1 ? 'request' : 'requests'}'
             .tr()
-        : '${allListings.length} total listings available'.tr();
+      : '$totalManagedCount total items • ${allListings.length} listings • ${allEvents.length} events'.tr();
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -789,26 +1009,53 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator.adaptive())
-                : listings.isEmpty
+                : listings.isEmpty && events.isEmpty
                     ? showEmptyState('No Listings Found'.tr(),
                         'Try a different search query.'.tr())
-                    : ListView.builder(
+                    : ListView(
                         padding: const EdgeInsets.only(bottom: 24),
-                        itemCount: listings.length,
-                        itemBuilder: (context, index) {
-                          final listing = listings[index];
-                          return ModernListingCard(
-                            listing: listing,
-                            onSuspend: () =>
-                                _showSuspendListingConfirmation(listing),
-                            onUnsuspend: () =>
-                                _showUnsuspendListingConfirmation(listing),
-                            onFeature: () => _featureListing(listing),
-                            onUnfeature: () => _unfeatureListing(listing),
-                            onToggleFreshnessExempt: (value) =>
-                                _toggleListingFreshnessExempt(listing, value),
-                          );
-                        },
+                        children: [
+                          if (listings.isNotEmpty) ...[
+                            _AdminListSectionHeader(
+                              title: 'Listings'.tr(),
+                              count: listings.length,
+                            ),
+                            ...listings.map(
+                              (listing) => ModernListingCard(
+                                listing: listing,
+                                onSuspend: () =>
+                                    _showSuspendListingConfirmation(listing),
+                                onUnsuspend: () =>
+                                    _showUnsuspendListingConfirmation(listing),
+                                onFeature: () => _featureListing(listing),
+                                onUnfeature: () => _unfeatureListing(listing),
+                                onToggleFreshnessExempt: (value) =>
+                                    _toggleListingFreshnessExempt(listing, value),
+                                onToggleDemo: (value) =>
+                                    _toggleListingDemo(listing, value),
+                                onToggleMainVisibility: (value) =>
+                                    _toggleListingMainVisibility(listing, value),
+                              ),
+                            ),
+                          ],
+                          if (events.isNotEmpty) ...[
+                            _AdminListSectionHeader(
+                              title: 'Events'.tr(),
+                              count: events.length,
+                            ),
+                            ...events.map(
+                              (event) => ModernEventCard(
+                                event: event,
+                                onOpen: () => _viewEvent(event),
+                                onDelete: () => _deleteManagedEvent(event),
+                                onToggleDemo: (value) =>
+                                    _toggleEventDemo(event, value),
+                                onToggleMainVisibility: (value) =>
+                                    _toggleEventMainVisibility(event, value),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
           ),
         ],
@@ -823,7 +1070,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       },
       child: Column(
         children: [
-          // A simple header for now
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
             child: Column(
@@ -858,24 +1104,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         'No Reports Found'.tr(), 'All caught up!'.tr())
                     : Builder(
                         builder: (context) {
-                          // Group reports by listingId to avoid duplicates
-                          final uniqueListings = <String, ReportedListing>{};
-                          for (var report in reportedListings) {
-                            if (!uniqueListings.containsKey(report.listingId)) {
-                              uniqueListings[report.listingId] = report;
-                            }
+                          final groupedReports = <String, List<ReportedListing>>{};
+                          for (final report in reportedListings) {
+                            final key = _reportGroupKey(report);
+                            groupedReports.putIfAbsent(key, () => []).add(report);
                           }
-                          final uniqueReports = uniqueListings.values.toList();
+
+                          final uniqueReports = groupedReports.values
+                              .map((group) => group.first)
+                              .toList();
 
                           return ListView.builder(
                             padding: const EdgeInsets.only(bottom: 24),
                             itemCount: uniqueReports.length,
                             itemBuilder: (context, index) {
                               final report = uniqueReports[index];
-                              // Count reports for this listing
-                              final reportCount = reportedListings
-                                  .where((r) => r.listingId == report.listingId)
-                                  .length;
+                              final reportCount = groupedReports[_reportGroupKey(report)]?.length ?? 1;
                               return _buildReportCard(report, reportCount);
                             },
                           );
@@ -885,6 +1129,50 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         ],
       ),
     );
+  }
+
+  String _reportGroupKey(ReportedListing report) {
+    if (report.isOrderFulfillmentIssue &&
+        report.orderId != null &&
+        report.orderId!.isNotEmpty) {
+      return '${report.listingId}_${report.orderId}';
+    }
+    return report.listingId;
+  }
+
+  List<ReportedListing> _reportsInSameGroup(ReportedListing report) {
+    final key = _reportGroupKey(report);
+    return reportedListings.where((r) => _reportGroupKey(r) == key).toList();
+  }
+
+  String _formatOrderLabel(String orderId) {
+    if (orderId.length <= 8) return orderId.toUpperCase();
+    return orderId.substring(0, 8).toUpperCase();
+  }
+
+  String _buildSuspensionReasonDetails(ReportedListing report) {
+    final details = <String>[];
+
+    if (report.isOrderFulfillmentIssue) {
+      details.add('Order fulfillment fraud report');
+      if (report.orderId != null && report.orderId!.isNotEmpty) {
+        details.add('Order ID: ${report.orderId}');
+      }
+      if (report.orderStatus != null && report.orderStatus!.isNotEmpty) {
+        details.add('Order status: ${report.orderStatus}');
+      }
+    } else {
+      details.add('Fraudulent activity reported by users');
+    }
+
+    if (report.reporterName.trim().isNotEmpty) {
+      details.add('Reported by: ${report.reporterName.trim()}');
+    }
+    if (report.reason.trim().isNotEmpty) {
+      details.add('Reported issue: ${report.reason.trim()}');
+    }
+
+    return details.join('\n');
   }
 
   Widget _buildReportCard(ReportedListing report, int reportCount) {
@@ -971,6 +1259,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
+                      if (report.isOrderFulfillmentIssue &&
+                          report.orderId != null &&
+                          report.orderId!.isNotEmpty)
+                        Text(
+                          'Order #${_formatOrderLabel(report.orderId!)} • ${report.orderStatus ?? 'fulfilled'}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.orange[300] : Colors.orange[800],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      if (report.isOrderFulfillmentIssue &&
+                          report.orderId != null &&
+                          report.orderId!.isNotEmpty)
+                        const SizedBox(height: 2),
                       Text(
                         reportCount > 1
                             ? '$reportCount reports • Latest by ${report.reporterName}'
@@ -1019,8 +1322,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 OutlinedButton.icon(
                   onPressed: () => _dismissReport(report),
@@ -1035,11 +1340,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
-                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: () => _suspendUserFromReport(report),
+                  icon: Icon(Icons.person_off, size: 18),
+                  label: Text('Suspend User'.tr()),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepOrange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
                 ElevatedButton.icon(
                   onPressed: () => _suspendListingFromReport(report),
                   icon: Icon(Icons.block, size: 18),
-                  label: Text('Suspend'.tr()),
+                  label: Text('Suspend Listing'.tr()),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
@@ -1056,6 +1371,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   void _viewReportedListing(ReportedListing report) async {
+    if (report.listingId.isEmpty) {
+      showSnackBar(context, 'Listing reference is missing for this report.'.tr());
+      return;
+    }
+
     context
         .read<LoadingCubit>()
         .showLoading(context, 'Loading...'.tr(), false, Color(colorPrimary));
@@ -1070,7 +1390,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           ListingDetailsWrappingWidget(
               listing: listing, currentUser: currentUser),
         );
-        // Refresh reports after returning in case listing was suspended
         if (mounted) {
           context.read<AdminBloc>().add(GetReportedListingsEvent());
         }
@@ -1088,11 +1407,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   void _dismissReport(ReportedListing report) async {
-    // Get all reports for this listing
-    final allReportsForListing =
-        reportedListings.where((r) => r.listingId == report.listingId).toList();
-
-    final count = allReportsForListing.length;
+    final reportsToDismiss = _reportsInSameGroup(report);
+    final count = reportsToDismiss.length;
     final message =
         count > 1 ? 'Dismissing $count reports...'.tr() : 'Dismissing...'.tr();
 
@@ -1100,8 +1416,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         .read<LoadingCubit>()
         .showLoading(context, message, false, Color(colorPrimary));
 
-    // Dismiss all reports for this listing
-    for (final r in allReportsForListing) {
+    for (final r in reportsToDismiss) {
       await listingApiManager.dismissReport(r.id);
     }
 
@@ -1109,23 +1424,109 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     context.read<AdminBloc>().add(GetReportedListingsEvent());
   }
 
-  void _suspendListingFromReport(ReportedListing report) async {
+  Future<void> _suspendListingFromReport(ReportedListing report) async {
     final listing =
         await listingApiManager.getListing(listingID: report.listingId);
-    if (listing != null) {
-      _showSuspendListingConfirmation(listing);
-
-      // Dismiss all reports for this listing after suspension
-      final allReportsForListing = reportedListings
-          .where((r) => r.listingId == report.listingId)
-          .toList();
-
-      for (final r in allReportsForListing) {
-        await listingApiManager.dismissReport(r.id);
-      }
-
-      context.read<AdminBloc>().add(GetReportedListingsEvent());
+    if (listing == null) {
+      showSnackBar(context, 'Listing not found or has been deleted.'.tr());
+      return;
     }
+
+    final result = await _showModernActionDialog(
+      context,
+      title: 'Suspend Listing?'.tr(),
+      content:
+          'Suspend "${listing.title}" for reported fraud and hide it from the public directory?'
+              .tr(),
+      isDestructive: true,
+      actionLabel: 'Suspend Listing'.tr(),
+    );
+
+    if (result != true || !mounted) {
+      return;
+    }
+
+    final suspensionInfo = SuspensionInfo(
+      isSuspended: true,
+      reason: SuspensionReason.fraudulent,
+      reasonText: _buildSuspensionReasonDetails(report),
+      suspendedAt: DateTime.now(),
+      suspendedBy: currentUser.userID,
+    );
+
+    context.read<AdminBloc>().add(
+          SuspendListingEvent(
+            listing: listing,
+            suspensionInfo: suspensionInfo,
+          ),
+        );
+
+    final reportsToDismiss = _reportsInSameGroup(report);
+    for (final r in reportsToDismiss) {
+      await listingApiManager.resolveReport(r.id);
+    }
+
+    if (!mounted) return;
+    context.read<AdminBloc>().add(GetReportedListingsEvent());
+  }
+
+  Future<void> _suspendUserFromReport(ReportedListing report) async {
+    if (report.listingAuthorId.isEmpty) {
+      showSnackBar(context, 'No reported user found for this report.'.tr());
+      return;
+    }
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection(usersCollection)
+        .doc(report.listingAuthorId)
+        .get();
+
+    if (!userDoc.exists) {
+      showSnackBar(context, 'Reported user not found.'.tr());
+      return;
+    }
+
+    final user = ListingsUser.fromJson(userDoc.data()!);
+    if (user.suspended) {
+      showSnackBar(context, 'User is already suspended.'.tr());
+      return;
+    }
+
+    final result = await _showModernActionDialog(
+      context,
+      title: 'Suspend User?'.tr(),
+      content:
+          'Suspend ${user.fullName()} for suspected fraud and prevent further activity?'.tr(),
+      isDestructive: true,
+      actionLabel: 'Suspend User'.tr(),
+    );
+
+    if (result != true || !mounted) {
+      return;
+    }
+
+    final suspensionInfo = SuspensionInfo(
+      isSuspended: true,
+      reason: SuspensionReason.fraudulent,
+      reasonText: _buildSuspensionReasonDetails(report),
+      suspendedAt: DateTime.now(),
+      suspendedBy: currentUser.userID,
+    );
+
+    context.read<AdminBloc>().add(
+          SuspendUserEvent(
+            user: user,
+            suspensionInfo: suspensionInfo,
+          ),
+        );
+
+    final reportsToDismiss = _reportsInSameGroup(report);
+    for (final r in reportsToDismiss) {
+      await listingApiManager.resolveReport(r.id);
+    }
+
+    if (!mounted) return;
+    context.read<AdminBloc>().add(GetReportedListingsEvent());
   }
 
   List<ListingModel> _getFilteredListings() {
@@ -1140,6 +1541,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 .toLowerCase()
                 .contains(listingSearchQuery.toLowerCase()))
         .toList();
+  }
+
+  List<EventModel> _getFilteredEventsForAdmin() {
+    if (showOnlySuspendedListings) return const [];
+    if (listingSearchQuery.isEmpty) return allEvents;
+
+    final query = listingSearchQuery.toLowerCase();
+    return allEvents.where((event) {
+      return event.title.toLowerCase().contains(query) ||
+          event.venueName.toLowerCase().contains(query) ||
+          event.committee.toLowerCase().contains(query) ||
+          event.countryCode.toLowerCase().contains(query);
+    }).toList();
   }
 
   Future<void> _loadUnverifiedListings() async {
@@ -1619,6 +2033,76 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     }
   }
 
+  Future<void> _toggleListingDemo(ListingModel listing, bool value) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection(listingsCollection)
+          .doc(listing.id)
+          .update({'isDemo': value});
+      setState(() {
+        final idx = allListings.indexWhere((l) => l.id == listing.id);
+        if (idx >= 0) allListings[idx].isDemo = value;
+        final suspendedIdx = suspendedListings.indexWhere((l) => l.id == listing.id);
+        if (suspendedIdx >= 0) suspendedListings[suspendedIdx].isDemo = value;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              value
+                  ? 'Listing marked as demo. Non-admin users can view configuration but cannot save changes.'.tr()
+                  : 'Listing removed from demo.'.tr(),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleListingMainVisibility(
+    ListingModel listing,
+    bool visibleOnMainFeed,
+  ) async {
+    try {
+      final hidden = !visibleOnMainFeed;
+      await FirebaseFirestore.instance
+          .collection(listingsCollection)
+          .doc(listing.id)
+          .update({'hidden': hidden});
+
+      setState(() {
+        final idx = allListings.indexWhere((l) => l.id == listing.id);
+        if (idx >= 0) allListings[idx].hidden = hidden;
+        final suspendedIdx = suspendedListings.indexWhere((l) => l.id == listing.id);
+        if (suspendedIdx >= 0) suspendedListings[suspendedIdx].hidden = hidden;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              visibleOnMainFeed
+                  ? 'Listing is now visible on the main feed.'.tr()
+                  : 'Listing removed from main feed visibility (still available in Demo Listings if marked as demo).'.tr(),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _viewListing(String listingId) async {
     try {
       final doc = await FirebaseFirestore.instance
@@ -1645,6 +2129,121 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             listing: listing,
             currentUser: currentUser,
           ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _viewEvent(EventModel event) async {
+    await push(
+      context,
+      EventDetailsScreen(event: event),
+    );
+    await _loadAllEvents();
+  }
+
+  Future<void> _toggleEventDemo(EventModel event, bool value) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(event.id)
+          .set({'isDemo': value}, SetOptions(merge: true));
+      setState(() {
+        final idx = allEvents.indexWhere((entry) => entry.id == event.id);
+        if (idx >= 0) allEvents[idx].isDemo = value;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              value
+                  ? 'Event marked as demo. Non-admin users can inspect configuration but cannot save changes.'.tr()
+                  : 'Event removed from demo mode.'.tr(),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleEventMainVisibility(
+    EventModel event,
+    bool visibleOnMainFeed,
+  ) async {
+    try {
+      final status = visibleOnMainFeed ? 'active' : 'hidden';
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(event.id)
+          .set({'status': status}, SetOptions(merge: true));
+      setState(() {
+        final idx = allEvents.indexWhere((entry) => entry.id == event.id);
+        if (idx >= 0) allEvents[idx].status = status;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              visibleOnMainFeed
+                  ? 'Event is now visible on the main feed.'.tr()
+                  : 'Event removed from main feed visibility.'.tr(),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteManagedEvent(EventModel event) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Delete Event?'.tr()),
+        content: Text('Are you sure you want to remove this event?'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('No'.tr()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(
+              'Yes'.tr(),
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('events').doc(event.id).delete();
+      setState(() {
+        allEvents.removeWhere((entry) => entry.id == event.id);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Event deleted.'.tr())),
         );
       }
     } catch (e) {
@@ -2032,12 +2631,17 @@ class ModernUserCard extends StatelessWidget {
                         if (user.suspensionInfo!.reasonText != null &&
                             user.suspensionInfo!.reasonText!.isNotEmpty) ...[
                           const SizedBox(height: 4),
-                          Text(
-                            user.suspensionInfo!.reasonText!,
-                            style: TextStyle(
-                                fontSize: 11, color: Colors.red.shade700),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                          FutureBuilder<String?>(
+                            future: SuspensionReasonDetailsResolver.resolve(
+                              reasonText: user.suspensionInfo!.reasonText!,
+                            ),
+                            builder: (context, snapshot) => Text(
+                              snapshot.data ?? user.suspensionInfo!.reasonText!,
+                              style: TextStyle(
+                                  fontSize: 11, color: Colors.red.shade700),
+                              maxLines: 5,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ],
@@ -2078,6 +2682,8 @@ class ModernListingCard extends StatelessWidget {
   final VoidCallback onFeature;
   final VoidCallback onUnfeature;
   final ValueChanged<bool> onToggleFreshnessExempt;
+  final ValueChanged<bool> onToggleDemo;
+  final ValueChanged<bool> onToggleMainVisibility;
 
   const ModernListingCard({
     super.key,
@@ -2087,6 +2693,8 @@ class ModernListingCard extends StatelessWidget {
     required this.onFeature,
     required this.onUnfeature,
     required this.onToggleFreshnessExempt,
+    required this.onToggleDemo,
+    required this.onToggleMainVisibility,
   });
 
   @override
@@ -2187,6 +2795,52 @@ class ModernListingCard extends StatelessWidget {
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Row(
+              children: [
+                Icon(Icons.storefront_outlined, size: 14, color: Colors.blue.shade400),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Demo listing'.tr(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ),
+                Switch(
+                  value: listing.isDemo,
+                  activeColor: Colors.blue,
+                  onChanged: onToggleDemo,
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Row(
+              children: [
+                Icon(Icons.visibility_outlined, size: 14, color: Colors.green.shade500),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Visible on main feed'.tr(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ),
+                Switch(
+                  value: !listing.hidden,
+                  activeColor: Colors.green,
+                  onChanged: onToggleMainVisibility,
+                ),
+              ],
+            ),
+          ),
           if (isSuspended && listing.suspensionInfo != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -2213,12 +2867,18 @@ class ModernListingCard extends StatelessWidget {
                         if (listing.suspensionInfo!.reasonText != null &&
                             listing.suspensionInfo!.reasonText!.isNotEmpty) ...[
                           const SizedBox(height: 4),
-                          Text(
-                            listing.suspensionInfo!.reasonText!,
-                            style: TextStyle(
-                                fontSize: 11, color: Colors.red.shade700),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                          FutureBuilder<String?>(
+                            future: SuspensionReasonDetailsResolver.resolve(
+                              reasonText: listing.suspensionInfo!.reasonText!,
+                              listingId: listing.id,
+                            ),
+                            builder: (context, snapshot) => Text(
+                              snapshot.data ?? listing.suspensionInfo!.reasonText!,
+                              style: TextStyle(
+                                  fontSize: 11, color: Colors.red.shade700),
+                              maxLines: 6,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ],
@@ -2292,6 +2952,230 @@ class ModernListingCard extends StatelessWidget {
                 ],
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminListSectionHeader extends StatelessWidget {
+  final String title;
+  final int count;
+
+  const _AdminListSectionHeader({
+    required this.title,
+    required this.count,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white70 : Colors.black54,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ModernEventCard extends StatelessWidget {
+  final EventModel event;
+  final VoidCallback onOpen;
+  final VoidCallback onDelete;
+  final ValueChanged<bool> onToggleDemo;
+  final ValueChanged<bool> onToggleMainVisibility;
+
+  const ModernEventCard({
+    super.key,
+    required this.event,
+    required this.onOpen,
+    required this.onDelete,
+    required this.onToggleDemo,
+    required this.onToggleMainVisibility,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
+    final isVisible = event.status.toLowerCase() == 'active';
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[900] : Colors.white,
+        border:
+            Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: Stack(
+              children: [
+                SizedBox(
+                  height: 120,
+                  width: double.infinity,
+                  child: event.posterImageUrl.trim().isNotEmpty
+                      ? Image.network(event.posterImageUrl, fit: BoxFit.cover)
+                      : Container(
+                          color: isDark ? Colors.grey[850] : Colors.grey[200],
+                          child: const Icon(Icons.event, size: 40),
+                        ),
+                ),
+                if (!isVisible)
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      child: const Center(
+                        child: Text(
+                          'HIDDEN',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.deepOrange,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Text(
+                      'EVENT',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        event.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'by ${event.committee.isNotEmpty ? event.committee : event.createdBy} • ${event.venueName}',
+                        style: TextStyle(
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          fontSize: 13,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.open_in_new),
+                  onPressed: onOpen,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  onPressed: onDelete,
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Row(
+              children: [
+                Icon(Icons.storefront_outlined,
+                    size: 14, color: Colors.blue.shade400),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Demo listing'.tr(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ),
+                Switch(
+                  value: event.isDemo,
+                  activeThumbColor: Colors.blue,
+                  onChanged: onToggleDemo,
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Row(
+              children: [
+                Icon(Icons.visibility_outlined,
+                    size: 14, color: Colors.green.shade500),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Visible on main feed'.tr(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ),
+                Switch(
+                  value: isVisible,
+                  activeThumbColor: Colors.green,
+                  onChanged: onToggleMainVisibility,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

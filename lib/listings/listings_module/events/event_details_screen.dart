@@ -1,11 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/listings/model/event_model.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:caribtap/listings/listings_module/home/home_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,6 +15,7 @@ import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:caribtap/core/ui/full_screen_image_viewer/full_screen_image_viewer.dart';
 import 'package:caribtap/listings/ui/share/promote_event_screen.dart';
+import 'package:caribtap/listings/currency/currency_display_service.dart';
 
 class EventDetailsScreen extends StatefulWidget {
   final EventModel event;
@@ -48,6 +47,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     final currentUser = context.read<AuthenticationBloc>().user;
     final isOwner = currentUser?.userID == event.createdBy;
     final isAdmin = currentUser?.isAdmin ?? false;
+    final canManageEvent = isOwner || isAdmin;
+    final readOnlyDemo = event.isDemo && !isAdmin;
     final isEventFav = currentUser?.likedEventsIDs.contains(event.id) ?? false;
     event.isFav = isEventFav;
 
@@ -80,14 +81,16 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   icon: const Icon(Icons.share, color: Colors.white),
                   onPressed: () => _shareEvent(),
                 ),
-                if (isOwner || isAdmin)
+                if (canManageEvent || event.isDemo)
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert, color: Colors.white),
                     onSelected: (value) {
                       if (value == 'edit') {
-                        _editEvent(context);
+                        _editEvent(context, readOnly: readOnlyDemo);
                       } else if (value == 'delete') {
                         _deleteEvent(context);
+                      } else if (value == 'toggleDemo') {
+                        _toggleDemoStatus(!event.isDemo);
                       }
                     },
                     itemBuilder: (context) => [
@@ -96,17 +99,33 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                         child: ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: Icon(Icons.edit, color: isDark ? Colors.white70 : Colors.black54),
-                          title: Text('Edit'.tr(), style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+                          title: Text(readOnlyDemo ? 'View Configuration'.tr() : 'Edit'.tr(), style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
                         ),
                       ),
-                      PopupMenuItem(
-                        value: 'delete',
-                        child: ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.delete, color: Colors.red),
-                          title: Text('Delete'.tr(), style: const TextStyle(color: Colors.red)),
+                      if (isAdmin)
+                        PopupMenuItem(
+                          value: 'toggleDemo',
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(
+                              event.isDemo ? Icons.visibility_off_outlined : Icons.auto_awesome_outlined,
+                              color: isDark ? Colors.white70 : Colors.black54,
+                            ),
+                            title: Text(
+                              event.isDemo ? 'Remove Demo Mode'.tr() : 'Mark as Demo'.tr(),
+                              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                            ),
+                          ),
                         ),
-                      ),
+                      if (canManageEvent && !readOnlyDemo)
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.delete, color: Colors.red),
+                            title: Text('Delete'.tr(), style: const TextStyle(color: Colors.red)),
+                          ),
+                        ),
                     ],
                   )
                 else
@@ -133,6 +152,27 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           child: Image.network(
                             event.posterImageUrl,
                             fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: isDark ? Colors.grey.shade900 : Colors.grey.shade800,
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes != null
+                                        ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: isDark ? Colors.grey.shade900 : Colors.grey.shade200,
+                              child: Icon(Icons.event, size: 80, color: primaryColor),
+                            ),
                           ),
                         )
                       else
@@ -157,6 +197,26 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           ),
                         ),
                       ),
+                      if (event.isDemo)
+                        Positioned(
+                          left: 16,
+                          bottom: 20,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: primaryColor,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: const Text(
+                              'DEMO',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -177,6 +237,27 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 30),
+
+                    if (event.isDemo) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(
+                          readOnlyDemo
+                              ? 'This event is in demo mode. You can open View Configuration to inspect it, but only admins can save changes.'.tr()
+                              : 'This event is in demo mode. Admins can still edit it.'.tr(),
+                          style: TextStyle(
+                            color: isDark ? Colors.white70 : Colors.black87,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
 
                     // Event Title & Committee
                     Column(
@@ -522,13 +603,37 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                 ],
                               ),
                             ),
-                            Text(
-                              '${ticket.currency} ${ticket.price.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                color: primaryColor,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 16,
+                            FutureBuilder<CurrencyDisplayResult>(
+                              future: CurrencyDisplayService().buildDisplayResult(
+                                rawAmount: ticket.price.toStringAsFixed(2),
+                                originalCurrencyCode: ticket.currency,
+                                preferenceValue: null,
                               ),
+                              builder: (context, snapshot) {
+                                final result = snapshot.data;
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      result?.originalFormatted ?? '${ticket.currency} ${ticket.price.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        color: primaryColor,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    if (result?.approximateFormatted != null)
+                                      Text(
+                                        '~ ${result!.approximateFormatted}',
+                                        style: TextStyle(
+                                          color: isDark ? Colors.white38 : Colors.black38,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -599,16 +704,21 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     }
   }
 
-  Future<void> _editEvent(BuildContext context) async {
+  Future<void> _editEvent(BuildContext context, {bool readOnly = false}) async {
+    HomeBloc? homeBloc;
+    try {
+      homeBloc = context.read<HomeBloc>();
+    } catch (_) {}
     final bool? edited = await push(
       context,
       CreateEventScreen(
         currentUser: context.read<AuthenticationBloc>().user!,
         eventToEdit: event,
+        readOnly: readOnly,
       ),
     );
     if (edited == true && mounted) {
-      context.read<HomeBloc>().add(GetListingsEvent());
+      homeBloc?.add(GetListingsEvent());
       // Refresh current screen data
       final doc = await FirebaseFirestore.instance.collection('events').doc(event.id).get();
       if (doc.exists) {
@@ -617,6 +727,35 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           event.id = doc.id;
         });
       }
+    }
+  }
+
+  Future<void> _toggleDemoStatus(bool value) async {
+    try {
+      await FirebaseFirestore.instance.collection('events').doc(event.id).set(
+        {'isDemo': value},
+        SetOptions(merge: true),
+      );
+
+      if (!mounted) return;
+      setState(() {
+        event.isDemo = value;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            value
+                ? 'Event marked as demo. Non-admin users can inspect the configuration but cannot save changes.'.tr()
+                : 'Event removed from demo mode.'.tr(),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: {}'.tr(args: ['$e']))),
+      );
     }
   }
 
@@ -635,9 +774,21 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
 
     if (confirm == true && mounted) {
       context.read<LoadingCubit>().showLoading(context, 'Deleting...'.tr(), false, Color(cfg.colorPrimary));
-      context.read<HomeBloc>().add(EventDeleteEvent(event: event));
-      context.read<LoadingCubit>().hideLoading();
-      Navigator.pop(context);
+      try {
+        await FirebaseFirestore.instance.collection('events').doc(event.id).delete();
+        if (!mounted) return;
+        try {
+          context.read<HomeBloc>().add(EventDeleteEvent(event: event));
+        } catch (_) {}
+        context.read<LoadingCubit>().hideLoading();
+        Navigator.pop(context);
+      } catch (e) {
+        if (!mounted) return;
+        context.read<LoadingCubit>().hideLoading();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting event: {}'.tr(args: ['$e']))),
+        );
+      }
     }
   }
 
@@ -661,8 +812,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             TextField(
               controller: reasonController,
               style: TextStyle(color: isDark ? Colors.white : Colors.black),
-              decoration: const InputDecoration(
-                hintText: 'Reason...',
+              decoration: InputDecoration(
+                hintText: 'Reason...'.tr(),
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,

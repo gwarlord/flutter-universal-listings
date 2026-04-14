@@ -3,7 +3,8 @@ import 'package:image_picker/image_picker.dart';
 
 /// Widget for selecting and categorizing images for enhancement
 class ImageSelectorWidget extends StatefulWidget {
-  final Function(String imagePath, String category) onImageSelected;
+  final Future<void> Function(String imagePath, String category)
+      onImageSelected;
   final VoidCallback onCancel;
   final bool isLoading;
   final bool isDark;
@@ -22,6 +23,31 @@ class ImageSelectorWidget extends StatefulWidget {
 
 class _ImageSelectorWidgetState extends State<ImageSelectorWidget> {
   String _selectedCategory = 'product';
+
+  Future<void> _pickAndSelectImage(ImageSource source) async {
+    final imagePicker = ImagePicker();
+    try {
+      final pickedFile = await imagePicker.pickImage(
+        source: source,
+        imageQuality: 90,
+      );
+
+      if (pickedFile == null || !mounted) return;
+
+      await widget.onImageSelected(pickedFile.path, _selectedCategory);
+    } catch (e) {
+      if (!mounted) return;
+      final action = source == ImageSource.camera
+          ? 'taking photo'
+          : 'picking image';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error $action: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,26 +96,7 @@ class _ImageSelectorWidgetState extends State<ImageSelectorWidget> {
                 child: OutlinedButton.icon(
                   onPressed: widget.isLoading
                       ? null
-                      : () async {
-                          final imagePicker = ImagePicker();
-                          try {
-                            final pickedFile = await imagePicker.pickImage(
-                              source: ImageSource.camera,
-                              imageQuality: 90,
-                            );
-                            
-                            if (pickedFile != null) {
-                              widget.onImageSelected(pickedFile.path, _selectedCategory);
-                            }
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Error taking photo: $e'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        },
+                      : () => _pickAndSelectImage(ImageSource.camera),
                   icon: const Icon(Icons.camera_alt),
                   label: const Text('Camera'),
                   style: OutlinedButton.styleFrom(
@@ -105,46 +112,22 @@ class _ImageSelectorWidgetState extends State<ImageSelectorWidget> {
                 child: ElevatedButton.icon(
                   onPressed: widget.isLoading
                       ? null
-                      : () async {
-                          final imagePicker = ImagePicker();
-                          try {
-                            final pickedFile = await imagePicker.pickImage(
-                              source: ImageSource.gallery,
-                              imageQuality: 90,
-                            );
-                            
-                            if (pickedFile != null) {
-                              widget.onImageSelected(pickedFile.path, _selectedCategory);
-                            }
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Error picking image: $e'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        },
+                      : () => _pickAndSelectImage(ImageSource.gallery),
                   icon: widget.isLoading ? null : const Icon(Icons.image),
                   label: Text(widget.isLoading ? '' : 'Gallery'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
+                    backgroundColor: const Color(0xFF2D6CDF),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor:
+                        widget.isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                    disabledForegroundColor:
+                        widget.isDark ? Colors.white70 : Colors.black54,
+                    textStyle: const TextStyle(fontWeight: FontWeight.w600),
+                    elevation: 0,
                   ),
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: widget.isLoading ? null : widget.onCancel,
-            icon: const Icon(Icons.close),
-            label: const Text('Cancel'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: widget.isDark ? Colors.white : Colors.black,
-              side: BorderSide(
-                color: widget.isDark ? Colors.grey.shade600 : Colors.grey.shade300,
-              ),
-            ),
           ),
         ],
       ),

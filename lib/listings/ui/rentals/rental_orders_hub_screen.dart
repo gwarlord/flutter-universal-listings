@@ -151,7 +151,8 @@ class _RentalOrdersHubScreenState extends State<RentalOrdersHubScreen>
     final tabBar = TabBar(
       controller: _tabController,
       labelColor: Color(cfg.colorPrimary),
-      unselectedLabelColor: isDark ? Colors.white : onSurface.withOpacity(0.7),
+      unselectedLabelColor: isDark ? Colors.white : Colors.black,
+      unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
       tabs: [
         Tab(text: 'My Rentals'.tr()),
         if (_showListerTab) Tab(text: 'Manage Rentals'.tr()),

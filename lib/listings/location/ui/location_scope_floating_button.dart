@@ -18,8 +18,7 @@ class _LocationScopeFloatingButtonState extends State<LocationScopeFloatingButto
   static const String _keyX = 'location_scope_fab_x';
   static const String _keyY = 'location_scope_fab_y';
 
-  Offset _position = const Offset(20, 200);
-  bool _isInitialized = false;
+  Offset? _position;
 
   @override
   void initState() {
@@ -28,22 +27,36 @@ class _LocationScopeFloatingButtonState extends State<LocationScopeFloatingButto
   }
 
   Future<void> _loadPosition() async {
-    final prefs = await SharedPreferences.getInstance();
-    final x = prefs.getDouble(_keyX);
-    final y = prefs.getDouble(_keyY);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final x = prefs.getDouble(_keyX);
+      final y = prefs.getDouble(_keyY);
 
-    setState(() {
+      if (!mounted) return;
       if (x != null && y != null) {
-        _position = Offset(x, y);
+        setState(() {
+          _position = Offset(x, y);
+        });
       }
-      _isInitialized = true;
-    });
+    } catch (_) {
+      // Keep default in-memory position if persistence isn't ready yet.
+    }
+  }
+
+  Offset _defaultPositionFor(Size size) {
+    // Place in the lower-right area: right edge minus button width (~88px),
+    // ~65 % of screen height.
+    return Offset(
+      (size.width - 96).clamp(8.0, size.width - 8),
+      (size.height * 0.62).clamp(16.0, size.height - 120),
+    );
   }
 
   Future<void> _savePosition() async {
+    if (_position == null) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(_keyX, _position.dx);
-    await prefs.setDouble(_keyY, _position.dy);
+    await prefs.setDouble(_keyX, _position!.dx);
+    await prefs.setDouble(_keyY, _position!.dy);
   }
 
   String _countryCodeToFlag(String countryCode) {
@@ -56,10 +69,6 @@ class _LocationScopeFloatingButtonState extends State<LocationScopeFloatingButto
 
   @override
   Widget build(BuildContext context) {
-    if (!_isInitialized) {
-      return const SizedBox.shrink();
-    }
-
     return BlocBuilder<LocationScopeCubit, LocationScopeState>(
       builder: (context, state) {
         if (state.isLoading) {
@@ -101,12 +110,13 @@ class _LocationScopeFloatingButtonState extends State<LocationScopeFloatingButto
           : (isDark ? Colors.white : Theme.of(context).colorScheme.onSurface);
 
         final size = MediaQuery.of(context).size;
+        final pos = _position ?? _defaultPositionFor(size);
         final safePosition = Offset(
-          _position.dx.clamp(8.0, (size.width - 88).clamp(8.0, size.width)),
-          _position.dy.clamp(16.0, (size.height - 120).clamp(16.0, size.height)),
+          pos.dx.clamp(8.0, (size.width - 88).clamp(8.0, size.width)),
+          pos.dy.clamp(16.0, (size.height - 120).clamp(16.0, size.height)),
         );
 
-        if (safePosition != _position) {
+        if (safePosition != pos) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
             setState(() {
@@ -122,10 +132,11 @@ class _LocationScopeFloatingButtonState extends State<LocationScopeFloatingButto
                 message: 'Tap to toggle • Long press for options'.tr(),
             child: GestureDetector(
               onPanUpdate: (details) {
+                final dragStart = _position ?? safePosition;
                 setState(() {
                   _position = Offset(
-                    (_position.dx + details.delta.dx).clamp(0.0, size.width - 80),
-                    (_position.dy + details.delta.dy).clamp(0.0, size.height - 120),
+                    (dragStart.dx + details.delta.dx).clamp(0.0, size.width - 80),
+                    (dragStart.dy + details.delta.dy).clamp(0.0, size.height - 120),
                   );
                 });
               },

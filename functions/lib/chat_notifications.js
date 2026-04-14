@@ -37,6 +37,21 @@ exports.onChatMessageCreated = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const db = admin.firestore();
+function getTokens(userData) {
+    let tokens = [];
+    if (Array.isArray(userData?.fcmTokens)) {
+        tokens = userData.fcmTokens
+            .filter((t) => typeof t === "string" && t.trim().length > 0)
+            .map((t) => t.trim());
+    }
+    if (userData?.pushToken && typeof userData.pushToken === "string") {
+        const pushToken = userData.pushToken.trim();
+        if (pushToken && !tokens.includes(pushToken)) {
+            tokens.push(pushToken);
+        }
+    }
+    return Array.from(new Set(tokens));
+}
 exports.onChatMessageCreated = functions.firestore
     .document("channels/{channelId}/thread/{messageId}")
     .onCreate(async (snap, context) => {
@@ -62,41 +77,43 @@ exports.onChatMessageCreated = functions.firestore
         if (!userDoc.exists)
             continue;
         const userData = userDoc.data();
-        const pushToken = userData?.pushToken;
-        if (!pushToken)
+        const tokens = getTokens(userData);
+        if (tokens.length === 0)
             continue;
-        try {
-            await admin.messaging().send({
-                token: pushToken,
-                notification: {
-                    title: listingTitle,
-                    body: content,
-                },
-                data: {
-                    type: "chat",
-                    channelID: channelId,
-                    click_action: "FLUTTER_NOTIFICATION_CLICK", // Vital for background handling
-                },
-                android: {
-                    priority: "high",
+        for (const token of tokens) {
+            try {
+                await admin.messaging().send({
+                    token,
                     notification: {
-                        channelId: "chat_messages", // Ensure this exists in your Android code
-                        clickAction: "FLUTTER_NOTIFICATION_CLICK",
+                        title: listingTitle,
+                        body: content,
                     },
-                },
-                apns: {
-                    payload: {
-                        aps: {
-                            badge: 1,
-                            sound: "default",
+                    data: {
+                        type: "chat",
+                        channelID: channelId,
+                        click_action: "FLUTTER_NOTIFICATION_CLICK", // Vital for background handling
+                    },
+                    android: {
+                        priority: "high",
+                        notification: {
+                            channelId: "chat_messages", // Ensure this exists in your Android code
+                            clickAction: "FLUTTER_NOTIFICATION_CLICK",
                         },
                     },
-                },
-            });
-            functions.logger.info("✅ Notification sent", { userId });
-        }
-        catch (e) {
-            functions.logger.error("❌ Error sending notification", { userId, error: e });
+                    apns: {
+                        payload: {
+                            aps: {
+                                badge: 1,
+                                sound: "default",
+                            },
+                        },
+                    },
+                });
+                functions.logger.info("✅ Notification sent", { userId });
+            }
+            catch (e) {
+                functions.logger.error("❌ Error sending notification", { userId, error: e });
+            }
         }
     }
 });

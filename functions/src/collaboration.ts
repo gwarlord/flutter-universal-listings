@@ -20,6 +20,7 @@ interface CollaboratorPermissions {
   editListing: boolean;
   changeOrderStatus: boolean;
   changeFulfillment: boolean;
+  manageTableMode: boolean;
   deleteListing: false; // Always false
 }
 
@@ -229,6 +230,7 @@ export const addListingCollaborator = functions.https.onCall(
         editListing: incomingPermissions.editListing ?? true,
         changeOrderStatus: incomingPermissions.changeOrderStatus ?? true,
         changeFulfillment: incomingPermissions.changeFulfillment ?? true,
+        manageTableMode: incomingPermissions.manageTableMode ?? false,
         deleteListing: false, // ALWAYS false
       };
 
@@ -512,6 +514,7 @@ export const updateListingCollaboratorPermissions = functions.https.onCall(
           incomingPermissions.changeOrderStatus ?? incomingPermissions.changeOrderStatus,
         changeFulfillment:
           incomingPermissions.changeFulfillment ?? incomingPermissions.changeFulfillment,
+        manageTableMode: incomingPermissions.manageTableMode ?? false,
         deleteListing: false,
       };
 

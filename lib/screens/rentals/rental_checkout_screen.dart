@@ -87,6 +87,50 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
     return _securityDeposit / widget.cartItems.length;
   }
 
+  String get _displayCurrencyCode {
+    for (final item in widget.cartItems) {
+      final code = item.currencyCode.trim();
+      if (code.isNotEmpty) {
+        return code.toUpperCase();
+      }
+    }
+    return 'USD';
+  }
+
+  String _formatCurrency(double amount, String? currencyCode) {
+    final normalizedCode = (currencyCode == null || currencyCode.trim().isEmpty)
+        ? 'USD'
+        : currencyCode.toUpperCase();
+    return '$normalizedCode ${_getCurrencySymbol(normalizedCode)}${amount.toStringAsFixed(2)}';
+  }
+
+  String _getCurrencySymbol(String code) {
+    switch (code.toUpperCase()) {
+      case 'USD':
+      case 'TTD':
+      case 'JMD':
+      case 'BSD':
+      case 'BBD':
+      case 'GYD':
+      case 'DOP':
+      case 'KYD':
+      case 'SRD':
+      case 'CAD':
+      case 'AUD':
+        return '\$';
+      case 'EUR':
+        return '€';
+      case 'GBP':
+        return '£';
+      case 'JPY':
+        return '¥';
+      case 'INR':
+        return '₹';
+      default:
+        return '\$';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
@@ -151,7 +195,7 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
                     const SizedBox(height: 8),
                     if (_securityDeposit > 0)
                       Text(
-                        'Security Deposit: \$${_securityDeposit.toStringAsFixed(2)}'.tr(),
+                        '${'Security Deposit'.tr()}: ${_formatCurrency(_securityDeposit, _displayCurrencyCode)}',
                         style: const TextStyle(fontSize: 12),
                       ),
                     const SizedBox(height: 8),
@@ -207,7 +251,7 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('Subtotal'.tr()),
-                        Text('\$${_subtotal.toStringAsFixed(2)}'),
+                        Text(_formatCurrency(_subtotal, _displayCurrencyCode)),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -216,7 +260,7 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('Security Deposit'.tr()),
-                          Text('\$${_securityDeposit.toStringAsFixed(2)}'),
+                          Text(_formatCurrency(_securityDeposit, _displayCurrencyCode)),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -233,7 +277,7 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
                           ),
                         ),
                         Text(
-                          '\$${_total.toStringAsFixed(2)}',
+                          _formatCurrency(_total, _displayCurrencyCode),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -369,24 +413,24 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${item.durationDays} days × \$${item.pricePerDay.toStringAsFixed(2)}',
+                    '${item.durationDays} days × ${_formatCurrency(item.pricePerDay, item.currencyCode)}',
                     style: const TextStyle(fontSize: 12),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${'Rental Total'.tr()}: \$${item.totalPrice.toStringAsFixed(2)}',
+                    '${'Rental Total'.tr()}: ${_formatCurrency(item.totalPrice, item.currencyCode)}',
                     style: const TextStyle(fontSize: 12),
                   ),
                   if (itemDeposit > 0) ...[
                     const SizedBox(height: 2),
                     Text(
-                      '${'Security Deposit'.tr()}: \$${itemDeposit.toStringAsFixed(2)}',
+                      '${'Security Deposit'.tr()}: ${_formatCurrency(itemDeposit, item.currencyCode)}',
                       style: const TextStyle(fontSize: 12),
                     ),
                   ],
                   const SizedBox(height: 8),
                   Text(
-                    '\$${itemTotalWithDeposit.toStringAsFixed(2)}',
+                    _formatCurrency(itemTotalWithDeposit, item.currencyCode),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,

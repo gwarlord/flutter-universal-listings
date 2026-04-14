@@ -54,6 +54,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       .read<ResetPasswordCubit>()
                       .resetPassword(_emailAddress);
                 } else if (state is ResetPasswordFailureState) {
+                  context.read<LoadingCubit>().hideLoading();
                   showSnackBar(context, state.errorMessage);
                 }
               },

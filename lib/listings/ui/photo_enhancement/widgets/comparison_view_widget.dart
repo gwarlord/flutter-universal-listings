@@ -166,7 +166,13 @@ class _ComparisonViewWidgetState extends State<ComparisonViewWidget> {
                 icon: const Icon(Icons.check),
                 label: const Text('Approve & Save'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: const Color(0xFF3FAE49),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor:
+                      isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                  disabledForegroundColor:
+                      isDark ? Colors.white70 : Colors.black54,
+                  textStyle: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
             ),

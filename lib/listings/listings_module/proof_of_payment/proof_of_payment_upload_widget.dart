@@ -43,18 +43,68 @@ class _ProofOfPaymentUploadWidgetState
   bool _isExpanded = false;
   String? _uploadError;
   late TextEditingController _reviewControllerNote;
+  ProofOfPayment? _resolvedProofOfPayment;
+  bool _isLoadingProof = false;
 
   @override
   void initState() {
     super.initState();
     _popService = ProofOfPaymentService();
     _reviewControllerNote = TextEditingController();
+    _resolvedProofOfPayment = widget.proofOfPayment;
+    _tryLoadLatestProof();
+  }
+
+  @override
+  void didUpdateWidget(covariant ProofOfPaymentUploadWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.proofOfPayment != oldWidget.proofOfPayment) {
+      _resolvedProofOfPayment = widget.proofOfPayment;
+    }
+    if (widget.orderId != oldWidget.orderId ||
+        widget.listingId != oldWidget.listingId ||
+        widget.proofOfPayment != oldWidget.proofOfPayment) {
+      _tryLoadLatestProof();
+    }
   }
 
   @override
   void dispose() {
     _reviewControllerNote.dispose();
     super.dispose();
+  }
+
+  Future<void> _tryLoadLatestProof() async {
+    if (!mounted || _isLoadingProof) return;
+
+    final provided = _resolvedProofOfPayment ?? widget.proofOfPayment;
+    final shouldFetch = provided == null || !provided.hasUploads;
+    if (!shouldFetch) return;
+
+    setState(() {
+      _isLoadingProof = true;
+    });
+
+    try {
+      final latest = await _popService.getProofOfPayment(
+        listingId: widget.listingId,
+        orderId: widget.orderId,
+      );
+      if (!mounted) return;
+      if (latest != null) {
+        setState(() {
+          _resolvedProofOfPayment = latest;
+        });
+      }
+    } catch (_) {
+      // Non-fatal: keep rendering provided data if canonical fetch fails.
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingProof = false;
+        });
+      }
+    }
   }
 
   Future<void> _pickAndUploadImage() async {
@@ -93,11 +143,7 @@ class _ProofOfPaymentUploadWidgetState
 
       showSnackBar(context, 'Proof of payment uploaded successfully'.tr());
       widget.onUploadComplete?.call();
-
-      // Refresh POP data
-      if (mounted) {
-        // Re-fetch proof of payment
-      }
+      await _tryLoadLatestProof();
     } catch (e) {
       setState(() {
         _isUploading = false;
@@ -146,6 +192,7 @@ class _ProofOfPaymentUploadWidgetState
 
       showSnackBar(context, 'Proof of payment uploaded successfully'.tr());
       widget.onUploadComplete?.call();
+      await _tryLoadLatestProof();
     } catch (e) {
       setState(() {
         _isUploading = false;
@@ -190,6 +237,7 @@ class _ProofOfPaymentUploadWidgetState
 
       showSnackBar(context, 'Proof of payment uploaded successfully'.tr());
       widget.onUploadComplete?.call();
+      await _tryLoadLatestProof();
     } catch (e) {
       setState(() {
         _isUploading = false;
@@ -283,6 +331,7 @@ class _ProofOfPaymentUploadWidgetState
       showSnackBar(context,
           'Proof of payment $decision successfully'.tr());
       widget.onReviewComplete?.call();
+      await _tryLoadLatestProof();
     } catch (e) {
       showSnackBar(context, 'Review failed: ${e.toString()}'.tr());
     }
@@ -301,7 +350,7 @@ class _ProofOfPaymentUploadWidgetState
 
     final isDark = isDarkMode(context);
     // Initialize default POP if null
-    final pop = widget.proofOfPayment ?? 
+    final pop = _resolvedProofOfPayment ?? 
         ProofOfPayment(
           enabledAtOrderTime: false,
           uploads: [],
@@ -462,6 +511,11 @@ class _ProofOfPaymentUploadWidgetState
                     ],
                   ] else ...[
                     // LISTER (STAFF) VIEW
+                    if (_isLoadingProof)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 12),
+                        child: LinearProgressIndicator(),
+                      ),
                     if (!pop.hasUploads) ...[
                       Text('No proof of payment submitted yet.'.tr(),
                           style: TextStyle(

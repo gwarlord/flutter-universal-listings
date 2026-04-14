@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/map_explorer/models/country_activity_summary.dart';
@@ -36,6 +37,8 @@ class _CaribbeanMapScreenState extends State<CaribbeanMapScreen> {
   late final List<CountryMapConfig> _countries;
   Map<String, CountryActivitySummary> _activity = const {};
   bool _loading = true;
+  bool _locationServicesDisabled = false;
+  bool _hasShownLocationDisabledPrompt = false;
 
   CountryMapConfig? _selected;
   String? _selectedMarkerId;
@@ -44,7 +47,60 @@ class _CaribbeanMapScreenState extends State<CaribbeanMapScreen> {
   void initState() {
     super.initState();
     _countries = _countryMapService.getSupportedCountries();
+    _checkLocationServicesStatus();
     _loadActivity();
+  }
+
+  Future<void> _checkLocationServicesStatus() async {
+    final enabled = await Geolocator.isLocationServiceEnabled();
+    if (!mounted) return;
+    final disabled = !enabled;
+    if (_locationServicesDisabled != disabled) {
+      setState(() {
+        _locationServicesDisabled = disabled;
+      });
+    }
+    if (disabled && !_hasShownLocationDisabledPrompt) {
+      _hasShownLocationDisabledPrompt = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _showLocationServicesDialog();
+      });
+    }
+  }
+
+  Future<void> _showLocationServicesDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Turn on Location Services'),
+          content: const Text(
+            'Caribbean Explorer works best with Location Services enabled. Please turn on Location Services in your device settings.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Not now'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await _openLocationSettingsWithFallback();
+              },
+              child: const Text('Open Settings'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _openLocationSettingsWithFallback() async {
+    final opened = await Geolocator.openLocationSettings();
+    if (!opened) {
+      await Geolocator.openAppSettings();
+    }
   }
 
   Future<void> _loadActivity() async {
@@ -122,6 +178,39 @@ class _CaribbeanMapScreenState extends State<CaribbeanMapScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (_locationServicesDisabled)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.location_off, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Location Services are off. Enable them for a better map experience.',
+                        style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        await _openLocationSettingsWithFallback();
+                        if (!mounted) return;
+                        await _checkLocationServicesStatus();
+                      },
+                      child: const Text('Turn On'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 2, 20, 10),
             child: AnimatedSwitcher(

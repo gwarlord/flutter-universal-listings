@@ -1,0 +1,66 @@
+{
+  "collection": "categories",
+  "documents": [
+    {"id": "food-beverage", "slug": "food-beverage", "title": "Food & Beverage", "photo": "", "isActive": true, "sortOrder": 10, "synonyms": ["food and drink"]},
+    {"id": "retail-shopping", "slug": "retail-shopping", "title": "Retail & Shopping", "photo": "", "isActive": true, "sortOrder": 20},
+    {"id": "beauty-personal-care", "slug": "beauty-personal-care", "title": "Beauty & Personal Care", "photo": "", "isActive": true, "sortOrder": 30},
+    {"id": "health-wellness", "slug": "health-wellness", "title": "Health & Wellness", "photo": "", "isActive": true, "sortOrder": 40},
+    {"id": "automotive", "slug": "automotive", "title": "Automotive", "photo": "", "isActive": true, "sortOrder": 50},
+    {"id": "home-services", "slug": "home-services", "title": "Home Services", "photo": "", "isActive": true, "sortOrder": 60},
+    {"id": "professional-services", "slug": "professional-services", "title": "Professional Services", "photo": "", "isActive": true, "sortOrder": 70},
+    {"id": "events-entertainment", "slug": "events-entertainment", "title": "Events & Entertainment", "photo": "", "isActive": true, "sortOrder": 80},
+    {"id": "travel-tourism", "slug": "travel-tourism", "title": "Travel & Tourism", "photo": "", "isActive": true, "sortOrder": 90},
+    {"id": "education-training", "slug": "education-training", "title": "Education & Training", "photo": "", "isActive": true, "sortOrder": 100},
+    {"id": "real-estate-rentals", "slug": "real-estate-rentals", "title": "Real Estate & Rentals", "photo": "", "isActive": true, "sortOrder": 110},
+    {"id": "technology-electronics", "slug": "technology-electronics", "title": "Technology & Electronics", "photo": "", "isActive": true, "sortOrder": 120},
+    {"id": "agriculture-local-produce", "slug": "agriculture-local-produce", "title": "Agriculture & Local Produce", "photo": "", "isActive": true, "sortOrder": 130},
+    {"id": "community-nonprofit", "slug": "community-nonprofit", "title": "Community & Nonprofit", "photo": "", "isActive": true, "sortOrder": 140},
+    {"id": "other", "slug": "other", "title": "Other", "photo": "", "isActive": true, "sortOrder": 150},
+
+    {"id": "restaurants", "slug": "restaurants", "title": "Restaurants", "parentSlug": "food-beverage", "photo": "", "isActive": true, "sortOrder": 11},
+    {"id": "cafes-bakeries", "slug": "cafes-bakeries", "title": "Cafes & Bakeries", "parentSlug": "food-beverage", "photo": "", "isActive": true, "sortOrder": 12},
+    {"id": "catering", "slug": "catering", "title": "Catering", "parentSlug": "food-beverage", "photo": "", "isActive": true, "sortOrder": 13},
+    {"id": "street-vending", "slug": "street-vending", "title": "Street Vending", "parentSlug": "food-beverage", "photo": "", "isActive": true, "sortOrder": 14},
+
+    {"id": "fashion-accessories", "slug": "fashion-accessories", "title": "Fashion & Accessories", "parentSlug": "retail-shopping", "photo": "", "isActive": true, "sortOrder": 21},
+    {"id": "grocery-convenience", "slug": "grocery-convenience", "title": "Grocery & Convenience", "parentSlug": "retail-shopping", "photo": "", "isActive": true, "sortOrder": 22},
+
+    {"id": "hair-salon", "slug": "hair-salon", "title": "Hair Salon", "parentSlug": "beauty-personal-care", "photo": "", "isActive": true, "sortOrder": 31},
+    {"id": "barber", "slug": "barber", "title": "Barber", "parentSlug": "beauty-personal-care", "photo": "", "isActive": true, "sortOrder": 32},
+
+    {"id": "fitness-gym", "slug": "fitness-gym", "title": "Fitness & Gym", "parentSlug": "health-wellness", "photo": "", "isActive": true, "sortOrder": 41},
+    {"id": "clinics-medical", "slug": "clinics-medical", "title": "Clinics & Medical", "parentSlug": "health-wellness", "photo": "", "isActive": true, "sortOrder": 42},
+
+    {"id": "mechanic-repair", "slug": "mechanic-repair", "title": "Mechanic & Repair", "parentSlug": "automotive", "photo": "", "isActive": true, "sortOrder": 51},
+    {"id": "car-rentals", "slug": "car-rentals", "title": "Car Rentals", "parentSlug": "automotive", "photo": "", "isActive": true, "sortOrder": 53},
+
+    {"id": "plumbing-electrical", "slug": "plumbing-electrical", "title": "Plumbing & Electrical", "parentSlug": "home-services", "photo": "", "isActive": true, "sortOrder": 61},
+    {"id": "construction-renovation", "slug": "construction-renovation", "title": "Construction & Renovation", "parentSlug": "home-services", "photo": "", "isActive": true, "sortOrder": 63},
+
+    {"id": "legal-accounting", "slug": "legal-accounting", "title": "Legal & Accounting", "parentSlug": "professional-services", "photo": "", "isActive": true, "sortOrder": 71},
+    {"id": "consulting-business", "slug": "consulting-business", "title": "Consulting & Business", "parentSlug": "professional-services", "photo": "", "isActive": true, "sortOrder": 73},
+
+    {"id": "event-planning", "slug": "event-planning", "title": "Event Planning", "parentSlug": "events-entertainment", "photo": "", "isActive": true, "sortOrder": 81},
+    {"id": "venues", "slug": "venues", "title": "Venues", "parentSlug": "events-entertainment", "photo": "", "isActive": true, "sortOrder": 84},
+
+    {"id": "tours-excursions", "slug": "tours-excursions", "title": "Tours & Excursions", "parentSlug": "travel-tourism", "photo": "", "isActive": true, "sortOrder": 91},
+    {"id": "accommodation", "slug": "accommodation", "title": "Accommodation", "parentSlug": "travel-tourism", "photo": "", "isActive": true, "sortOrder": 92},
+
+    {"id": "tutoring", "slug": "tutoring", "title": "Tutoring", "parentSlug": "education-training", "photo": "", "isActive": true, "sortOrder": 101},
+    {"id": "skills-training", "slug": "skills-training", "title": "Skills Training", "parentSlug": "education-training", "photo": "", "isActive": true, "sortOrder": 102},
+
+    {"id": "residential-sales-rentals", "slug": "residential-sales-rentals", "title": "Residential Sales & Rentals", "parentSlug": "real-estate-rentals", "photo": "", "isActive": true, "sortOrder": 111},
+    {"id": "commercial-properties", "slug": "commercial-properties", "title": "Commercial Properties", "parentSlug": "real-estate-rentals", "photo": "", "isActive": true, "sortOrder": 112},
+
+    {"id": "phones-computers", "slug": "phones-computers", "title": "Phones & Computers", "parentSlug": "technology-electronics", "photo": "", "isActive": true, "sortOrder": 121},
+    {"id": "it-services", "slug": "it-services", "title": "IT Services", "parentSlug": "technology-electronics", "photo": "", "isActive": true, "sortOrder": 122},
+
+    {"id": "fresh-produce", "slug": "fresh-produce", "title": "Fresh Produce", "parentSlug": "agriculture-local-produce", "photo": "", "isActive": true, "sortOrder": 131},
+    {"id": "farming-supplies", "slug": "farming-supplies", "title": "Farming Supplies", "parentSlug": "agriculture-local-produce", "photo": "", "isActive": true, "sortOrder": 132},
+
+    {"id": "church-faith", "slug": "church-faith", "title": "Church & Faith", "parentSlug": "community-nonprofit", "photo": "", "isActive": true, "sortOrder": 141},
+    {"id": "charity-ngo", "slug": "charity-ngo", "title": "Charity & NGO", "parentSlug": "community-nonprofit", "photo": "", "isActive": true, "sortOrder": 142},
+
+    {"id": "miscellaneous", "slug": "miscellaneous", "title": "Miscellaneous", "parentSlug": "other", "photo": "", "isActive": true, "sortOrder": 151}
+  ]
+}

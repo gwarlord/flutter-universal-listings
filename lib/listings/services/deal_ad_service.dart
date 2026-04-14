@@ -1,19 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../model/deal_ad_model.dart';
-import 'package:http/http.dart' as http; // New import
-import 'dart:convert'; // New import
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // New import for .env
 import 'package:caribtap/listings/model/listings_user.dart'; // Changed import to ListingsUser
 
 class DealAdService {
   final _adsRef = FirebaseFirestore.instance.collection('deal_ads');
   final _usersRef = FirebaseFirestore.instance.collection('users'); // New reference to users collection
-  final _listingsRef = FirebaseFirestore.instance.collection('listings');
 
   Future<void> submitAd(DealAdModel ad) async {
     await _adsRef.doc(ad.id).set(ad.toMap());
-    // After submitting the ad, send notifications to users who favorited this listing
-    await sendDealNotificationToFavoriteUsers(ad);
+    // Notifications are sent server-side by Cloud Functions when the ad is approved.
   }
 
   Future<void> deleteAd(String adId) async {
@@ -79,74 +74,6 @@ class DealAdService {
     });
   }
 
-  // New method to send deal notifications to users who favorited the listing
-  Future<void> sendDealNotificationToFavoriteUsers(DealAdModel ad) async {
-    try {
-      final serverKey = dotenv.env['FCM_SERVER_KEY'];
-      if (serverKey == null || serverKey.isEmpty) {
-        print('FCM_SERVER_KEY not found in .env. Skipping deal notification.');
-        return;
-      }
-
-      // Get the listing details to retrieve the title
-      final listingDoc = await _listingsRef.doc(ad.listingId).get();
-      if (!listingDoc.exists) {
-        print('Listing ${ad.listingId} not found. Cannot send notifications.');
-        return;
-      }
-      
-      final listingData = listingDoc.data() as Map<String, dynamic>;
-      final listingTitle = listingData['title'] ?? 'a listing';
-
-      // Find all users who have favorited this listing
-      final favoriteUsersSnapshot = await _usersRef
-          .where('likedListingsIDs', arrayContains: ad.listingId)
-          .where('pushToken', isNotEqualTo: null)
-          .where('pushToken', isNotEqualTo: '')
-          .get();
-
-      if (favoriteUsersSnapshot.docs.isEmpty) {
-        print('No users with push tokens have favorited listing ${ad.listingId}.');
-        return;
-      }
-
-      for (var doc in favoriteUsersSnapshot.docs) {
-        final pushToken = doc['pushToken'];
-        if (pushToken != null && pushToken.isNotEmpty) {
-          final uri = Uri.parse('https://fcm.googleapis.com/fcm/send');
-          final headers = {
-            'Content-Type': 'application/json',
-            'Authorization': 'key=$serverKey',
-          };
-          final body = jsonEncode({
-            'to': pushToken,
-            'priority': 'high',
-            'notification': {
-              'title': 'New Deal from one of your Favourite Listing!',
-              'body': listingTitle,
-            },
-            'data': {
-              'type': 'deal',
-              'dealId': ad.id,
-              'listingId': ad.listingId,
-              'listingTitle': listingTitle,
-            },
-          });
-
-          final response = await http.post(uri, headers: headers, body: body);
-
-          if (response.statusCode == 200) {
-            print('Deal notification sent to user: ${doc.id}');
-          } else {
-            print('Failed to send deal notification to user ${doc.id}: ${response.statusCode} ${response.body}');
-          }
-        }
-      }
-    } catch (e) {
-      print('Error sending deal notification to favorite users: $e');
-    }
-  }
-  
   // New method to fetch a single user's details
   Future<ListingsUser?> getUser(String userId) async {
     try {

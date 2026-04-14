@@ -15,7 +15,11 @@ abstract class ListingsRepository {
   Future<List<FilterModel>> getFilters();
 
   // Listings CRUD / queries
-  Future<List<ListingModel>> getListings({required List<String> favListingsIDs});
+  Future<List<ListingModel>> getListings({
+    required List<String> favListingsIDs,
+    bool includeDemoListings = false,
+    bool includeHiddenListings = false,
+  });
   Future<List<ListingModel>> getMyListings({
     required String currentUserID,
     required List<String> favListingsIDs,
@@ -61,6 +65,7 @@ abstract class ListingsRepository {
   Future<void> deleteListing({required ListingModel listingModel});
   Future<List<ReportedListing>> getReportedListings();
   Future<void> dismissReport(String reportId);
+  Future<void> resolveReport(String reportId);
 
   // Listing suspension
   Future<List<ListingModel>> getSuspendedListings();

@@ -4,8 +4,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:caribtap/constants.dart';
-import 'package:caribtap/core/model/user.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
@@ -13,6 +11,7 @@ import 'package:caribtap/listings/model/order_request.dart';
 import 'package:caribtap/listings/model/table_mode_models.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/listings/services/store_service.dart';
+import 'package:caribtap/screens/store/my_order_reports_screen.dart';
 import 'package:caribtap/screens/store/order_detail_screen.dart';
 import 'package:caribtap/screens/store/shipping_tracking_display.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -69,20 +68,40 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _showHistory = !_showHistory;
-                  });
-                },
-                icon: Icon(
-                  _showHistory ? Icons.filter_list_off : Icons.history,
-                  size: 20,
-                ),
-                label: Text(_showHistory ? 'Active Only'.tr() : 'Show History'.tr()),
-                style: TextButton.styleFrom(
-                  foregroundColor: Color(cfg.colorPrimary),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: 'My Reports'.tr(),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MyOrderReportsScreen(
+                            currentUser: widget.currentUser,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.fact_check_outlined, size: 20),
+                    color: Colors.redAccent,
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _showHistory = !_showHistory;
+                      });
+                    },
+                    icon: Icon(
+                      _showHistory ? Icons.filter_list_off : Icons.history,
+                      size: 20,
+                    ),
+                    label: Text(_showHistory ? 'Active Only'.tr() : 'Show History'.tr()),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Color(cfg.colorPrimary),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -198,7 +217,11 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
         final listing = previewData['listing'] as ListingModel?;
         final listingTitle =
             listing?.title ?? 'Order ${order.id.substring(0, 8)}';
-        final firstItemImage = previewData['firstItemImage'] as String?;
+        final previewImages = (previewData['previewImages'] as List?)
+            ?.whereType<String>()
+            .where((url) => url.trim().isNotEmpty)
+            .toList() ??
+          const <String>[];
         final isTableMode = previewData['tableSessionId'] != null;
         final tableName = previewData['tableName'] as String?;
         final assignedStaff = previewData['assignedStaff'] as List<AssignedStaff>? ?? [];
@@ -242,7 +265,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                     children: [
                       _buildStatusBadge(order.status),
                       Text(
-                        '${_getCurrencySymbol(order.currencyCode)}${order.estimatedTotal.toStringAsFixed(2)}',
+                        _formatCurrency(order.estimatedTotal, order.currencyCode),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -286,23 +309,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                           width: 56,
                           height: 56,
                           color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
-                          child: firstItemImage != null && firstItemImage.isNotEmpty
-                              ? Image.network(
-                                  firstItemImage,
-                                  fit: BoxFit.cover,
-                                  cacheWidth: 112,
-                                  cacheHeight: 112,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Icon(
-                                      Icons.shopping_bag,
-                                      color: dark ? Colors.white38 : Colors.black38,
-                                    );
-                                  },
-                                )
-                              : Icon(
-                                  Icons.shopping_bag,
-                                  color: dark ? Colors.white38 : Colors.black38,
-                                ),
+                          child: _buildOrderThumbnail(previewImages, dark),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -527,6 +534,90 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
     return null;
   }
 
+  Widget _buildOrderThumbnail(List<String> previewImages, bool dark) {
+    if (previewImages.isEmpty) {
+      return Icon(
+        Icons.shopping_bag,
+        color: dark ? Colors.white38 : Colors.black38,
+      );
+    }
+
+    if (previewImages.length == 1) {
+      return Image.network(
+        previewImages.first,
+        fit: BoxFit.cover,
+        cacheWidth: 112,
+        cacheHeight: 112,
+        errorBuilder: (context, error, stackTrace) {
+          return Icon(
+            Icons.shopping_bag,
+            color: dark ? Colors.white38 : Colors.black38,
+          );
+        },
+      );
+    }
+
+    final tiles = previewImages.take(4).toList();
+    final topLeft = tiles.isNotEmpty ? tiles[0] : null;
+    final topRight = tiles.length > 1 ? tiles[1] : null;
+    final bottomLeft = tiles.length > 2 ? tiles[2] : null;
+    final bottomRight = tiles.length > 3 ? tiles[3] : null;
+
+    return Column(
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(child: _buildThumbnailTile(topLeft, dark)),
+              const SizedBox(width: 1),
+              Expanded(child: _buildThumbnailTile(topRight, dark)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 1),
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(child: _buildThumbnailTile(bottomLeft, dark)),
+              const SizedBox(width: 1),
+              Expanded(child: _buildThumbnailTile(bottomRight, dark)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildThumbnailTile(String? imageUrl, bool dark) {
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return Container(
+        color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+        child: Icon(
+          Icons.shopping_bag,
+          size: 12,
+          color: dark ? Colors.white30 : Colors.black26,
+        ),
+      );
+    }
+
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      cacheWidth: 56,
+      cacheHeight: 56,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+          child: Icon(
+            Icons.shopping_bag,
+            size: 12,
+            color: dark ? Colors.white30 : Colors.black26,
+          ),
+        );
+      },
+    );
+  }
+
   Future<Map<String, dynamic>> _getOrderPreviewData(OrderRequest order) async {
     final result = <String, dynamic>{};
 
@@ -534,23 +625,27 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
     final listing = await _getListingCached(order.listingId);
     result['listing'] = listing;
 
-    // Get first item image
-    if (order.items.isNotEmpty) {
-      try {
-        final firstItemId = order.items.first.itemId;
-        final itemDoc = await FirebaseFirestore.instance
-            .collection('listings')
-            .doc(order.listingId)
-            .collection('catalog_items')
-            .doc(firstItemId)
-            .get();
+    // Build a preview set from up to 4 ordered items so mixed catalogs can show image collage.
+    final previewItemIds = order.items
+        .map((item) => item.itemId)
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .take(4)
+        .toList();
 
-        if (itemDoc.exists) {
-          final itemData = itemDoc.data();
-          final photos = itemData?['photos'] as List?;
-          if (photos != null && photos.isNotEmpty) {
-            result['firstItemImage'] = photos.first;
-          }
+    if (previewItemIds.isNotEmpty) {
+      try {
+        final imageResults = await Future.wait(
+          previewItemIds.map((itemId) => _fetchCatalogItemPreviewImage(order.listingId, itemId)),
+        );
+        final previewImages = imageResults
+            .whereType<String>()
+            .where((url) => url.trim().isNotEmpty)
+            .toList();
+
+        if (previewImages.isNotEmpty) {
+          result['previewImages'] = previewImages;
+          result['firstItemImage'] = previewImages.first;
         }
       } catch (e) {
         // Ignore error, will show default icon
@@ -585,6 +680,27 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
     }
 
     return result;
+  }
+
+  Future<String?> _fetchCatalogItemPreviewImage(String listingId, String itemId) async {
+    final itemDoc = await FirebaseFirestore.instance
+        .collection('listings')
+        .doc(listingId)
+        .collection('catalog_items')
+        .doc(itemId)
+        .get();
+
+    if (!itemDoc.exists) return null;
+    final itemData = itemDoc.data();
+    final photos = itemData?['photos'] as List?;
+    if (photos == null || photos.isEmpty) return null;
+
+    for (final photo in photos) {
+      final url = photo?.toString().trim() ?? '';
+      if (url.isNotEmpty) return url;
+    }
+
+    return null;
   }
 
   Future<void> _uploadProofOfPayment(OrderRequest order) async {
@@ -648,5 +764,12 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
     };
 
     return currencySymbols[currencyCode] ?? '\$';
+  }
+
+  String _formatCurrency(double amount, String? currencyCode) {
+    final normalizedCode = (currencyCode == null || currencyCode.trim().isEmpty)
+        ? 'USD'
+        : currencyCode.toUpperCase();
+    return '$normalizedCode ${_getCurrencySymbol(normalizedCode)}${amount.toStringAsFixed(2)}';
   }
 }

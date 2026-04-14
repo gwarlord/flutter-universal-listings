@@ -18,6 +18,7 @@ import 'package:caribtap/listings/listings_module/api/collaboration_api_manager.
 import 'package:caribtap/listings/ui/collaboration/chat_scope_integration.dart';
 import 'package:caribtap/listings/listings_module/proof_of_payment/proof_of_payment_upload_widget.dart';
 import 'package:caribtap/listings/model/proof_of_payment_model.dart';
+import 'package:caribtap/listings/model/blocked_booking_user.dart';
 import 'package:caribtap/listings/services/blocked_user_repository.dart';
 import 'package:intl/intl.dart';
 
@@ -38,22 +39,28 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
   bool _statusUpdated = false;
   DateTime? _selectedFilterDate;
   Set<String> _bookingDateKeys = {};
+  bool _didStartInitialLoad = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    context.read<BookingBloc>().add(
-          GetReceivedBookingsEvent(listersUserId: widget.currentUser.userID),
-        );
-    // Clear the booking-requests badge whenever this screen opens,
-    // regardless of how the user navigated here.
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didStartInitialLoad) return;
+    _didStartInitialLoad = true;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        context
-            .read<AttentionCubit>()
-            .markModuleAsSeen(AttentionModule.bookingRequests);
-      }
+      if (!mounted) return;
+      context.read<BookingBloc>().add(
+            GetReceivedBookingsEvent(listersUserId: widget.currentUser.userID),
+          );
+      context
+          .read<AttentionCubit>()
+          .markModuleAsSeen(AttentionModule.bookingRequests);
     });
   }
 
@@ -237,6 +244,11 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
         title: Text('Manage Bookings'.tr()),
         actions: [
           IconButton(
+            icon: const Icon(Icons.block),
+            onPressed: _showBlockedUsersSheet,
+            tooltip: 'Blocked users'.tr(),
+          ),
+          IconButton(
             icon: Icon(
               Icons.calendar_month,
               color: _selectedFilterDate != null ? Color(cfg.colorPrimary) : null,
@@ -255,7 +267,8 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,
-          unselectedLabelColor: isDarkMode(context) ? Colors.white70 : Colors.black54,
+          unselectedLabelColor: isDarkMode(context) ? Colors.white70 : Colors.black,
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
           tabs: [
             Tab(text: 'Pending'.tr()),
             Tab(text: 'Confirmed'.tr()),
@@ -298,7 +311,7 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
               final pendingBookings =
                   allBookings.where((b) => b.isPending).toList();
               final confirmedBookings =
-                  allBookings.where((b) => b.isConfirmed).toList();
+                  allBookings.where(_isActiveConfirmedBooking).toList();
 
               final filteredAllBookings =
                   allBookings.where(_matchesBookingSearch).toList();
@@ -679,7 +692,15 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
 
   bool _isCalendarRelevantBookingStatus(dynamic booking) {
     final status = (booking.status ?? '').toString().toLowerCase();
-    return status == 'pending' || status == 'confirmed';
+    if (status == 'pending') return true;
+    return _isActiveConfirmedBooking(booking);
+  }
+
+  bool _isActiveConfirmedBooking(dynamic booking) {
+    final status = (booking.status ?? '').toString().toLowerCase();
+    final completionTag = (booking.completionTag ?? '').toString().trim().toLowerCase();
+    final isTerminalCompletion = completionTag == 'completed' || completionTag == 'no_show';
+    return status == 'confirmed' && !isTerminalCompletion;
   }
 
   Widget _buildBookingsList(List<dynamic> bookings) {
@@ -699,8 +720,10 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
 
   Widget _buildBookingCard(dynamic booking) {
     final dark = isDarkMode(context);
+    final primary = Color(cfg.colorPrimary);
     final String bookingStatus = (booking.status ?? '').toString().toLowerCase();
     final String completionTag = (booking.completionTag ?? '').toString().trim().toLowerCase();
+    final bool isTerminalCompletion = completionTag == 'completed' || completionTag == 'no_show';
     final String cancelledBy = (booking.cancelledBy ?? '').toString().toLowerCase();
     final String cancelledByUserId = (booking.cancelledByUserId ?? '').toString().trim();
     final String customerId = (booking.customerId ?? '').toString().trim();
@@ -1075,6 +1098,13 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => _rejectBooking(booking),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: dark ? Colors.red.shade300 : Colors.red.shade700,
+                        side: BorderSide(
+                          color: dark ? Colors.red.shade300.withOpacity(0.7) : Colors.red.shade700.withOpacity(0.55),
+                          width: 1.4,
+                        ),
+                      ),
                       child: Text('Reject'.tr()),
                     ),
                   ),
@@ -1083,7 +1113,8 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
                     child: ElevatedButton(
                       onPressed: () => _approveBooking(booking),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: dark ? Colors.green.shade500 : Colors.green.shade600,
+                        foregroundColor: Colors.white,
                       ),
                       child: Text('Confirm'.tr()),
                     ),
@@ -1099,6 +1130,13 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
                       onPressed: completionTag == 'completed'
                           ? null
                           : () => _tagBookingCompletion(booking, 'completed'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: primary,
+                        side: BorderSide(
+                          color: primary.withOpacity(dark ? 0.7 : 0.55),
+                          width: 1.4,
+                        ),
+                      ),
                       child: Text('Mark completed'.tr()),
                     ),
                   ),
@@ -1108,19 +1146,34 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
                       onPressed: completionTag == 'no_show'
                           ? null
                           : () => _tagBookingCompletion(booking, 'no_show'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: dark ? Colors.orange.shade300 : Colors.orange.shade800,
+                        side: BorderSide(
+                          color: dark ? Colors.orange.shade300.withOpacity(0.7) : Colors.orange.shade800.withOpacity(0.55),
+                          width: 1.4,
+                        ),
+                      ),
                       child: Text('Mark no-show'.tr()),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => _cancelBooking(booking),
-                  child: Text('Cancel booking'.tr()),
+              if (!isTerminalCompletion)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => _cancelBooking(booking),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: dark ? Colors.red.shade300 : Colors.red.shade700,
+                      side: BorderSide(
+                        color: dark ? Colors.red.shade300.withOpacity(0.7) : Colors.red.shade700.withOpacity(0.55),
+                        width: 1.4,
+                      ),
+                    ),
+                    child: Text('Cancel booking'.tr()),
+                  ),
                 ),
-              ),
             ],
           ],
         ),
@@ -1428,6 +1481,196 @@ class _BookingManagementScreenState extends State<BookingManagementScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to block user. Please try again.'.tr()),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showBlockedUsersSheet() async {
+    final dark = isDarkMode(context);
+    final blockedRepo = BlockedUserRepository();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: dark ? Colors.white24 : Colors.black26,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Blocked users'.tr(),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: dark ? Colors.white : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: StreamBuilder<List<BlockedBookingUser>>(
+                    stream: blockedRepo.streamBlockedUsers(widget.currentUser.userID),
+                    builder: (context, snapshot) {
+                      final blockedUsers = snapshot.data ?? const <BlockedBookingUser>[];
+
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator.adaptive());
+                      }
+
+                      if (blockedUsers.isEmpty) {
+                        return Center(
+                          child: Text(
+                            'No blocked users'.tr(),
+                            style: TextStyle(
+                              color: dark ? Colors.white54 : Colors.black54,
+                            ),
+                          ),
+                        );
+                      }
+
+                      return ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: blockedUsers.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final blocked = blockedUsers[index];
+                          return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                            future: FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(blocked.blockedUserId)
+                                .get(),
+                            builder: (context, userSnap) {
+                              final data = userSnap.data?.data();
+                              final firstName = (data?['firstName'] as String?)?.trim() ?? '';
+                              final lastName = (data?['lastName'] as String?)?.trim() ?? '';
+                              final displayName = (data?['displayName'] as String?)?.trim() ?? '';
+                              final fullName = '$firstName $lastName'.trim();
+                              final name = fullName.isNotEmpty
+                                  ? fullName
+                                  : (displayName.isNotEmpty ? displayName : blocked.blockedUserId);
+                              final reason = (blocked.reason ?? '').trim();
+
+                              return ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
+                                leading: CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+                                  child: Icon(
+                                    Icons.person,
+                                    color: dark ? Colors.white70 : Colors.black54,
+                                    size: 18,
+                                  ),
+                                ),
+                                title: Text(
+                                  name,
+                                  style: TextStyle(color: dark ? Colors.white : Colors.black87),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: reason.isNotEmpty
+                                    ? Text(
+                                        '${'Reason'.tr()}: $reason',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: dark ? Colors.white60 : Colors.black54,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      )
+                                    : Text(
+                                        blocked.blockedUserId,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: dark ? Colors.white54 : Colors.black45,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                trailing: TextButton(
+                                  onPressed: () => _confirmUnblockUser(blocked),
+                                  child: Text('Unblock'.tr()),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmUnblockUser(BlockedBookingUser blockedUser) async {
+    final dark = isDarkMode(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: dark ? Colors.grey[900] : Colors.white,
+        title: Text(
+          'Unblock user?'.tr(),
+          style: TextStyle(color: dark ? Colors.white : Colors.black87),
+        ),
+        content: Text(
+          'This user will be able to send booking requests again.'.tr(),
+          style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('Cancel'.tr()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text('Unblock'.tr()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await BlockedUserRepository().unblockUser(
+        listerId: widget.currentUser.userID,
+        blockedUserId: blockedUser.blockedUserId,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('User unblocked successfully.'.tr()),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to unblock user. Please try again.'.tr()),
           backgroundColor: Colors.red,
         ),
       );

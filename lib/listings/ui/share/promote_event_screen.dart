@@ -13,6 +13,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:caribtap/core/utils/helper.dart';
+import 'package:caribtap/listings/currency/currency_formatter.dart';
 import 'package:caribtap/listings/model/event_model.dart';
 
 class PromoteEventScreen extends StatefulWidget {
@@ -26,6 +27,7 @@ class PromoteEventScreen extends StatefulWidget {
 
 class _PromoteEventScreenState extends State<PromoteEventScreen> {
   final GlobalKey _posterKey = GlobalKey();
+  final GlobalKey _shareButtonKey = GlobalKey();
 
   bool _isGeneratingImage = false;
   bool _fillImage = false;
@@ -159,10 +161,23 @@ class _PromoteEventScreenState extends State<PromoteEventScreen> {
   }
 
   Rect? get _sharePositionOrigin {
-    final renderObject = context.findRenderObject();
-    if (renderObject is! RenderBox) return null;
-    final offset = renderObject.localToGlobal(Offset.zero);
-    return offset & renderObject.size;
+    // Try the share button key first (most precise anchor for iOS popover)
+    final buttonContext = _shareButtonKey.currentContext;
+    if (buttonContext != null) {
+      final renderObject = buttonContext.findRenderObject();
+      if (renderObject is RenderBox && renderObject.hasSize) {
+        final offset = renderObject.localToGlobal(Offset.zero);
+        final rect = offset & renderObject.size;
+        if (rect.width > 0 && rect.height > 0) return rect;
+      }
+    }
+    // Fallback: centre of the screen
+    final size = MediaQuery.sizeOf(context);
+    return Rect.fromCenter(
+      center: Offset(size.width / 2, size.height / 2),
+      width: 1,
+      height: 1,
+    );
   }
 
   @override
@@ -172,9 +187,7 @@ class _PromoteEventScreenState extends State<PromoteEventScreen> {
         title: Text('Share Event'.tr()),
       ),
       body: SingleChildScrollView(
-        physics: _isFillAdjustMode
-            ? const NeverScrollableScrollPhysics()
-            : const BouncingScrollPhysics(),
+        physics: const BouncingScrollPhysics(),
         padding: EdgeInsets.fromLTRB(
           16,
           16,
@@ -263,6 +276,7 @@ class _PromoteEventScreenState extends State<PromoteEventScreen> {
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
+                    key: _shareButtonKey,
                     onPressed: _isGeneratingImage ? null : _sharePosterImage,
                     icon: _isGeneratingImage
                         ? const SizedBox(
@@ -572,7 +586,10 @@ class _EventPoster extends StatelessWidget {
                                 Text(
                                   ticket.price == 0
                                       ? 'Free'.tr()
-                                      : '${ticket.currency} ${ticket.price.toStringAsFixed(2)}',
+                                      : CurrencyFormatter().formatAmount(
+                                          currencyCode: ticket.currency,
+                                          amount: ticket.price,
+                                        ),
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,

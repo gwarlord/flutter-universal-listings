@@ -31,6 +31,7 @@ class RentalBrowseService {
               pricingUnit: _pricingUnitToString(catalogItem.pricingUnit),
               currencyCode: 'USD', // Default, will be overridden by listing currency
               photos: catalogItem.photos,
+              videos: catalogItem.videos,
               isAvailable: catalogItem.isAvailable && catalogItem.stockQty > 0,
               stockQty: catalogItem.stockQty,
               depositAmount: catalogItem.depositAmount,
@@ -87,6 +88,7 @@ class RentalBrowseService {
         pricingUnit: _pricingUnitToString(catalogItem.pricingUnit),
         currencyCode: 'USD',
         photos: catalogItem.photos,
+        videos: catalogItem.videos,
         isAvailable: catalogItem.isAvailable && catalogItem.stockQty > 0,
         stockQty: catalogItem.stockQty,
         depositAmount: catalogItem.depositAmount,
@@ -224,6 +226,9 @@ class RentalBrowseService {
     required String? customerNotes,
   }) async {
     if (cartItems.isEmpty) return [];
+    final listingDoc = await _firestore.collection('listings').doc(listingId).get();
+    final listingAcceptsProofOfPayment =
+        listingDoc.data()?['payments']?['acceptProofOfPayment'] == true;
       
     final List<String> bookingIds = [];
     final requestedByUnit = <String, int>{};
@@ -298,6 +303,7 @@ class RentalBrowseService {
           status: RentalBookingStatus.pending,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
+          listingAcceptsProofOfPayment: listingAcceptsProofOfPayment,
         );
 
         final bookingPayload = {

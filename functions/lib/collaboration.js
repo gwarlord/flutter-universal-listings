@@ -191,6 +191,7 @@ exports.addListingCollaborator = functions.https.onCall(async (data, context) =>
             editListing: incomingPermissions.editListing ?? true,
             changeOrderStatus: incomingPermissions.changeOrderStatus ?? true,
             changeFulfillment: incomingPermissions.changeFulfillment ?? true,
+            manageTableMode: incomingPermissions.manageTableMode ?? false,
             deleteListing: false, // ALWAYS false
         };
         // 5. Write collaborator document
@@ -411,6 +412,7 @@ exports.updateListingCollaboratorPermissions = functions.https.onCall(async (dat
             editListing: incomingPermissions.editListing ?? incomingPermissions.editListing,
             changeOrderStatus: incomingPermissions.changeOrderStatus ?? incomingPermissions.changeOrderStatus,
             changeFulfillment: incomingPermissions.changeFulfillment ?? incomingPermissions.changeFulfillment,
+            manageTableMode: incomingPermissions.manageTableMode ?? false,
             deleteListing: false,
         };
         // Update permissions

@@ -46,7 +46,11 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
     });
 
     on<GetAllListingsEvent>((event, emit) async {
-      allListings = await listingsRepository.getListings(favListingsIDs: currentUser.likedListingsIDs);
+      allListings = await listingsRepository.getListings(
+        favListingsIDs: currentUser.likedListingsIDs,
+        includeDemoListings: true,
+        includeHiddenListings: true,
+      );
       emit(AllListingsState(listings: allListings));
     });
 
@@ -87,11 +91,12 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
         event.listing.suspensionInfo = event.suspensionInfo;
         // Update the listing's suspended property
         event.listing.suspended = true;
-        if (!suspendedListings.any((l) => l.id == event.listing.id)) {
-          suspendedListings.add(event.listing);
-        }
         allListings.removeWhere((l) => l.id == event.listing.id);
-        debugPrint('[AdminBloc] SuspendListingEvent: Emitting AllListingsState');
+        allListings.add(event.listing);
+        suspendedListings.removeWhere((l) => l.id == event.listing.id);
+        suspendedListings.add(event.listing);
+        debugPrint('[AdminBloc] SuspendListingEvent: Emitting SuspendedListingsState and AllListingsState');
+        emit(SuspendedListingsState(suspendedListings: List<ListingModel>.from(suspendedListings)));
         emit(AllListingsState(listings: allListings));
         debugPrint('[AdminBloc] SuspendListingEvent COMPLETE: ${event.listing.id}');
       } catch (e, stackTrace) {
@@ -118,10 +123,10 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
         // Update the listing's suspended property
         event.listing.suspended = false;
         suspendedListings.removeWhere((l) => l.id == event.listing.id);
-        if (!allListings.any((l) => l.id == event.listing.id)) {
-          allListings.add(event.listing);
-        }
-        debugPrint('[AdminBloc] UnsuspendListingEvent: Emitting AllListingsState');
+        allListings.removeWhere((l) => l.id == event.listing.id);
+        allListings.add(event.listing);
+        debugPrint('[AdminBloc] UnsuspendListingEvent: Emitting SuspendedListingsState and AllListingsState');
+        emit(SuspendedListingsState(suspendedListings: List<ListingModel>.from(suspendedListings)));
         emit(AllListingsState(listings: allListings));
         debugPrint('[AdminBloc] UnsuspendListingEvent COMPLETE: ${event.listing.id}');
       } catch (e, stackTrace) {

@@ -148,6 +148,10 @@ class RentalService {
 
   /// Create a new rental booking
   Future<String> createRentalBooking(RentalBooking booking) async {
+    final listingDoc = await _firestore.collection('listings').doc(booking.listingId).get();
+    final listingAcceptsProofOfPayment =
+        listingDoc.data()?['payments']?['acceptProofOfPayment'] == true;
+
     final catalogRef = _rentalCatalogItemRef(booking.listingId, booking.rentalUnitId);
     final catalogDoc = await catalogRef.get();
     if (!catalogDoc.exists) {
@@ -176,7 +180,9 @@ class RentalService {
 
     final bookingRef = _rentalBookingsRef.doc();
     final bookingData = booking.toJson()
-      ..putIfAbsent('inventoryReserved', () => false);
+      ..putIfAbsent('inventoryReserved', () => false)
+      ..['listingAcceptsProofOfPayment'] =
+          booking.listingAcceptsProofOfPayment || listingAcceptsProofOfPayment;
 
     await _firestore.runTransaction((transaction) async {
       final latestCatalogDoc = await transaction.get(catalogRef);

@@ -48,10 +48,16 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       'yearlyPrice': 199.99,
       'color': Colors.blue,
       'popular': true,
+      'subtitle': 'Tools to help you sell, manage, and grow on CaribTap.',
+      'ctaText': 'Start Growing',
       'features': [
-        'Booking system with email & reminders',
-        'Standard Analytics on listing performance',
-        'AI photo enhancements',
+        'Create listings for sales, rentals, bookings, and events',
+        'Boost listing quality with AI-enhanced photos',
+        'Activate customer chat and manage blocked users',
+        'Manage bookings and rentals from one place',
+        'Access analytics to track performance',
+        'Post deals and promotions',
+        'Accept proof of payment on eligible listings',
       ],
     },
     {
@@ -60,11 +66,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       'monthlyPrice': 39.99,
       'yearlyPrice': 399.99,
       'color': Colors.purple,
+      'subtitle': 'Everything you need to run and scale your business on CaribTap.',
+      'ctaText': 'Run Your Business',
       'features': [
-        'All Professional Services',
-        'Enable Chat to talk directly with customers',
-        'Enable Quotes & Invoices',
-        'Unlock Advance Analytics',
+        'Everything in Professional',
+        'Create your own Mini Store with internal catalog',
+        'Accept and manage customer orders',
+        'Generate quotes and invoices',
+        'Access advanced analytics',
+        'Unlock stronger commerce tools for structured selling',
       ],
     },
   ];
@@ -380,8 +390,18 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
+                ),                const SizedBox(height: 16),
+                if (tier['subtitle'] != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      tier['subtitle'].tr(),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: dark ? Colors.white70 : Colors.black54,
+                      ),
+                    ),
+                  ),                const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -403,7 +423,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           ? 'Current Plan'.tr()
                           : (tier['tier'] == 'free'
                               ? 'Downgrade'.tr()
-                              : 'Subscribe Now'.tr()),
+                              : tier['ctaText']?.tr() ?? 'Subscribe Now'.tr()),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

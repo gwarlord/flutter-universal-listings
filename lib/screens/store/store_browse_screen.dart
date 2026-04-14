@@ -1,11 +1,15 @@
+import 'dart:typed_data';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:caribtap/core/ui/full_screen_image_viewer/full_screen_image_viewer.dart';
+import 'package:caribtap/core/ui/full_screen_video_viewer/full_screen_video_viewer.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/model/catalog_item.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/currency/currency_display_service.dart';
 import 'package:caribtap/listings/services/store_service.dart';
 import 'package:caribtap/listings/utils/category_localization.dart';
 import 'package:caribtap/screens/store/cart_models.dart';
@@ -29,6 +33,7 @@ class StoreBrowseScreen extends StatefulWidget {
 
 class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
   final StoreService _storeService = StoreService();
+  final CurrencyDisplayService _currencyDisplayService = CurrencyDisplayService();
   final TextEditingController _searchController = TextEditingController();
   final List<CartItem> _cart = [];
 
@@ -389,11 +394,36 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_formatCurrency(displayPrice, item.currencyCode),
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Color(cfg.colorPrimary))),
+                        FutureBuilder<CurrencyDisplayResult>(
+                          future: _currencyDisplayService.buildDisplayResult(
+                            rawAmount: displayPrice.toStringAsFixed(2),
+                            originalCurrencyCode: item.currencyCode,
+                            preferenceValue: widget.currentUser?.settings.displayCurrencyPreference,
+                          ),
+                          builder: (context, snapshot) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _formatCurrency(displayPrice, item.currencyCode),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(cfg.colorPrimary),
+                                  ),
+                                ),
+                                if (snapshot.data?.approximateFormatted != null)
+                                  Text(
+                                    snapshot.data!.approximateFormatted!,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
                         if (!item.isAvailable)
                           Text('Unavailable'.tr(),
                               style: const TextStyle(
@@ -416,7 +446,7 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
       color: Colors.grey.shade300,
       child: const Icon(Icons.image, size: 40, color: Colors.grey));
   String _formatCurrency(double amount, String currencyCode) =>
-      '${_getCurrencySymbol(currencyCode)}${amount.toStringAsFixed(2)}';
+      '${currencyCode.toUpperCase()} ${_getCurrencySymbol(currencyCode)}${NumberFormat('#,##0.00').format(amount)}';
   String _getCurrencySymbol(String code) {
     switch (code.toUpperCase()) {
       case 'USD':
@@ -477,6 +507,8 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => _ItemDetailModal(
         item: item,
+        currencyPreferenceValue:
+          widget.currentUser?.settings.displayCurrencyPreference,
         getExistingQtyForVariant: (variant) =>
             _cartQtyForSelection(item, variant),
         onRemoveFromCart: (variant) {
@@ -543,11 +575,13 @@ class _StoreBrowseScreenState extends State<StoreBrowseScreen> {
 
 class _ItemDetailModal extends StatefulWidget {
   final CatalogItem item;
+  final String? currencyPreferenceValue;
   final int Function(Map<String, dynamic>? variant) getExistingQtyForVariant;
   final void Function(Map<String, dynamic>? variant) onRemoveFromCart;
   final Function(CartItem) onAddToCart;
   const _ItemDetailModal({
     required this.item,
+    required this.currencyPreferenceValue,
     required this.getExistingQtyForVariant,
     required this.onRemoveFromCart,
     required this.onAddToCart,
@@ -558,6 +592,7 @@ class _ItemDetailModal extends StatefulWidget {
 }
 
 class _ItemDetailModalState extends State<_ItemDetailModal> {
+  final CurrencyDisplayService _currencyDisplayService = CurrencyDisplayService();
   int _quantity = 1;
   int _selectedPhotoIndex = 0;
   CatalogVariant? _selectedVariant;
@@ -935,6 +970,34 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
                 ),
               ],
               const SizedBox(height: 16),
+
+              // Videos
+              if (widget.item.videos.isNotEmpty) ...[
+                Text(
+                  'Videos'.tr(),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: dark ? Colors.white : Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 120,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: widget.item.videos.length,
+                    itemBuilder: (context, index) {
+                      return _StoreVideoThumb(
+                        url: widget.item.videos[index],
+                        dark: dark,
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -944,14 +1007,43 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                               color: dark ? Colors.white : Colors.black))),
-                  Text(
-                      _formatCurrency(
-                          _selectedVariant?.price ?? widget.item.price,
-                          widget.item.currencyCode),
-                      style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(cfg.colorPrimary))),
+                  FutureBuilder<CurrencyDisplayResult>(
+                    future: _currencyDisplayService.buildDisplayResult(
+                      rawAmount:
+                          (_selectedVariant?.price ?? widget.item.price).toStringAsFixed(2),
+                      originalCurrencyCode: widget.item.currencyCode,
+                      preferenceValue: widget.currencyPreferenceValue,
+                    ),
+                    builder: (context, snapshot) {
+                      final display = snapshot.data;
+                      final original = _formatCurrency(
+                        _selectedVariant?.price ?? widget.item.price,
+                        widget.item.currencyCode,
+                      );
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            original,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Color(cfg.colorPrimary),
+                            ),
+                          ),
+                          if (display?.approximateFormatted != null)
+                            Text(
+                              display!.approximateFormatted!,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -1131,7 +1223,7 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
   }
 
   String _formatCurrency(double amount, String currencyCode) =>
-      '${_getCurrencySymbol(currencyCode)}${amount.toStringAsFixed(2)}';
+      '${currencyCode.toUpperCase()} ${_getCurrencySymbol(currencyCode)}${amount.toStringAsFixed(2)}';
   String _getCurrencySymbol(String code) {
     switch (code.toUpperCase()) {
       case 'USD':
@@ -1188,5 +1280,84 @@ class _ItemDetailModalState extends State<_ItemDetailModal> {
           : null,
     ));
     Navigator.pop(context);
+  }
+}
+
+class _StoreVideoThumb extends StatefulWidget {
+  final String url;
+  final bool dark;
+
+  const _StoreVideoThumb({required this.url, required this.dark});
+
+  @override
+  State<_StoreVideoThumb> createState() => _StoreVideoThumbState();
+}
+
+class _StoreVideoThumbState extends State<_StoreVideoThumb> {
+  Uint8List? _thumb;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _generate();
+  }
+
+  Future<void> _generate() async {
+    final bytes = await VideoThumbnail.thumbnailData(
+      video: widget.url,
+      imageFormat: ImageFormat.JPEG,
+      maxHeight: 120,
+      quality: 75,
+    );
+    if (mounted) setState(() { _thumb = bytes; _loaded = true; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => FullScreenVideoViewer(
+              videoUrl: widget.url,
+              heroTag: 'store_video_${widget.url.hashCode}',
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 160,
+        height: 120,
+        margin: const EdgeInsets.only(right: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: widget.dark ? Colors.grey.shade800 : Colors.grey.shade200,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: _thumb != null
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.memory(_thumb!, fit: BoxFit.cover),
+                    const Center(
+                      child: Icon(Icons.play_circle_fill,
+                          color: Colors.white70, size: 36),
+                    ),
+                  ],
+                )
+              : Center(
+                  child: _loaded
+                      ? Icon(Icons.videocam,
+                          size: 36, color: Colors.grey.shade500)
+                      : const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+        ),
+      ),
+    );
   }
 }

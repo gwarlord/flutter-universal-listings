@@ -30,6 +30,13 @@ class PhotoEnhancementBottomSheet extends StatelessWidget {
           _showSubscriptionModal(context, state.requiredTier);
         } else if (state is QuotaExhausted) {
           _showQuotaExhaustedDialog(context, state);
+        } else if (state is OfflineError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.orange,
+            ),
+          );
         } else if (state is EnhancementError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -140,6 +147,8 @@ class PhotoEnhancementBottomSheet extends StatelessWidget {
       return _buildSubscriptionRequired(context, state);
     } else if (state is QuotaExhausted) {
       return _buildQuotaExhausted(context, state);
+    } else if (state is OfflineError) {
+      return _buildOfflineError(context, state);
     } else if (state is EnhancementError) {
       return _buildError(context, state);
     }
@@ -151,13 +160,12 @@ class PhotoEnhancementBottomSheet extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return ImageSelectorWidget(
       isDark: isDark,
-      onImageSelected: (imagePath, category) {
-        context.read<PhotoEnhancementCubit>().startEnhancement(
-          listingId: listingId,
+      onImageSelected: (imagePath, category) async {
+        await context.read<PhotoEnhancementCubit>().selectImageForEnhancement(
           imagePath: imagePath,
+          listingId: listingId,
           category: category,
           subscriptionTier: subscriptionTier,
-          userId: userId,
         );
       },
       onCancel: () => Navigator.pop(context),
@@ -282,6 +290,50 @@ class PhotoEnhancementBottomSheet extends StatelessWidget {
           const Text(
             'Enhancement Failed',
             style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            state.message,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () =>
+                      context.read<PhotoEnhancementCubit>().reset(),
+                  child: const Text('Try Again'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOfflineError(BuildContext context, OfflineError state) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.wifi_off_rounded, size: 64, color: Colors.orange[700]),
+          const SizedBox(height: 16),
+          Text(
+            'Offline'.toUpperCase(),
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),

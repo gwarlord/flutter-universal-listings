@@ -22,6 +22,7 @@ import 'package:caribtap/core/ui/loading/loading_cubit.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/core/utils/user_report/api/api_manager.dart';
 import 'package:caribtap/core/utils/user_report/api/user_report_repository.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'firestore_chat_screen_v2.dart';
 
@@ -1106,14 +1107,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   Padding(
                     padding:
                         const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                    child: Text(
-                      messageData.content,
-                      textAlign: TextAlign.start,
-                      style: TextStyle(
-                        color:
-                            isDarkMode(context) ? Colors.black : Colors.white,
-                        fontSize: 16,
-                      ),
+                    child: _ChatMessageText(
+                      text: messageData.content,
+                      textColor: isDarkMode(context) ? Colors.black : Colors.white,
+                      linkColor: isDarkMode(context) ? Colors.blue.shade900 : Colors.blue.shade100,
                     ),
                   ),
                 ],
@@ -1379,14 +1376,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   Padding(
                     padding:
                         const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                    child: Text(
-                      messageData.content,
-                      textAlign: TextAlign.start,
-                      style: TextStyle(
-                        color:
-                            isDarkMode(context) ? Colors.white : Colors.black,
-                        fontSize: 16,
-                      ),
+                    child: _ChatMessageText(
+                      text: messageData.content,
+                      textColor: isDarkMode(context) ? Colors.white : Colors.black,
+                      linkColor: isDarkMode(context) ? Colors.blue.shade300 : Colors.blue.shade700,
                     ),
                   ),
                 ],
@@ -1457,6 +1450,102 @@ class _ChatScreenState extends State<ChatScreen> {
             Navigator.pop(actionSheetContext);
           },
         ),
+      ),
+    );
+  }
+}
+
+/// Renders a chat message with clickable URLs and long-press to copy.
+class _ChatMessageText extends StatelessWidget {
+  final String text;
+  final Color textColor;
+  final Color linkColor;
+
+  const _ChatMessageText({
+    required this.text,
+    required this.textColor,
+    required this.linkColor,
+  });
+
+  static final _urlRegex = RegExp(
+    r'(https?://[^\s]+|caribtap://[^\s]+)',
+    caseSensitive: false,
+  );
+
+  Future<void> _launch(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void _copyToClipboard(BuildContext context, String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Copied to clipboard'.tr()),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final matches = _urlRegex.allMatches(text).toList();
+
+    if (matches.isEmpty) {
+      // Plain text — just long-press to copy
+      return GestureDetector(
+        onLongPress: () => _copyToClipboard(context, text),
+        child: Text(
+          text,
+          textAlign: TextAlign.start,
+          style: TextStyle(color: textColor, fontSize: 16),
+        ),
+      );
+    }
+
+    // Build a RichText with tappable link spans
+    final spans = <InlineSpan>[];
+    int cursor = 0;
+    for (final match in matches) {
+      if (match.start > cursor) {
+        spans.add(TextSpan(
+          text: text.substring(cursor, match.start),
+          style: TextStyle(color: textColor, fontSize: 16),
+        ));
+      }
+      final url = match.group(0)!;
+      spans.add(WidgetSpan(
+        child: GestureDetector(
+          onTap: () => _launch(url),
+          onLongPress: () => _copyToClipboard(context, url),
+          child: Text(
+            url,
+            style: TextStyle(
+              color: linkColor,
+              fontSize: 16,
+              decoration: TextDecoration.underline,
+              decorationColor: linkColor,
+            ),
+          ),
+        ),
+      ));
+      cursor = match.end;
+    }
+    if (cursor < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(cursor),
+        style: TextStyle(color: textColor, fontSize: 16),
+      ));
+    }
+
+    return GestureDetector(
+      onLongPress: () => _copyToClipboard(context, text),
+      child: Text.rich(
+        TextSpan(children: spans),
+        textAlign: TextAlign.start,
       ),
     );
   }

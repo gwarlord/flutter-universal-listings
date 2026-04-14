@@ -11,6 +11,7 @@ import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:caribtap/listings/ui/profile/settings/settings_bloc.dart';
 import 'package:caribtap/listings/ui/auth/reset_password/reset_password_screen.dart';
 import 'package:caribtap/listings/ui/profile/payment_details/payment_details_screen.dart';
+import 'package:caribtap/listings/currency/supported_currency.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -28,6 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool _bookingEmailReminders;
   late bool _bookingPushReminders;
   String? _selectedLanguageCode;
+  late String _displayCurrencyPreference;
 
   @override
   void initState() {
@@ -37,6 +39,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _bookingEmailReminders = user.settings.bookingEmailReminders;
     _bookingPushReminders = user.settings.bookingPushReminders;
     _selectedLanguageCode = user.settings.languageCode;
+    _displayCurrencyPreference =
+      normalizePreferenceValue(user.settings.displayCurrencyPreference);
   }
 
   @override
@@ -263,6 +267,121 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       const SizedBox(height: 32),
+                      Text('PRICING DISPLAY'.tr(), style: titleStyle),
+                      const SizedBox(height: 12),
+                      Card(
+                        color: cardColor,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(
+                            color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Color(colorPrimary).withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(Icons.currency_exchange, color: Color(colorPrimary)),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Display prices in'.tr(),
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: isDark ? Colors.white : Colors.black87,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Converted prices are estimates for reference only'.tr(),
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              DropdownButtonFormField<String>(
+                                value: _displayCurrencyPreference,
+                                decoration: InputDecoration(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                                  ),
+                                  filled: true,
+                                  fillColor: isDark ? Colors.grey[850] : Colors.grey[50],
+                                ),
+                                items: [
+                                  DropdownMenuItem<String>(
+                                    value: CurrencyDisplayPreference.original,
+                                    child: Text('Original listing currency'.tr()),
+                                  ),
+                                  DropdownMenuItem<String>(
+                                    value: CurrencyDisplayPreference.local,
+                                    child: Text('Local currency'.tr()),
+                                  ),
+                                  const DropdownMenuItem<String>(
+                                    value: 'USD',
+                                    child: Text('USD'),
+                                  ),
+                                  const DropdownMenuItem<String>(
+                                    value: 'XCD',
+                                    child: Text('XCD'),
+                                  ),
+                                  const DropdownMenuItem<String>(
+                                    value: 'TTD',
+                                    child: Text('TTD'),
+                                  ),
+                                  const DropdownMenuItem<String>(
+                                    value: 'JMD',
+                                    child: Text('JMD'),
+                                  ),
+                                  const DropdownMenuItem<String>(
+                                    value: 'BBD',
+                                    child: Text('BBD'),
+                                  ),
+                                  const DropdownMenuItem<String>(
+                                    value: 'GYD',
+                                    child: Text('GYD'),
+                                  ),
+                                ],
+                                onChanged: (String? newValue) {
+                                  if (newValue == null) return;
+                                  setState(() {
+                                    _displayCurrencyPreference = newValue;
+                                  });
+                                  context.read<SettingsBloc>().add(SettingsChangedEvent());
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
                       Text('BUSINESS SETTINGS'.tr(), style: titleStyle),
                       const SizedBox(height: 12),
                       Card(
@@ -333,6 +452,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             user.settings.bookingEmailReminders = _bookingEmailReminders;
                             user.settings.bookingPushReminders = _bookingPushReminders;
                             user.settings.languageCode = _selectedLanguageCode;
+                                user.settings.displayCurrencyPreference = _displayCurrencyPreference;
                             context.read<LoadingCubit>().showLoading(
                                   context,
                                   'Saving changes...'.tr(),

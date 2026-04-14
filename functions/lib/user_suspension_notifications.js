@@ -36,6 +36,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.onUserUnsuspended = exports.onUserSuspended = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
+function getTokens(userData) {
+    let tokens = [];
+    if (Array.isArray(userData?.fcmTokens)) {
+        tokens = userData.fcmTokens
+            .filter((t) => typeof t === "string" && t.trim().length > 0)
+            .map((t) => t.trim());
+    }
+    if (userData?.pushToken && typeof userData.pushToken === "string") {
+        const pushToken = userData.pushToken.trim();
+        if (pushToken && !tokens.includes(pushToken)) {
+            tokens.push(pushToken);
+        }
+    }
+    return Array.from(new Set(tokens));
+}
 /**
  * Sends a notification to a user when they are suspended
  */
@@ -53,20 +68,20 @@ exports.onUserSuspended = functions.firestore
         return null; // Not a new suspension
     }
     const user = after;
-    if (!user.pushToken) {
-        console.log("No push token for suspended user:", userId);
-        return null;
-    }
-    // Check if push notifications are enabled
     if (user.settings?.allowPushNotifications === false) {
         console.log("Push notifications disabled for suspended user:", userId);
+        return null;
+    }
+    const tokens = getTokens(user);
+    if (tokens.length === 0) {
+        console.log("No push tokens for suspended user:", userId);
         return null;
     }
     const suspensionInfo = user.suspensionInfo || {};
     const reasonText = suspensionInfo.reasonText
         ? `Reason: ${suspensionInfo.reasonText}`
         : "Your account has been suspended due to a policy violation.";
-    const message = {
+    const messagePayload = {
         notification: {
             title: "🚫 Account Suspended",
             body: reasonText,
@@ -77,10 +92,11 @@ exports.onUserSuspended = functions.firestore
             reason: suspensionInfo.reason || "unknown",
             timestamp: new Date().toISOString(),
         },
-        token: user.pushToken,
     };
     try {
-        await admin.messaging().send(message);
+        for (const token of tokens) {
+            await admin.messaging().send({ ...messagePayload, token });
+        }
         console.log("Suspension notification sent to user:", userId);
         return null;
     }
@@ -106,16 +122,16 @@ exports.onUserUnsuspended = functions.firestore
         return null; // Not an unsuspension
     }
     const user = after;
-    if (!user.pushToken) {
-        console.log("No push token for unsuspended user:", userId);
-        return null;
-    }
-    // Check if push notifications are enabled
     if (user.settings?.allowPushNotifications === false) {
         console.log("Push notifications disabled for unsuspended user:", userId);
         return null;
     }
-    const message = {
+    const tokens = getTokens(user);
+    if (tokens.length === 0) {
+        console.log("No push tokens for unsuspended user:", userId);
+        return null;
+    }
+    const messagePayload = {
         notification: {
             title: "✅ Account Restored",
             body: "Your account suspension has been lifted. You can now log in again.",
@@ -125,10 +141,11 @@ exports.onUserUnsuspended = functions.firestore
             userId: userId,
             timestamp: new Date().toISOString(),
         },
-        token: user.pushToken,
     };
     try {
-        await admin.messaging().send(message);
+        for (const token of tokens) {
+            await admin.messaging().send({ ...messagePayload, token });
+        }
         console.log("Unsuspension notification sent to user:", userId);
         return null;
     }

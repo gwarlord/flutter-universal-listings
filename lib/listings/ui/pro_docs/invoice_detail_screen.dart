@@ -1,6 +1,8 @@
 import 'package:caribtap/listings/model/invoice_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/payment_details_model.dart';
 import 'package:caribtap/listings/services/invoice_service.dart';
+import 'package:caribtap/listings/services/payment_details_service.dart';
 import 'package:caribtap/listings/services/pdf_service.dart';
 import 'package:caribtap/listings/services/share_link_service.dart';
 import 'package:caribtap/listings/services/tier_gate_service.dart';
@@ -31,6 +33,16 @@ class InvoiceDetailScreen extends StatefulWidget {
 class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   final NumberFormat _currency = NumberFormat.simpleCurrency();
   final PdfService _pdfService = PdfService();
+  final PaymentDetailsService _paymentDetailsService = PaymentDetailsService();
+
+  Future<PaymentDetailsPublic?> _getPaymentDetails() async {
+    try {
+      final details = await _paymentDetailsService.getPublic(widget.currentUser.userID);
+      return details.hasAnyPaymentMethod ? details : null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +79,10 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 _sectionTitle('Items'.tr()),
+                if (invoice.poNumber.isNotEmpty) ...[
+                  _totalRow('PO Number'.tr(), invoice.poNumber),
+                  const SizedBox(height: 8),
+                ],
                 ...invoice.items.map((item) {
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
@@ -141,7 +157,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                 onPressed: canSend
                     ? () async {
                         if (invoice.shareToken != null && invoice.status == 'sent') {
-                          await _shareToken(invoice);
+                          await _shareToken(context, invoice);
                         } else {
                           await context.read<InvoiceDetailCubit>().sendInvoice(invoice);
                         }
@@ -176,22 +192,30 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     );
   }
 
-  Future<void> _shareToken(InvoiceModel invoice) async {
+  Future<void> _shareToken(BuildContext context, InvoiceModel invoice) async {
     final token = invoice.shareToken;
     if (token == null || token.isEmpty) return;
     final link = ShareLinkService().buildPublicDocLink(type: 'invoice', token: token);
-    await Share.share('${'Invoice link'.tr()}: $link');
+    final box = context.findRenderObject() as RenderBox?;
+    await Share.share(
+      '${'Invoice link'.tr()}: $link',
+      sharePositionOrigin: box != null
+          ? box.localToGlobal(Offset.zero) & box.size
+          : const Rect.fromLTWH(0, 0, 1, 1),
+    );
   }
 
   Future<void> _shareInvoicePdf(InvoiceModel invoice) async {
     final tier = TierGateService().resolveTierFromUser(widget.currentUser);
     final canBrand = TierGateService().canUseBranding(tier);
     final businessName = canBrand ? _displayName(widget.currentUser) : null;
+    final paymentDetails = await _getPaymentDetails();
     await _pdfService.shareInvoicePdf(
       invoice,
       businessName: businessName,
       includeWatermark: !canBrand,
       hideFooter: canBrand,
+      paymentDetails: paymentDetails,
     );
   }
 

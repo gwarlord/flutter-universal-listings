@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../model/rental_booking.dart';
 import '../../services/rental_service.dart';
 import 'rental_booking_detail_screen.dart';
@@ -37,17 +38,17 @@ class _RentalsManagementScreenState extends State<RentalsManagementScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rental Management'),
+        title: Text('Rental Management'.tr()),
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          tabs: const [
-            Tab(text: 'Active'),
-            Tab(text: 'Pending'),
-            Tab(text: 'Confirmed'),
-            Tab(text: 'Completed'),
-            Tab(text: 'Cancelled'),
-            Tab(text: 'All'),
+          tabs: [
+            Tab(text: 'Active'.tr()),
+            Tab(text: 'Pending'.tr()),
+            Tab(text: 'Confirmed'.tr()),
+            Tab(text: 'Completed'.tr()),
+            Tab(text: 'Cancelled'.tr()),
+            Tab(text: 'All'.tr()),
           ],
         ),
       ),
@@ -59,7 +60,7 @@ class _RentalsManagementScreenState extends State<RentalsManagementScreen>
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(child: Text('Error: {}'.tr(args: ['${snapshot.error}'])));
           }
 
           final allBookings = snapshot.data ?? [];
@@ -111,7 +112,7 @@ class _RentalsManagementScreenState extends State<RentalsManagementScreen>
             Icon(Icons.event_busy, size: 80, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              'No bookings',
+              'No bookings'.tr(),
               style: Theme.of(context).textTheme.titleLarge,
             ),
           ],
@@ -185,7 +186,7 @@ class _RentalsManagementScreenState extends State<RentalsManagementScreen>
                   Icon(statusIcon, size: 20, color: statusColor),
                   const SizedBox(width: 8),
                   Text(
-                    booking.status.toString().split('.').last.toUpperCase(),
+                    _statusLabel(booking.status).tr().toUpperCase(),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: statusColor,
                           fontWeight: FontWeight.bold,
@@ -207,7 +208,7 @@ class _RentalsManagementScreenState extends State<RentalsManagementScreen>
                           Icon(Icons.warning, size: 14, color: Colors.red[900]),
                           const SizedBox(width: 4),
                           Text(
-                            'OVERDUE',
+                            'OVERDUE'.tr(),
                             style: TextStyle(
                               color: Colors.red[900],
                               fontSize: 12,
@@ -231,11 +232,11 @@ class _RentalsManagementScreenState extends State<RentalsManagementScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Start: $startDate at $startTime',
+                          'Start: {} at {}'.tr(args: [startDate, startTime]),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         Text(
-                          'End: $endDate at $endTime',
+                          'End: {} at {}'.tr(args: [endDate, endTime]),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
@@ -277,7 +278,7 @@ class _RentalsManagementScreenState extends State<RentalsManagementScreen>
                       Icon(Icons.warning_amber, size: 16, color: Colors.orange[900]),
                       const SizedBox(width: 8),
                       Text(
-                        'Mileage overage: \$${booking.mileageOverageCharge!.toStringAsFixed(2)}',
+                        'Mileage overage: {}'.tr(args: ['\$${booking.mileageOverageCharge!.toStringAsFixed(2)}']),
                         style: TextStyle(
                           color: Colors.orange[900],
                           fontSize: 12,
@@ -300,14 +301,14 @@ class _RentalsManagementScreenState extends State<RentalsManagementScreen>
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.red,
                         ),
-                        child: const Text('Decline'),
+                        child: Text('Decline'.tr()),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () => _confirmBooking(booking),
-                        child: const Text('Confirm'),
+                        child: Text('Confirm'.tr()),
                       ),
                     ),
                   ],
@@ -318,6 +319,23 @@ class _RentalsManagementScreenState extends State<RentalsManagementScreen>
         ),
       ),
     );
+  }
+
+  String _statusLabel(RentalBookingStatus status) {
+    switch (status) {
+      case RentalBookingStatus.pending:
+        return 'Pending';
+      case RentalBookingStatus.confirmed:
+        return 'Confirmed';
+      case RentalBookingStatus.active:
+        return 'Active';
+      case RentalBookingStatus.completed:
+        return 'Completed';
+      case RentalBookingStatus.cancelled:
+        return 'Cancelled';
+      case RentalBookingStatus.disputed:
+        return 'Disputed';
+    }
   }
 
   void _navigateToDetail(RentalBooking booking) {
@@ -337,13 +355,13 @@ class _RentalsManagementScreenState extends State<RentalsManagementScreen>
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Booking confirmed')),
+          SnackBar(content: Text('Booking confirmed'.tr())),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('Error: {}'.tr(args: ['$e']))),
         );
       }
     }
@@ -364,13 +382,13 @@ class _RentalsManagementScreenState extends State<RentalsManagementScreen>
         );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Booking declined')),
+            SnackBar(content: Text('Booking declined'.tr())),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
+            SnackBar(content: Text('Error: {}'.tr(args: ['$e']))),
           );
         }
       }
@@ -395,11 +413,11 @@ class _DeclineReasonDialogState extends State<_DeclineReasonDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Decline Booking'),
+      title: Text('Decline Booking'.tr()),
       content: TextField(
         controller: _controller,
-        decoration: const InputDecoration(
-          hintText: 'Reason for declining (optional)',
+        decoration: InputDecoration(
+          hintText: 'Reason for declining (optional)'.tr(),
           border: OutlineInputBorder(),
         ),
         maxLines: 3,
@@ -407,11 +425,11 @@ class _DeclineReasonDialogState extends State<_DeclineReasonDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text('Cancel'.tr()),
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, _controller.text),
-          child: const Text('Decline'),
+          child: Text('Decline'.tr()),
         ),
       ],
     );

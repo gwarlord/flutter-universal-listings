@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:caribtap/constants.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
@@ -64,6 +66,12 @@ class _RentalItemEditorScreenState extends State<RentalItemEditorScreen> {
   List<File> _newVideoFiles = [];
   bool _isUploading = false;
   bool _isSaving = false;
+
+    bool get _isReadOnlyDemoEdit =>
+      widget.listing.isDemo && !widget.currentUser.isAdmin;
+
+    String _demoEditNotAllowedMessage() =>
+      'This is a demo listing. Edits are not allowed.'.tr();
 
   String _resolveListingCurrencyCode() {
     final storeCurrency = (widget.listing.storeCurrencyCode ?? '').trim();
@@ -155,7 +163,9 @@ class _RentalItemEditorScreenState extends State<RentalItemEditorScreen> {
             )
           else
             TextButton(
-              onPressed: _saveItem,
+              onPressed: _isReadOnlyDemoEdit
+                  ? () => showSnackBar(context, _demoEditNotAllowedMessage())
+                  : _saveItem,
               child: Text(
                 'Save'.tr(),
                 style: const TextStyle(
@@ -639,11 +649,16 @@ class _RentalItemEditorScreenState extends State<RentalItemEditorScreen> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: url != null
-                ? Image.network(url, fit: BoxFit.cover)
-                : (file != null && isPhotos
-                    ? Image.file(file, fit: BoxFit.cover)
-                    : Icon(Icons.videocam, size: 40, color: Colors.grey.shade600)),
+            child: isPhotos
+                ? (url != null
+                    ? Image.network(url, fit: BoxFit.cover)
+                    : (file != null
+                        ? Image.file(file, fit: BoxFit.cover)
+                        : const SizedBox()))
+                : _VideoThumb(
+                    source: url ?? file?.path ?? '',
+                    dark: dark,
+                  ),
           ),
         ),
         Positioned(
@@ -741,9 +756,12 @@ class _RentalItemEditorScreenState extends State<RentalItemEditorScreen> {
   }
 
   String _friendlyErrorMessage(Object error) {
+    if (_isReadOnlyDemoEdit) {
+      return _demoEditNotAllowedMessage();
+    }
     final message = error.toString();
     if (message.contains('PERMISSION_DENIED')) {
-      return 'You don’t have permission to save this rental item. Please check your account permissions or subscription.'.tr();
+      return _demoEditNotAllowedMessage();
     }
     if (message.contains('No AppCheckProvider')) {
       return 'Upload failed because App Check is not configured for this build. Please enable App Check or use a debug provider.'.tr();
@@ -752,6 +770,11 @@ class _RentalItemEditorScreenState extends State<RentalItemEditorScreen> {
   }
 
   Future<void> _saveItem() async {
+    if (_isReadOnlyDemoEdit) {
+      showSnackBar(context, _demoEditNotAllowedMessage());
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -875,5 +898,57 @@ class _RentalItemEditorScreenState extends State<RentalItemEditorScreen> {
         });
       }
     }
+  }
+}
+
+class _VideoThumb extends StatefulWidget {
+  final String source;
+  final bool dark;
+
+  const _VideoThumb({required this.source, required this.dark});
+
+  @override
+  State<_VideoThumb> createState() => _VideoThumbState();
+}
+
+class _VideoThumbState extends State<_VideoThumb> {
+  Uint8List? _thumb;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _generate();
+  }
+
+  Future<void> _generate() async {
+    if (widget.source.isEmpty) return;
+    final bytes = await VideoThumbnail.thumbnailData(
+      video: widget.source,
+      imageFormat: ImageFormat.JPEG,
+      maxHeight: 100,
+      quality: 75,
+    );
+    if (mounted) setState(() { _thumb = bytes; _loaded = true; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_thumb != null) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.memory(_thumb!, fit: BoxFit.cover),
+          const Center(
+            child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 28),
+          ),
+        ],
+      );
+    }
+    return Center(
+      child: _loaded
+          ? Icon(Icons.videocam, size: 40, color: Colors.grey.shade600)
+          : const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+    );
   }
 }

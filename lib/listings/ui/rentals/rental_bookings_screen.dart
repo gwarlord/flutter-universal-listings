@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:intl/intl.dart';
 import 'package:caribtap/listings/model/rental_booking.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
@@ -32,7 +33,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rental Bookings'),
+        title: Text('Rental Bookings'.tr()),
         elevation: 0,
       ),
       body: Column(
@@ -76,7 +77,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
 
                 if (snapshot.hasError) {
                   return Center(
-                    child: Text('Error: ${snapshot.error}'),
+                    child: Text('Error: {}'.tr(args: ['${snapshot.error}'])),
                   );
                 }
 
@@ -98,7 +99,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'No $_selectedTab bookings',
+                          _emptyStateMessage(_selectedTab).tr(),
                           style: TextStyle(
                             fontSize: 18,
                             color: Colors.grey.shade600,
@@ -136,7 +137,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          label,
+          label.tr(),
           style: TextStyle(
             color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -150,7 +151,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
     return FutureBuilder<DocumentSnapshot>(
       future: FirebaseFirestore.instance.collection('users').doc(booking.customerId).get(),
       builder: (context, userSnapshot) {
-        String customerName = 'Customer';
+        String customerName = 'Customer'.tr();
         String customerEmail = '';
         
         if (userSnapshot.hasData && userSnapshot.data!.exists) {
@@ -209,7 +210,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Start',
+                        'Start'.tr(),
                         style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                       ),
                       const SizedBox(height: 4),
@@ -231,7 +232,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'End',
+                        'End'.tr(),
                         style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                       ),
                       const SizedBox(height: 4),
@@ -262,7 +263,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Total Price', style: TextStyle(fontWeight: FontWeight.w600)),
+                      Text('Total Price'.tr(), style: const TextStyle(fontWeight: FontWeight.w600)),
                       Text(
                         '\$${booking.totalAmount.toStringAsFixed(2)}',
                         style: TextStyle(
@@ -279,7 +280,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Security Deposit',
+                          'Security Deposit'.tr(),
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade700,
@@ -316,7 +317,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                         side: const BorderSide(color: Colors.red),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: const Text('Decline'),
+                      child: Text('Decline'.tr()),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -331,7 +332,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                         backgroundColor: Colors.green,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: const Text('Confirm'),
+                      child: Text('Confirm'.tr()),
                     ),
                   ),
                 ],
@@ -349,7 +350,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                     backgroundColor: primaryColor,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: const Text('Mark as Collected'),
+                  child: Text('Mark as Collected'.tr()),
                 ),
               ),
             ] else if (booking.status == RentalBookingStatus.active) ...[
@@ -367,7 +368,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                         backgroundColor: Colors.blue,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: const Text('Returned OK'),
+                      child: Text('Returned OK'.tr()),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -379,7 +380,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                         side: const BorderSide(color: Colors.orange),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: const Text('Returned Issues'),
+                      child: Text('Returned Issues'.tr()),
                     ),
                   ),
                 ],
@@ -432,7 +433,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
         border: Border.all(color: color),
       ),
       child: Text(
-        label,
+        label.tr(),
         style: TextStyle(
           color: color,
           fontWeight: FontWeight.bold,
@@ -459,6 +460,23 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
     }
   }
 
+  String _emptyStateMessage(String tab) {
+    switch (tab) {
+      case 'pending':
+        return 'No pending bookings';
+      case 'confirmed':
+        return 'No confirmed bookings';
+      case 'active':
+        return 'No active bookings';
+      case 'completed':
+        return 'No completed bookings';
+      case 'cancelled':
+        return 'No cancelled bookings';
+      default:
+        return 'No bookings found';
+    }
+  }
+
   Future<void> _updateBookingStatus(
     RentalBooking booking,
     RentalBookingStatus newStatus,
@@ -477,9 +495,10 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
       );
       
       if (mounted) {
+        final statusLabel = _statusLabel(effectiveStatus).tr().toLowerCase();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Booking ${effectiveStatus.toString().split('.').last}'),
+            content: Text('Booking status updated to {}'.tr(args: [statusLabel])),
             backgroundColor: Colors.green,
           ),
         );
@@ -488,7 +507,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating booking: $e'),
+            content: Text('Error updating booking: {}'.tr(args: ['$e'])),
             backgroundColor: Colors.red,
           ),
         );
@@ -504,14 +523,14 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Returned with issues'),
+          title: Text('Returned with issues'.tr()),
           content: TextField(
             controller: controller,
             maxLines: 3,
             decoration: InputDecoration(
-              hintText: 'Describe the issue',
+              hintText: 'Describe the issue'.tr(),
               border: const OutlineInputBorder(),
-              errorText: showError ? 'Issue note is required' : null,
+              errorText: showError ? 'Issue note is required'.tr() : null,
             ),
             onChanged: (_) {
               if (showError) {
@@ -522,7 +541,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text('Cancel'.tr()),
             ),
             ElevatedButton(
               onPressed: () {
@@ -533,7 +552,7 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
                 }
                 Navigator.pop(context, value);
               },
-              child: const Text('Save'),
+              child: Text('Save'.tr()),
             ),
           ],
         ),
@@ -548,5 +567,22 @@ class _RentalBookingsScreenState extends State<RentalBookingsScreen> {
       returnedInGoodCondition: false,
       returnIssueNote: note.trim(),
     );
+  }
+
+  String _statusLabel(RentalBookingStatus status) {
+    switch (status) {
+      case RentalBookingStatus.pending:
+        return 'Pending';
+      case RentalBookingStatus.confirmed:
+        return 'Confirmed';
+      case RentalBookingStatus.active:
+        return 'Active';
+      case RentalBookingStatus.completed:
+        return 'Completed';
+      case RentalBookingStatus.cancelled:
+        return 'Cancelled';
+      case RentalBookingStatus.disputed:
+        return 'Disputed';
+    }
   }
 }

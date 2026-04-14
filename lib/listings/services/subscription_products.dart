@@ -20,28 +20,28 @@ const List<SubscriptionProductDefinition> subscriptionProducts = [
     tier: 2,
     billingPeriodLabel: 'Monthly',
     displayName: 'Professional',
-    description: 'Advanced tools for growing teams.',
+    description: 'Tools to help you sell, manage, and grow on CaribTap.',
   ),
   SubscriptionProductDefinition(
     productId: 'caribtap_pro_t2_annual',
     tier: 2,
     billingPeriodLabel: 'Annual',
     displayName: 'Professional',
-    description: 'Advanced tools for growing teams.',
+    description: 'Tools to help you sell, manage, and grow on CaribTap.',
   ),
   SubscriptionProductDefinition(
     productId: 'caribtap_pro_t3_monthly',
     tier: 3,
     billingPeriodLabel: 'Monthly',
     displayName: 'Premium',
-    description: 'Full suite with premium business features.',
+    description: 'Everything you need to run and scale your business on CaribTap.',
   ),
   SubscriptionProductDefinition(
     productId: 'caribtap_pro_t3_annual',
     tier: 3,
     billingPeriodLabel: 'Annual',
     displayName: 'Premium',
-    description: 'Full suite with premium business features.',
+    description: 'Everything you need to run and scale your business on CaribTap.',
   ),
 ];
 

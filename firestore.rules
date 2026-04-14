@@ -60,6 +60,22 @@ service cloud.firestore {
         (request.resource.data.listingFreshnessExempt == resource.data.listingFreshnessExempt);
     }
 
+    // Robust owner check for listings where owner may be stored under
+    // different field names depending on legacy/new write paths.
+    function isListingOwner(listingId) {
+      let listing = get(/databases/$(database)/documents/listings/$(listingId)).data;
+      return isSignedIn() && (
+        request.auth.uid == listing.authorID ||
+        request.auth.uid == listing.authorId ||
+        request.auth.uid == listing.customerId ||
+        request.auth.uid == listing.customerID ||
+        request.auth.uid == listing.ownerId ||
+        request.auth.uid == listing.ownerID ||
+        request.auth.uid == listing.userID ||
+        request.auth.uid == listing.user_id
+      );
+    }
+
     function hasActiveSubscription() {
       let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
       let tier = userDoc.subscriptionTier;
@@ -111,7 +127,7 @@ service cloud.firestore {
       // 2. User is an active collaborator
       // 3. Admin
       allow read: if isSignedIn() && (
-        request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID ||
+        isListingOwner(listingId) ||
         (exists(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)) &&
          get(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)).data.isActive == true) ||
         isAdmin()
@@ -255,6 +271,7 @@ service cloud.firestore {
       // 3. User is ONLY incrementing the viewCount (allows public view tracking)
       // 4. User is ONLY updating reviewsCount and reviewsSum (allows review posting)
       // NOTE: tapCount and tapBadge are managed by Cloud Functions only
+      // NOTE: demo listings (isDemo == true) are read-only for non-admins
         allow update: if isSignedIn() && (
           request.auth.uid == resource.data.authorID ||
           request.auth.uid == resource.data.customerId ||
@@ -265,9 +282,13 @@ service cloud.firestore {
         // Prevent client-side modification of tap fields (Cloud Functions only)
         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['tapCount', 'tapBadge']) || isAdmin()) &&
         // Allow authors/admins to update even if freshness structure is missing
-        (request.auth.uid == resource.data.authorID || isAdmin() || canEditListingFreshnessExempt());
+        (request.auth.uid == resource.data.authorID || isAdmin() || canEditListingFreshnessExempt()) &&
+        // Demo listings are immutable for non-admin users
+        (resource.data.get('isDemo', false) == false || isAdmin());
       
-      allow delete: if isSignedIn() && (request.auth.uid == resource.data.authorID || isAdmin());
+      allow delete: if isSignedIn() && (request.auth.uid == resource.data.authorID || isAdmin()) &&
+        // Demo listings cannot be deleted by non-admin users
+        (resource.data.get('isDemo', false) == false || isAdmin());
       
       match /bookings/{bookingId} {
           allow read: if isSignedIn() && (request.auth.uid == resource.data.customerId || request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID || isAdmin());
@@ -332,13 +353,12 @@ service cloud.firestore {
         // OR
         // 2. Rentals are enabled for the listing
         allow read: if isSignedIn() && (
-          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID ||
+          isListingOwner(listingId) ||
           get(/databases/$(database)/documents/listings/$(listingId)).data.rentalConfig.isRentalEnabled == true
         );
 
         // Allow write ONLY if listing author
-        allow create, update, delete: if isSignedIn() &&
-          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID;
+        allow create, update, delete: if isListingOwner(listingId);
       }
 
       // Rental Units (Premium Rentals)
@@ -406,7 +426,7 @@ service cloud.firestore {
         // 2. User is an active collaborator
         // 3. Admin
         allow read, list: if isSignedIn() && (
-          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID ||
+          isListingOwner(listingId) ||
           (exists(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)) &&
            get(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)).data.isActive == true) ||
           isAdmin()
@@ -414,18 +434,18 @@ service cloud.firestore {
 
         // Allow create if listing author (Cloud Functions will validate subscription tier & quota)
         allow create: if isSignedIn() && 
-          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID;
+          isListingOwner(listingId);
 
         // Allow update if listing author or active collaborator (for publishing/rating variants)
         allow update: if isSignedIn() && (
-          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID ||
+          isListingOwner(listingId) ||
           (exists(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)) &&
            get(/databases/$(database)/documents/listings/$(listingId)/collaborators/$(request.auth.uid)).data.isActive == true)
         );
 
         // Allow delete if listing author only (can't delete other's variants)
         allow delete: if isSignedIn() && 
-          request.auth.uid == get(/databases/$(database)/documents/listings/$(listingId)).data.authorID;
+          isListingOwner(listingId);
       }
 
       // Activity Tracking - Customer engagement tracking
@@ -778,11 +798,25 @@ service cloud.firestore {
 
       // Authenticated users can create their own events only
       allow create: if isSignedIn() &&
-        request.resource.data.createdBy == request.auth.uid;
+        request.resource.data.createdBy == request.auth.uid &&
+        (request.resource.data.get('isDemo', false) == false || isAdmin());
 
-      // Only event owner or admin can modify/delete
-      allow update, delete: if isSignedIn() && (
-        request.auth.uid == resource.data.createdBy ||
+      // Demo events are read-only for non-admins.
+      // Only event owner or admin can modify non-demo events.
+      allow update: if isSignedIn() && (
+        (
+          request.auth.uid == resource.data.createdBy &&
+          resource.data.get('isDemo', false) == false &&
+          request.resource.data.get('isDemo', false) == resource.data.get('isDemo', false)
+        ) ||
+        isAdmin()
+      );
+
+      allow delete: if isSignedIn() && (
+        (
+          request.auth.uid == resource.data.createdBy &&
+          resource.data.get('isDemo', false) == false
+        ) ||
         isAdmin()
       );
     }
@@ -962,6 +996,25 @@ service cloud.firestore {
     allow read: if isAdmin();
     // Only Cloud Functions (service account) can write
     allow create, update, delete: if request.auth.token.serviceAccount == true;
+  }
+
+  // User-submitted suggestions / feedback
+  match /app_suggestions/{suggestionId} {
+    // Any signed-in user can submit a suggestion
+    allow create: if isSignedIn();
+    // Only admins can read or moderate (archive) suggestions
+    allow read, update, delete: if isAdmin();
+  }
+
+  // Subscription/trial runtime config (admin-controlled feature switches)
+  match /settings/{docId} {
+    allow read, write: if isAdmin() || request.auth.token.serviceAccount == true;
+  }
+
+  // Trial claim audit records
+  match /subscription_trial_claims/{claimId} {
+    allow read: if isAdmin();
+    allow create, update, delete: if isAdmin() || request.auth.token.serviceAccount == true;
   }
   }
 }

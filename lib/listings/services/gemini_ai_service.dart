@@ -1,13 +1,13 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:caribtap/core/config/app_env.dart';
 
 class GeminiAIService {
   static final GeminiAIService _instance = GeminiAIService._internal();
   factory GeminiAIService() => _instance;
   GeminiAIService._internal();
 
-  // Gemini API key is now loaded from .env using flutter_dotenv
-  static String get _apiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
+  // Gemini API key can come from dart-defines or .env fallback.
+  static String get _apiKey => AppEnv.geminiApiKey;
   
   GenerativeModel? _model;
   bool _initialized = false;
@@ -23,8 +23,8 @@ class GeminiAIService {
   void initialize() {
     if (_initialized && _model != null) return;
     if (_apiKey.isEmpty) {
-      print('❌ [GEMINI] API key not found in .env!');
-      throw Exception('GEMINI_API_KEY not set in .env');
+      print('❌ [GEMINI] API key not configured.');
+      throw Exception('GEMINI_API_KEY not configured');
     }
     // Use 'gemini-2.0-flash' as recommended by Google
     const String modelName = 'gemini-2.0-flash';

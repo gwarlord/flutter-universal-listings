@@ -81,17 +81,13 @@ class PhotoEnhancementService {
   /// Save enhanced image variant to Firestore
   Future<ImageVariant> saveEnhancementVariant(ImageVariant variant) async {
     try {
-      final docRef = _firestore
-          .collection('listings')
-          .doc(variant.listingId)
-          .collection(variantsCollection)
-          .doc(variant.id);
-
-      await docRef.set(variant.toJson());
-
-      // Also update listing's image_variants array
-      await _firestore.collection('listings').doc(variant.listingId).update({
-        'image_variants': FieldValue.arrayUnion([variant.toJson()])
+      // Use callable function for server-side write to avoid client-side
+      // permission mismatches across legacy/new owner field variants.
+      final callable = _functions.httpsCallable('saveEnhancementVariant');
+      await callable.call({
+        'listingId': variant.listingId,
+        'variantId': variant.id,
+        'variant': variant.toJson(),
       });
 
       return variant;

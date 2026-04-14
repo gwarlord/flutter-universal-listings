@@ -85,6 +85,7 @@ class EventModel {
   String committee;
   List<TicketType> ticketTypes;
   List<CommitteeMember> committeeMembers;
+  bool isDemo;
   bool isFlagged;
   bool isFav;
 
@@ -109,6 +110,7 @@ class EventModel {
     this.committee = '',
     this.ticketTypes = const [],
     this.committeeMembers = const [],
+    this.isDemo = false,
     this.isFlagged = false,
     this.isFav = false,
   })  : createdAtSeconds = createdAtSeconds ?? Timestamp.now().seconds,
@@ -141,6 +143,7 @@ class EventModel {
       committee: (json['committee'] ?? '').toString(),
       ticketTypes: ticketsRaw.map((e) => TicketType.fromJson(e as Map<String, dynamic>)).toList(),
       committeeMembers: membersRaw.map((e) => CommitteeMember.fromJson(e as Map<String, dynamic>)).toList(),
+      isDemo: json['isDemo'] as bool? ?? false,
       isFlagged: json['isFlagged'] as bool? ?? false,
       isFav: json['isFav'] as bool? ?? false,
     );
@@ -169,6 +172,7 @@ class EventModel {
       'committee': committee,
       'ticketTypes': ticketTypes.map((e) => e.toJson()).toList(),
       'committeeMembers': committeeMembers.map((e) => e.toJson()).toList(),
+      'isDemo': isDemo,
       'isFlagged': isFlagged,
     }..remove('isFav');
   }

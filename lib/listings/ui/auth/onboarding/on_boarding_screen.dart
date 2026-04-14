@@ -25,34 +25,26 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
   void initState() {
     super.initState();
     _titlesList = [
-      'Build your perfect app'.tr(),
-      'Map View'.tr(),
-      'Saved Listings'.tr(),
-      'Advanced Custom Filters'.tr(),
-      'Add New Listings'.tr(),
-      'Chat'.tr(),
-      'Get Notified'.tr(),
+      'Welcome to CaribTap'.tr(),
+      'Discover the Caribbean'.tr(),
+      'Book & Shop'.tr(),
+      'Grow Your Business'.tr(),
+      'Stay Connected'.tr(),
     ];
     _subtitlesList = [
-      'Use this starter kit to make your own classifieds app in minutes.'.tr(),
-      'Visualize listings on the map to make your search easier.'.tr(),
-      'Save your favorite listings to come back to them later.'.tr(),
-      'Custom dynamic filters to accommodate all markets and all customer needs.'
-          .tr(),
-      'Add new listings directly from the app including photo gallery and filters.'
-          .tr(),
-      'Communicate with your customers and vendors in real-time.'.tr(),
-      'Stay on top of your game with real-time push notifications.'.tr(),
+      'Your Caribbean marketplace — find businesses, services and products from across the region, all in one place.'.tr(),
+      'Browse listings by category, location or keyword. Use the interactive map to explore what\'s near you or anywhere in the Caribbean.'.tr(),
+      'Book appointments, order products and rent items directly in the app. Manage your bookings and orders with ease.'.tr(),
+      'List your business, promote deals, sell products and offer rentals. Reach thousands of Caribbean customers and grow your brand.'.tr(),
+      'Chat directly with businesses and customers, get real-time booking updates and stay on top of every transaction with push notifications.'.tr(),
     ];
 
     _imageList = [
-      'assets/images/listings_welcome_image.png',
-      Icons.map_outlined,
-      Icons.favorite_border,
-      Icons.settings_outlined,
-      Icons.camera_alt_outlined,
-      Icons.chat_outlined,
-      Icons.notifications_none_outlined,
+      'assets/images/caribtap_logo.png',
+      Icons.travel_explore_rounded,
+      Icons.shopping_bag_outlined,
+      Icons.storefront_outlined,
+      Icons.chat_bubble_outline_rounded,
     ];
   }
 
@@ -153,39 +145,43 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
 
   Widget getPage(dynamic image, String title, String subTitle,
       BuildContext context, bool isLastPage) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        image is String
-            ? Image.asset(
-                image,
-                color: Colors.white,
-                width: 150,
-                height: 150,
-                fit: BoxFit.cover,
-              )
-            : Icon(
-                image as IconData,
-                color: Colors.white,
-                size: 150,
-              ),
-        const SizedBox(height: 40),
-        Text(
-          title.toUpperCase(),
-          style: const TextStyle(
-              color: Colors.white, fontSize: 18.0, fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center,
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            image is String
+                ? Image.asset(
+                    image,
+                    width: 200,
+                    height: 200,
+                    fit: BoxFit.contain,
+                  )
+                : Icon(
+                    image as IconData,
+                    color: Colors.white,
+                    size: 150,
+                  ),
+            const SizedBox(height: 40),
+            Text(
+              title.toUpperCase(),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              subTitle,
+              style: const TextStyle(color: Colors.white, fontSize: 14.0),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            subTitle,
-            style: const TextStyle(color: Colors.white, fontSize: 14.0),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

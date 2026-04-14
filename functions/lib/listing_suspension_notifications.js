@@ -36,6 +36,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.onListingUnsuspended = exports.onListingSuspended = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
+function getTokens(userData) {
+    let tokens = [];
+    if (Array.isArray(userData?.fcmTokens)) {
+        tokens = userData.fcmTokens
+            .filter((t) => typeof t === "string" && t.trim().length > 0)
+            .map((t) => t.trim());
+    }
+    if (userData?.pushToken && typeof userData.pushToken === "string") {
+        const pushToken = userData.pushToken.trim();
+        if (pushToken && !tokens.includes(pushToken)) {
+            tokens.push(pushToken);
+        }
+    }
+    return Array.from(new Set(tokens));
+}
 /**
  * Sends a notification to a lister when their listing is suspended
  */
@@ -70,16 +85,17 @@ exports.onListingSuspended = functions.firestore
             return null;
         }
         const lister = listerDoc.data();
-        if (!lister?.pushToken) {
-            console.log("No push token for lister of listing:", listingId);
+        const listerTokens = getTokens(lister);
+        if (listerTokens.length === 0) {
+            console.log("No push tokens for lister of listing:", listingId);
             return null;
         }
         // Check if push notifications are enabled
-        if (lister.settings?.allowPushNotifications === false) {
+        if (lister?.settings?.allowPushNotifications === false) {
             console.log("Push notifications disabled for lister:", listing.authorID);
             return null;
         }
-        const message = {
+        const messagePayload = {
             notification: {
                 title: "🚫 Listing Suspended",
                 body: `"${listingTitle}" has been suspended and is no longer visible to customers.${reasonDetail ? ` Reason: ${reasonDetail}.` : ""}`,
@@ -92,9 +108,10 @@ exports.onListingSuspended = functions.firestore
                 reasonText: reasonText || "",
                 timestamp: new Date().toISOString(),
             },
-            token: lister.pushToken,
         };
-        await admin.messaging().send(message);
+        for (const token of listerTokens) {
+            await admin.messaging().send({ ...messagePayload, token });
+        }
         console.log("Listing suspension notification sent to lister:", listing.authorID);
         return null;
     }
@@ -132,16 +149,17 @@ exports.onListingUnsuspended = functions.firestore
             return null;
         }
         const lister = listerDoc.data();
-        if (!lister?.pushToken) {
-            console.log("No push token for lister of listing:", listingId);
+        const listerTokens = getTokens(lister);
+        if (listerTokens.length === 0) {
+            console.log("No push tokens for lister of listing:", listingId);
             return null;
         }
         // Check if push notifications are enabled
-        if (lister.settings?.allowPushNotifications === false) {
+        if (lister?.settings?.allowPushNotifications === false) {
             console.log("Push notifications disabled for lister:", listing.authorID);
             return null;
         }
-        const message = {
+        const messagePayload = {
             notification: {
                 title: "✅ Listing Restored",
                 body: `"${listingTitle}" is now visible to customers again.`,
@@ -152,9 +170,10 @@ exports.onListingUnsuspended = functions.firestore
                 listingTitle: listingTitle,
                 timestamp: new Date().toISOString(),
             },
-            token: lister.pushToken,
         };
-        await admin.messaging().send(message);
+        for (const token of listerTokens) {
+            await admin.messaging().send({ ...messagePayload, token });
+        }
         console.log("Listing unsuspension notification sent to lister:", listing.authorID);
         return null;
     }

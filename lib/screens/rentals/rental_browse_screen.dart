@@ -1,5 +1,8 @@
+import 'dart:typed_data';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:caribtap/core/ui/full_screen_video_viewer/full_screen_video_viewer.dart';
 import 'package:caribtap/constants.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/core/utils/helper.dart';
@@ -7,11 +10,34 @@ import 'package:caribtap/core/ui/full_screen_image_viewer/full_screen_image_view
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/rental_config.dart';
+import 'package:caribtap/listings/currency/currency_display_service.dart';
 import 'package:caribtap/screens/rentals/rental_item_models.dart';
 import 'package:caribtap/screens/rentals/rental_browse_service.dart';
 import 'package:caribtap/screens/rentals/rental_cart_storage.dart';
 import 'package:caribtap/screens/rentals/rental_checkout_screen.dart';
 import 'package:caribtap/listings/utils/search_utils.dart';
+
+String _formatCurrency(double amount, String currencyCode) {
+  final normalizedCode = currencyCode.trim().isEmpty
+      ? 'USD'
+      : currencyCode.toUpperCase();
+  return '$normalizedCode ${_getCurrencySymbol(normalizedCode)}${NumberFormat('#,##0.00').format(amount)}';
+}
+
+String _getCurrencySymbol(String code) {
+  switch (code.toUpperCase()) {
+    case 'USD':
+    case 'TTD':
+    case 'JMD':
+      return '\$';
+    case 'EUR':
+      return '€';
+    case 'GBP':
+      return '£';
+    default:
+      return '\$';
+  }
+}
 
 /// Customer-facing rental browsing screen - Browse and select rental items
 class RentalBrowseScreen extends StatefulWidget {
@@ -32,6 +58,7 @@ class RentalBrowseScreen extends StatefulWidget {
 
 class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
   final RentalBrowseService _rentalService = RentalBrowseService();
+  final CurrencyDisplayService _currencyDisplayService = CurrencyDisplayService();
   final TextEditingController _searchController = TextEditingController();
   final List<RentalCartItem> _cart = [];
   
@@ -374,12 +401,31 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '\$${item.basePrice.toStringAsFixed(2)} / ${item.pricingUnit}',
+                    '${_formatCurrency(item.basePrice, item.currencyCode)} / ${item.pricingUnit}',
                     style: TextStyle(
                       color: primaryColor,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
+                  ),
+                  FutureBuilder<CurrencyDisplayResult>(
+                    future: _currencyDisplayService.buildDisplayResult(
+                      rawAmount: item.basePrice.toStringAsFixed(2),
+                      originalCurrencyCode: item.currencyCode,
+                      preferenceValue:
+                          widget.currentUser?.settings.displayCurrencyPreference,
+                    ),
+                    builder: (context, snapshot) {
+                      final approx = snapshot.data?.approximateFormatted;
+                      if (approx == null) return const SizedBox.shrink();
+                      return Text(
+                        '$approx / ${item.pricingUnit}',
+                        style: TextStyle(
+                          color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          fontSize: 11,
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 8),
                   ElevatedButton(
@@ -475,6 +521,8 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
         builder: (context, scrollController) => _RentalItemDetailSheet(
           item: item,
           rentalConfig: widget.rentalConfig,
+          currencyPreferenceValue:
+              widget.currentUser?.settings.displayCurrencyPreference,
           sheetScrollController: scrollController,
           onAddToCart: (cartItem) {
             final latestCount = _cartCountForRentalUnit(item.id);
@@ -588,12 +636,14 @@ class _RentalBrowseScreenState extends State<RentalBrowseScreen> {
 class _RentalItemDetailSheet extends StatefulWidget {
   final RentalItemBrowse item;
   final RentalConfig rentalConfig;
+  final String? currencyPreferenceValue;
   final ScrollController sheetScrollController;
   final Function(RentalCartItem) onAddToCart;
 
   const _RentalItemDetailSheet({
     required this.item,
     required this.rentalConfig,
+    required this.currencyPreferenceValue,
     required this.sheetScrollController,
     required this.onAddToCart,
   });
@@ -604,6 +654,7 @@ class _RentalItemDetailSheet extends StatefulWidget {
 
 class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
   final RentalBrowseService _rentalService = RentalBrowseService();
+  final CurrencyDisplayService _currencyDisplayService = CurrencyDisplayService();
   late DateTime _startDate;
   late DateTime _endDate;
   bool _isChecking = false;
@@ -767,6 +818,33 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
                   const SizedBox(height: 16),
                 ],
 
+                // Videos
+                if (widget.item.videos.isNotEmpty) ...[
+                  Text(
+                    'Videos'.tr(),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: dark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 120,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: widget.item.videos.length,
+                      itemBuilder: (context, index) {
+                        return _RentalVideoThumb(
+                          url: widget.item.videos[index],
+                          dark: dark,
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // Description
                 if (widget.item.description != null)
                   Text(
@@ -870,9 +948,10 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
                             'Price per ${widget.item.pricingUnit}'.tr(),
                             style: TextStyle(color: dark ? Colors.white : Colors.black),
                           ),
-                          Text(
-                            '\$${widget.item.basePrice.toStringAsFixed(2)}',
-                            style: TextStyle(color: dark ? Colors.white : Colors.black),
+                          _buildPriceWithApprox(
+                            amount: widget.item.basePrice,
+                            currencyCode: widget.item.currencyCode,
+                            dark: dark,
                           ),
                         ],
                       ),
@@ -887,13 +966,12 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
                               color: dark ? Colors.white : Colors.black,
                             ),
                           ),
-                          Text(
-                            '\$${_calculateRentalSubtotal().toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: dark ? Colors.white : Colors.black,
-                            ),
+                          _buildPriceWithApprox(
+                            amount: _calculateRentalSubtotal(),
+                            currencyCode: widget.item.currencyCode,
+                            dark: dark,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
                         ],
                       ),
@@ -906,9 +984,10 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
                               'Security Deposit'.tr(),
                               style: TextStyle(color: dark ? Colors.white : Colors.black),
                             ),
-                            Text(
-                              '\$${_securityDeposit().toStringAsFixed(2)}',
-                              style: TextStyle(color: dark ? Colors.white : Colors.black),
+                            _buildPriceWithApprox(
+                              amount: _securityDeposit(),
+                              currencyCode: widget.item.currencyCode,
+                              dark: dark,
                             ),
                           ],
                         ),
@@ -923,13 +1002,12 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
                                 color: dark ? Colors.white : Colors.black,
                               ),
                             ),
-                            Text(
-                              '\$${_calculateTotalWithDeposit().toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: dark ? Colors.white : Colors.black,
-                              ),
+                            _buildPriceWithApprox(
+                              amount: _calculateTotalWithDeposit(),
+                              currencyCode: widget.item.currencyCode,
+                              dark: dark,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
                             ),
                           ],
                         ),
@@ -1009,6 +1087,47 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
 
   int _getDurationDays() {
     return _endDate.difference(_startDate).inDays + 1;
+  }
+
+  Widget _buildPriceWithApprox({
+    required double amount,
+    required String currencyCode,
+    required bool dark,
+    FontWeight? fontWeight,
+    double? fontSize,
+  }) {
+    return FutureBuilder<CurrencyDisplayResult>(
+      future: _currencyDisplayService.buildDisplayResult(
+        rawAmount: amount.toStringAsFixed(2),
+        originalCurrencyCode: currencyCode,
+        preferenceValue: widget.currencyPreferenceValue,
+      ),
+      builder: (context, snapshot) {
+        final display = snapshot.data;
+        final original = _formatCurrency(amount, currencyCode);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              original,
+              style: TextStyle(
+                fontWeight: fontWeight,
+                fontSize: fontSize,
+                color: dark ? Colors.white : Colors.black,
+              ),
+            ),
+            if (display?.approximateFormatted != null)
+              Text(
+                display!.approximateFormatted!,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+              ),
+          ],
+        );
+      },
+    );
   }
 
   double _calculateRentalSubtotal() {
@@ -1093,5 +1212,84 @@ class _RentalItemDetailSheetState extends State<_RentalItemDetailSheet> {
 
     widget.onAddToCart(cartItem);
     setState(() => _isChecking = false);
+  }
+}
+
+class _RentalVideoThumb extends StatefulWidget {
+  final String url;
+  final bool dark;
+
+  const _RentalVideoThumb({required this.url, required this.dark});
+
+  @override
+  State<_RentalVideoThumb> createState() => _RentalVideoThumbState();
+}
+
+class _RentalVideoThumbState extends State<_RentalVideoThumb> {
+  Uint8List? _thumb;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _generate();
+  }
+
+  Future<void> _generate() async {
+    final bytes = await VideoThumbnail.thumbnailData(
+      video: widget.url,
+      imageFormat: ImageFormat.JPEG,
+      maxHeight: 120,
+      quality: 75,
+    );
+    if (mounted) setState(() { _thumb = bytes; _loaded = true; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => FullScreenVideoViewer(
+              videoUrl: widget.url,
+              heroTag: 'rental_video_${widget.url.hashCode}',
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 160,
+        height: 120,
+        margin: const EdgeInsets.only(right: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: widget.dark ? Colors.grey.shade800 : Colors.grey.shade200,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: _thumb != null
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.memory(_thumb!, fit: BoxFit.cover),
+                    const Center(
+                      child: Icon(Icons.play_circle_fill,
+                          color: Colors.white70, size: 36),
+                    ),
+                  ],
+                )
+              : Center(
+                  child: _loaded
+                      ? Icon(Icons.videocam,
+                          size: 36, color: Colors.grey.shade500)
+                      : const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+        ),
+      ),
+    );
   }
 }

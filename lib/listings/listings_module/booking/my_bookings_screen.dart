@@ -399,6 +399,14 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             ),
             const SizedBox(height: 12),
             Text(
+              '${'Booked On'.tr()}: ${DateFormat('MMM dd, yyyy').format(booking.createdAt)}',
+              style: TextStyle(
+                fontSize: 12,
+                color: dark ? Colors.white70 : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
               '${'Start Date'.tr()}: ${DateFormat('MMM dd, yyyy').format(booking.checkInDate)}',
               style: TextStyle(
                 fontSize: 12,

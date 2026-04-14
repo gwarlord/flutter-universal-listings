@@ -49,3 +49,6 @@ functions/firebase-debug*.log
 
 # Local debug/auth logs
 web_auth_debug.log
+
+# Local temporary workspaces
+temp/

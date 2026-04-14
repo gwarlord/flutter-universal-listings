@@ -3,6 +3,22 @@ import * as admin from "firebase-admin";
 
 const db = admin.firestore();
 
+function getTokens(userData: any): string[] {
+  let tokens: string[] = [];
+  if (Array.isArray(userData?.fcmTokens)) {
+    tokens = userData.fcmTokens
+      .filter((t: any) => typeof t === "string" && t.trim().length > 0)
+      .map((t: string) => t.trim());
+  }
+  if (userData?.pushToken && typeof userData.pushToken === "string") {
+    const pushToken = userData.pushToken.trim();
+    if (pushToken && !tokens.includes(pushToken)) {
+      tokens.push(pushToken);
+    }
+  }
+  return Array.from(new Set(tokens));
+}
+
 // Trigger: When a deal ad is approved, notify all users who favorited the lister's listing
 export const onDealAdApproved = functions.firestore
   .document("deal_ads/{adId}")
@@ -38,21 +54,24 @@ export const onDealAdApproved = functions.firestore
     for (const userDoc of usersSnap.docs) {
       const user = userDoc.data();
       // Send push notification if allowed
-      if (user.pushToken && user.settings?.allowPushNotifications !== false) {
-        await admin.messaging().send({
-          token: user.pushToken,
-          notification: {
-            title,
-            body,
-          },
-          data: {
-            type: "deal_ad",
-            adId: context.params.adId,
-            listingId,
-            listerId,
-            adUrl,
-          },
-        });
+      const tokens = getTokens(user);
+      if (tokens.length > 0 && user.settings?.allowPushNotifications !== false) {
+        for (const token of tokens) {
+          await admin.messaging().send({
+            token,
+            notification: {
+              title,
+              body,
+            },
+            data: {
+              type: "deal_ad",
+              adId: context.params.adId,
+              listingId,
+              listerId,
+              adUrl,
+            },
+          });
+        }
       }
     }
   });

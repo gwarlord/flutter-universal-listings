@@ -197,6 +197,8 @@ class _RentalBookingDialogState extends State<RentalBookingDialog> {
         'subtotal': _totalPrice,
         'depositAmount': depositAmt,
         'totalAmount': _totalPrice + depositAmt,
+        'listingAcceptsProofOfPayment':
+            widget.listing.payments['acceptProofOfPayment'] == true,
         'status': RentalBookingStatus.pending.toString().split('.').last,
         'createdAt': Timestamp.fromDate(now),
         'updatedAt': Timestamp.fromDate(now),

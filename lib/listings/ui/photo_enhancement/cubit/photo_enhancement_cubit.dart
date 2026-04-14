@@ -4,6 +4,7 @@ import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/ui/photo_enhancement/models/models.dart';
 import 'package:caribtap/listings/ui/photo_enhancement/services/services.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 part 'photo_enhancement_state.dart';
@@ -28,6 +29,39 @@ class PhotoEnhancementCubit extends Cubit<PhotoEnhancementState> {
         _offlineQueue = offlineQueue,
         _analytics = analytics,
         super(const PhotoEnhancementInitial());
+
+  bool _looksLikeNetworkIssue(Object error) {
+    final raw = error.toString().toLowerCase();
+    return error is SocketException ||
+        raw.contains('unable to resolve host') ||
+        raw.contains('unknownhostexception') ||
+        raw.contains('firestore.googleapis.com') ||
+        raw.contains('network') ||
+        raw.contains('unavailable');
+  }
+
+        bool _looksLikePermissionIssue(Object error) {
+          if (error is FirebaseFunctionsException) {
+        return error.code == 'permission-denied' ||
+            error.code == 'unauthenticated';
+          }
+          final raw = error.toString().toLowerCase();
+          return raw.contains('permission-denied') ||
+          raw.contains('you do not own this listing') ||
+          raw.contains('not authorized') ||
+          raw.contains('unauthenticated');
+        }
+
+        String _friendlyEnhancementError(Object error, {bool duringSave = false}) {
+          if (_looksLikePermissionIssue(error)) {
+        return duringSave
+            ? 'Saving AI enhancement is not allowed for this listing.'.trim()
+            : 'AI enhancement is not available for this listing.'.trim();
+          }
+          return duringSave
+          ? 'Failed to save enhancement. Please try again.'.trim()
+          : 'Enhancement failed. Please try again.'.trim();
+        }
 
   /// Initialize enhancement for a listing
   Future<void> initializeEnhancement({
@@ -77,20 +111,10 @@ class PhotoEnhancementCubit extends Cubit<PhotoEnhancementState> {
     required String subscriptionTier,
   }) async {
     try {
-      // Get quota to verify still available
-      final quota = await _quotaManager.getQuota(listingId);
-      if (quota.isQuotaExhausted()) {
-        emit(QuotaExhausted(
-          usedCount: quota.usedCount,
-          resetDate: quota.monthResetDate,
-        ));
-        return;
-      }
-
       emit(ImageSelected(
         imagePath: imagePath,
         category: category,
-        quota: quota,
+        quota: null,
       ));
     } catch (e) {
       emit(EnhancementError(
@@ -177,11 +201,16 @@ class PhotoEnhancementCubit extends Cubit<PhotoEnhancementState> {
         response.processingTimeSeconds,
       );
     } catch (e) {
-      emit(EnhancementError(
-        message: 'Enhancement failed: ${e.toString()}',
-        exception: e,
-      ));
-      _analytics.logEnhancementError(e.toString());
+      if (_looksLikeNetworkIssue(e)) {
+        emit(const OfflineError());
+        _analytics.logFeatureUnavailable('offline');
+      } else {
+        emit(EnhancementError(
+          message: _friendlyEnhancementError(e),
+          exception: e,
+        ));
+        _analytics.logEnhancementError(e.toString());
+      }
     }
   }
 
@@ -243,15 +272,12 @@ class PhotoEnhancementCubit extends Cubit<PhotoEnhancementState> {
       // Save to Firestore
       await _enhancementService.saveEnhancementVariant(variant);
 
-      // Update quota
-      await _quotaManager.incrementQuota(listingId);
-
       emit(VariantSaved(variant: variant));
 
       _analytics.logVariantSaved(listingId);
     } catch (e) {
       emit(EnhancementError(
-        message: 'Failed to save variant: ${e.toString()}',
+        message: _friendlyEnhancementError(e, duringSave: true),
         exception: e,
       ));
     }

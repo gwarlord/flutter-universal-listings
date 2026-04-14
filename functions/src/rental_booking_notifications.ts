@@ -214,11 +214,6 @@ export const onRentalBookingStatusChanged = functions.firestore
     const after = change.after.data();
     const bookingId = context.params.bookingId;
 
-    // Check if status changed
-    if (before.status === after.status) {
-      return null;
-    }
-
     try {
       // Determine who to notify based on status change
       let recipientId = "";
@@ -244,63 +239,99 @@ export const onRentalBookingStatusChanged = functions.firestore
       const vehicleEmoji = isVehicleRental ? "🚘" : "📦";
       const startEmoji = isVehicleRental ? "🚘" : "📤";
 
-      switch (after.status) {
-        case "confirmed":
-          // Notify customer that booking was confirmed
-          recipientId = after.customerId;
-          title = "✅ Rental Booking Confirmed";
-          body = `Your rental booking for ${listingTitle} has been confirmed!`;
-          notificationType = "rental_confirmed";
-          break;
+      const beforePayment = (before.payment || {}) as Record<string, unknown>;
+      const afterPayment = (after.payment || {}) as Record<string, unknown>;
+      const proofUrlBefore = String(beforePayment.proofOfPaymentUrl || "").trim();
+      const proofUrlAfter = String(afterPayment.proofOfPaymentUrl || "").trim();
+      const proofStatusBefore = String(beforePayment.proofOfPaymentStatus || "").toLowerCase();
+      const proofStatusAfter = String(afterPayment.proofOfPaymentStatus || "").toLowerCase();
 
-        case "cancelled":
-          // Notify the customer with a distinct message for declined requests.
-          recipientId = after.customerId;
-          {
-            const cancelledByRole = (after.cancelledByRole || "").toString().toLowerCase();
-            const previousStatus = (before.status || "").toString().toLowerCase();
-            const wasDeclinedByLister =
-              cancelledByRole === "lister" && previousStatus === "pending";
-            const wasCancelledByCustomer = cancelledByRole === "customer";
+      const proofUploaded = !proofUrlBefore && !!proofUrlAfter;
+      const proofReviewed =
+        proofUrlAfter.length > 0 &&
+        proofStatusBefore !== proofStatusAfter &&
+        (proofStatusAfter === "approved" || proofStatusAfter === "rejected");
 
-            if (wasDeclinedByLister) {
-              title = "Rental Request Declined";
-              body = `Your booking request for ${listingTitle} was declined by the host. We're sorry this one didn't work out.`;
-            } else if (wasCancelledByCustomer) {
-              title = "Rental Booking Cancelled";
-              body = `You cancelled your booking for ${listingTitle}.`;
-            } else {
-              title = "Rental Booking Cancelled";
-              body = `Your booking for ${listingTitle} was cancelled by the host. We're sorry for the inconvenience.`;
-            }
-          }
-          {
-            const reason = normalizedCancellationReason(after.cancellationReason);
-            if (reason) {
-              body = `${body} Reason: ${reason}`;
-            }
-          }
-          notificationType = "rental_cancelled";
-          break;
+      if (proofUploaded) {
+        recipientId = after.listerId;
+        title = "Payment Proof Uploaded";
+        body = `A customer uploaded proof of payment for ${listingTitle}.`;
+        notificationType = "rental_proof_uploaded";
+      } else if (proofReviewed) {
+        recipientId = after.customerId;
+        title = proofStatusAfter === "approved"
+          ? "Payment Proof Approved"
+          : "Payment Proof Rejected";
+        body = proofStatusAfter === "approved"
+          ? `Your proof of payment for ${listingTitle} was approved.`
+          : `Your proof of payment for ${listingTitle} was rejected. Please upload a new one.`;
+        notificationType = "rental_proof_reviewed";
+      }
 
-        case "active":
-          // Notify customer that rental period has started
-          recipientId = after.customerId;
-          title = `${startEmoji} Rental Started`;
-          body = `Your rental period for ${listingTitle} has started. Enjoy!`;
-          notificationType = "rental_started";
-          break;
-
-        case "completed":
-          // Notify customer that rental is complete
-          recipientId = after.customerId;
-          title = "✨ Rental Complete";
-          body = `Your rental of ${listingTitle} is complete. Thank you!`;
-          notificationType = "rental_completed";
-          break;
-
-        default:
+      if (!notificationType) {
+        // Only process status-driven notifications when status changed.
+        if (before.status === after.status) {
           return null;
+        }
+
+        switch (after.status) {
+          case "confirmed":
+            // Notify customer that booking was confirmed
+            recipientId = after.customerId;
+            title = "✅ Rental Booking Confirmed";
+            body = `Your rental booking for ${listingTitle} has been confirmed!`;
+            notificationType = "rental_confirmed";
+            break;
+
+          case "cancelled":
+            // Notify the customer with a distinct message for declined requests.
+            recipientId = after.customerId;
+            {
+              const cancelledByRole = (after.cancelledByRole || "").toString().toLowerCase();
+              const previousStatus = (before.status || "").toString().toLowerCase();
+              const wasDeclinedByLister =
+                cancelledByRole === "lister" && previousStatus === "pending";
+              const wasCancelledByCustomer = cancelledByRole === "customer";
+
+              if (wasDeclinedByLister) {
+                title = "Rental Request Declined";
+                body = `Your booking request for ${listingTitle} was declined by the host. We're sorry this one didn't work out.`;
+              } else if (wasCancelledByCustomer) {
+                title = "Rental Booking Cancelled";
+                body = `You cancelled your booking for ${listingTitle}.`;
+              } else {
+                title = "Rental Booking Cancelled";
+                body = `Your booking for ${listingTitle} was cancelled by the host. We're sorry for the inconvenience.`;
+              }
+            }
+            {
+              const reason = normalizedCancellationReason(after.cancellationReason);
+              if (reason) {
+                body = `${body} Reason: ${reason}`;
+              }
+            }
+            notificationType = "rental_cancelled";
+            break;
+
+          case "active":
+            // Notify customer that rental period has started
+            recipientId = after.customerId;
+            title = `${startEmoji} Rental Started`;
+            body = `Your rental period for ${listingTitle} has started. Enjoy!`;
+            notificationType = "rental_started";
+            break;
+
+          case "completed":
+            // Notify customer that rental is complete
+            recipientId = after.customerId;
+            title = "✨ Rental Complete";
+            body = `Your rental of ${listingTitle} is complete. Thank you!`;
+            notificationType = "rental_completed";
+            break;
+
+          default:
+            return null;
+        }
       }
 
       if (!recipientId) {
@@ -533,7 +564,7 @@ export const sendRentalReturnReminders = functions.pubsub
  * Notify listers when an active rental is overdue for return.
  * Sends one-time push + email per booking (tracked via overdueAlertSentAt).
  */
-export const sendOverdueRentalAlerts = functions.pubsub
+export const sendOverdueRentalAlerts = functions.runWith({ secrets: [sendgridKeySecret] }).pubsub
   .schedule("every 10 minutes")
   .timeZone("UTC")
   .onRun(async () => {

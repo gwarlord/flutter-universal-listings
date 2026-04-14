@@ -552,6 +552,8 @@ class _RentalRequestScreenState extends State<RentalRequestScreen> {
         status: RentalBookingStatus.pending,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        listingAcceptsProofOfPayment:
+            widget.listing.payments['acceptProofOfPayment'] == true,
         requesterName: requesterName.isNotEmpty ? requesterName : null,
         requesterEmail: requesterEmail.isNotEmpty ? requesterEmail : null,
         requesterPhoneNumber: requesterPhone.isNotEmpty ? requesterPhone : null,

@@ -12,6 +12,7 @@ import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/suspension_info.dart';
 import 'package:caribtap/listings/ui/auth/reauth_user/reauth_user_bloc.dart';
 import 'package:caribtap/listings/ui/profile/api/profile_repository.dart';
+import 'package:caribtap/core/utils/phone_number_utils.dart';
 import 'package:path/path.dart' as path;
 
 class ProfileFirebaseUtils extends ProfileRepository {
@@ -20,10 +21,46 @@ class ProfileFirebaseUtils extends ProfileRepository {
   Reference storage = FirebaseStorage.instance.ref();
 
   @override
-  updateCurrentUser(ListingsUser currentUser) async => await firestore
-      .collection(usersCollection)
-      .doc(currentUser.userID)
-      .set(currentUser.toJson(), SetOptions(merge: true));
+  updateCurrentUser(ListingsUser currentUser) async {
+    final ref = firestore.collection(usersCollection).doc(currentUser.userID);
+    final payload = currentUser.toJson();
+    final existingDoc = await ref.get();
+
+    if (existingDoc.exists) {
+      final existingData = existingDoc.data() ?? <String, dynamic>{};
+      final existingCountryCode =
+          (existingData['countryCode'] as String?)?.trim() ?? currentUser.countryCode;
+
+      final existingRawPhone = (existingData['phoneNumber'] as String?) ?? '';
+      final incomingRawPhone = (payload['phoneNumber'] as String?) ?? '';
+
+      final existingPhone = await normalizePhoneForCountry(
+            existingRawPhone,
+            existingCountryCode,
+          ) ??
+          normalizePhoneForVerification(existingRawPhone);
+      final incomingPhone = await normalizePhoneForCountry(
+            incomingRawPhone,
+            currentUser.countryCode,
+          ) ??
+          normalizePhoneForVerification(incomingRawPhone);
+
+      final samePhoneNumber =
+          existingPhone.isNotEmpty && incomingPhone.isNotEmpty && existingPhone == incomingPhone;
+
+      if (samePhoneNumber) {
+        payload['phoneNumber'] = existingData['phoneNumber'] ?? incomingRawPhone;
+
+        if (existingData['phoneVerified'] == true) {
+          payload['phoneVerified'] = true;
+          payload['phoneVerifiedAt'] =
+              existingData['phoneVerifiedAt'] ?? payload['phoneVerifiedAt'];
+        }
+      }
+    }
+
+    await ref.set(payload, SetOptions(merge: true));
+  }
 
   @override
   Future<String> uploadUserImageToServer(

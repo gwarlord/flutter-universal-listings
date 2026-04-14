@@ -98,6 +98,7 @@ class _CaribbeanRegionMapState extends State<CaribbeanRegionMap> {
             indoorViewEnabled: false,
             trafficEnabled: false,
             minMaxZoomPreference: const MinMaxZoomPreference(3.5, 9.5),
+            padding: const EdgeInsets.only(bottom: 80),
             markers: _buildCountryMarkers(),
             circles: _buildSelectedIslandAura(),
             polygons: _buildCountryPolygons(),
@@ -170,6 +171,8 @@ class _CaribbeanRegionMapState extends State<CaribbeanRegionMap> {
     final selectedMarkerId = widget.selectedMarkerId;
 
     return widget.countries.map((country) {
+      final countryActivity = widget.activity[country.id] ??
+          CountryActivitySummary(countryId: country.id);
       final state = _markerStateFor(
         markerIslandId: country.id,
         selectedIslandId: selectedIslandId,
@@ -186,6 +189,11 @@ class _CaribbeanRegionMapState extends State<CaribbeanRegionMap> {
         icon: icon,
         zIndex: isSelectedMarker ? 100 : 40,
         alpha: isDimmed ? 0.35 : 1.0,
+        infoWindow: InfoWindow(
+          title: country.displayName,
+          snippet:
+              '${countryActivity.listingsCount} listings • ${countryActivity.usersCount} users',
+        ),
         onTap: () => widget.onMarkerTap(country),
       );
     }).toSet();

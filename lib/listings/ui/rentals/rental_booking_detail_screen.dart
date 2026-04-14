@@ -1,7 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:url_launcher/url_launcher.dart';
 import '../../model/rental_booking.dart';
 import '../../model/rental_unit.dart';
 import '../../model/rental_catalog_item.dart';
@@ -26,6 +30,8 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
   final RentalService _rentalService = RentalService();
   final RentalCatalogService _catalogService = RentalCatalogService();
   double? _catalogDepositAmount;
+  bool _isUploadingProof = false;
+  bool _isReviewingProof = false;
 
   RentalBooking get booking => widget.booking;
 
@@ -745,10 +751,240 @@ class _RentalBookingDetailScreenState extends State<RentalBookingDetailScreen> {
               booking.checkinEvidence!,
             ),
           ],
+
+          const SizedBox(height: 16),
+          _buildProofOfPaymentSection(),
         ],
       ),
       bottomNavigationBar: _buildLifecycleActions(),
     );
+  }
+
+  Widget _buildProofOfPaymentSection() {
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('rental_bookings')
+          .doc(booking.id)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data() ?? <String, dynamic>{};
+        final bool listingAcceptsProof =
+            data['listingAcceptsProofOfPayment'] == true ||
+                booking.listingAcceptsProofOfPayment;
+
+        if (!listingAcceptsProof) {
+          return const SizedBox.shrink();
+        }
+
+        final payment =
+            (data['payment'] as Map<String, dynamic>?) ?? booking.payment ?? <String, dynamic>{};
+        final proofUrl = (payment['proofOfPaymentUrl'] as String? ?? '').trim();
+        final proofStatus =
+            (payment['proofOfPaymentStatus'] as String? ?? 'pending').toLowerCase();
+        final rejectionReason = (payment['rejectionReason'] as String? ?? '').trim();
+        final statusValue = (data['status'] as String? ?? booking.status.name).toLowerCase();
+        final bool isConfirmed = statusValue == RentalBookingStatus.confirmed.name;
+        final bool hasProof = proofUrl.isNotEmpty;
+        final bool canUpload =
+            _isCustomerView && isConfirmed && (!hasProof || proofStatus == 'rejected');
+        final bool canReview = _isListerView && hasProof && proofStatus == 'pending';
+
+        if (!hasProof && !canUpload) {
+          return const SizedBox.shrink();
+        }
+
+        return _buildSection(
+          context,
+          title: 'Proof of Payment'.tr(),
+          children: [
+            if (canUpload) ...[
+              Text(
+                'This rental requires proof of payment. Upload a receipt or screenshot.'.tr(),
+              ),
+              const SizedBox(height: 10),
+              FilledButton.icon(
+                onPressed: _isUploadingProof ? null : _uploadProofOfPayment,
+                icon: _isUploadingProof
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.upload_file),
+                label: Text(_isUploadingProof
+                    ? 'Uploading...'.tr()
+                    : 'Upload Proof of Payment'.tr()),
+              ),
+            ],
+            if (hasProof) ...[
+              _buildInfoRow(
+                context,
+                'Status'.tr(),
+                proofStatus.toUpperCase(),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => _openProofFile(proofUrl),
+                icon: const Icon(Icons.open_in_new),
+                label: Text('View Proof'.tr()),
+              ),
+            ],
+            if (proofStatus == 'rejected' && rejectionReason.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                '${'Rejection Reason'.tr()}: $rejectionReason',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            if (canReview) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _isReviewingProof ? null : _rejectProofOfPayment,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                      ),
+                      child: Text('Reject'.tr()),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _isReviewingProof
+                          ? null
+                          : () => _updateProofOfPaymentStatus('approved'),
+                      child: Text('Approve'.tr()),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _uploadProofOfPayment() async {
+    try {
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      if (image == null) return;
+
+      setState(() => _isUploadingProof = true);
+
+      final imageFile = File(image.path);
+      final storageRef = FirebaseStorage.instance.ref();
+      final fileName =
+          'proof_of_payment/rental_${booking.id}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final proofRef = storageRef.child(fileName);
+      final uploadTask = await proofRef.putFile(imageFile);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+
+      await FirebaseFirestore.instance
+          .collection('rental_bookings')
+          .doc(booking.id)
+          .update({
+        'payment.proofOfPaymentUrl': downloadUrl,
+        'payment.proofOfPaymentStatus': 'pending',
+        'payment.proofSubmittedAt': FieldValue.serverTimestamp(),
+        'payment.rejectionReason': FieldValue.delete(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Proof of payment uploaded successfully'.tr())),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to upload proof of payment'.tr())),
+      );
+    } finally {
+      if (mounted) setState(() => _isUploadingProof = false);
+    }
+  }
+
+  Future<void> _rejectProofOfPayment() async {
+    final reasonController = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Reject Payment?'.tr()),
+        content: TextField(
+          controller: reasonController,
+          minLines: 2,
+          maxLines: 4,
+          decoration: InputDecoration(
+            labelText: 'Rejection reason'.tr(),
+            hintText: 'Tell the customer what to fix'.tr(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'.tr()),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, reasonController.text.trim()),
+            child: Text('Reject'.tr()),
+          ),
+        ],
+      ),
+    );
+
+    final trimmed = reason?.trim() ?? '';
+    if (trimmed.isEmpty) return;
+    await _updateProofOfPaymentStatus('rejected', rejectionReason: trimmed);
+  }
+
+  Future<void> _updateProofOfPaymentStatus(
+    String status, {
+    String? rejectionReason,
+  }) async {
+    try {
+      setState(() => _isReviewingProof = true);
+      final updateData = <String, dynamic>{
+        'payment.proofOfPaymentStatus': status,
+        'payment.proofReviewedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      if (rejectionReason != null && rejectionReason.trim().isNotEmpty) {
+        updateData['payment.rejectionReason'] = rejectionReason.trim();
+      } else {
+        updateData['payment.rejectionReason'] = FieldValue.delete();
+      }
+
+      await FirebaseFirestore.instance
+          .collection('rental_bookings')
+          .doc(booking.id)
+          .update(updateData);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Proof of payment updated'.tr())),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update proof of payment'.tr())),
+      );
+    } finally {
+      if (mounted) setState(() => _isReviewingProof = false);
+    }
+  }
+
+  Future<void> _openProofFile(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Widget? _buildLifecycleActions() {

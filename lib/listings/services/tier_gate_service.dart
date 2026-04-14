@@ -88,4 +88,26 @@ class TierGateService {
   int? quoteHistoryLimit(ProTier tier) {
     return tier == ProTier.tier1 ? 20 : null;
   }
+
+  bool hasProfessionalAccess(ListingsUser user) {
+    final tier = resolveTierFromUser(user);
+    return tier == ProTier.tier2 || tier == ProTier.tier3;
+  }
+
+  bool hasPremiumAccess(ListingsUser user) {
+    final tier = resolveTierFromUser(user);
+    return tier == ProTier.tier3;
+  }
+
+  bool hasPaidAccess(ListingsUser user) {
+    return hasProfessionalAccess(user);
+  }
+
+  bool canManageRentals(ListingsUser user) {
+    return hasProfessionalAccess(user);
+  }
+
+  bool canUseAdvancedAnalytics(ListingsUser user) {
+    return hasPremiumAccess(user);
+  }
 }

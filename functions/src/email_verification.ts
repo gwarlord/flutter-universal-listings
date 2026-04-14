@@ -14,7 +14,7 @@ function generateVerificationCode(): string {
 }
 
 // Send verification code via email
-export const sendVerificationCode = functions.https.onCall(async (data, context) => {
+export const sendVerificationCode = functions.runWith({ secrets: [sendgridKeySecret] }).https.onCall(async (data, context) => {
   // Check if user is authenticated
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
@@ -101,6 +101,91 @@ export const sendVerificationCode = functions.https.onCall(async (data, context)
     await verificationRef.delete();
     
     throw new functions.https.HttpsError('internal', 'Failed to send verification email');
+  }
+});
+
+// Send password reset email with a CTA button.
+// This uses Firebase Admin to generate the action link and SendGrid for HTML rendering.
+export const sendPasswordResetEmailButton = functions.runWith({ secrets: [sendgridKeySecret] }).https.onCall(async (data) => {
+  const email = (data?.email ?? '').toString().trim().toLowerCase();
+  if (!email) {
+    throw new functions.https.HttpsError('invalid-argument', 'Email is required');
+  }
+
+  // Always return success-like responses for unknown users to reduce account enumeration risk.
+  try {
+    const actionCodeSettings: admin.auth.ActionCodeSettings = {
+      url: 'https://caribtap.com/reset-password',
+      handleCodeInApp: true,
+      iOS: {
+        bundleId: 'com.caribtap.ios',
+      },
+      android: {
+        packageName: 'com.caribtap.instaflutter.android',
+        installApp: true,
+        minimumVersion: '1',
+      },
+    };
+
+    const resetLink = await admin.auth().generatePasswordResetLink(
+      email,
+      actionCodeSettings,
+    );
+
+    const sendgridKey = await sendgridKeySecret.value();
+    if (!sendgridKey) {
+      console.warn('SENDGRID_KEY is not configured; skipping custom reset email send.');
+      return {
+        success: true,
+        customEmailSent: false,
+        message: 'If an account exists for this email, a reset link has been sent.',
+      };
+    }
+
+    sgMail.setApiKey(sendgridKey);
+    await sgMail.send({
+      to: email,
+      from: { email: 'noreply@caribtap.com', name: 'CaribTap' },
+      subject: 'Reset your password for CaribTap',
+      text:
+        `We received a request to reset your CaribTap password.\n\n` +
+        `Reset password: ${resetLink}\n\n` +
+        `If you did not request this, you can safely ignore this email.`,
+      html: `
+        <div style="font-family: Arial, Helvetica, sans-serif; max-width: 620px; margin: 0 auto; padding: 24px; color: #1f2937;">
+          <h2 style="margin: 0 0 16px; color: #0f172a;">Reset your password for CaribTap</h2>
+          <p style="margin: 0 0 18px; line-height: 1.5;">We received a request to reset your password.</p>
+          <p style="margin: 0 0 24px; line-height: 1.5;">Click the button below to continue:</p>
+          <p style="margin: 0 0 28px;">
+            <a href="${resetLink}" style="display: inline-block; background: #2A9EB8; color: #ffffff; text-decoration: none; padding: 12px 22px; border-radius: 10px; font-weight: 700;">
+              Reset Password
+            </a>
+          </p>
+          <p style="margin: 0 0 12px; font-size: 13px; color: #6b7280; line-height: 1.5;">
+            If the button does not work, copy and paste this link into your browser:
+          </p>
+          <p style="margin: 0 0 16px; font-size: 12px; color: #6b7280; word-break: break-word;">${resetLink}</p>
+          <p style="margin: 0; font-size: 12px; color: #6b7280;">If you did not request this, you can safely ignore this email.</p>
+        </div>
+      `,
+    });
+
+    return {
+      success: true,
+      customEmailSent: true,
+      message: 'If an account exists for this email, a reset link has been sent.',
+    };
+  } catch (error: any) {
+    const code = error?.code || '';
+    if (code === 'auth/user-not-found') {
+      return {
+        success: true,
+        message: 'If an account exists for this email, a reset link has been sent.',
+      };
+    }
+
+    console.error('sendPasswordResetEmailButton error:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to send password reset email');
   }
 });
 

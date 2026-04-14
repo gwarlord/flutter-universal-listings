@@ -186,7 +186,7 @@ Total: ${_formatCurrency(order.estimatedTotal, order.currencyCode)}
 
   String _formatCurrency(double amount, String currencyCode) {
     final symbol = _getCurrencySymbol(currencyCode);
-    return '$symbol${amount.toStringAsFixed(2)}';
+    return '${currencyCode.toUpperCase()} $symbol${amount.toStringAsFixed(2)}';
   }
 
   String _getCurrencySymbol(String code) {

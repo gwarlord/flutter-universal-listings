@@ -51,7 +51,11 @@ class ListingsCustomBackendUtils extends ListingsRepository {
   Future<List<FilterModel>> getFilters() async => [];
 
   @override
-  Future<List<ListingModel>> getListings({required List<String> favListingsIDs}) async => [];
+  Future<List<ListingModel>> getListings({
+    required List<String> favListingsIDs,
+    bool includeDemoListings = false,
+    bool includeHiddenListings = false,
+  }) async => [];
 
   @override
   Future<List<ListingModel>> getMyListings({
@@ -155,4 +159,7 @@ class ListingsCustomBackendUtils extends ListingsRepository {
 
   @override
   Future<void> dismissReport(String reportId) async {}
+
+  @override
+  Future<void> resolveReport(String reportId) async {}
 }

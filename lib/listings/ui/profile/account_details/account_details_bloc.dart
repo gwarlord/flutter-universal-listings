@@ -77,8 +77,16 @@ class AccountDetailsBloc
       }
     });
     on<UpdateUserDataEvent>((event, emit) async {
-      final previousPhone = normalizePhoneForVerification(currentUser.phoneNumber);
-      final nextPhone = normalizePhoneForVerification(event.phoneNumber);
+      final previousPhone = await normalizePhoneForCountry(
+            currentUser.phoneNumber,
+            currentUser.countryCode,
+          ) ??
+          normalizePhoneForVerification(currentUser.phoneNumber);
+      final nextPhone = await normalizePhoneForCountry(
+            event.phoneNumber,
+            event.countryCode,
+          ) ??
+          normalizePhoneForVerification(event.phoneNumber);
       final phoneChanged = previousPhone != nextPhone;
 
       currentUser.firstName = event.firstName;

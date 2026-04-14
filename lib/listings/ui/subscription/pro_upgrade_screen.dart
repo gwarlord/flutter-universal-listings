@@ -1,6 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:caribtap/constants.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/listings/model/entitlement_subscription.dart';
@@ -9,6 +13,7 @@ import 'package:caribtap/listings/services/entitlement_service.dart';
 import 'package:caribtap/listings/services/pro_gate.dart';
 import 'package:caribtap/listings/services/subscription_products.dart';
 import 'package:caribtap/listings/services/subscription_service.dart';
+import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -32,6 +37,10 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
   final EntitlementService _entitlementService = EntitlementService();
 
   bool _isLoading = true;
+  bool _isClaimingTrial = false;
+  bool _isLoadingTrialConfig = false;
+  bool _trialEnabled = true;
+  bool _trialRequiresPhoneVerified = false;
   String? _errorMessage;
   List<ProductDetails> _products = const [];
   int? _selectedTier;
@@ -44,6 +53,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
     super.initState();
     _subscriptionService.startListening(userId: widget.currentUser.userID);
     _selectedTier = widget.initialTier;
+    _loadTrialConfig();
     _loadProducts();
   }
 
@@ -111,6 +121,71 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
     }
   }
 
+  Future<void> _loadTrialConfig() async {
+    setState(() => _isLoadingTrialConfig = true);
+    try {
+      final config = await _subscriptionService.getProfessionalTrialConfig();
+      if (!mounted) return;
+      setState(() {
+        _trialEnabled = config['enabled'] == true;
+        _trialRequiresPhoneVerified = config['requiresPhoneVerified'] == true;
+      });
+    } catch (_) {
+      // Fail open for growth mode; claim callable still enforces server policy.
+      if (!mounted) return;
+      setState(() {
+        _trialEnabled = true;
+        _trialRequiresPhoneVerified = false;
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingTrialConfig = false);
+      }
+    }
+  }
+
+  Future<void> _claimProfessionalTrial() async {
+    if (_isClaimingTrial) {
+      return;
+    }
+
+    if (_trialRequiresPhoneVerified && widget.currentUser.phoneVerified != true) {
+      showSnackBar(context, 'Phone verification is required to claim this trial.'.tr());
+      return;
+    }
+
+    setState(() => _isClaimingTrial = true);
+    try {
+      final result = await _subscriptionService.claimProfessionalTrial();
+      final userDoc = await FirebaseFirestore.instance
+          .collection(usersCollection)
+          .doc(widget.currentUser.userID)
+          .get();
+      if (userDoc.exists && mounted) {
+        final freshUser = ListingsUser.fromJson(userDoc.data()!);
+        context.read<AuthenticationBloc>().add(UpdateAuthUserEvent(freshUser));
+      }
+      if (!mounted) return;
+      final expiresAt = result['expiresAt']?.toString();
+      final message = expiresAt != null && expiresAt.isNotEmpty
+          ? 'Your 30-day Professional trial is now active until {}.'.tr(
+              args: [expiresAt.split('T').first],
+            )
+          : 'Your 30-day Professional trial is now active.'.tr();
+      showSnackBar(context, message);
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is FirebaseFunctionsException
+          ? (error.message ?? 'Unable to start free trial.'.tr())
+          : 'Unable to start free trial.'.tr();
+      showSnackBar(context, message);
+    } finally {
+      if (mounted) {
+        setState(() => _isClaimingTrial = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
@@ -161,6 +236,15 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
             onPressed: _loadProducts,
             child: Text('Retry'.tr()),
           ),
+          if (widget.currentUser.subscriptionTier.toLowerCase() == 'free' && _trialEnabled) ...[
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: (_isClaimingTrial || _isLoadingTrialConfig)
+                  ? null
+                  : _claimProfessionalTrial,
+              child: Text('Start Free 30 Days'.tr()),
+            ),
+          ],
         ],
       ),
     );
@@ -182,6 +266,10 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 48),
             children: [
               _buildHeader(theme, tier),
+              if (tier == 0 && _trialEnabled) ...[
+                const SizedBox(height: 16),
+                _buildTrialCard(theme),
+              ],
               const SizedBox(height: 20),
               _buildPlanSection(
                 theme,
@@ -206,23 +294,112 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
   }
 
   Widget _buildHeader(ThemeData theme, int tier) {
-    final headline = tier > 0
-        ? 'Current plan: {}'.tr(args: [_tierLabel(tier).tr()])
-        : 'Choose a plan'.tr();
+    final tierName = _tierLabel(tier);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          headline,
-          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-        ),
+        if (tier > 0)
+          RichText(
+            text: TextSpan(
+              style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              children: [
+                TextSpan(text: 'Current plan: '.tr()),
+                TextSpan(
+                  text: tierName.tr(),
+                  style: TextStyle(color: _tierColor(tier)),
+                ),
+              ],
+            ),
+          )
+        else
+          Text(
+            'Choose a plan'.tr(),
+            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
         const SizedBox(height: 8),
-        Text(
-          'Pick Professional or Premium to unlock business tools.'.tr(),
-          style: theme.textTheme.bodyMedium,
+        RichText(
+          text: TextSpan(
+            style: theme.textTheme.bodyMedium,
+            children: [
+              TextSpan(text: 'Pick '.tr()),
+              TextSpan(
+                text: 'Professional'.tr(),
+                style: TextStyle(
+                  color: Colors.blue,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              TextSpan(text: ' or '.tr()),
+              TextSpan(
+                text: 'Premium'.tr(),
+                style: const TextStyle(
+                  color: Colors.purple,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              TextSpan(text: ' to unlock business tools.'.tr()),
+            ],
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildTrialCard(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Color(cfg.colorPrimary).withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Color(cfg.colorPrimary).withOpacity(0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Start with 30 days free'.tr(),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Claim one free 30-day Professional trial to explore business tools before subscribing.'.tr(),
+            style: theme.textTheme.bodySmall,
+          ),
+          if (_trialRequiresPhoneVerified && widget.currentUser.phoneVerified != true) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Phone verification is required to claim this trial.'.tr(),
+              style: theme.textTheme.bodySmall?.copyWith(color: Colors.orange),
+            ),
+          ],
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: (_isClaimingTrial || _isLoadingTrialConfig)
+                  ? null
+                  : _claimProfessionalTrial,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(cfg.colorPrimary),
+                foregroundColor: Colors.white,
+              ),
+              child: _isClaimingTrial
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text('Start Free 30 Days'.tr()),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -259,16 +436,23 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
 
   List<String> _planBenefits(int tier) {
     final professionalBenefits = [
-      'AI photo enhancement'.tr(),
-      'Watermarking tools'.tr(),
-      'Priority support'.tr(),
+      'Create listings for sales, rentals, bookings, and events'.tr(),
+      'Boost listing quality with AI-enhanced photos'.tr(),
+      'Activate customer chat and manage blocked users'.tr(),
+      'Manage bookings and rentals from one place'.tr(),
+      'Access analytics to track performance'.tr(),
+      'Post deals and promotions'.tr(),
+      'Accept proof of payment on eligible listings'.tr(),
     ];
 
     if (tier == 3) {
       return [
         'Everything in Professional'.tr(),
-        'Quotes & invoices tools'.tr(),
-        'Full suite with premium business features.'.tr(),
+        'Create your own Mini Store with internal catalog'.tr(),
+        'Accept and manage customer orders'.tr(),
+        'Generate quotes and invoices'.tr(),
+        'Access advanced analytics'.tr(),
+        'Unlock stronger commerce tools for structured selling'.tr(),
       ];
     }
 
@@ -315,7 +499,10 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
               Expanded(
                 child: Text(
                   label,
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: _tierColor(tier),
+                  ),
                 ),
               ),
               if (isCurrent)
@@ -424,9 +611,18 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '${_tierLabel(tier).tr()} ${label.isNotEmpty ? '- ${label.tr()}' : ''}',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                RichText(
+                  text: TextSpan(
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    children: [
+                      TextSpan(
+                        text: _tierLabel(tier).tr(),
+                        style: TextStyle(color: _tierColor(tier)),
+                      ),
+                      if (label.isNotEmpty)
+                        TextSpan(text: ' - ${label.tr()}'),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -527,6 +723,18 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
         return 'Premium';
       default:
         return 'Free';
+    }
+  }
+
+  Color _tierColor(int tier) {
+    switch (tier) {
+      case 2:
+      case 1:
+        return Colors.blue;
+      case 3:
+        return Colors.purple;
+      default:
+        return Colors.grey;
     }
   }
 }

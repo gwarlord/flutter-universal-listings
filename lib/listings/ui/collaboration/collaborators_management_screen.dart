@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:caribtap/constants.dart';
 import 'package:caribtap/core/utils/helper.dart';
@@ -45,13 +46,13 @@ class _CollaboratorsManagementScreenState
       }
       switch (error.code) {
         case 'not-found':
-          return 'User not found';
+          return 'User not found'.tr();
         case 'invalid-argument':
-          return 'Please enter a valid collaborator email or UID';
+          return 'Please enter a valid collaborator email or UID'.tr();
         case 'permission-denied':
-          return 'You do not have permission for this action';
+          return 'You do not have permission for this action'.tr();
         default:
-          return 'Action failed. Please try again.';
+          return 'Action failed. Please try again.'.tr();
       }
     }
     return error.toString();
@@ -78,7 +79,7 @@ class _CollaboratorsManagementScreenState
   void _showAddCollaboratorDialog() {
     if (!widget.isOwner || !widget.hasPremium) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Premium required to manage collaborators')),
+        SnackBar(content: Text('Premium required to manage collaborators'.tr())),
       );
       return;
     }
@@ -109,14 +110,14 @@ class _CollaboratorsManagementScreenState
             if (mounted) {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Collaborator added successfully')),
+                SnackBar(content: Text('Collaborator added successfully'.tr())),
               );
               _loadCollaborators();
             }
           } catch (e) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Error: ${_friendlyError(e)}')),
+                SnackBar(content: Text('Error: {}'.tr(args: [_friendlyError(e)]))),
               );
             }
           }
@@ -148,12 +149,12 @@ class _CollaboratorsManagementScreenState
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Permissions updated')),
+        SnackBar(content: Text('Permissions updated'.tr())),
       );
       _loadCollaborators();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${_friendlyError(e)}')),
+        SnackBar(content: Text('Error: {}'.tr(args: [_friendlyError(e)]))),
       );
     }
   }
@@ -167,13 +168,13 @@ class _CollaboratorsManagementScreenState
         backgroundColor: isDark ? Colors.grey[900] : Colors.white,
         surfaceTintColor: Colors.transparent,
         title: Text(
-          'Remove Collaborator',
+          'Remove Collaborator'.tr(),
           style: TextStyle(
             color: isDark ? Colors.white : Colors.black87,
           ),
         ),
         content: Text(
-          'Are you sure you want to remove ${collaborator.displayName ?? collaborator.uid}?',
+          'Are you sure you want to remove {}?'.tr(args: [collaborator.displayName ?? collaborator.uid]),
           style: TextStyle(
             color: isDark ? Colors.grey[300] : Colors.black87,
           ),
@@ -182,7 +183,7 @@ class _CollaboratorsManagementScreenState
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(
-              'Cancel',
+              'Cancel'.tr(),
               style: TextStyle(
                 color: isDark ? Colors.grey[400] : Colors.black54,
               ),
@@ -191,7 +192,7 @@ class _CollaboratorsManagementScreenState
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: Text(
-              'Remove',
+              'Remove'.tr(),
               style: TextStyle(
                 color: Colors.red,
               ),
@@ -221,14 +222,14 @@ class _CollaboratorsManagementScreenState
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Collaborator removed')),
+            SnackBar(content: Text('Collaborator removed'.tr())),
           );
           _loadCollaborators();
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${_friendlyError(e)}')),
+            SnackBar(content: Text('Error: {}'.tr(args: [_friendlyError(e)]))),
           );
         }
       }
@@ -239,14 +240,14 @@ class _CollaboratorsManagementScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Collaborators'),
+        title: Text('Collaborators'.tr()),
         elevation: 0,
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : errorMessage != null
               ? Center(
-                  child: Text('Error: $errorMessage'),
+                  child: Text('Error: {}'.tr(args: ['$errorMessage'])),
                 )
               : Column(
                   children: [
@@ -262,15 +263,15 @@ class _CollaboratorsManagementScreenState
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'Premium Feature',
+                                  Text(
+                                    'Premium Feature'.tr(),
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
-                                  const Text(
-                                    'Upgrade to Premium to manage collaborators',
+                                  Text(
+                                    'Upgrade to Premium to manage collaborators'.tr(),
                                     style: TextStyle(fontSize: 12),
                                   ),
                                 ],
@@ -292,14 +293,14 @@ class _CollaboratorsManagementScreenState
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    'No Collaborators Yet',
+                                    'No Collaborators Yet'.tr(),
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleMedium,
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Add collaborators to manage this listing',
+                                    'Add collaborators to manage this listing'.tr(),
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodySmall,
@@ -336,7 +337,7 @@ class _CollaboratorsManagementScreenState
           ? FloatingActionButton.extended(
               onPressed: _showAddCollaboratorDialog,
               icon: const Icon(Icons.person_add),
-              label: const Text('Add Collaborator'),
+              label: Text('Add Collaborator'.tr()),
             )
           : null,
     );
@@ -376,7 +377,7 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
     final email = emailController.text.trim();
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter an email')),
+        SnackBar(content: Text('Please enter an email'.tr())),
       );
       return;
     }
@@ -403,7 +404,7 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Add Collaborator',
+                'Add Collaborator'.tr(),
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -417,7 +418,7 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
                   color: isDark ? Colors.white : Colors.black87,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Enter email or UID',
+                  hintText: 'Enter email or UID'.tr(),
                   hintStyle: TextStyle(
                     color: isDark ? Colors.grey[400] : Colors.grey[600],
                   ),
@@ -453,7 +454,7 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Permissions',
+                  'Permissions'.tr(),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: isDark ? Colors.white : Colors.black87,
@@ -462,7 +463,7 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
               ),
               const SizedBox(height: 12),
               _PermissionToggle(
-                label: 'Manage Orders',
+                label: 'Manage Orders'.tr(),
                 value: permissions.manageOrders,
                 onChanged: (value) {
                   setState(() {
@@ -472,7 +473,7 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
                 },
               ),
               _PermissionToggle(
-                label: 'Manage Bookings',
+                label: 'Manage Bookings'.tr(),
                 value: permissions.manageBookings,
                 onChanged: (value) {
                   setState(() {
@@ -482,7 +483,7 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
                 },
               ),
               _PermissionToggle(
-                label: 'Manage Rentals',
+                label: 'Manage Rentals'.tr(),
                 value: permissions.manageRentals,
                 onChanged: (value) {
                   setState(() {
@@ -492,7 +493,7 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
                 },
               ),
               _PermissionToggle(
-                label: 'Manage Chats',
+                label: 'Manage Chats'.tr(),
                 value: permissions.manageChats,
                 onChanged: (value) {
                   setState(() {
@@ -502,7 +503,7 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
                 },
               ),
               _PermissionToggle(
-                label: 'Edit Listing',
+                label: 'Edit Listing'.tr(),
                 value: permissions.editListing,
                 onChanged: (value) {
                   setState(() {
@@ -512,7 +513,7 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
                 },
               ),
               _PermissionToggle(
-                label: 'Change Order Status',
+                label: 'Change Order Status'.tr(),
                 value: permissions.changeOrderStatus,
                 onChanged: (value) {
                   setState(() {
@@ -522,7 +523,7 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
                 },
               ),
               _PermissionToggle(
-                label: 'Change Fulfillment',
+                label: 'Change Fulfillment'.tr(),
                 value: permissions.changeFulfillment,
                 onChanged: (value) {
                   setState(() {
@@ -532,7 +533,7 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
                 },
               ),
               _PermissionToggle(
-                label: 'Manage Table Mode',
+                label: 'Manage Table Mode'.tr(),
                 value: permissions.manageTableMode,
                 onChanged: (value) {
                   setState(() {
@@ -550,7 +551,7 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
                         ? null
                         : () => Navigator.pop(context),
                     child: Text(
-                      'Cancel',
+                      'Cancel'.tr(),
                       style: TextStyle(
                         color: isDark ? Colors.grey[400] : Colors.black54,
                       ),
@@ -567,7 +568,7 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
                               strokeWidth: 2,
                             ),
                           )
-                        : const Text('Add'),
+                        : Text('Add'.tr()),
                   ),
                 ],
               ),
@@ -676,7 +677,7 @@ class _CollaboratorTileState extends State<CollaboratorTile> {
               ),
             ),
             subtitle: Text(
-              '${permissions.enabledPermissions.length} permissions',
+              '{} permissions'.tr(args: ['${permissions.enabledPermissions.length}']),
               style: TextStyle(
                 color: isDark ? Colors.grey[400] : Colors.grey[600],
               ),
@@ -705,7 +706,7 @@ class _CollaboratorTileState extends State<CollaboratorTile> {
                   PopupMenuItem(
                     value: 'remove',
                     child: Text(
-                      'Remove',
+                      'Remove'.tr(),
                       style: TextStyle(
                         color: isDark ? Colors.white : Colors.black87,
                       ),
@@ -730,49 +731,49 @@ class _CollaboratorTileState extends State<CollaboratorTile> {
               child: Column(
                 children: [
                   _PermissionToggle(
-                    label: 'Manage Orders',
+                    label: 'Manage Orders'.tr(),
                     value: permissions.manageOrders,
                     onChanged: (value) =>
                         _updatePermission('manageOrders', value),
                   ),
                   _PermissionToggle(
-                    label: 'Manage Bookings',
+                    label: 'Manage Bookings'.tr(),
                     value: permissions.manageBookings,
                     onChanged: (value) =>
                         _updatePermission('manageBookings', value),
                   ),
                   _PermissionToggle(
-                    label: 'Manage Rentals',
+                    label: 'Manage Rentals'.tr(),
                     value: permissions.manageRentals,
                     onChanged: (value) =>
                         _updatePermission('manageRentals', value),
                   ),
                   _PermissionToggle(
-                    label: 'Manage Chats',
+                    label: 'Manage Chats'.tr(),
                     value: permissions.manageChats,
                     onChanged: (value) =>
                         _updatePermission('manageChats', value),
                   ),
                   _PermissionToggle(
-                    label: 'Edit Listing',
+                    label: 'Edit Listing'.tr(),
                     value: permissions.editListing,
                     onChanged: (value) =>
                         _updatePermission('editListing', value),
                   ),
                   _PermissionToggle(
-                    label: 'Change Order Status',
+                    label: 'Change Order Status'.tr(),
                     value: permissions.changeOrderStatus,
                     onChanged: (value) =>
                         _updatePermission('changeOrderStatus', value),
                   ),
                   _PermissionToggle(
-                    label: 'Change Fulfillment',
+                    label: 'Change Fulfillment'.tr(),
                     value: permissions.changeFulfillment,
                     onChanged: (value) =>
                         _updatePermission('changeFulfillment', value),
                   ),
                   _PermissionToggle(
-                    label: 'Manage Table Mode',
+                    label: 'Manage Table Mode'.tr(),
                     value: permissions.manageTableMode,
                     onChanged: (value) =>
                         _updatePermission('manageTableMode', value),

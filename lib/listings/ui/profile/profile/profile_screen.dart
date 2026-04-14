@@ -670,7 +670,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (Platform.isAndroid) {
           pushAndRemoveUntil(
             context,
-            HomeScreen(currentUser: currentUser),
+            ContainerWrapperWidget(currentUser: currentUser),
             false,
           );
         } else {

@@ -144,6 +144,8 @@ class _BookingRequestDialogState extends State<BookingRequestDialog> {
       customAnswers: widget.listing.enableCustomQuestions
           ? _questionControllers.map((k, v) => MapEntry(k, v.text.trim()))
           : {},
+        listingAcceptsProofOfPayment:
+          widget.listing.payments['acceptProofOfPayment'] == true,
       requesterPhoneVerified: widget.currentUser.phoneVerified,
     );
 

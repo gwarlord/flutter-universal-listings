@@ -24,6 +24,10 @@ class InvoiceBuilderCubit extends Cubit<InvoiceBuilderState> {
     emit(state.copyWith(invoice: state.invoice?.copyWith(terms: value)));
   }
 
+  void updatePoNumber(String value) {
+    emit(state.copyWith(invoice: state.invoice?.copyWith(poNumber: value)));
+  }
+
   void updateDueDate(DateTime? date) {
     emit(state.copyWith(invoice: state.invoice?.copyWith(dueDate: date)));
   }

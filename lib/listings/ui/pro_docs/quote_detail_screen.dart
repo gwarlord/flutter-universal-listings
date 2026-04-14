@@ -1,6 +1,8 @@
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/payment_details_model.dart';
 import 'package:caribtap/listings/model/quote_model.dart';
+import 'package:caribtap/listings/services/payment_details_service.dart';
 import 'package:caribtap/listings/services/pdf_service.dart';
 import 'package:caribtap/listings/services/quote_service.dart';
 import 'package:caribtap/listings/services/share_link_service.dart';
@@ -31,6 +33,16 @@ class QuoteDetailScreen extends StatefulWidget {
 
 class _QuoteDetailScreenState extends State<QuoteDetailScreen> {
   final PdfService _pdfService = PdfService();
+  final PaymentDetailsService _paymentDetailsService = PaymentDetailsService();
+
+  Future<PaymentDetailsPublic?> _getPaymentDetails() async {
+    try {
+      final details = await _paymentDetailsService.getPublic(widget.currentUser.userID);
+      return details.hasAnyPaymentMethod ? details : null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   NumberFormat _currencyFor(QuoteModel quote) {
     final code = quote.currencyCode.isNotEmpty
@@ -242,7 +254,7 @@ class _QuoteDetailScreenState extends State<QuoteDetailScreen> {
                 onPressed: canSend
                     ? () async {
                         if (quote.shareToken != null && quote.status == 'sent') {
-                          await _shareToken(quote);
+                          await _shareToken(context, quote);
                         } else {
                           await context.read<QuoteDetailCubit>().sendQuote(quote);
                         }
@@ -284,6 +296,7 @@ class _QuoteDetailScreenState extends State<QuoteDetailScreen> {
                       InvoiceBuilderScreen(
                         uid: widget.currentUser.userID,
                         invoice: invoice,
+                        currentUser: widget.currentUser,
                       ),
                     );
                   },
@@ -370,22 +383,30 @@ class _QuoteDetailScreenState extends State<QuoteDetailScreen> {
     }
   }
 
-  Future<void> _shareToken(QuoteModel quote) async {
+  Future<void> _shareToken(BuildContext context, QuoteModel quote) async {
     final token = quote.shareToken;
     if (token == null || token.isEmpty) return;
     final link = ShareLinkService().buildPublicDocLink(type: 'quote', token: token);
-    await Share.share('${'Quote link'.tr()}: $link');
+    final box = context.findRenderObject() as RenderBox?;
+    await Share.share(
+      '${'Quote link'.tr()}: $link',
+      sharePositionOrigin: box != null
+          ? box.localToGlobal(Offset.zero) & box.size
+          : const Rect.fromLTWH(0, 0, 1, 1),
+    );
   }
 
   Future<void> _shareQuotePdf(QuoteModel quote) async {
     final tier = TierGateService().resolveTierFromUser(widget.currentUser);
     final canBrand = TierGateService().canUseBranding(tier);
     final businessName = canBrand ? _displayName(widget.currentUser) : null;
+    final paymentDetails = await _getPaymentDetails();
     await _pdfService.shareQuotePdf(
       quote,
       businessName: businessName,
       includeWatermark: !canBrand,
       hideFooter: canBrand,
+      paymentDetails: paymentDetails,
     );
   }
 
@@ -399,6 +420,7 @@ class _QuoteDetailScreenState extends State<QuoteDetailScreen> {
         businessName: businessName,
         includeWatermark: !canBrand,
         hideFooter: canBrand,
+        paymentDetails: await _getPaymentDetails(),
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

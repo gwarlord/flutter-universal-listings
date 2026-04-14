@@ -270,7 +270,7 @@ class _MenuEditSectionWidgetState extends State<MenuEditSectionWidget> {
     }
 
     final picker = ImagePicker();
-    final pickedFiles = await picker.pickMultiImage();
+    final pickedFiles = await picker.pickMultiImage(imageQuality: 85);
 
     if (pickedFiles.isEmpty) return;
 

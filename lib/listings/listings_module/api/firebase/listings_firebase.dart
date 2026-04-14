@@ -109,6 +109,15 @@ class ListingsFirebaseUtils extends ListingsRepository {
 
   @override
   Future<void> dismissReport(String reportId) async {
+    await _updateReportStatus(reportId, 'dismissed');
+  }
+
+  @override
+  Future<void> resolveReport(String reportId) async {
+    await _updateReportStatus(reportId, 'resolved');
+  }
+
+  Future<void> _updateReportStatus(String reportId, String status) async {
     // Get report to find the listing ID
     final reportDoc = await firestore.collection('reports').doc(reportId).get();
     final reportData = reportDoc.data();
@@ -117,7 +126,7 @@ class ListingsFirebaseUtils extends ListingsRepository {
     await firestore
         .collection('reports')
         .doc(reportId)
-        .update({'status': 'dismissed'});
+        .update({'status': status});
     
     // Clear isFlagged on the listing if this was the only pending report
     if (reportData != null && reportData['listingId'] != null) {
@@ -242,9 +251,51 @@ class ListingsFirebaseUtils extends ListingsRepository {
           .collection(cfg.categoriesCollection)
           .get();
 
-      final categories = snap.docs
+      final parsedCategories = snap.docs
           .map((d) => CategoriesModel.fromJson(d.data(), id: d.id))
           .where((c) => c.isActive)
+          .toList();
+
+      final dedupedByKey = <String, CategoriesModel>{};
+      for (final category in parsedCategories) {
+        final dedupeKey = _categoryDedupeKey(category);
+        final existing = dedupedByKey[dedupeKey];
+        if (existing == null) {
+          dedupedByKey[dedupeKey] = category;
+          continue;
+        }
+
+        dedupedByKey[dedupeKey] =
+            _preferCategoryCandidate(existing, category);
+      }
+
+      final deduped = dedupedByKey.values.toList();
+      final bySlug = <String, CategoriesModel>{
+        for (final category in deduped)
+          if (category.slug.trim().isNotEmpty) category.slug.trim(): category,
+      };
+
+      final categories = deduped
+          .where((category) {
+            final parentSlug = category.parentSlug?.trim();
+            if (parentSlug == null || parentSlug.isEmpty) {
+              return true;
+            }
+
+            final parent = bySlug[parentSlug];
+            if (parent == null) {
+              return true;
+            }
+
+            final categoryTitle = category.title.trim().toLowerCase();
+            final parentTitle = parent.title.trim().toLowerCase();
+            if (categoryTitle.isEmpty || parentTitle.isEmpty) {
+              return true;
+            }
+
+            // Ignore malformed child docs that duplicate parent display label.
+            return categoryTitle != parentTitle;
+          })
           .toList()
         ..sort((a, b) {
           final sortCompare = a.sortOrder.compareTo(b.sortOrder);
@@ -259,6 +310,55 @@ class ListingsFirebaseUtils extends ListingsRepository {
       debugPrint('$st');
       return <CategoriesModel>[];
     }
+  }
+
+  String _categoryDedupeKey(CategoriesModel category) {
+    final normalizedParent = category.parentSlug?.trim().toLowerCase() ?? '';
+    final normalizedTitle = category.title.trim().toLowerCase();
+    if (normalizedTitle.isNotEmpty) {
+      return 'title:$normalizedParent:$normalizedTitle';
+    }
+
+    final slug = category.slug.trim().toLowerCase();
+    if (slug.isNotEmpty) {
+      return 'slug:$slug';
+    }
+
+    return 'id:${category.id.trim().toLowerCase()}';
+  }
+
+  CategoriesModel _preferCategoryCandidate(
+    CategoriesModel left,
+    CategoriesModel right,
+  ) {
+    int score(CategoriesModel category) {
+      var result = 0;
+      if (category.parentSlug?.trim().isNotEmpty == true) {
+        result += 8;
+      }
+      if (category.photo.trim().isNotEmpty) {
+        result += 4;
+      }
+      if (category.synonyms.isNotEmpty) {
+        result += 2;
+      }
+      if (category.sortOrder > 0) {
+        result += 1;
+      }
+      return result;
+    }
+
+    final leftScore = score(left);
+    final rightScore = score(right);
+    if (rightScore != leftScore) {
+      return rightScore > leftScore ? right : left;
+    }
+
+    if (right.sortOrder != left.sortOrder) {
+      return right.sortOrder < left.sortOrder ? right : left;
+    }
+
+    return right.title.trim().length > left.title.trim().length ? right : left;
   }
 
   @override
@@ -291,7 +391,11 @@ class ListingsFirebaseUtils extends ListingsRepository {
   }
 
   @override
-  Future<List<ListingModel>> getListings({required List<String> favListingsIDs}) async {
+  Future<List<ListingModel>> getListings({
+    required List<String> favListingsIDs,
+    bool includeDemoListings = false,
+    bool includeHiddenListings = false,
+  }) async {
     final result = await firestore.collection(cfg.listingsCollection).get();
     final List<ListingModel> listings = [];
 
@@ -300,7 +404,7 @@ class ListingsFirebaseUtils extends ListingsRepository {
         final model = _listingFromDoc(doc);
         // Filter out suspended and hidden listings
         if (model.suspended) continue;
-        if (model.hidden) continue;
+        if (model.hidden && !includeHiddenListings) continue;
         model.isFav = favListingsIDs.contains(doc.id);
         listings.add(model);
       } catch (e, s) {

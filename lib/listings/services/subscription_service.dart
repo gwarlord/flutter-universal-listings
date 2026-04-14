@@ -110,6 +110,22 @@ class SubscriptionService {
     await _iap.restorePurchases();
   }
 
+  Future<Map<String, dynamic>> claimProfessionalTrial() async {
+    final callable = FirebaseFunctions.instance.httpsCallable(
+      'claimProfessionalTrial',
+    );
+    final response = await callable.call(<String, dynamic>{});
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<Map<String, dynamic>> getProfessionalTrialConfig() async {
+    final callable = FirebaseFunctions.instance.httpsCallable(
+      'getProfessionalTrialConfig',
+    );
+    final response = await callable.call(<String, dynamic>{});
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
   Future<void> _handlePurchaseUpdate(PurchaseDetails purchase) async {
     if (purchase.status == PurchaseStatus.pending) {
       return;

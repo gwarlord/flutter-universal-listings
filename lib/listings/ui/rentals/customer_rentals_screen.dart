@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../model/rental_booking.dart';
 import '../../services/rental_service.dart';
+import 'rental_booking_detail_screen.dart';
 
 class CustomerRentalsScreen extends StatelessWidget {
   final String customerId;
@@ -106,7 +107,12 @@ class CustomerRentalsScreen extends StatelessWidget {
       color: surface,
       child: InkWell(
         onTap: () {
-          // Navigate to detail screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RentalBookingDetailScreen(booking: booking),
+            ),
+          );
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(

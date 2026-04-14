@@ -18,6 +18,7 @@ class InvoiceModel {
   final String currencySymbol;
   final String notes;
   final String terms;
+  final String poNumber;
   final DateTime? dueDate;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -43,6 +44,7 @@ class InvoiceModel {
     required this.currencySymbol,
     required this.notes,
     required this.terms,
+    required this.poNumber,
     required this.dueDate,
     required this.createdAt,
     required this.updatedAt,
@@ -72,6 +74,7 @@ class InvoiceModel {
       currencySymbol: defaultCurrencySymbol(),
       notes: '',
       terms: '',
+      poNumber: '',
       dueDate: null,
       createdAt: null,
       updatedAt: null,
@@ -99,6 +102,7 @@ class InvoiceModel {
       'currencySymbol': currencySymbol,
       'notes': notes,
       'terms': terms,
+      'poNumber': poNumber,
       'dueDate': dueDate != null ? Timestamp.fromDate(dueDate!) : null,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : null,
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
@@ -135,6 +139,7 @@ class InvoiceModel {
           json['currencySymbol']?.toString() ?? defaultCurrencySymbol(json['currencyCode']?.toString()),
       notes: json['notes']?.toString() ?? '',
       terms: json['terms']?.toString() ?? '',
+      poNumber: json['poNumber']?.toString() ?? '',
       dueDate: readDateTime(json['dueDate']),
       createdAt: readDateTime(json['createdAt']),
       updatedAt: readDateTime(json['updatedAt']),
@@ -162,6 +167,7 @@ class InvoiceModel {
     String? currencySymbol,
     String? notes,
     String? terms,
+    String? poNumber,
     DateTime? dueDate,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -187,6 +193,7 @@ class InvoiceModel {
       currencySymbol: currencySymbol ?? this.currencySymbol,
       notes: notes ?? this.notes,
       terms: terms ?? this.terms,
+      poNumber: poNumber ?? this.poNumber,
       dueDate: dueDate ?? this.dueDate,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

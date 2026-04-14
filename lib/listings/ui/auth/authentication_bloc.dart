@@ -21,20 +21,31 @@ class AuthenticationBloc
   AuthenticationBloc({this.user, required this.authenticationRepository})
       : super(AuthenticationState.unauthenticated()) {
     on<CheckFirstRunEvent>((event, emit) async {
-      prefs = await SharedPreferences.getInstance();
-      finishedOnBoarding = prefs.getBool(finishedOnBoardingConst) ?? false;
-      if (!kIsWeb) {
-        await authenticationRepository.setupPushNotification();
-      }
-      if (!finishedOnBoarding) {
-        emit(AuthenticationState.onboarding());
-      } else {
-        user = await authenticationRepository.getAuthUser();
-        if (user == null) {
-          emit(AuthenticationState.unauthenticated());
-        } else {
-          emit(AuthenticationState.authenticated(user!));
+      try {
+        prefs = await SharedPreferences.getInstance();
+        finishedOnBoarding = prefs.getBool(finishedOnBoardingConst) ?? false;
+        if (!kIsWeb) {
+          try {
+            await authenticationRepository
+                .setupPushNotification()
+                .timeout(const Duration(seconds: 5));
+          } catch (e) {
+            debugPrint('setupPushNotification skipped due to startup timeout/error: $e');
+          }
         }
+        if (!finishedOnBoarding) {
+          emit(AuthenticationState.onboarding());
+        } else {
+          user = await authenticationRepository.getAuthUser();
+          if (user == null) {
+            emit(AuthenticationState.unauthenticated());
+          } else {
+            emit(AuthenticationState.authenticated(user!));
+          }
+        }
+      } catch (e) {
+        debugPrint('CheckFirstRunEvent failed, defaulting to unauthenticated: $e');
+        emit(AuthenticationState.unauthenticated());
       }
     });
     on<FinishedOnBoardingEvent>((event, emit) async {

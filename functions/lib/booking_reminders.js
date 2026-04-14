@@ -57,7 +57,7 @@ const REMINDER_WINDOW = 10 * 60 * 1000; // ±10 minutes window
  * Scheduled function that runs every 10 minutes to check for bookings
  * that need reminder notifications
  */
-exports.sendBookingReminders = functions.pubsub
+exports.sendBookingReminders = functions.runWith({ secrets: [secrets_1.sendgridKeySecret, secrets_1.appUrlSecret] }).pubsub
     .schedule("every 10 minutes")
     .onRun(async (context) => {
     functions.logger.info("🔔 Starting booking reminders check...");

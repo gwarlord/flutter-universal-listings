@@ -62,13 +62,28 @@ export const enhancePhoto = functions
     }
 
     const listing = listingDoc.data();
-    const ownerId =
-      listing?.authorID ||
-      listing?.authorId ||
-      listing?.userID ||
-      listing?.user_id;
+    const ownerCandidates = [
+      listing?.authorID,
+      listing?.authorId,
+      listing?.userID,
+      listing?.user_id,
+      listing?.customerId,
+      listing?.customerID,
+      listing?.ownerId,
+      listing?.ownerID,
+    ].filter((v): v is string => typeof v === "string" && v.trim().length > 0);
 
-    if (!ownerId || ownerId !== context.auth.uid) {
+    const isOwner = ownerCandidates.includes(context.auth.uid);
+
+    let isAdmin = false;
+    try {
+      const userDoc = await db.collection("users").doc(context.auth.uid).get();
+      isAdmin = userDoc.data()?.isAdmin === true;
+    } catch (err) {
+      console.warn("Failed to resolve admin status for enhancePhoto:", err);
+    }
+
+    if (!isOwner && !isAdmin) {
       throw new functions.https.HttpsError(
         "permission-denied",
         "You do not own this listing"
@@ -275,15 +290,21 @@ async function applyAutoCrop(
   visionResults: any
 ): Promise<Buffer> {
   try {
+    // Product images are already re-framed during studio background creation.
+    // Cropping again here makes the result feel too zoomed in.
+    if (visionResults?.category === "product") {
+      return imageBuffer;
+    }
+
     const image = sharp(imageBuffer);
     const metadata = await image.metadata();
 
-    // Simple crop to 90% of image (focus on center)
+    // Apply only a very light center crop for non-product images.
     const width = metadata.width || 1000;
     const height = metadata.height || 1000;
 
-    const cropWidth = Math.floor(width * 0.9);
-    const cropHeight = Math.floor(height * 0.9);
+    const cropWidth = Math.floor(width * 0.97);
+    const cropHeight = Math.floor(height * 0.97);
     const left = Math.floor((width - cropWidth) / 2);
     const top = Math.floor((height - cropHeight) / 2);
 
@@ -341,6 +362,12 @@ async function applyBackgroundBlur(
   visionResults: any
 ): Promise<Buffer> {
   try {
+    // Blurring before product cutout/white background hurts edge fidelity and
+    // can make remove.bg previews look pixelated.
+    if (visionResults?.category === "product") {
+      return imageBuffer;
+    }
+
     return await sharp(imageBuffer)
       .blur(0.3)
       .withMetadata()
@@ -440,21 +467,33 @@ async function removeBackgroundToWhite(imageBuffer: Buffer, usePreview: boolean 
   // Detect the object bounds and crop to focus on the product
   const croppedCutout = await cropToContent(cutout);
   
-  // Use cropped dimensions for the white background
-  const croppedMetadata = await sharp(croppedCutout).metadata();
-  const croppedWidth = croppedMetadata.width || 1000;
-  const croppedHeight = croppedMetadata.height || 1000;
-  
+  // Preserve the original canvas size and place the isolated subject inside it
+  // with some breathing room so the result does not look overly zoomed.
+  const targetWidth = Math.max(1, Math.floor(originalWidth * 0.88));
+  const targetHeight = Math.max(1, Math.floor(originalHeight * 0.88));
+
+  const fittedCutout = await sharp(croppedCutout)
+    .resize({
+      width: targetWidth,
+      height: targetHeight,
+      fit: "contain",
+      withoutEnlargement: true,
+      kernel: sharp.kernel.lanczos3,
+    })
+    .sharpen({ sigma: 0.35 })
+    .png()
+    .toBuffer();
+
   return await sharp({
     create: {
-      width: croppedWidth,
-      height: croppedHeight,
+      width: originalWidth,
+      height: originalHeight,
       channels: 3,
       background: "#ffffff",
     },
   })
-    .composite([{ input: croppedCutout, gravity: "center" }])
-    .jpeg({ quality: 92 })
+    .composite([{ input: fittedCutout, gravity: "center" }])
+    .jpeg({ quality: 96, mozjpeg: true })
     .toBuffer();
 }
 
@@ -501,8 +540,8 @@ async function cropToContent(imageBuffer: Buffer): Promise<Buffer> {
       }
     }
 
-    // Add 5% padding around detected bounds
-    const padding = 0.05;
+    // Add more padding so product previews do not feel tightly cropped.
+    const padding = 0.14;
     const contentWidth = Math.max(right - left, 10);
     const contentHeight = Math.max(bottom - top, 10);
     
@@ -656,6 +695,41 @@ export const saveEnhancementVariant = functions.https.onCall(
     const { listingId, variantId, variant } = data;
 
     try {
+      // Validate listing ownership/admin access
+      const listingDoc = await db.collection("listings").doc(listingId).get();
+      if (!listingDoc.exists) {
+        throw new functions.https.HttpsError("not-found", "Listing not found");
+      }
+
+      const listing = listingDoc.data();
+      const ownerCandidates = [
+        listing?.authorID,
+        listing?.authorId,
+        listing?.userID,
+        listing?.user_id,
+        listing?.customerId,
+        listing?.customerID,
+        listing?.ownerId,
+        listing?.ownerID,
+      ].filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+
+      const isOwner = ownerCandidates.includes(context.auth.uid);
+
+      let isAdmin = false;
+      try {
+        const userDoc = await db.collection("users").doc(context.auth.uid).get();
+        isAdmin = userDoc.data()?.isAdmin === true;
+      } catch (err) {
+        console.warn("Failed to resolve admin status for saveEnhancementVariant:", err);
+      }
+
+      if (!isOwner && !isAdmin) {
+        throw new functions.https.HttpsError(
+          "permission-denied",
+          "You do not own this listing"
+        );
+      }
+
       await db
         .collection("listings")
         .doc(listingId)
@@ -667,9 +741,53 @@ export const saveEnhancementVariant = functions.https.onCall(
           savedAt: new Date().toISOString(),
         });
 
+      await db.collection("listings").doc(listingId).set(
+        {
+          image_variants: admin.firestore.FieldValue.arrayUnion({
+            ...variant,
+            isPublished: true,
+            savedAt: new Date().toISOString(),
+          }),
+        },
+        { merge: true }
+      );
+
+      // Increment listing-level monthly quota server-side.
+      const now = new Date();
+      const quotaRef = db.collection("enhancement_quotas").doc(listingId);
+      const quotaSnap = await quotaRef.get();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+
+      if (!quotaSnap.exists) {
+        await quotaRef.set({
+          listingId,
+          year: currentYear,
+          month: currentMonth,
+          usedCount: 1,
+        });
+      } else {
+        const quota = quotaSnap.data() || {};
+        const samePeriod =
+          quota.year === currentYear && quota.month === currentMonth;
+
+        await quotaRef.set(
+          {
+            listingId,
+            year: currentYear,
+            month: currentMonth,
+            usedCount: samePeriod ? (Number(quota.usedCount || 0) + 1) : 1,
+          },
+          { merge: true }
+        );
+      }
+
       return { success: true, variantId };
     } catch (error) {
       console.error("Save variant error:", error);
+      if (error instanceof functions.https.HttpsError) {
+        throw error;
+      }
       throw new functions.https.HttpsError(
         "internal",
         "Failed to save variant"

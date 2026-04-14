@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -16,6 +17,7 @@ import 'ad_upload_screen.dart';
 import 'package:caribtap/listings/utils/caribbean_countries.dart';
 import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
 import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 // Helper function to convert country code to flag emoji
 String _countryCodeToFlag(String countryCode) {
@@ -62,11 +64,81 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
     });
   }
 
+  /// Returns true when the user has enough profile data to enable targeted ordering.
+  bool _hasUserProfile(ListingsUser? user) {
+    if (user == null) return false;
+    final hasCountry = user.countryCode.isNotEmpty;
+    final hasInterests =
+        user.likedListingsIDs.isNotEmpty || user.likedEventsIDs.isNotEmpty;
+    final hasDemo = user.gender != 'Prefer not to say' ||
+        user.ageRange != 'Prefer not to say';
+    return hasCountry || hasInterests || hasDemo;
+  }
+
+  /// Computes a relevance score for [ad] against [user] profile.
+  /// Higher score = more relevant = shown earlier.
+  double _scoreAdForUser(DealAdModel ad, ListingsUser user) {
+    double score = 0;
+    final t = ad.targeting;
+
+    // --- Location ---
+    if (t.locations.isEmpty) {
+      score += 2; // Broad/all-countries: fine for everyone
+    } else if (t.locations
+        .any((l) => l.toLowerCase() == user.countryCode.toLowerCase())) {
+      score += 8; // Explicitly targets this user's country
+    } else {
+      score -= 5; // Targets a different country
+    }
+
+    // --- Gender ---
+    if (t.genders.isEmpty ||
+        t.genders.any((g) => g.toLowerCase() == 'all')) {
+      score += 1;
+    } else if (t.genders
+        .any((g) => g.toLowerCase() == user.gender.toLowerCase())) {
+      score += 4;
+    } else {
+      score -= 3;
+    }
+
+    // --- Audience type ---
+    final hasInterests = user.likedListingsIDs.isNotEmpty ||
+        user.likedEventsIDs.isNotEmpty;
+    if (t.audienceTypes.contains('ALL')) {
+      score += 1;
+    } else if (t.audienceTypes.contains('INTEREST_BASED') && hasInterests) {
+      score += 5;
+    } else if (t.audienceTypes.contains('FAVORITES') && hasInterests) {
+      score += 3;
+    }
+
+    return score;
+  }
+
   List<dynamic> _injectAds(List<DealAdModel> ads) {
+    final rng = Random();
+    final sorted = List<DealAdModel>.from(ads);
+
+    if (!_hasUserProfile(widget.currentUser)) {
+      // No profile data — randomise so the feed doesn't always start the same
+      sorted.shuffle(rng);
+    } else {
+      final user = widget.currentUser!;
+      // Pre-compute scores once, adding a small random tiebreaker so ads
+      // with equal relevance rotate rather than freezing in approval order.
+      final scores = {
+        for (final ad in sorted)
+          ad.id: _scoreAdForUser(ad, user) + rng.nextDouble()
+      };
+      sorted.sort(
+          (a, b) => (scores[b.id] ?? 0).compareTo(scores[a.id] ?? 0));
+    }
+
     List<dynamic> items = [];
-    for (int i = 0; i < ads.length; i++) {
-      items.add(ads[i]);
-      // Inject an ad every 3 items
+    for (int i = 0; i < sorted.length; i++) {
+      items.add(sorted[i]);
+      // Inject a Google/native ad slot every 3 deal-ads
       if ((i + 1) % 3 == 0) {
         items.add('ad_placeholder');
       }
@@ -149,8 +221,8 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
           return false;
         },
         child: _feedItems.isEmpty
-            ? const Center(
-                child: Text('No deals or promotions available.', style: TextStyle(color: Colors.white)),
+            ? Center(
+                child: Text('No deals or promotions available.'.tr(), style: const TextStyle(color: Colors.white)),
               )
             : PageView.builder(
                 scrollDirection: Axis.vertical,
@@ -175,7 +247,7 @@ class _DealsFeedScreenState extends State<DealsFeedScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text('Sponsored', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                            Text('Sponsored'.tr(), style: const TextStyle(color: Colors.grey, fontSize: 12)),
                             const SizedBox(height: 10),
                             AdsUtils.dealsFeedAd(),
                           ],
@@ -241,27 +313,32 @@ class _DealFeedItemState extends State<DealFeedItem> {
   void initState() {
     super.initState();
     _isMuted = widget.isMuted;
-    
-    if (widget.ad.mediaType == 'video') {
-      _videoController = VideoPlayerController.networkUrl(
-        Uri.parse(widget.ad.mediaUrl),
-        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-      )
-        ..initialize().then((_) {
-          if (mounted) {
-            setState(() => _isInitialized = true);
-            _videoController!.addListener(_onVideoStateChanged);
-            _videoController!.setLooping(false);
-            _videoController!.setVolume(_isMuted ? 0 : 1);
-            if (widget.isActive) {
-              _hasReportedVideoCompletion = false;
-              _videoController!.seekTo(Duration.zero);
-              _videoController!.play();
-            }
-          }
-        });
+    // Only initialise the controller when this item is the active (visible) one.
+    // This avoids buffering all videos in the PageView simultaneously.
+    if (widget.ad.mediaType == 'video' && widget.isActive) {
+      _initVideoController();
     }
+  }
 
+  void _initVideoController() {
+    if (_videoController != null) return; // already created
+    _videoController = VideoPlayerController.networkUrl(
+      Uri.parse(widget.ad.mediaUrl),
+      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+    )
+      ..initialize().then((_) {
+        if (mounted) {
+          setState(() => _isInitialized = true);
+          _videoController!.addListener(_onVideoStateChanged);
+          _videoController!.setLooping(false);
+          _videoController!.setVolume(_isMuted ? 0 : 1);
+          if (widget.isActive) {
+            _hasReportedVideoCompletion = false;
+            _videoController!.seekTo(Duration.zero);
+            _videoController!.play();
+          }
+        }
+      });
   }
 
   @override
@@ -275,13 +352,21 @@ class _DealFeedItemState extends State<DealFeedItem> {
       }
     }
 
-    if (_videoController != null && _isInitialized) {
-      if (!oldWidget.isActive && widget.isActive) {
-        _hasReportedVideoCompletion = false;
-        _videoController!.seekTo(Duration.zero);
-        _videoController!.play();
-      } else if (oldWidget.isActive && !widget.isActive) {
-        _videoController!.pause();
+    if (widget.ad.mediaType == 'video') {
+      // Lazily initialise when this item becomes active for the first time.
+      if (widget.isActive && _videoController == null) {
+        _initVideoController();
+        return;
+      }
+
+      if (_videoController != null && _isInitialized) {
+        if (!oldWidget.isActive && widget.isActive) {
+          _hasReportedVideoCompletion = false;
+          _videoController!.seekTo(Duration.zero);
+          _videoController!.play();
+        } else if (oldWidget.isActive && !widget.isActive) {
+          _videoController!.pause();
+        }
       }
     }
   }
@@ -315,18 +400,18 @@ class _DealFeedItemState extends State<DealFeedItem> {
       builder: (context) => AlertDialog(
         backgroundColor: dark ? const Color(0xFF1E1E1E) : Colors.white,
         title: Text(
-          'Delete Ad?',
+          'Delete Ad?'.tr(),
           style: TextStyle(color: dark ? Colors.white : Colors.black),
         ),
         content: Text(
-          'Are you sure you want to permanently remove this advertisement?',
+          'Are you sure you want to permanently remove this advertisement?'.tr(),
           style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Cancel',
+              'Cancel'.tr(),
               style: TextStyle(color: dark ? Colors.white60 : Colors.black54),
             ),
           ),
@@ -336,11 +421,11 @@ class _DealFeedItemState extends State<DealFeedItem> {
               if (mounted) {
                 Navigator.pop(context); // Close dialog
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Ad deleted successfully')),
+                  SnackBar(content: Text('Ad deleted successfully'.tr())),
                 );
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text('Delete'.tr(), style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -366,18 +451,18 @@ class _DealFeedItemState extends State<DealFeedItem> {
         } else {
           // If no user is logged in, show a snackbar or handle appropriately
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please log in to view listing details')),
+            SnackBar(content: Text('Please log in to view listing details'.tr())),
           );
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Listing not found or was removed')),
+          SnackBar(content: Text('Listing not found or was removed'.tr())),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading listing: $e')),
+          SnackBar(content: Text('Error loading listing: {}'.tr(args: ['$e']))),
         );
       }
     } finally {
@@ -419,14 +504,26 @@ class _DealFeedItemState extends State<DealFeedItem> {
                           ),
                         ),
                       )
-                    : Container(color: Colors.black))
+                    : (widget.ad.thumbnailUrl?.isNotEmpty == true
+                        ? ImageFiltered(
+                            imageFilter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                            child: CachedNetworkImage(
+                              imageUrl: widget.ad.thumbnailUrl!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                            ),
+                          )
+                        : Container(color: Colors.black)))
                 : ImageFiltered(
                     imageFilter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                    child: Image.network(
-                      ad.mediaUrl,
+                    child: CachedNetworkImage(
+                      imageUrl: ad.mediaUrl,
                       fit: BoxFit.cover,
-                      cacheWidth: blurredCacheWidth,
-                      cacheHeight: blurredCacheHeight,
+                      width: double.infinity,
+                      height: double.infinity,
+                      memCacheWidth: blurredCacheWidth,
+                      memCacheHeight: blurredCacheHeight,
                       filterQuality: FilterQuality.low,
                     ),
                   ),
@@ -441,12 +538,35 @@ class _DealFeedItemState extends State<DealFeedItem> {
                           aspectRatio: _videoController!.value.aspectRatio,
                           child: VideoPlayer(_videoController!),
                         )
-                      : const CircularProgressIndicator(color: Colors.white))
-                  : Image.network(
-                      ad.mediaUrl,
+                      : Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            if (widget.ad.thumbnailUrl?.isNotEmpty == true)
+                              CachedNetworkImage(
+                                imageUrl: widget.ad.thumbnailUrl!,
+                                fit: BoxFit.contain,
+                                width: double.infinity,
+                                height: double.infinity,
+                              )
+                            else
+                              Container(color: Colors.black),
+                            const CircularProgressIndicator(color: Colors.white),
+                          ],
+                        ))
+                  : CachedNetworkImage(
+                      imageUrl: ad.mediaUrl,
                       fit: BoxFit.contain,
-                      cacheWidth: cacheWidth,
-                      cacheHeight: cacheHeight,
+                      width: double.infinity,
+                      height: double.infinity,
+                      memCacheWidth: cacheWidth,
+                      memCacheHeight: cacheHeight,
+                      placeholder: (context, url) => Container(
+                        color: Colors.black,
+                        child: const Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.white54, size: 48),
                     ),
             ),
           ),
@@ -476,7 +596,7 @@ class _DealFeedItemState extends State<DealFeedItem> {
             top: topPadding + 10,
             child: Column(
               children: [
-                ShareAdWidget(adTitle: ad.caption, adUrl: ad.mediaUrl, adId: ad.id),
+                ShareAdWidget(adTitle: ad.caption, adUrl: ad.mediaUrl, adId: ad.id, listingId: ad.listingId),
                 const SizedBox(height: 12),
                 if (widget.ad.mediaType == 'video') ...[
                   IconButton(

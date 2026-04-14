@@ -102,7 +102,7 @@ async function hasActiveEntitlement(uid, minTier) {
  *   status?: "UNKNOWN" | "LABEL_CREATED" | "IN_TRANSIT" | "OUT_FOR_DELIVERY" | "DELIVERED"
  * }
  */
-exports.setOrderTracking = functions.https.onCall(async (data, context) => {
+exports.setOrderTracking = functions.runWith({ secrets: [secrets_1.sendgridKeySecret] }).https.onCall(async (data, context) => {
     // Verify user is authenticated
     if (!context.auth) {
         throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
@@ -228,7 +228,7 @@ exports.setOrderTracking = functions.https.onCall(async (data, context) => {
  * Send tracking email to customer
  * Called internally or manually to resend tracking info
  */
-exports.sendTrackingEmail = functions.https.onCall(async (data, context) => {
+exports.sendTrackingEmail = functions.runWith({ secrets: [secrets_1.sendgridKeySecret] }).https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
     }

@@ -12,8 +12,13 @@ class ResetPasswordCubit extends Cubit<ResetPasswordState> {
       : super(ResetPasswordInitial());
 
   resetPassword(String email) async {
-    await authenticationRepository.resetPassword(email);
-    emit(ResetPasswordDoneState());
+    try {
+      await authenticationRepository.resetPassword(email);
+      emit(ResetPasswordDoneState());
+    } catch (e) {
+      emit(ResetPasswordFailureState(
+          errorMessage: e.toString().replaceFirst('Exception: ', '').tr()));
+    }
   }
 
   checkValidField(GlobalKey<FormState> key) {

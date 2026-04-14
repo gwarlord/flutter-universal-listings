@@ -278,6 +278,8 @@ class TestDataPopulator {
         'featuredBy': null,
         'featuredUntil': null,
 
+        'isDemo': true,
+
         'suspended': false,
 
         'reviewsCount': 0,

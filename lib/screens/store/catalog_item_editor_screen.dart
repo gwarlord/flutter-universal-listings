@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/core/utils/helper.dart';
@@ -902,7 +904,14 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: dark ? Colors.grey.shade800 : Colors.grey.shade200),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: url != null ? Image.network(url, fit: BoxFit.cover, cacheWidth: 200, cacheHeight: 200) : (file != null && isPhotos ? Image.file(file, fit: BoxFit.cover) : Icon(Icons.videocam, size: 40, color: Colors.grey.shade600)),
+            child: isPhotos
+                ? (url != null
+                    ? Image.network(url, fit: BoxFit.cover, cacheWidth: 200, cacheHeight: 200)
+                    : (file != null ? Image.file(file, fit: BoxFit.cover) : const SizedBox()))
+                : _CatalogVideoThumb(
+                    source: url ?? file?.path ?? '',
+                    dark: dark,
+                  ),
           ),
         ),
         Positioned(top: 4, right: 4, child: GestureDetector(onTap: onRemove, child: Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle), child: const Icon(Icons.close, size: 16, color: Colors.white)))),
@@ -1061,5 +1070,57 @@ class _CatalogItemEditorScreenState extends State<CatalogItemEditorScreen> {
         setState(() => _isSaving = false);
       }
     }
+  }
+}
+
+class _CatalogVideoThumb extends StatefulWidget {
+  final String source;
+  final bool dark;
+
+  const _CatalogVideoThumb({required this.source, required this.dark});
+
+  @override
+  State<_CatalogVideoThumb> createState() => _CatalogVideoThumbState();
+}
+
+class _CatalogVideoThumbState extends State<_CatalogVideoThumb> {
+  Uint8List? _thumb;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _generate();
+  }
+
+  Future<void> _generate() async {
+    if (widget.source.isEmpty) return;
+    final bytes = await VideoThumbnail.thumbnailData(
+      video: widget.source,
+      imageFormat: ImageFormat.JPEG,
+      maxHeight: 100,
+      quality: 75,
+    );
+    if (mounted) setState(() { _thumb = bytes; _loaded = true; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_thumb != null) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.memory(_thumb!, fit: BoxFit.cover),
+          const Center(
+            child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 28),
+          ),
+        ],
+      );
+    }
+    return Center(
+      child: _loaded
+          ? Icon(Icons.videocam, size: 40, color: Colors.grey.shade600)
+          : const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+    );
   }
 }

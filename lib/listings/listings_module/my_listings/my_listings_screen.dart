@@ -11,11 +11,15 @@ import 'package:caribtap/listings/listings_module/add_listing/add_listing_screen
 import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
 import 'package:caribtap/listings/listings_module/listing_details/listing_details_screen.dart';
 import 'package:caribtap/listings/listings_module/my_listings/my_listings_bloc.dart';
+import 'package:caribtap/listings/utils/suspension_reason_details.dart';
 import 'package:caribtap/listings/ui/profile/api/profile_api_manager.dart';
 import 'package:caribtap/listings/ui/collaboration/assigned_listings_screen.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:caribtap/listings/widgets/freshness_indicators.dart';
 import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:caribtap/listings/model/event_model.dart';
+import 'package:caribtap/listings/listings_module/events/event_details_screen.dart';
 
 class MyListingsWrapperWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -65,6 +69,8 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   bool isLoading = true;
   bool _initialListingHandled = false;
   String? _initialListingId;
+  List<EventModel> _events = [];
+  bool _eventsLoading = true;
 
   @override
   void initState() {
@@ -72,6 +78,26 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     currentUser = widget.currentUser;
     _initialListingId = widget.initialListingId;
     context.read<MyListingsBloc>().add(GetMyListingsEvent());
+    _loadMyEvents();
+  }
+
+  Future<void> _loadMyEvents() async {
+    if (!mounted) return;
+    setState(() => _eventsLoading = true);
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('events')
+          .where('createdBy', isEqualTo: currentUser.userID)
+          .get();
+      final events = snap.docs.map((doc) {
+        final e = EventModel.fromJson(doc.data());
+        e.id = doc.id;
+        return e;
+      }).toList();
+      if (mounted) setState(() { _events = events; _eventsLoading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _eventsLoading = false);
+    }
   }
 
   Future<void> _openAssignedListings() async {
@@ -124,6 +150,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
           onRefresh: () async {
             context.read<MyListingsBloc>().add(LoadingEvent());
             context.read<MyListingsBloc>().add(GetMyListingsEvent());
+            _loadMyEvents();
           },
           child: BlocConsumer<MyListingsBloc, MyListingsState>(
             listener: (context, state) {
@@ -165,11 +192,11 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
               }
             },
             builder: (context, state) {
-              if (isLoading) {
+              if (isLoading || _eventsLoading) {
                 return const Center(
                     child: CircularProgressIndicator.adaptive());
               }
-              if (_listings.isEmpty) {
+              if (_listings.isEmpty && _events.isEmpty) {
                 return Stack(
                   children: [
                     ListView(),
@@ -197,17 +224,51 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                   ],
                 );
               } else {
-                return GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 24,
-                      crossAxisSpacing: 16),
-                  itemCount: _listings.length,
-                  itemBuilder: (context, index) => MyListingCard(
-                    listing: _listings[index],
-                    currentUser: currentUser,
-                  ),
+                return CustomScrollView(
+                  slivers: [
+                    if (_listings.isNotEmpty)
+                      SliverPadding(
+                        padding: const EdgeInsets.all(16),
+                        sliver: SliverGrid(
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 24,
+                              crossAxisSpacing: 16),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) => MyListingCard(
+                              listing: _listings[index],
+                              currentUser: currentUser,
+                            ),
+                            childCount: _listings.length,
+                          ),
+                        ),
+                      ),
+                    if (_events.isNotEmpty) ...[
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                          child: Text(
+                            'My Events'.tr(),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => MyEventCard(
+                            event: _events[index],
+                            currentUser: currentUser,
+                            onRefresh: _loadMyEvents,
+                          ),
+                          childCount: _events.length,
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                    ],
+                  ],
                 );
               }
             },
@@ -300,11 +361,16 @@ class _MyListingCardState extends State<MyListingCard> {
                         ),
                         if (widget.listing.suspensionInfo!.reasonText != null) ...[
                           const SizedBox(height: 4),
-                          Text(
-                            widget.listing.suspensionInfo!.reasonText!,
-                            style: TextStyle(color: Colors.red.shade700, fontSize: 12),
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
+                          FutureBuilder<String?>(
+                            future: SuspensionReasonDetailsResolver.resolve(
+                              reasonText: widget.listing.suspensionInfo!.reasonText!,
+                              listingId: widget.listing.id,
+                            ),
+                            builder: (context, snapshot) => SelectableText(
+                              snapshot.data ?? widget.listing.suspensionInfo!.reasonText!,
+                              style: TextStyle(color: Colors.red.shade700, fontSize: 12),
+                              enableInteractiveSelection: true,
+                            ),
                           ),
                         ],
                       ],
@@ -679,6 +745,64 @@ class _MyListingCardState extends State<MyListingCard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class MyEventCard extends StatelessWidget {
+  final EventModel event;
+  final ListingsUser currentUser;
+  final VoidCallback onRefresh;
+
+  const MyEventCard({
+    Key? key,
+    required this.event,
+    required this.currentUser,
+    required this.onRefresh,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = isDarkMode(context);
+    final startDate = DateTime.fromMillisecondsSinceEpoch(event.startAtSeconds * 1000);
+    final formattedDate = '${startDate.day}/${startDate.month}/${startDate.year}';
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        onTap: () async {
+          await push(context, EventDetailsScreen(event: event));
+          onRefresh();
+        },
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            width: 52,
+            height: 52,
+            child: event.posterImageUrl.isNotEmpty
+                ? displayImage(event.posterImageUrl)
+                : Container(
+                    color: Color(colorPrimary).withOpacity(0.15),
+                    child: Icon(Icons.event, color: Color(colorPrimary)),
+                  ),
+          ),
+        ),
+        title: Text(
+          event.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(
+          formattedDate,
+          style: TextStyle(
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
+            fontSize: 12,
+          ),
+        ),
+        trailing: const Icon(Icons.chevron_right),
       ),
     );
   }

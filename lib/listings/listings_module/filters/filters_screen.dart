@@ -9,22 +9,50 @@ import 'package:caribtap/listings/listings_module/filters/filters_bloc.dart';
 
 class FilterWrappingWidget extends StatelessWidget {
   final Map<String, String>? filtersValue;
+  final String? titleText;
+  final String? saveButtonText;
+  final String? instructionText;
+  final bool includeListingDefaults;
 
-  const FilterWrappingWidget({super.key, this.filtersValue});
+  const FilterWrappingWidget({
+    super.key,
+    this.filtersValue,
+    this.titleText,
+    this.saveButtonText,
+    this.instructionText,
+    this.includeListingDefaults = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => FiltersBloc(listingsRepository: listingApiManager),
-      child: FiltersScreen(filtersValue: filtersValue),
+      child: FiltersScreen(
+        filtersValue: filtersValue,
+        titleText: titleText,
+        saveButtonText: saveButtonText,
+        instructionText: instructionText,
+        includeListingDefaults: includeListingDefaults,
+      ),
     );
   }
 }
 
 class FiltersScreen extends StatefulWidget {
   final Map<String, String>? filtersValue;
+  final String? titleText;
+  final String? saveButtonText;
+  final String? instructionText;
+  final bool includeListingDefaults;
 
-  const FiltersScreen({super.key, this.filtersValue});
+  const FiltersScreen({
+    super.key,
+    this.filtersValue,
+    this.titleText,
+    this.saveButtonText,
+    this.instructionText,
+    this.includeListingDefaults = false,
+  });
 
   @override
   State<FiltersScreen> createState() => _FiltersScreenState();
@@ -33,6 +61,79 @@ class FiltersScreen extends StatefulWidget {
 class _FiltersScreenState extends State<FiltersScreen> {
   List<FilterModel> _filters = [];
   bool isLoading = true;
+
+  List<FilterModel> _buildEffectiveFilters(List<FilterModel> source) {
+    final cloned = source
+        .map(
+          (f) => FilterModel(
+            id: f.id,
+            name: f.name,
+            options: List<dynamic>.from(f.options),
+          ),
+        )
+        .toList();
+
+    if (!widget.includeListingDefaults) {
+      return cloned;
+    }
+
+    _mergeFilterOptions(
+      cloned,
+      'Delivery',
+      const ['Same-day delivery'],
+    );
+
+    _mergeFilterOptions(
+      cloned,
+      'Category-Specific Features',
+      const [
+        'Restaurant: Dine-in',
+        'Restaurant: Takeout',
+        'Professional Service: Emergency service',
+        'Professional Service: Free estimate',
+        'Events: Indoor venue',
+        'Events: Outdoor venue',
+        'Accommodation: Self check-in',
+        'Accommodation: Kitchen',
+      ],
+    );
+
+    return cloned;
+  }
+
+  void _mergeFilterOptions(
+    List<FilterModel> target,
+    String filterName,
+    List<String> defaults,
+  ) {
+    final index = target.indexWhere(
+      (f) => f.name.trim().toLowerCase() == filterName.toLowerCase(),
+    );
+
+    if (index < 0) {
+      target.add(
+        FilterModel(
+          id: filterName
+              .toLowerCase()
+              .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+              .replaceAll(RegExp(r'^_|_$'), ''),
+          name: filterName,
+          options: List<dynamic>.from(defaults),
+        ),
+      );
+      return;
+    }
+
+    final existing = target[index];
+    final merged = <String>[];
+    merged.addAll(existing.options.map((e) => e.toString()));
+    for (final opt in defaults) {
+      if (!merged.contains(opt)) {
+        merged.add(opt);
+      }
+    }
+    existing.options = merged;
+  }
 
   @override
   void initState() {
@@ -77,7 +178,7 @@ class _FiltersScreenState extends State<FiltersScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Filters'.tr(),
+                    widget.titleText ?? 'Filters'.tr(),
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: isDark ? Colors.white : Colors.black,
@@ -92,13 +193,37 @@ class _FiltersScreenState extends State<FiltersScreen> {
               ),
             ),
             Divider(color: isDark ? Colors.grey[800] : Colors.grey[200]),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 18,
+                    color: isDark ? Colors.white60 : Colors.black54,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      widget.instructionText ??
+                          'Only select filters that apply to your listing.'.tr(),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: isDark ? Colors.white60 : Colors.black54,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Expanded(
               child: BlocConsumer<FiltersBloc, FiltersState>(
                 listener: (context, state) {
                   if (state is FiltersReadyState) {
                     setState(() {
                       isLoading = false;
-                      _filters = state.filters;
+                      _filters = _buildEffectiveFilters(state.filters);
                     });
                   }
                 },
@@ -159,7 +284,7 @@ class _FiltersScreenState extends State<FiltersScreen> {
                   ),
                 ),
                 child: Text(
-                  'Save Filters'.tr(),
+                  widget.saveButtonText ?? 'Save Filters'.tr(),
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.bold),
                 ),

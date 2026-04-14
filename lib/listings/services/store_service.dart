@@ -7,6 +7,7 @@ import 'package:caribtap/listings/model/order_request.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/utils/subscription_helper.dart';
+import 'package:caribtap/listings/utils/image_compress_utils.dart';
 import 'package:uuid/uuid.dart';
 
 /// Service for managing Mini Store catalog and orders
@@ -208,8 +209,9 @@ class StoreService {
     final fileName = '${_uuid.v4()}.$ext';
     final path = 'listings/$listingId/catalog_items/$itemId/${isVideo ? 'videos' : 'photos'}/$fileName';
 
+    final fileToUpload = isVideo ? file : await compressImageFile(file);
     final ref = _storage.ref().child(path);
-    await ref.putFile(file);
+    await ref.putFile(fileToUpload);
     return await ref.getDownloadURL();
   }
 
@@ -237,11 +239,56 @@ class StoreService {
       throw Exception('Store is not enabled for this listing');
     }
 
+    final fulfillmentAddress = orderRequest.fulfillment.address?.trim() ?? '';
+    if (orderRequest.fulfillment.method == FulfillmentMethod.delivery &&
+        fulfillmentAddress.isEmpty) {
+      throw Exception('Delivery address is required');
+    }
+
+    if (orderRequest.fulfillment.method == FulfillmentMethod.shipping) {
+      final shippingAddress = orderRequest.shipping?.address?.trim() ?? '';
+      if (fulfillmentAddress.isEmpty && shippingAddress.isEmpty) {
+        throw Exception('Shipping address is required');
+      }
+    }
+
     final now = Timestamp.now();
     final orderId = _uuid.v4();
+    final normalizedFulfillment = FulfillmentInfo(
+      method: orderRequest.fulfillment.method,
+      address: fulfillmentAddress.isNotEmpty
+          ? fulfillmentAddress
+          : orderRequest.shipping?.address?.trim(),
+      latitude: orderRequest.fulfillment.latitude,
+      longitude: orderRequest.fulfillment.longitude,
+      preferredAt: orderRequest.fulfillment.preferredAt,
+    );
+
+    ShippingInfo? normalizedShipping = orderRequest.shipping;
+    if (orderRequest.fulfillment.method == FulfillmentMethod.shipping) {
+      final normalizedShippingAddress =
+          (orderRequest.shipping?.address?.trim().isNotEmpty == true)
+              ? orderRequest.shipping!.address!.trim()
+              : normalizedFulfillment.address;
+      normalizedShipping = ShippingInfo(
+        address: normalizedShippingAddress,
+        latitude: orderRequest.shipping?.latitude,
+        longitude: orderRequest.shipping?.longitude,
+        instructions: orderRequest.shipping?.instructions,
+        carrierName: orderRequest.shipping?.carrierName,
+        trackingNumber: orderRequest.shipping?.trackingNumber,
+        trackingUrl: orderRequest.shipping?.trackingUrl,
+        status: orderRequest.shipping?.status ?? TrackingStatus.unknown,
+        updatedAt: orderRequest.shipping?.updatedAt,
+        updatedBy: orderRequest.shipping?.updatedBy,
+      );
+    }
+
     final orderData = orderRequest.copyWith(
       id: orderId,
       customerId: customer.userID,
+      fulfillment: normalizedFulfillment,
+      shipping: normalizedShipping,
       createdAt: now,
       updatedAt: now,
     );
@@ -415,11 +462,85 @@ class StoreService {
       throw Exception('Order cannot be cancelled at this stage');
     }
 
+    final proofUrl =
+        (order.payment?['proofOfPaymentUrl'] as String?)?.trim() ?? '';
+    if (proofUrl.isNotEmpty) {
+      throw Exception('Order cannot be cancelled after proof of payment is uploaded');
+    }
+
     await _firestore.collection('order_requests').doc(requestId).update({
       'status': OrderStatus.cancelled.value,
       'updatedAt': Timestamp.now(),
       'cancelledFromStatus': order.status.value,
     });
+  }
+
+  Future<void> reportFulfillmentIssue({
+    required String orderId,
+    required ListingsUser currentUser,
+    required String reason,
+  }) async {
+    final trimmedReason = reason.trim();
+    if (trimmedReason.isEmpty) {
+      throw Exception('Please provide a reason for this report');
+    }
+
+    final orderDoc = await _firestore.collection('order_requests').doc(orderId).get();
+    if (!orderDoc.exists) {
+      throw Exception('Order not found');
+    }
+
+    final order = OrderRequest.fromJson(orderDoc.data()!);
+    if (order.customerId != currentUser.userID) {
+      throw Exception('You can only report your own orders');
+    }
+
+    if (order.status != OrderStatus.fulfilled) {
+      throw Exception('You can report this issue only after the order is marked fulfilled');
+    }
+
+    final existingPendingReport = await _firestore
+        .collection('reports')
+        .where('reportType', isEqualTo: 'order_fulfillment_issue')
+        .where('orderId', isEqualTo: orderId)
+        .where('reporterId', isEqualTo: currentUser.userID)
+        .where('status', isEqualTo: 'pending')
+        .limit(1)
+        .get();
+
+    if (existingPendingReport.docs.isNotEmpty) {
+      throw Exception('You already submitted this report and it is under review');
+    }
+
+    final listingDoc =
+        await _firestore.collection('listings').doc(order.listingId).get();
+    final listingTitle = (listingDoc.data()?['title'] as String?)?.trim();
+
+    await _firestore.collection('reports').add({
+      'listingId': order.listingId,
+      'listingTitle':
+          (listingTitle != null && listingTitle.isNotEmpty) ? listingTitle : 'Order issue report',
+      'listingAuthorId': order.listerId,
+      'reporterId': currentUser.userID,
+      'reporterName': currentUser.fullName(),
+      'reason': trimmedReason,
+      'createdAt': FieldValue.serverTimestamp(),
+      'status': 'pending',
+      'reportType': 'order_fulfillment_issue',
+      'orderId': orderId,
+      'orderStatus': order.status.value,
+    });
+
+    if (listingDoc.exists) {
+      try {
+        await _firestore.collection('listings').doc(order.listingId).update({
+          'isFlagged': true,
+          'updatedAt': Timestamp.now(),
+        });
+      } catch (_) {
+        // Report submission should still succeed if listing flag update fails.
+      }
+    }
   }
 
   Future<Map<String, dynamic>> migrateListingTierSnapshots() async {

@@ -12,7 +12,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_image_v2/flutter_native_image_v2.dart';
 
-import 'package:http/http.dart' as http;
 import 'package:caribtap/constants.dart';
 import 'package:caribtap/core/model/channel_data_model.dart';
 import 'package:caribtap/core/model/chat_feed_model.dart';
@@ -465,23 +464,8 @@ class ChatFireStoreUtils extends ChatRepository {
         }
       }
 
-      // Notifications logic
-      for (var participant in channelDataModel.participants) {
-        if (participant.userID != message.senderID) {
-          if (participant.settings.allowPushNotifications) {
-            await sendNotification(
-              participant.pushToken,
-              channelDataModel.name,
-              message.content,
-              <String, dynamic>{
-                'click_action': 'FLUTTER_NOTIFICATION_CLICK',
-                'type': 'chat',
-                'channelID': channelDataModel.channelID,
-              },
-            );
-          }
-        }
-      }
+      // Push notifications are handled server-side by Cloud Functions
+      // to avoid exposing FCM server credentials in the client app.
       return true;
     } catch (e, s) {
       debugPrint('ChatFireStoreUtils.sendMessage $e $s');
@@ -611,43 +595,3 @@ class _MockMetadata implements SnapshotMetadata {
   bool get isFromCache => false;
 }
 
-sendNotification(String token, String title, String body,
-    Map<String, dynamic>? payload) async {
-  if (token.isEmpty) {
-    debugPrint('🔔 [DEBUG] No push token provided.');
-    return;
-  }
-  final cleanKey = serverKey.trim();
-  if (cleanKey.isEmpty) {
-    debugPrint('🔔 [DEBUG] No FCM server key provided.');
-    return;
-  }
-
-  debugPrint('🔔 [DEBUG] Sending push notification');
-  debugPrint('🔔 [DEBUG] Push token: $token');
-  debugPrint('🔔 [DEBUG] Notification title: $title');
-  debugPrint('🔔 [DEBUG] Notification body: $body');
-  debugPrint('🔔 [DEBUG] Payload: ${payload?.toString() ?? '{}'}');
-
-  try {
-    final response = await http.post(
-      Uri.parse('https://fcm.googleapis.com/fcm/send'),
-      headers: <String, String>{
-        'Content-Type': 'application/json',
-        'Authorization': 'key=$cleanKey',
-      },
-      body: jsonEncode(
-        <String, dynamic>{
-          'notification': <String, dynamic>{'body': body, 'title': title},
-          'priority': 'high',
-          'data': payload ?? <String, dynamic>{},
-          'to': token
-        },
-      ),
-    );
-    
-    debugPrint('🔔 FCM Response: ${response.statusCode} ${response.body}');
-  } catch (e) {
-    debugPrint('🔔 FCM Exception: $e');
-  }
-}

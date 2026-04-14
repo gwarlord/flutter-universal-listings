@@ -10,10 +10,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart' as painting;
+import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
+import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:app_links/app_links.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:caribtap/core/config/app_env.dart';
 import 'package:caribtap/listings/main.dart' as listings_app; // Added alias
 import 'package:caribtap/listings/services/deep_link_service.dart';
 import 'package:caribtap/listings/services/deal_notification_service.dart';
@@ -145,22 +148,60 @@ const AndroidNotificationChannel bookingRemindersChannel = AndroidNotificationCh
   importance: Importance.max,
 );
 
+final Set<String> _processedFirebaseActionCodes = <String>{};
 
-// Handle Firebase email verification deep links
-Future<void> _handleFirebaseEmailVerificationLink(String? link) async {
+Map<String, String?> _extractFirebaseActionParams(Uri uri) {
+  String? mode = uri.queryParameters['mode'];
+  String? oobCode = uri.queryParameters['oobCode'];
+
+  if (mode != null && oobCode != null && oobCode.isNotEmpty) {
+    return {'mode': mode, 'oobCode': oobCode};
+  }
+
+  final nestedLink = uri.queryParameters['link'] ??
+      uri.queryParameters['continueUrl'] ??
+      uri.queryParameters['deep_link_id'];
+
+  if (nestedLink != null && nestedLink.isNotEmpty) {
+    try {
+      final nestedUri = Uri.parse(Uri.decodeFull(nestedLink));
+      mode = nestedUri.queryParameters['mode'];
+      oobCode = nestedUri.queryParameters['oobCode'];
+      if (mode != null && oobCode != null && oobCode.isNotEmpty) {
+        return {'mode': mode, 'oobCode': oobCode};
+      }
+    } catch (_) {
+      // Keep fallback empty if nested URL cannot be parsed.
+    }
+  }
+
+  return {'mode': mode, 'oobCode': oobCode};
+}
+
+
+// Handle Firebase auth action deep links (email verification + password reset)
+Future<void> _handleFirebaseAuthActionLink(String? link) async {
   if (link == null) return;
   
   try {
     // Extract query parameters
     final uri = Uri.parse(link);
-    final mode = uri.queryParameters['mode'];
-    final oobCode = uri.queryParameters['oobCode'];
+    final actionParams = _extractFirebaseActionParams(uri);
+    final mode = actionParams['mode'];
+    final oobCode = actionParams['oobCode'];
+    if (oobCode == null || oobCode.isEmpty) return;
+
+    // Some devices deliver the same deep link twice (initial + stream).
+    if (_processedFirebaseActionCodes.contains(oobCode)) {
+      print('ℹ️ Firebase action code already processed, skipping duplicate: $mode');
+      return;
+    }
     
-    // Check if this is an email verification link
-    if (mode == 'verifyEmail' && oobCode != null) {
+    if (mode == 'verifyEmail') {
       print('🔐 Processing Firebase email verification code...');
       // Apply the verification code
       await FirebaseAuth.instance.applyActionCode(oobCode);
+      _processedFirebaseActionCodes.add(oobCode);
       // Refresh the current user
       await FirebaseAuth.instance.currentUser?.reload();
       print('✅ Email verified successfully via deep link!');
@@ -168,11 +209,145 @@ Future<void> _handleFirebaseEmailVerificationLink(String? link) async {
       if (navigatorKey.currentContext != null) {
         showSnackBar(navigatorKey.currentContext!, 'Email verified successfully!'.tr());
       }
+    } else if (mode == 'resetPassword') {
+      print('🔐 Processing Firebase reset password code...');
+      final accountEmail =
+          await FirebaseAuth.instance.verifyPasswordResetCode(oobCode);
+
+      final context = navigatorKey.currentContext;
+      if (context == null) {
+        print('⚠️ Navigator context unavailable for password reset dialog.');
+        return;
+      }
+
+      final newPasswordController = TextEditingController();
+      final confirmPasswordController = TextEditingController();
+      String? validationError;
+      bool submitting = false;
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return StatefulBuilder(
+            builder: (dialogContext, setDialogState) {
+              return AlertDialog(
+                title: Text('Reset Password'.tr()),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Create a new password for'.tr(args: [accountEmail]),
+                      style: Theme.of(dialogContext).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: newPasswordController,
+                      obscureText: true,
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                        labelText: 'New Password'.tr(),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: confirmPasswordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'Confirm Password'.tr(),
+                      ),
+                    ),
+                    if (validationError != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        validationError!,
+                        style: TextStyle(
+                          color: Theme.of(dialogContext).colorScheme.error,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: submitting ? null : () => Navigator.of(dialogContext).pop(),
+                    child: Text('Cancel'.tr()),
+                  ),
+                  ElevatedButton(
+                    onPressed: submitting
+                        ? null
+                        : () async {
+                            final password = newPasswordController.text.trim();
+                            final confirm = confirmPasswordController.text.trim();
+
+                            if (password.length < 6) {
+                              setDialogState(() {
+                                validationError =
+                                    'Password must be at least 6 characters.'.tr();
+                              });
+                              return;
+                            }
+
+                            if (password != confirm) {
+                              setDialogState(() {
+                                validationError = 'Passwords do not match.'.tr();
+                              });
+                              return;
+                            }
+
+                            setDialogState(() {
+                              validationError = null;
+                              submitting = true;
+                            });
+
+                            try {
+                              await FirebaseAuth.instance.confirmPasswordReset(
+                                code: oobCode,
+                                newPassword: password,
+                              );
+                              _processedFirebaseActionCodes.add(oobCode);
+
+                              if (navigatorKey.currentContext != null) {
+                                showSnackBar(
+                                  navigatorKey.currentContext!,
+                                  'Password has been reset successfully. Please sign in.'.tr(),
+                                );
+                              }
+                              if (dialogContext.mounted) {
+                                Navigator.of(dialogContext).pop();
+                              }
+                            } on FirebaseAuthException catch (e) {
+                              setDialogState(() {
+                                validationError = e.message ??
+                                    'Unable to reset password. Please request a new reset link.'.tr();
+                                submitting = false;
+                              });
+                            } catch (_) {
+                              setDialogState(() {
+                                validationError =
+                                    'Unable to reset password. Please request a new reset link.'.tr();
+                                submitting = false;
+                              });
+                            }
+                          },
+                    child: Text(submitting ? 'Saving...'.tr() : 'Update Password'.tr()),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
     }
   } catch (e) {
-    print('❌ Error processing verification link: $e');
+    print('❌ Error processing auth action link: $e');
     if (navigatorKey.currentContext != null) {
-      showSnackBar(navigatorKey.currentContext!, 'Verification failed: $e'.tr());
+      showSnackBar(
+        navigatorKey.currentContext!,
+        'This password reset link is invalid, expired, or has already been used. Please request a new one.'.tr(),
+      );
     }
   }
 }
@@ -759,7 +934,7 @@ Future<void> _initializePostLaunchServices() async {
     } else if (DeepLinkService.isListingDeepLink(url)) {
       _handleListingDeepLink(url);
     } else {
-      _handleFirebaseEmailVerificationLink(url);
+      _handleFirebaseAuthActionLink(url);
     }
   }, onError: (err) {
     print('❌ Deep link error: $err');
@@ -779,7 +954,7 @@ Future<void> _initializePostLaunchServices() async {
       } else if (DeepLinkService.isListingDeepLink(url)) {
         await _handleListingDeepLink(url);
       } else {
-        await _handleFirebaseEmailVerificationLink(url);
+        await _handleFirebaseAuthActionLink(url);
       }
     }
   } catch (err) {
@@ -813,7 +988,7 @@ Future<void> _initializeAppCheckEarly() async {
   if (!kIsWeb) {
     try {
       final forceDebugAppCheck =
-          (dotenv.env['APPCHECK_FORCE_DEBUG_PROVIDER'] ?? '').trim().toLowerCase() == 'true';
+          AppEnv.appCheckForceDebugProvider;
       final isIos = defaultTargetPlatform == TargetPlatform.iOS;
       // iOS attestation often fails on local/profile builds; use debug provider unless this is a release build.
       final useDebugProvider =
@@ -876,8 +1051,7 @@ Future<void> _initializeAppCheckEarly() async {
     return;
   }
 
-  final webRecaptchaSiteKey =
-      (dotenv.env['WEB_RECAPTCHA_SITE_KEY'] ?? '').trim();
+  final webRecaptchaSiteKey = AppEnv.webRecaptchaSiteKey;
   if (webRecaptchaSiteKey.isNotEmpty) {
     try {
       await FirebaseAppCheck.instance.activate(
@@ -896,12 +1070,44 @@ Future<void> _initializeAppCheckEarly() async {
   }
 }
 
+Future<void> _initializeDeferredStartup() async {
+  final dotenvLoaded = await AppEnv.loadDotEnvIfPresent();
+  if (dotenvLoaded) {
+    await _setStartupStage('dotenv_loaded');
+  } else {
+    print('ℹ️ .env not loaded; relying on dart-defines and native config.');
+    await _setStartupStage('dotenv_skipped');
+  }
+
+  await AppEnv.loadNativePlatformConfig();
+  await _setStartupStage('native_env_loaded');
+
+  await _initializeAppCheckEarly();
+}
+
 void main() async {
   _installGlobalCrashLogging();
 
   await (runZonedGuarded<Future<void>>(() async {
-    WidgetsFlutterBinding.ensureInitialized();
+    final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+    FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
     _startupPersistenceReady = true;
+
+    // Fix blank map on Android caused by SurfaceProducer backend.
+    // Must be called before the first GoogleMap widget is built.
+    // Guarded with try-catch because the renderer can only be initialized once
+    // per process; a second call (e.g. hot restart) throws "already initialized".
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      final platform = GoogleMapsFlutterPlatform.instance;
+      if (platform is GoogleMapsFlutterAndroid) {
+        try {
+          await platform.initializeWithRenderer(AndroidMapRenderer.legacy);
+        } catch (_) {
+          // Already initialized — safe to ignore.
+        }
+      }
+    }
+
     await _initializeFirebaseApp();
 
     await _setStartupStage('main_entered');
@@ -913,24 +1119,26 @@ void main() async {
     painting.imageCache.maximumSizeBytes = isIOS
       ? (kDebugMode ? 20 << 20 : 60 << 20)
         : (kDebugMode ? 60 << 20 : 100 << 20);
-  
-  try {
-    await dotenv.load(fileName: ".env");
-    await _setStartupStage('dotenv_loaded');
-  } catch (e) {
-    print('⚠️ Failed to load .env at startup: $e');
-    await _setStartupError('dotenv.load', e);
-  }
-  await _initializeAppCheckEarly();
+
   await EasyLocalization.ensureInitialized();
   await _setStartupStage('localization_ready');
   await _setStartupStage('firebase_initialized');
+
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS)) {
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+      ]);
+      await _setStartupStage('orientation_locked_portrait');
+    }
 
     runApp(listings_app.runListings()); // Called with alias
     await _setStartupStage('run_app_called');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_setStartupStage('first_frame_rendered'));
     });
+    unawaited(_initializeDeferredStartup());
     unawaited(_initializePostLaunchServices());
   }, (Object error, StackTrace stack) {
     print('💥 [runZonedGuarded] Uncaught async startup error: $error');

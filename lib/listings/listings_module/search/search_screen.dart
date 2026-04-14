@@ -17,6 +17,7 @@ import 'package:caribtap/listings/listings_module/listing_details/listing_detail
 import 'package:caribtap/listings/listings_module/search/search_bloc.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
+import 'package:caribtap/listings/currency/currency_display_service.dart';
 
 class SearchWrapperWidget extends StatelessWidget {
   final ListingsUser currentUser;
@@ -226,6 +227,35 @@ class SearchListingsResultTile extends StatefulWidget {
 }
 
 class _SearchListingsResultTileState extends State<SearchListingsResultTile> {
+  final CurrencyDisplayService _currencyDisplayService = CurrencyDisplayService();
+  late Future<CurrencyDisplayResult> _priceDisplayFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _priceDisplayFuture = _currencyDisplayService.buildDisplayResult(
+      rawAmount: widget.listing.price,
+      originalCurrencyCode: widget.listing.currencyCode,
+      preferenceValue: widget.currentUser.settings.displayCurrencyPreference,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchListingsResultTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.listing.id != widget.listing.id ||
+        oldWidget.listing.price != widget.listing.price ||
+        oldWidget.listing.currencyCode != widget.listing.currencyCode ||
+        oldWidget.currentUser.settings.displayCurrencyPreference !=
+            widget.currentUser.settings.displayCurrencyPreference) {
+      _priceDisplayFuture = _currencyDisplayService.buildDisplayResult(
+        rawAmount: widget.listing.price,
+        originalCurrencyCode: widget.listing.currencyCode,
+        preferenceValue: widget.currentUser.settings.displayCurrencyPreference,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -288,17 +318,44 @@ class _SearchListingsResultTileState extends State<SearchListingsResultTile> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Text(
-                              widget.listing.price,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: isDarkMode(context)
-                                    ? Colors.grey[300]
-                                    : const Color(0xFF464646),
-                              ),
+                            FutureBuilder<CurrencyDisplayResult>(
+                              future: _priceDisplayFuture,
+                              builder: (context, snapshot) {
+                                final display = snapshot.data;
+                                final original =
+                                    display?.originalFormatted ?? widget.listing.price;
+
+                                return Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      original,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDarkMode(context)
+                                            ? Colors.grey[300]
+                                            : const Color(0xFF464646),
+                                      ),
+                                    ),
+                                    if (display?.approximateFormatted != null)
+                                      Text(
+                                        display!.approximateFormatted!,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isDarkMode(context)
+                                              ? Colors.grey[400]
+                                              : Colors.grey[600],
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
                             ),
                           ],
                         ),

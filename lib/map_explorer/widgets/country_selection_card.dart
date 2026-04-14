@@ -56,7 +56,8 @@ class CountrySelectionCard extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 16, 20),
+            padding: EdgeInsets.fromLTRB(
+                20, 16, 16, 20 + MediaQuery.of(context).viewPadding.bottom),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

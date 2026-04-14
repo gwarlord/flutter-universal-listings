@@ -59,12 +59,68 @@ class _MapViewScreenState extends State<MapViewScreen> {
       Future.delayed(const Duration(milliseconds: 500), () => true);
   GoogleMapController? _mapController;
   late ListingsUser currentUser;
+  bool _locationServicesDisabled = false;
+  bool _hasShownLocationDisabledPrompt = false;
 
   @override
   void initState() {
     super.initState();
     currentUser = widget.currentUser;
+    _checkLocationServicesStatus();
     _getLocation();
+  }
+
+  Future<void> _checkLocationServicesStatus() async {
+    if (kIsWeb) return;
+    final enabled = await Geolocator.isLocationServiceEnabled();
+    if (!mounted) return;
+    final disabled = !enabled;
+    if (_locationServicesDisabled != disabled) {
+      setState(() {
+        _locationServicesDisabled = disabled;
+      });
+    }
+    if (disabled && !_hasShownLocationDisabledPrompt) {
+      _hasShownLocationDisabledPrompt = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _showLocationServicesDialog();
+      });
+    }
+  }
+
+  Future<void> _showLocationServicesDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('Turn on Location Services'.tr()),
+          content: Text(
+            'Map features need Location Services enabled to work properly. Please turn on Location Services in your device settings.'.tr(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text('Not now'.tr()),
+            ),
+            FilledButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await _openLocationSettingsWithFallback();
+              },
+              child: Text('Open Settings'.tr()),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _openLocationSettingsWithFallback() async {
+    final opened = await Geolocator.openLocationSettings();
+    if (!opened) {
+      await Geolocator.openAppSettings();
+    }
   }
 
   // For search and favorites
@@ -165,6 +221,48 @@ class _MapViewScreenState extends State<MapViewScreen> {
                   onMapCreated: _onMapCreated,
                 );
               }),
+          if (_locationServicesDisabled)
+            Positioned(
+              left: 12,
+              right: 12,
+              top: MediaQuery.of(context).padding.top + 72,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.92),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.location_off,
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Location Services are off. Turn them on for full map functionality.'.tr(),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onErrorContainer,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          await _openLocationSettingsWithFallback();
+                          if (!mounted) return;
+                          await _checkLocationServicesStatus();
+                        },
+                        child: Text('Turn On'.tr()),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           // Custom zoom buttons
           Positioned(
             right: 16,
@@ -473,7 +571,11 @@ class _MapViewScreenState extends State<MapViewScreen> {
   }
 
   void _getLocation() async {
-    locationData = await getCurrentLocation();
+    final position = await getCurrentLocation();
+    if (!mounted) return;
+    setState(() {
+      locationData = position;
+    });
     if (_mapController != null && widget.followUserLocation && widget.initialFocus == null) {
       _mapController!.moveCamera(CameraUpdate.newLatLng(LatLng(
           locationData?.latitude ?? 0.01, locationData?.longitude ?? 0.01)));

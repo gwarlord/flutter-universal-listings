@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:caribtap/listings/model/rental_catalog_item.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/utils/subscription_helper.dart';
+import 'package:caribtap/listings/utils/image_compress_utils.dart';
 
 /// Service for managing rental catalog items
 class RentalCatalogService {
@@ -65,15 +66,15 @@ class RentalCatalogService {
   }
 
   /// Create or update rental catalog item
-  /// REQUIRES: current user is Premium tier
+  /// REQUIRES: current user is Professional tier or above
   Future<void> upsertRentalItem({
     required String listingId,
     required RentalCatalogItem item,
     required ListingsUser currentUser,
   }) async {
-    // CRITICAL: Verify Premium tier
-    if (!isPremiumUser(currentUser)) {
-      throw Exception('🔒 Rentals is a Premium feature. Upgrade to manage rental items.');
+    // CRITICAL: Verify Professional tier or above
+    if (!isProfessionalUser(currentUser)) {
+      throw Exception('🔒 Rentals is a Professional feature. Upgrade to manage rental items.');
     }
 
     final now = Timestamp.now();
@@ -163,8 +164,9 @@ class RentalCatalogService {
     final mediaType = isVideo ? 'videos' : 'photos';
     final path = 'rentals/$listingId/$itemId/$mediaType/$fileName';
 
+    final fileToUpload = isVideo ? file : await compressImageFile(file);
     final ref = _storage.ref().child(path);
-    final uploadTask = await ref.putFile(file);
+    final uploadTask = await ref.putFile(fileToUpload);
     return await uploadTask.ref.getDownloadURL();
   }
 

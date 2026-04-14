@@ -155,6 +155,9 @@ class ListingModel {
   String categoryID;
   String categoryPhoto;
   String categoryTitle;
+  String primaryCategorySlug;
+  String subcategorySlug;
+  List<String> categoryTags;
 
   /// Core
   int createdAt;
@@ -268,6 +271,9 @@ class ListingModel {
   int? featuredUntil; // Timestamp in seconds, null = no expiration
   String? featuredBy; // 'auto-premium', 'admin', or admin user ID
 
+  /// Demo listing — view-only for non-admins
+  bool isDemo;
+
   /// Menu (Food & Beverage)
   bool menuEnabled;
   String menuMode;
@@ -276,7 +282,7 @@ class ListingModel {
   List<Map<String, dynamic>> menuUploads;
   List<Map<String, dynamic>> menuSections;
 
-  /// Rentals (Premium Feature)
+  /// Rentals (Professional Feature)
   RentalConfig? rentalConfig;
 
   /// Multi-Location Brands
@@ -294,6 +300,9 @@ class ListingModel {
     this.categoryID = '',
     this.categoryPhoto = '',
     this.categoryTitle = '',
+    this.primaryCategorySlug = '',
+    this.subcategorySlug = '',
+    this.categoryTags = const [],
     int? createdAt,
     this.title = '',
     this.description = '',
@@ -337,7 +346,7 @@ class ListingModel {
     this.storeDineInEnabled = false,
     this.storeShippingEnabled = false,
     this.storeShippingFee = 0.0,
-    this.storeLeadTimeHours = 24,
+    this.storeLeadTimeHours = 0,
     this.storeUpdatedAt,
     this.listerTierSnapshot = 'free',
     Map<String, dynamic>? payments,
@@ -369,6 +378,7 @@ class ListingModel {
     this.isFeatured = false,
     this.featuredUntil,
     this.featuredBy,
+    this.isDemo = false,
     this.menuEnabled = false,
     this.menuMode = "both",
     String? menuCurrencyCode,
@@ -411,6 +421,9 @@ class ListingModel {
       categoryID: json['categoryID'] ?? '',
       categoryPhoto: json['categoryPhoto'] ?? '',
       categoryTitle: json['categoryTitle'] ?? '',
+      primaryCategorySlug: json['primaryCategorySlug'] ?? '',
+      subcategorySlug: json['subcategorySlug'] ?? '',
+      categoryTags: List<String>.from(json['categoryTags'] ?? []),
         createdAt: createdAtSeconds,
       title: json['title'] ?? '',
       description: json['description'] ?? '',
@@ -456,7 +469,7 @@ class ListingModel {
       storeDineInEnabled: json['storeDineInEnabled'] ?? false,
       storeShippingEnabled: json['storeShippingEnabled'] ?? false,
       storeShippingFee: (json['storeShippingFee'] ?? 0).toDouble(),
-      storeLeadTimeHours: json['storeLeadTimeHours'] ?? 24,
+      storeLeadTimeHours: json['storeLeadTimeHours'] ?? 0,
       storeUpdatedAt: json['storeUpdatedAt'],
       listerTierSnapshot: json['listerTierSnapshot'] ?? 'free',
       payments: Map<String, dynamic>.from(json['payments'] ?? {'acceptProofOfPayment': false}),
@@ -493,6 +506,7 @@ class ListingModel {
       isFeatured: json['isFeatured'] ?? false,
       featuredUntil: json['featuredUntil'],
       featuredBy: json['featuredBy'],
+      isDemo: json['isDemo'] ?? false,
         menuEnabled: json['menuEnabled'] ?? false,
         menuMode: json['menuMode'] ?? "both",
         menuCurrencyCode: json['menuCurrencyCode'] ?? json['currencyCode'] ?? 'USD',
@@ -516,6 +530,9 @@ class ListingModel {
       'categoryID': categoryID,
       'categoryPhoto': categoryPhoto,
       'categoryTitle': categoryTitle,
+      'primaryCategorySlug': primaryCategorySlug,
+      'subcategorySlug': subcategorySlug,
+      'categoryTags': categoryTags,
       'createdAt': createdAt,
       'title': title,
       'description': description,
@@ -591,6 +608,7 @@ class ListingModel {
       'isFeatured': isFeatured,
       'featuredUntil': featuredUntil,
       'featuredBy': featuredBy,
+      'isDemo': isDemo,
         'menuEnabled': menuEnabled,
         'menuMode': menuMode,
         'menuCurrencyCode': menuCurrencyCode,
@@ -611,6 +629,9 @@ class ListingModel {
     String? categoryID,
     String? categoryPhoto,
     String? categoryTitle,
+    String? primaryCategorySlug,
+    String? subcategorySlug,
+    List<String>? categoryTags,
     int? createdAt,
     String? title,
     String? description,
@@ -665,6 +686,7 @@ class ListingModel {
     String? tapBadge,
     String? countryCode,
     RentalConfig? rentalConfig,
+    bool? isDemo,
   }) {
     return ListingModel(
       id: id ?? this.id,
@@ -674,6 +696,9 @@ class ListingModel {
       categoryID: categoryID ?? this.categoryID,
       categoryPhoto: categoryPhoto ?? this.categoryPhoto,
       categoryTitle: categoryTitle ?? this.categoryTitle,
+      primaryCategorySlug: primaryCategorySlug ?? this.primaryCategorySlug,
+      subcategorySlug: subcategorySlug ?? this.subcategorySlug,
+      categoryTags: categoryTags ?? this.categoryTags,
       createdAt: createdAt ?? this.createdAt,
       title: title ?? this.title,
       description: description ?? this.description,
@@ -731,6 +756,7 @@ class ListingModel {
       brandId: brandId ?? this.brandId,
       locationLabel: locationLabel ?? this.locationLabel,
       countryCode: countryCode ?? this.countryCode,
+      isDemo: isDemo ?? this.isDemo,
     );
   }
 }

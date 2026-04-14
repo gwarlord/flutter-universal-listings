@@ -36,10 +36,10 @@ class WelcomeScreen extends StatelessWidget {
                 children: [
                   Center(
                     child: Image.asset(
-                      'assets/images/listings_welcome_image.png',
+                      'assets/images/caribtap_c_logo.png',
                       width: 250.0,
                       height: 250.0,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                     ),
                   ),
                   Padding(

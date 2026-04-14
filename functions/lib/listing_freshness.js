@@ -48,6 +48,21 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const messaging = admin.messaging();
 const EMAIL_FROM = { email: "admin@caribtap.com", name: "CaribTap" };
+function getTokens(userData) {
+    let tokens = [];
+    if (Array.isArray(userData?.fcmTokens)) {
+        tokens = userData.fcmTokens
+            .filter((t) => typeof t === "string" && t.trim().length > 0)
+            .map((t) => t.trim());
+    }
+    if (userData?.pushToken && typeof userData.pushToken === "string") {
+        const pushToken = userData.pushToken.trim();
+        if (pushToken && !tokens.includes(pushToken)) {
+            tokens.push(pushToken);
+        }
+    }
+    return Array.from(new Set(tokens));
+}
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEV_MODE = process.env.NODE_ENV === "development" ||
     process.env.FUNCTIONS_EMULATOR === "true";
@@ -55,7 +70,7 @@ const DEFAULT_FRESHNESS_DAYS = DEV_MODE ? 1 : 90;
 const WARN_10D_OFFSET_MS = DEV_MODE ? 10 * 60 * 1000 : 10 * DAY_MS;
 const WARN_1D_OFFSET_MS = DEV_MODE ? 1 * 60 * 1000 : 1 * DAY_MS;
 const WARNING_WINDOW_MS = DEV_MODE ? 5 * 60 * 1000 : 12 * 60 * 60 * 1000;
-exports.processListingFreshness = functions.pubsub
+exports.processListingFreshness = functions.runWith({ secrets: [secrets_1.sendgridKeySecret, secrets_1.appUrlSecret] }).pubsub
     .schedule("every 6 hours")
     .onRun(async () => {
     const now = new Date();
@@ -373,7 +388,7 @@ async function sendFreshnessNotification(params) {
         return { emailSent, pushSent };
     const user = userSnap.data() || {};
     const email = user.email;
-    const pushToken = user.pushToken;
+    const tokens = getTokens(user);
     const allowPush = user.settings?.allowPushNotifications !== false;
     const hideAtFormatted = formatDateForTimezone(params.hideAt, "America/Port_of_Spain");
     // Get secrets asynchronously
@@ -406,25 +421,27 @@ async function sendFreshnessNotification(params) {
             });
         }
     }
-    if (pushToken && allowPush) {
+    if (tokens.length > 0 && allowPush) {
         try {
             const push = buildPushPayload({
                 listingTitle: params.listingTitle,
                 type: params.type,
                 daysRemaining: params.daysRemaining,
             });
-            await messaging.send({
-                token: pushToken,
-                notification: {
-                    title: push.title,
-                    body: push.body,
-                },
-                data: {
-                    type: "listing_freshness",
-                    listingId: params.listingId,
-                    action: "RESET",
-                },
-            });
+            for (const token of tokens) {
+                await messaging.send({
+                    token,
+                    notification: {
+                        title: push.title,
+                        body: push.body,
+                    },
+                    data: {
+                        type: "listing_freshness",
+                        listingId: params.listingId,
+                        action: "RESET",
+                    },
+                });
+            }
             pushSent = true;
         }
         catch (error) {
@@ -578,7 +595,7 @@ function getFreshnessForCategory(category, customDays) {
     return CATEGORY_FRESHNESS[normalized] || DEFAULT_FRESHNESS_DAYS;
 }
 // Activity-based auto-refresh
-exports.processActivityAutoRefresh = functions.pubsub
+exports.processActivityAutoRefresh = functions.runWith({ secrets: [secrets_1.sendgridKeySecret, secrets_1.appUrlSecret] }).pubsub
     .schedule("every 12 hours")
     .onRun(async () => {
     const now = new Date();
@@ -707,27 +724,29 @@ async function sendAutoRefreshNotification(listing, activityScore) {
         return;
     const user = userSnap.data() || {};
     const email = user.email;
-    const pushToken = user.pushToken;
+    const tokens = getTokens(user);
     const allowPush = user.settings?.allowPushNotifications !== false;
     const message = `Great news! Your listing "${listing.title}" was automatically refreshed for another ${listing.freshness?.days || 90} days due to strong customer engagement!`;
     // Send push notification
-    if (pushToken && allowPush) {
-        try {
-            await messaging.send({
-                token: pushToken,
-                notification: {
-                    title: "🎉 Listing Auto-Refreshed!",
-                    body: message,
-                },
-                data: {
-                    type: "listing_auto_refresh",
-                    listingId: listing.id,
-                    activityScore: activityScore.score30Days.toString(),
-                },
-            });
-        }
-        catch (error) {
-            functions.logger.error("Error sending auto-refresh push", { error });
+    if (tokens.length > 0 && allowPush) {
+        for (const token of tokens) {
+            try {
+                await messaging.send({
+                    token,
+                    notification: {
+                        title: "🎉 Listing Auto-Refreshed!",
+                        body: message,
+                    },
+                    data: {
+                        type: "listing_auto_refresh",
+                        listingId: listing.id,
+                        activityScore: activityScore.score30Days.toString(),
+                    },
+                });
+            }
+            catch (error) {
+                functions.logger.error("Error sending auto-refresh push", { error });
+            }
         }
     }
     // Send email if available

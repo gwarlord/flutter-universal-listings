@@ -26,6 +26,10 @@ const PRODUCT_TIER_MAP: Record<string, number> = {
 const DEFAULT_ANDROID_PACKAGE = "com.caribtap.instaflutter.android";
 const IOS_VERIFY_URL = "https://buy.itunes.apple.com/verifyReceipt";
 const IOS_SANDBOX_URL = "https://sandbox.itunes.apple.com/verifyReceipt";
+const PROFESSIONAL_TRIAL_PRODUCT_ID = "trial_professional_30d";
+const PROFESSIONAL_TRIAL_DAYS = 30;
+const SUBSCRIPTION_CONFIG_COLLECTION = "settings";
+const SUBSCRIPTION_CONFIG_DOC = "subscription_config";
 
 function getTierForProduct(productId: string): number {
   return PRODUCT_TIER_MAP[productId] ?? 0;
@@ -46,6 +50,56 @@ function getSubscriptionTierName(tier: number): string {
 
 function isEmulator(): boolean {
   return !!process.env.FUNCTIONS_EMULATOR || !!process.env.FIREBASE_AUTH_EMULATOR_HOST;
+}
+
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+function isActiveEntitlementSnapshot(data: FirebaseFirestore.DocumentData | undefined): boolean {
+  if (!data) {
+    return false;
+  }
+
+  const status = data.status as string | undefined;
+  const tier = Number(data.tier || 0);
+  const expiresAt = data.expiresAt?.toDate?.() as Date | undefined;
+  const now = new Date();
+
+  if (status !== "active" || tier <= 0) {
+    return false;
+  }
+
+  if (expiresAt && expiresAt <= now) {
+    return false;
+  }
+
+  return true;
+}
+
+type ProfessionalTrialConfig = {
+  enabled: boolean;
+  requiresPhoneVerified: boolean;
+};
+
+async function fetchProfessionalTrialConfig(): Promise<ProfessionalTrialConfig> {
+  const doc = await db
+    .collection(SUBSCRIPTION_CONFIG_COLLECTION)
+    .doc(SUBSCRIPTION_CONFIG_DOC)
+    .get();
+
+  if (!doc.exists) {
+    return {
+      enabled: true,
+      requiresPhoneVerified: false,
+    };
+  }
+
+  const data = doc.data() || {};
+  return {
+    enabled: data.professionalTrialEnabled !== false,
+    requiresPhoneVerified: data.professionalTrialRequiresPhoneVerified === true,
+  };
 }
 
 function normalizeAesKey(keyValue: string): Buffer {
@@ -356,6 +410,161 @@ export const verifyPurchase = functions
       willRenew,
     };
   });
+
+export const claimProfessionalTrial = functions.https.onCall(async (_data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
+  }
+
+  const uid = context.auth.uid;
+  const trialConfig = await fetchProfessionalTrialConfig();
+  if (!trialConfig.enabled) {
+    throw new functions.https.HttpsError("failed-precondition", "Free trial is not available right now");
+  }
+
+  const userRef = db.collection("users").doc(uid);
+  const entitlementRef = userRef.collection("entitlements").doc("subscription");
+  const purchaseRef = entitlementRef.collection("purchases").doc();
+  const auditRef = db.collection("subscription_trial_claims").doc();
+
+  const now = new Date();
+  const expiresAt = addDays(now, PROFESSIONAL_TRIAL_DAYS);
+  const expiresAtTs = admin.firestore.Timestamp.fromDate(expiresAt);
+
+  let finalTier = 0;
+  let finalStatus = "inactive";
+
+  await db.runTransaction(async (transaction) => {
+    const [userSnap, entitlementSnap] = await Promise.all([
+      transaction.get(userRef),
+      transaction.get(entitlementRef),
+    ]);
+
+    if (!userSnap.exists) {
+      throw new functions.https.HttpsError("failed-precondition", "User profile not found");
+    }
+
+    const userData = userSnap.data() || {};
+    const entitlementData = entitlementSnap.data();
+    const profileTier = (userData.subscriptionTier || "free").toString().trim().toLowerCase();
+    const profileExpiresAt = userData.subscriptionExpiresAt?.toDate?.() as Date | undefined;
+    const profileActive = profileTier !== "free" && (!profileExpiresAt || profileExpiresAt > now);
+    const entitlementActive = isActiveEntitlementSnapshot(entitlementData);
+
+    if (userData.suspended === true) {
+      throw new functions.https.HttpsError("permission-denied", "Suspended accounts are not eligible for the free trial");
+    }
+
+    if (trialConfig.requiresPhoneVerified && userData.phoneVerified !== true) {
+      throw new functions.https.HttpsError("failed-precondition", "Phone verification is required to claim this trial");
+    }
+
+    if (userData.trialClaimedAt || userData.trialProductId) {
+      throw new functions.https.HttpsError("already-exists", "Free trial already claimed");
+    }
+
+    if (profileActive || entitlementActive) {
+      throw new functions.https.HttpsError("failed-precondition", "Account already has an active subscription");
+    }
+
+    finalTier = 2;
+    finalStatus = "active";
+
+    transaction.set(
+      userRef,
+      {
+        subscriptionTier: "professional",
+        isSubscriptionActive: true,
+        subscriptionExpiresAt: expiresAtTs,
+        trialClaimedAt: admin.firestore.FieldValue.serverTimestamp(),
+        trialExpiresAt: expiresAtTs,
+        trialProductId: PROFESSIONAL_TRIAL_PRODUCT_ID,
+        trialSource: "self_claim",
+        trialTier: "professional",
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    transaction.set(
+      entitlementRef,
+      {
+        platform: "trial_promo",
+        productId: PROFESSIONAL_TRIAL_PRODUCT_ID,
+        tier: 2,
+        status: "active",
+        expiresAt: expiresAtTs,
+        willRenew: false,
+        grantSource: "self_claim",
+        trialClaimedAt: admin.firestore.FieldValue.serverTimestamp(),
+        lastVerifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    transaction.set(purchaseRef, {
+      platform: "trial_promo",
+      productId: PROFESSIONAL_TRIAL_PRODUCT_ID,
+      tier: 2,
+      status: "active",
+      expiresAt: expiresAtTs,
+      willRenew: false,
+      source: "trial_claim",
+      verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    transaction.set(auditRef, {
+      uid,
+      email: (userData.email || "").toString().toLowerCase(),
+      phoneNumber: (userData.phoneNumber || "").toString(),
+      phoneVerified: userData.phoneVerified === true,
+      source: "self_claim",
+      trialProductId: PROFESSIONAL_TRIAL_PRODUCT_ID,
+      tier: "professional",
+      claimedAt: admin.firestore.FieldValue.serverTimestamp(),
+      expiresAt: expiresAtTs,
+      status: "active",
+    });
+  });
+
+  try {
+    const listingDocs = await db.collection("listings").where("authorID", "==", uid).get();
+    if (!listingDocs.empty) {
+      const batch = db.batch();
+      for (const doc of listingDocs.docs) {
+        batch.update(doc.ref, {
+          listerTierSnapshot: "professional",
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
+    }
+  } catch (error) {
+    functions.logger.warn("Trial claim listing snapshot update failed", { uid, error });
+  }
+
+  return {
+    tier: finalTier,
+    status: finalStatus,
+    productId: PROFESSIONAL_TRIAL_PRODUCT_ID,
+    expiresAt: expiresAt.toISOString(),
+  };
+});
+
+export const getProfessionalTrialConfig = functions.https.onCall(async (_data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
+  }
+
+  const config = await fetchProfessionalTrialConfig();
+  return {
+    enabled: config.enabled,
+    requiresPhoneVerified: config.requiresPhoneVerified,
+    trialDays: PROFESSIONAL_TRIAL_DAYS,
+    tier: "professional",
+  };
+});
 
 export const refreshEntitlementsDaily = functions
   .runWith({ secrets: [appleSharedSecret, entitlementTokenKeySecret, googleServiceAccountJsonSecret] })

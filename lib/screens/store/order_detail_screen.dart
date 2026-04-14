@@ -58,6 +58,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   TableSessionModel? _tableSession;
   bool _isSummonCooldown = false;
   int _summonCooldownSeconds = 0;
+  bool _isSubmittingFulfillmentReport = false;
 
   bool get _canShowBlockUserAction =>
       widget.viewAsLister &&
@@ -212,6 +213,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final bool hasProofOfPayment =
         _currentOrder.payment?['proofOfPaymentUrl'] != null &&
         _currentOrder.payment!['proofOfPaymentUrl'].isNotEmpty;
+    final bool canReportFulfillmentIssue =
+      !widget.viewAsLister && _currentOrder.status == OrderStatus.fulfilled;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -425,7 +428,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     ),
                   ],
                 ),
-                if (_currentOrder.fulfillment.address != null) ...[
+                if (_currentOrder.fulfillment.address != null &&
+                  _currentOrder.fulfillment.address!.trim().isNotEmpty &&
+                  !(_currentOrder.fulfillment.method == FulfillmentMethod.shipping &&
+                    _currentOrder.shipping?.address != null &&
+                    _currentOrder.shipping!.address!.trim().isNotEmpty)) ...[
                   const SizedBox(height: 12),
                   // Tappable address with navigation
                   Material(
@@ -660,6 +667,48 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         // Proof of Payment Section (Lister View)
         if (widget.viewAsLister && hasProofOfPayment)
           _buildListerProofOfPaymentSection(dark),
+
+        if (canReportFulfillmentIssue) ...[
+          const SizedBox(height: 16),
+          _buildSectionTitle('Need Help?'.tr(), dark),
+          Card(
+            color: dark ? Colors.grey.shade900 : Colors.grey.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'If this order was marked fulfilled but you did not receive it, report it to admins for review.'.tr(),
+                    style: TextStyle(color: dark ? Colors.white70 : Colors.black54),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _isSubmittingFulfillmentReport
+                          ? null
+                          : _showFulfillmentIssueDialog,
+                      icon: _isSubmittingFulfillmentReport
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.report_problem_outlined),
+                      label: Text('Report Fulfillment Issue'.tr()),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.redAccent),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
 
         // Shipping Tracking Section (only for SHIPPING orders)
         if (_currentOrder.fulfillment.method == FulfillmentMethod.shipping) ...[
@@ -1259,9 +1308,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     // This handles cases where user might be both customer and lister
     final isLister = widget.viewAsLister;
     final isCustomer = !widget.viewAsLister;
+    final hasUploadedProof =
+      ((_currentOrder.payment?['proofOfPaymentUrl'] as String?) ?? '')
+        .trim()
+        .isNotEmpty;
 
-    // Customer can only cancel requested orders
-    if (isCustomer && _currentOrder.status == OrderStatus.requested) {
+    // Customer can only cancel requested orders before any proof upload.
+    if (isCustomer &&
+      _currentOrder.status == OrderStatus.requested &&
+      !hasUploadedProof) {
       return Container(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
         decoration: BoxDecoration(
@@ -1743,6 +1798,101 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     } catch (e) {
       hideProgress();
       showAlertDialog(context, 'Error'.tr(), 'Failed to update status'.tr());
+    }
+  }
+
+  Future<void> _showFulfillmentIssueDialog() async {
+    final reasonController = TextEditingController();
+    final dark = isDarkMode(context);
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        scrollable: true,
+        backgroundColor: dark ? Colors.grey[850] : Colors.white,
+        title: Text(
+          'Report Fulfillment Issue'.tr(),
+          style: TextStyle(color: dark ? Colors.white : Colors.black),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Tell us what happened so admins can review this order.'.tr(),
+                style: TextStyle(color: dark ? Colors.white70 : Colors.black87),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Admin actions may only extend to suspending the listing and/or user involved after investigation.'.tr(),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: dark ? Colors.orange[200] : Colors.orange[800],
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Submitting a report starts moderation review and does not transfer liability to the platform.'.tr(),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: dark ? Colors.white60 : Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: reasonController,
+                minLines: 3,
+                maxLines: 5,
+                style: TextStyle(color: dark ? Colors.white : Colors.black),
+                decoration: InputDecoration(
+                  hintText: 'Example: Order marked fulfilled but never delivered.'.tr(),
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'.tr()),
+          ),
+          TextButton(
+            onPressed: () {
+              final value = reasonController.text.trim();
+              if (value.isEmpty) {
+                showSnackBar(context, 'Please provide a reason.'.tr());
+                return;
+              }
+              Navigator.pop(context, value);
+            },
+            child: Text('Submit'.tr()),
+          ),
+        ],
+      ),
+    );
+
+    if (reason == null || reason.trim().isEmpty || !mounted) return;
+
+    setState(() => _isSubmittingFulfillmentReport = true);
+    try {
+      await _storeService.reportFulfillmentIssue(
+        orderId: _currentOrder.id,
+        currentUser: widget.currentUser,
+        reason: reason,
+      );
+      if (!mounted) return;
+      showSnackBar(
+        context,
+        'Report submitted. Admins will review this issue.'.tr(),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      showSnackBar(context, e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmittingFulfillmentReport = false);
+      }
     }
   }
 

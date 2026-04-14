@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:caribtap/listings/model/invoice_model.dart';
+import 'package:caribtap/listings/model/payment_details_model.dart';
 import 'package:caribtap/listings/model/quote_model.dart';
 import 'package:caribtap/listings/model/pro_doc_shared.dart';
 import 'package:http/http.dart' as http;
@@ -19,6 +20,7 @@ class PdfService {
     String? footerText,
     bool includeWatermark = false,
     bool hideFooter = false,
+    PaymentDetailsPublic? paymentDetails,
   }) async {
     final doc = pw.Document();
     final client = quote.clientSnapshot;
@@ -128,8 +130,10 @@ class PdfService {
               pw.SizedBox(height: 12),
               pw.Text('Terms', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
               pw.Text(quote.terms),
-            ],
-          ];
+            ],            if (paymentDetails != null && paymentDetails.hasAnyPaymentMethod) ...[  
+              pw.SizedBox(height: 16),
+              _paymentMethodsSection(paymentDetails),
+            ],          ];
         },
         footer: (context) {
           if (hideFooter) return pw.SizedBox();
@@ -155,6 +159,7 @@ class PdfService {
     String? footerText,
     bool includeWatermark = false,
     bool hideFooter = false,
+    PaymentDetailsPublic? paymentDetails,
   }) async {
     final bytes = await buildQuotePdf(
       quote,
@@ -162,6 +167,7 @@ class PdfService {
       footerText: footerText,
       includeWatermark: includeWatermark,
       hideFooter: hideFooter,
+      paymentDetails: paymentDetails,
     );
     await Printing.sharePdf(bytes: bytes, filename: '${quote.quoteNumber.isNotEmpty ? quote.quoteNumber : 'quote'}.pdf');
   }
@@ -172,6 +178,7 @@ class PdfService {
     String? footerText,
     bool includeWatermark = false,
     bool hideFooter = false,
+    PaymentDetailsPublic? paymentDetails,
   }) async {
     final bytes = await buildQuotePdf(
       quote,
@@ -179,6 +186,7 @@ class PdfService {
       footerText: footerText,
       includeWatermark: includeWatermark,
       hideFooter: hideFooter,
+      paymentDetails: paymentDetails,
     );
     final filename = '${quote.quoteNumber.isNotEmpty ? quote.quoteNumber : 'quote'}.pdf';
     
@@ -207,6 +215,7 @@ class PdfService {
     String? footerText,
     bool includeWatermark = false,
     bool hideFooter = false,
+    PaymentDetailsPublic? paymentDetails,
   }) async {
     final doc = pw.Document();
     final client = invoice.clientSnapshot;
@@ -271,6 +280,10 @@ class PdfService {
                   children: [
                     pw.Text('Invoice', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
                     pw.Text(invoice.invoiceNumber.isNotEmpty ? invoice.invoiceNumber : '-', style: const pw.TextStyle(fontSize: 16)),
+                    if (invoice.poNumber.isNotEmpty) ...[
+                      pw.SizedBox(height: 4),
+                      pw.Text('PO: ${invoice.poNumber}', style: const pw.TextStyle(fontSize: 10)),
+                    ],
                   ],
                 ),
               ],
@@ -316,8 +329,10 @@ class PdfService {
               pw.SizedBox(height: 12),
               pw.Text('Terms', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
               pw.Text(invoice.terms),
-            ],
-          ];
+            ],            if (paymentDetails != null && paymentDetails.hasAnyPaymentMethod) ...[  
+              pw.SizedBox(height: 16),
+              _paymentMethodsSection(paymentDetails),
+            ],          ];
         },
         footer: (context) {
           if (hideFooter) return pw.SizedBox();
@@ -343,6 +358,7 @@ class PdfService {
     String? footerText,
     bool includeWatermark = false,
     bool hideFooter = false,
+    PaymentDetailsPublic? paymentDetails,
   }) async {
     final bytes = await buildInvoicePdf(
       invoice,
@@ -350,6 +366,7 @@ class PdfService {
       footerText: footerText,
       includeWatermark: includeWatermark,
       hideFooter: hideFooter,
+      paymentDetails: paymentDetails,
     );
     await Printing.sharePdf(bytes: bytes, filename: '${invoice.invoiceNumber.isNotEmpty ? invoice.invoiceNumber : 'invoice'}.pdf');
   }
@@ -360,6 +377,7 @@ class PdfService {
     String? footerText,
     bool includeWatermark = false,
     bool hideFooter = false,
+    PaymentDetailsPublic? paymentDetails,
   }) async {
     final bytes = await buildInvoicePdf(
       invoice,
@@ -367,6 +385,7 @@ class PdfService {
       footerText: footerText,
       includeWatermark: includeWatermark,
       hideFooter: hideFooter,
+      paymentDetails: paymentDetails,
     );
     final filename = '${invoice.invoiceNumber.isNotEmpty ? invoice.invoiceNumber : 'invoice'}.pdf';
     
@@ -411,12 +430,19 @@ class PdfService {
     final taxableBase = (quote.subtotal - discountAmount).clamp(0, double.infinity).toDouble();
     final taxAmount = quote.tax.applyTo(taxableBase);
 
+    final discountLabel = quote.discount.type == AdjustmentType.percent
+        ? 'Discount (${_formatPct(quote.discount.value)})'
+        : 'Discount';
+    final taxLabel = quote.tax.type == AdjustmentType.percent
+        ? 'Tax (${_formatPct(quote.tax.value)})'
+        : 'Tax';
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.end,
       children: [
         _totalRow('Subtotal', currency.format(quote.subtotal)),
-        if (discountAmount > 0) _totalRow('Discount', '-${currency.format(discountAmount)}'),
-        if (taxAmount > 0) _totalRow('Tax', currency.format(taxAmount)),
+        if (discountAmount > 0) _totalRow(discountLabel, '-${currency.format(discountAmount)}'),
+        if (taxAmount > 0) _totalRow(taxLabel, currency.format(taxAmount)),
         pw.Divider(),
         _totalRow('Total', currency.format(quote.total), isBold: true),
       ],
@@ -428,12 +454,19 @@ class PdfService {
     final taxableBase = (invoice.subtotal - discountAmount).clamp(0, double.infinity).toDouble();
     final taxAmount = invoice.tax.applyTo(taxableBase);
 
+    final discountLabel = invoice.discount.type == AdjustmentType.percent
+        ? 'Discount (${_formatPct(invoice.discount.value)})'
+        : 'Discount';
+    final taxLabel = invoice.tax.type == AdjustmentType.percent
+        ? 'Tax (${_formatPct(invoice.tax.value)})'
+        : 'Tax';
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.end,
       children: [
         _totalRow('Subtotal', currency.format(invoice.subtotal)),
-        if (discountAmount > 0) _totalRow('Discount', '-${currency.format(discountAmount)}'),
-        if (taxAmount > 0) _totalRow('Tax', currency.format(taxAmount)),
+        if (discountAmount > 0) _totalRow(discountLabel, '-${currency.format(discountAmount)}'),
+        if (taxAmount > 0) _totalRow(taxLabel, currency.format(taxAmount)),
         pw.Divider(),
         _totalRow('Total', currency.format(invoice.total), isBold: true),
       ],
@@ -465,6 +498,54 @@ class PdfService {
       children: [
         pw.Text(label, style: style),
         pw.Text(value, style: style),
+      ],
+    );
+  }
+
+  String _formatPct(double value) {
+    final formatted = value == value.truncate()
+        ? value.toStringAsFixed(0)
+        : value.toStringAsFixed(2).replaceAll(RegExp(r'0+$'), '');
+    return '$formatted%';
+  }
+
+  pw.Widget _paymentMethodsSection(PaymentDetailsPublic payment) {
+    final rows = <pw.Widget>[];
+
+    // Bank transfer
+    final bank = payment.bankTransfer;
+    if (bank != null && bank.isValid) {
+      rows.add(pw.Text('Bank Transfer', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)));
+      if (bank.bankName.isNotEmpty) rows.add(pw.Text('Bank: ${bank.bankName}', style: const pw.TextStyle(fontSize: 10)));
+      if (bank.accountName.isNotEmpty) rows.add(pw.Text('Account Name: ${bank.accountName}', style: const pw.TextStyle(fontSize: 10)));
+      if (bank.accountNumber.isNotEmpty) rows.add(pw.Text('Account #: ${bank.accountNumber}', style: const pw.TextStyle(fontSize: 10)));
+      if (bank.branch.isNotEmpty) rows.add(pw.Text('Branch: ${bank.branch}', style: const pw.TextStyle(fontSize: 10)));
+      if (bank.swiftBic.isNotEmpty) rows.add(pw.Text('SWIFT/BIC: ${bank.swiftBic}', style: const pw.TextStyle(fontSize: 10)));
+      if (bank.iban.isNotEmpty) rows.add(pw.Text('IBAN: ${bank.iban}', style: const pw.TextStyle(fontSize: 10)));
+      if (bank.currency.isNotEmpty) rows.add(pw.Text('Currency: ${bank.currency}', style: const pw.TextStyle(fontSize: 10)));
+      if (bank.instructions.isNotEmpty) rows.add(pw.Text(bank.instructions, style: const pw.TextStyle(fontSize: 10)));
+    }
+
+    // Payment apps
+    for (final app in payment.paymentApps.where((a) => a.isValid)) {
+      if (rows.isNotEmpty) rows.add(pw.SizedBox(height: 6));
+      final detail = app.handle.isNotEmpty ? app.handle : app.url;
+      final label = app.label.isNotEmpty ? app.label : app.type.displayText;
+      rows.add(pw.Text('$label: $detail', style: const pw.TextStyle(fontSize: 10)));
+    }
+
+    // Payment notes
+    if (payment.notes.isNotEmpty) {
+      if (rows.isNotEmpty) rows.add(pw.SizedBox(height: 4));
+      rows.add(pw.Text(payment.notes, style: const pw.TextStyle(fontSize: 10)));
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text('Payment Methods', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 4),
+        ...rows,
       ],
     );
   }

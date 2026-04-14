@@ -199,6 +199,9 @@ class _RentalCatalogManagerScreenState
 
   Widget _buildItemCard(RentalCatalogItem item, bool dark) {
     final cardColor = dark ? Colors.grey.shade900 : Colors.grey.shade50;
+    final priceLabel =
+        '${_getCurrencySymbol(item.currencyCode ?? 'USD')}${item.basePrice.toStringAsFixed(2)}'
+        ' / ${item.pricingUnit.toString().split('.').last}';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -220,6 +223,8 @@ class _RentalCatalogManagerScreenState
                         width: 80,
                         height: 80,
                         fit: BoxFit.cover,
+                        cacheWidth: 160,
+                        cacheHeight: 160,
                         errorBuilder: (_, __, ___) => _placeholderImage(),
                       )
                     : _placeholderImage(),
@@ -234,66 +239,64 @@ class _RentalCatalogManagerScreenState
                     Text(
                       item.name,
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: dark ? Colors.white : Colors.black,
+                        fontWeight: FontWeight.bold,
+                        color: dark ? Colors.white : Colors.black87,
                       ),
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    if (item.category.isNotEmpty)
+                    if (item.category.isNotEmpty) ...[
+                      const SizedBox(height: 2),
                       Text(
                         item.category,
                         style: TextStyle(
                           fontSize: 12,
-                          color: dark
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade600,
+                          color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
                         ),
                       ),
-                    const SizedBox(height: 8),
+                    ],
+                    const SizedBox(height: 4),
+                    Text(
+                      priceLabel,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(cfg.colorPrimary),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
-                        Text(
-                          '\$${item.basePrice.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(cfg.colorPrimary),
-                            fontSize: 16,
-                          ),
+                        Icon(
+                          item.isAvailable ? Icons.check_circle : Icons.cancel,
+                          size: 16,
+                          color: item.isAvailable ? Colors.green : Colors.red,
                         ),
+                        const SizedBox(width: 4),
                         Text(
-                          ' / ${item.pricingUnit.toString().split('.').last}',
+                          item.isAvailable ? 'Available'.tr() : 'Unavailable'.tr(),
                           style: TextStyle(
                             fontSize: 12,
-                            color: dark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade600,
+                            color: dark ? Colors.white70 : Colors.black54,
                           ),
                         ),
-                        const Spacer(),
-                        if (item.stockQty > 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: item.isAvailable
-                                  ? Colors.green
-                                  : Colors.orange,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              item.isAvailable
-                                  ? 'Available (${item.stockQty})'
-                                  : 'Unavailable',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
+                        if (item.stockQty > 0) ...[
+                          const SizedBox(width: 12),
+                          Icon(
+                            Icons.inventory_2_outlined,
+                            size: 16,
+                            color: dark ? Colors.white70 : Colors.black54,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${item.stockQty}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: dark ? Colors.white70 : Colors.black54,
                             ),
                           ),
+                        ],
                       ],
                     ),
                   ],
@@ -302,8 +305,16 @@ class _RentalCatalogManagerScreenState
 
               // Actions
               PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert,
-                    color: dark ? Colors.white70 : Colors.black54),
+                icon: Icon(
+                  Icons.more_vert,
+                  color: dark ? Colors.white70 : Colors.black54,
+                ),
+                color: dark ? Colors.grey.shade900 : Colors.white,
+                surfaceTintColor: Colors.transparent,
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 onSelected: (value) {
                   if (value == 'edit') {
                     _editItem(item);
@@ -316,9 +327,12 @@ class _RentalCatalogManagerScreenState
                     value: 'edit',
                     child: Row(
                       children: [
-                        const Icon(Icons.edit, size: 20),
+                        Icon(Icons.edit, size: 20,
+                            color: dark ? Colors.white70 : Colors.black87),
                         const SizedBox(width: 8),
-                        Text('Edit'.tr()),
+                        Text('Edit'.tr(),
+                            style: TextStyle(
+                                color: dark ? Colors.white : Colors.black87)),
                       ],
                     ),
                   ),
@@ -352,6 +366,40 @@ class _RentalCatalogManagerScreenState
       ),
       child: const Icon(Icons.image, size: 40, color: Colors.white),
     );
+  }
+
+  String _formatCurrency(double amount, String? currencyCode) {
+    final normalizedCode = (currencyCode == null || currencyCode.trim().isEmpty)
+        ? 'USD'
+        : currencyCode.toUpperCase();
+    return '$normalizedCode ${_getCurrencySymbol(normalizedCode)}${amount.toStringAsFixed(2)}';
+  }
+
+  String _getCurrencySymbol(String code) {
+    switch (code.toUpperCase()) {
+      case 'USD':
+      case 'TTD':
+      case 'JMD':
+      case 'BSD':
+      case 'BBD':
+      case 'GYD':
+      case 'DOP':
+      case 'KYD':
+      case 'SRD':
+      case 'CAD':
+      case 'AUD':
+        return '\$';
+      case 'EUR':
+        return '€';
+      case 'GBP':
+        return '£';
+      case 'JPY':
+        return '¥';
+      case 'INR':
+        return '₹';
+      default:
+        return '\$';
+    }
   }
 
   void _addNewItem() {

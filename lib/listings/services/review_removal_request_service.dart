@@ -1,10 +1,5 @@
-import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
-import 'package:caribtap/constants.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listing_review_model.dart';
@@ -56,12 +51,7 @@ class ReviewRemovalRequestService {
           .collection(_requestsCollection)
           .add(request.toJson());
 
-      // Send notification to admins
-      await _sendNotificationToAdmins(
-        requestId: docRef.id,
-        listingTitle: listing.title,
-        listingId: listing.id,
-      );
+      // Notifications are sent server-side by Cloud Functions.
 
       return docRef.id;
     } catch (e) {
@@ -250,66 +240,4 @@ class ReviewRemovalRequestService {
     }
   }
 
-  /// Send FCM notification to all admins
-  Future<void> _sendNotificationToAdmins({
-    required String requestId,
-    required String listingTitle,
-    required String listingId,
-  }) async {
-    try {
-      final serverKey = dotenv.env['FCM_SERVER_KEY'];
-      if (serverKey == null || serverKey.isEmpty) {
-        debugPrint('FCM_SERVER_KEY not found. Skipping admin notification.');
-        return;
-      }
-
-      final adminUsersSnapshot = await _firestore
-          .collection(usersCollection)
-          .where('isAdmin', isEqualTo: true)
-          .where('pushToken', isNotEqualTo: null)
-          .where('pushToken', isNotEqualTo: '')
-          .get();
-
-      if (adminUsersSnapshot.docs.isEmpty) {
-        debugPrint('No admin users with push tokens found.');
-        return;
-      }
-
-      for (var doc in adminUsersSnapshot.docs) {
-        final pushToken = doc.data()['pushToken'];
-        if (pushToken != null && pushToken.isNotEmpty) {
-          final uri = Uri.parse('https://fcm.googleapis.com/fcm/send');
-          final headers = {
-            'Content-Type': 'application/json',
-            'Authorization': 'key=$serverKey',
-          };
-          final body = jsonEncode({
-            'to': pushToken,
-            'priority': 'high',
-            'notification': {
-              'title': 'Review Removal Request',
-              'body':
-                  'A lister requested removal of a review for "$listingTitle"',
-            },
-            'data': {
-              'type': 'review_removal_request',
-              'requestId': requestId,
-              'listingId': listingId,
-            },
-          });
-
-          final response = await http.post(uri, headers: headers, body: body);
-
-          if (response.statusCode == 200) {
-            debugPrint('Notification sent to admin: ${doc.id}');
-          } else {
-            debugPrint(
-                'Failed to send notification to admin ${doc.id}: ${response.statusCode}');
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('Error sending admin notifications: $e');
-    }
-  }
 }

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:video_compress/video_compress.dart';
+import 'package:caribtap/listings/utils/image_compress_utils.dart';
 
 class MediaUploadService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
@@ -28,8 +29,9 @@ class MediaUploadService {
   }
 
   Future<String> uploadAdThumbnail(File file, String listerId, String adId) async {
+    final compressed = await compressImageFile(file);
     final ref = _storage.ref().child('deal_ads/$listerId/${adId}_thumb.jpg');
-    final uploadTask = await ref.putFile(file);
+    final uploadTask = await ref.putFile(compressed);
     return await uploadTask.ref.getDownloadURL();
   }
 

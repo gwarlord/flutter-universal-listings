@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -15,6 +16,7 @@ import 'package:caribtap/listings/model/table_mode_models.dart';
 import 'package:caribtap/listings/ui/table_mode/staff_table_sessions_screen.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 class StaffTablesScreen extends StatefulWidget {
   final ListingModel listing;
@@ -752,12 +754,55 @@ class _TableQRScreenState extends State<_TableQRScreen> {
 
   Future<void> _shareQR(BuildContext context, String qrData) async {
     try {
-      await Share.share(
-        'Join ${_currentTable.tableName} at ${widget.listing.title}\n\nTable Code: ${_currentTable.tableCodePublic}\n\nOr scan QR: $qrData',
+      final painter = QrPainter(
+        data: qrData,
+        version: QrVersions.auto,
+        gapless: true,
+        color: Colors.black,
+        emptyColor: Colors.white,
+      );
+
+      final uiImage = await painter.toImage(1024);
+      final byteData = await uiImage.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        throw Exception('Could not generate QR image bytes');
+      }
+
+      final bytes = byteData.buffer.asUint8List();
+      final tmpDir = await getTemporaryDirectory();
+      final safeName =
+          'table_${_currentTable.tableName}_${DateTime.now().millisecondsSinceEpoch}'
+              .replaceAll(RegExp(r'[^A-Za-z0-9_-]+'), '_');
+      final file = File('${tmpDir.path}/$safeName.png');
+      await file.writeAsBytes(bytes, flush: true);
+
+      final box = context.findRenderObject() as RenderBox?;
+      final origin = box == null
+          ? null
+          : Rect.fromLTWH(
+              box.localToGlobal(Offset.zero).dx,
+              box.localToGlobal(Offset.zero).dy,
+              box.size.width,
+              box.size.height,
+            );
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text:
+            'Join ${_currentTable.tableName} at ${widget.listing.title}\n\nTable Code: ${_currentTable.tableCodePublic}',
         subject: '${_currentTable.tableName} - ${widget.listing.title}',
+        sharePositionOrigin: origin,
       );
     } catch (e) {
-      showSnackBar(context, 'Failed to share'.tr());
+      debugPrint('Share QR error: $e');
+      try {
+        await Share.share(
+          'Join ${_currentTable.tableName} at ${widget.listing.title}\n\nTable Code: ${_currentTable.tableCodePublic}',
+          subject: '${_currentTable.tableName} - ${widget.listing.title}',
+        );
+      } catch (_) {
+        showSnackBar(context, 'Failed to share'.tr());
+      }
     }
   }
 }

@@ -62,6 +62,7 @@ function normalizeTierValue(value) {
  */
 async function fetchEntitlement(uid) {
     try {
+        const now = new Date();
         // Check entitlements/subscription document
         const entitlementDoc = await db
             .collection("users")
@@ -70,8 +71,12 @@ async function fetchEntitlement(uid) {
             .doc("subscription")
             .get();
         if (entitlementDoc.exists) {
-            const tier = entitlementDoc.data()?.tier;
-            if (tier) {
+            const data = entitlementDoc.data() || {};
+            const status = data.status;
+            const expiresAt = data.expiresAt?.toDate?.();
+            const tier = data.tier;
+            const isActive = status === "active" && (!expiresAt || expiresAt > now);
+            if (isActive && tier) {
                 const normalized = normalizeTierValue(tier);
                 if (normalized > 0) {
                     return normalized;

@@ -99,6 +99,7 @@ class RentalItemBrowse {
   final String pricingUnit; // 'hourly', 'daily', 'weekly', 'monthly'
   final String currencyCode;
   final List<String> photos;
+  final List<String> videos;
   final bool isAvailable;
   final int stockQty; // Number of units available
   final double? depositAmount;
@@ -117,6 +118,7 @@ class RentalItemBrowse {
     this.pricingUnit = 'daily',
     this.currencyCode = 'USD',
     this.photos = const [],
+    this.videos = const [],
     this.isAvailable = true,
     this.stockQty = 1,
     this.depositAmount,
@@ -137,6 +139,7 @@ class RentalItemBrowse {
       pricingUnit: json['pricingUnit'] ?? 'daily',
       currencyCode: json['currencyCode'] ?? 'USD',
       photos: List<String>.from(json['photos'] ?? []),
+      videos: List<String>.from(json['videos'] ?? []),
       isAvailable: json['isAvailable'] ?? true,
       stockQty: json['stockQty'] ?? 1,
       depositAmount: (json['depositAmount'] as num?)?.toDouble(),
@@ -158,6 +161,7 @@ class RentalItemBrowse {
       'pricingUnit': pricingUnit,
       'currencyCode': currencyCode,
       'photos': photos,
+      'videos': videos,
       'isAvailable': isAvailable,
       'stockQty': stockQty,
       'depositAmount': depositAmount,

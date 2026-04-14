@@ -10,10 +10,10 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_native_image_v2/flutter_native_image_v2.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'package:caribtap/constants.dart';
+import 'package:caribtap/core/config/app_env.dart';
 import 'package:caribtap/core/model/user.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
@@ -51,6 +51,17 @@ class AuthFirebaseUtils extends AuthenticationRepository {
       return await firebaseMessaging.getToken() ?? '';
     }
     return '';
+  }
+
+  String _normalizeIso2(String? value) {
+    final normalized = (value ?? '').trim().toUpperCase();
+    return RegExp(r'^[A-Z]{2}$').hasMatch(normalized) ? normalized : '';
+  }
+
+  String _inferredCountryCode() {
+    final localeCountry = WidgetsBinding
+        .instance.platformDispatcher.locale.countryCode;
+    return _normalizeIso2(localeCountry);
   }
 
   @override
@@ -200,7 +211,7 @@ class AuthFirebaseUtils extends AuthenticationRepository {
   @override
   loginWithGoogle() async {
     try {
-      final webClientId = (dotenv.env['GOOGLE_WEB_CLIENT_ID'] ?? '').trim();
+      final webClientId = AppEnv.googleWebClientId;
       debugPrint(
           '🔐 [GoogleSignIn] Starting login. isWeb=$kIsWeb, hasWebClientId=${webClientId.isNotEmpty}');
       final GoogleSignIn googleSignIn = kIsWeb && webClientId.isNotEmpty
@@ -245,6 +256,16 @@ class AuthFirebaseUtils extends AuthenticationRepository {
               errorText.contains('identitytoolkit'))) {
         return 'Google login is blocked: your Web API key is restricted from Firebase Auth (Identity Toolkit SignInWithIdp).'
             .tr();
+      }
+      // Firebase may have already authenticated the user before the exception
+      // occurred (e.g. during Firestore write or push-token retrieval).
+      // Recover gracefully so we don't show a false error to the user.
+      final existingFirebaseUser = auth.FirebaseAuth.instance.currentUser;
+      if (existingFirebaseUser != null) {
+        debugPrint(
+            'loginWithGoogle: exception thrown but Firebase already authenticated uid=${existingFirebaseUser.uid}, recovering...');
+        final user = await _getCurrentUser(existingFirebaseUser.uid);
+        if (user != null) return user;
       }
       return 'Google login failed, Please try again.'.tr();
     }
@@ -359,6 +380,8 @@ class AuthFirebaseUtils extends AuthenticationRepository {
             settings: UserSettings(),
             email: '',
             profilePictureURL: profileImageUrl,
+            countryCode: _inferredCountryCode(),
+            homeCountry: _inferredCountryCode(),
             userID: userCredential.user?.uid ?? '');
         String? errorMessage = await _createNewUser(user);
         if (errorMessage == null) {
@@ -438,7 +461,8 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           firstName: firstName,
           userID: result.user?.uid ?? '',
           lastName: lastName,
-          countryCode: countryCode,
+          countryCode: _normalizeIso2(countryCode),
+          homeCountry: _normalizeIso2(countryCode),
           gender: gender,
           ageRange: ageRange,
           pushToken: await _resolvePushToken(),
@@ -583,8 +607,81 @@ class AuthFirebaseUtils extends AuthenticationRepository {
   }
 
   @override
-  resetPassword(String emailAddress) async => await auth.FirebaseAuth.instance
-      .sendPasswordResetEmail(email: emailAddress);
+  resetPassword(String emailAddress) async {
+    final email = emailAddress.trim();
+
+    try {
+      final result = await functions.httpsCallable('sendPasswordResetEmailButton').call({
+        'email': email,
+      });
+
+      final data = result.data;
+      final bool customEmailSent =
+          data is Map && data['customEmailSent'] == true;
+
+      if (!customEmailSent) {
+        debugPrint(
+          'sendPasswordResetEmailButton returned without custom email send; falling back to FirebaseAuth reset email.',
+        );
+        await _sendDefaultPasswordResetEmail(email);
+      }
+
+      return;
+    } on FirebaseFunctionsException catch (e, s) {
+      debugPrint(
+          'sendPasswordResetEmailButton FirebaseFunctionsException: code=${e.code}, message=${e.message}, details=${e.details} $s');
+
+      // If the custom callable is missing (not deployed) or temporarily not
+      // reachable, fallback to Firebase Auth reset email to keep the flow working.
+      if (e.code == 'not-found' ||
+          e.code == 'unimplemented' ||
+          e.code == 'unavailable' ||
+          e.code == 'deadline-exceeded') {
+        await _sendDefaultPasswordResetEmail(email);
+        return;
+      }
+
+      if (e.code == 'resource-exhausted' || e.code == 'too-many-requests') {
+        throw Exception(
+          'Too many reset attempts. Please wait a few minutes and try again.',
+        );
+      }
+
+      if (e.code == 'permission-denied') {
+        // Backend/App Check can block callable access in some client states.
+        // Fallback to direct Firebase Auth reset as a safe recovery path.
+        await _sendDefaultPasswordResetEmail(email);
+        return;
+      }
+
+      if ((e.message ?? '').isNotEmpty) {
+        throw Exception(e.message!);
+      }
+
+      throw Exception(
+        'Password reset email service is unavailable. Please try again shortly.',
+      );
+    } catch (e, s) {
+      debugPrint('sendPasswordResetEmailButton failed: $e $s');
+      await _sendDefaultPasswordResetEmail(email);
+    }
+  }
+
+  Future<void> _sendDefaultPasswordResetEmail(String email) async {
+    final settings = auth.ActionCodeSettings(
+      url: 'https://caribtap.com/reset-password',
+      handleCodeInApp: true,
+      iOSBundleId: 'com.caribtap.ios',
+      androidPackageName: 'com.caribtap.instaflutter.android',
+      androidInstallApp: true,
+      androidMinimumVersion: '1',
+    );
+
+    await auth.FirebaseAuth.instance.sendPasswordResetEmail(
+      email: email,
+      actionCodeSettings: settings,
+    );
+  }
 
   @override
   updatePhoneNumber(auth.PhoneAuthCredential credential) async =>
@@ -680,6 +777,8 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           active: true,
           pushToken: await _resolvePushToken(),
           phoneNumber: '',
+          countryCode: _inferredCountryCode(),
+          homeCountry: _inferredCountryCode(),
           settings: UserSettings());
       String? errorMessage = await _createNewUser(user);
       if (errorMessage == null) {
@@ -713,6 +812,8 @@ class AuthFirebaseUtils extends AuthenticationRepository {
           active: true,
           pushToken: await _resolvePushToken(),
           phoneNumber: '',
+          countryCode: _inferredCountryCode(),
+          homeCountry: _inferredCountryCode(),
           settings: UserSettings());
       String? errorMessage = await _createNewUser(user);
       if (errorMessage == null) {
@@ -727,13 +828,27 @@ class AuthFirebaseUtils extends AuthenticationRepository {
   /// returns an error message on failure or null on success
   Future<String?> _createNewUser(ListingsUser user) async {
     try {
+      final payload = user.toJson();
+      final normalizedHome = _normalizeIso2(payload['homeCountry']?.toString());
+      final normalizedCountry = _normalizeIso2(payload['countryCode']?.toString());
+
+      final resolvedHome = normalizedHome.isNotEmpty
+        ? normalizedHome
+        : normalizedCountry;
+      final resolvedCountry = normalizedCountry.isNotEmpty
+        ? normalizedCountry
+        : normalizedHome;
+
+      payload['homeCountry'] = resolvedHome;
+      payload['countryCode'] = resolvedCountry;
+
       debugPrint(
           '📝 _createNewUser: Attempting to save user ${user.userID} to Firestore...');
-      debugPrint('📝 User data to save: ${user.toJson()}');
+      debugPrint('📝 User data to save: $payload');
       await firestore
           .collection(usersCollection)
           .doc(user.userID)
-          .set(user.toJson());
+        .set(payload);
       debugPrint('✅ _createNewUser: User saved successfully to Firestore');
       return null;
     } on FirebaseException catch (e, s) {

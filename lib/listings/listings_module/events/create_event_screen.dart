@@ -1,14 +1,10 @@
 import 'dart:io';
-import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_google_places_hoc081098/flutter_google_places_hoc081098.dart';
 import 'package:flutter_google_places_hoc081098/google_maps_webservice_places.dart' as google_places;
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 import 'package:caribtap/constants.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
@@ -18,18 +14,19 @@ import 'package:caribtap/listings/model/event_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/services/entitlement_service.dart';
 import 'package:caribtap/listings/utils/caribbean_countries.dart';
-import 'package:caribtap/listings/utils/country_search_dialog.dart';
-import 'package:http/http.dart' as http;
+import 'package:geocoding/geocoding.dart' as geocoding;
 import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
 
 class CreateEventScreen extends StatefulWidget {
   final ListingsUser currentUser;
   final EventModel? eventToEdit;
+  final bool readOnly;
 
   const CreateEventScreen({
     super.key,
     required this.currentUser,
     this.eventToEdit,
+    this.readOnly = false,
   });
 
   @override
@@ -54,7 +51,6 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   DateTime? _endAt;
   String? _countryCode;
   google_places.PlaceDetails? _placeDetail;
-  google_places.Prediction? _prediction;
   File? _posterImage;
   String? _existingPosterUrl;
 
@@ -65,6 +61,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   bool _checkingEntitlement = true;
   bool _isSubscribed = false;
   bool _showValidationErrors = false;
+
+  bool get _isReadOnlyDemo =>
+      widget.readOnly ||
+      ((widget.eventToEdit?.isDemo ?? false) && !widget.currentUser.isAdmin);
 
   bool get _titleMissing => _titleController.text.trim().isEmpty;
   bool get _descriptionMissing => _descriptionController.text.trim().isEmpty;
@@ -91,9 +91,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       _endBeforeStart;
   }
 
-  String get _selectedCountryLabel {
-    final selected = CaribbeanCountries.byCode(_countryCode);
-    return selected?.name ?? '';
+  void _showReadOnlyDemoMessage() {
+    showSnackBar(context, 'Edits are not allowed on demo listings.'.tr());
   }
 
   InputDecoration _inputDecoration({
@@ -187,6 +186,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   }
 
   Future<void> _pickPoster() async {
+    if (_isReadOnlyDemo) {
+      _showReadOnlyDemoMessage();
+      return;
+    }
+
     final file = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 90);
     if (file == null) return;
 
@@ -196,12 +200,14 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   }
 
   Future<void> _pickLocation() async {
+    if (_isReadOnlyDemo) {
+      _showReadOnlyDemoMessage();
+      return;
+    }
+
     final key = placesApiKey;
     if (key.trim().isEmpty) {
-      showSnackBar(
-        context,
-        'Google Places API key is missing.'.tr(),
-      );
+      await _showManualLocationFallbackDialog();
       return;
     }
 
@@ -209,45 +215,127 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     final baseTheme = Theme.of(context);
     final suggestionIconColor = dark ? Colors.white : Color(cfg.colorPrimary);
 
-    final prediction = await Navigator.of(context).push<google_places.Prediction>(
-      MaterialPageRoute(
-        builder: (routeContext) => Theme(
-          data: Theme.of(routeContext).copyWith(
-            iconTheme: baseTheme.iconTheme.copyWith(
-              color: suggestionIconColor,
+    google_places.Prediction? prediction;
+    try {
+      prediction = await Navigator.of(context).push<google_places.Prediction>(
+        MaterialPageRoute(
+          builder: (routeContext) => Theme(
+            data: Theme.of(routeContext).copyWith(
+              iconTheme: baseTheme.iconTheme.copyWith(
+                color: suggestionIconColor,
+              ),
+              listTileTheme: baseTheme.listTileTheme.copyWith(
+                iconColor: suggestionIconColor,
+              ),
             ),
-            listTileTheme: baseTheme.listTileTheme.copyWith(
-              iconColor: suggestionIconColor,
-            ),
-          ),
-          child: PlacesAutocompleteWidget(
-            apiKey: key,
-            mode: Mode.fullscreen,
-            language: 'en',
-            resultTextStyle: TextStyle(
-              color: dark ? Colors.white : Colors.black87,
-              fontSize: 16,
+            child: PlacesAutocompleteWidget(
+              apiKey: key,
+              mode: Mode.fullscreen,
+              language: 'en',
+              resultTextStyle: TextStyle(
+                color: dark ? Colors.white : Colors.black87,
+                fontSize: 16,
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      debugPrint('[Places] Event location autocomplete failed: $e');
+      if (!mounted) return;
+      showSnackBar(
+        context,
+        'Autocomplete unavailable right now. Enter location manually.',
+      );
+      await _showManualLocationFallbackDialog();
+      return;
+    }
     if (prediction == null) return;
-
-    setState(() {
-      _prediction = prediction;
-    });
 
     final details = await listingApiManager.getPlaceDetails(prediction);
     if (!mounted) return;
+    final placeName = details?.name.trim();
 
     setState(() {
       _placeDetail = details;
-      if (_venueController.text.trim().isEmpty &&
-          (details?.name?.trim().isNotEmpty ?? false)) {
-        _venueController.text = details!.name!;
+      if (_venueController.text.trim().isEmpty && placeName?.isNotEmpty == true) {
+        _venueController.text = placeName!;
       }
     });
+  }
+
+  Future<void> _showManualLocationFallbackDialog() async {
+    final formattedAddress = _placeDetail?.formattedAddress?.trim();
+    final initialValue = (formattedAddress?.isNotEmpty ?? false)
+      ? formattedAddress!
+        : (widget.eventToEdit?.venueName.trim() ?? '');
+    final controller = TextEditingController(text: initialValue);
+
+    final submittedAddress = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('Enter location manually'.tr()),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: InputDecoration(
+              hintText: 'e.g. Bridgetown, Barbados'.tr(),
+            ),
+            onSubmitted: (value) => Navigator.of(dialogContext).pop(value.trim()),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text('Cancel'.tr()),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
+              child: Text('Use location'.tr()),
+            ),
+          ],
+        );
+      },
+    );
+
+    final placeText = submittedAddress?.trim() ?? '';
+    if (placeText.isEmpty) return;
+
+    geocoding.Location? resolved;
+    try {
+      final results = await geocoding.locationFromAddress(placeText);
+      if (results.isNotEmpty) {
+        resolved = results.first;
+      }
+    } catch (_) {}
+
+    final fallbackLat = widget.eventToEdit?.latitude ?? 0.0;
+    final fallbackLng = widget.eventToEdit?.longitude ?? 0.0;
+    final lat = resolved?.latitude ?? fallbackLat;
+    final lng = resolved?.longitude ?? fallbackLng;
+
+    if (!mounted) return;
+    setState(() {
+      _placeDetail = google_places.PlaceDetails(
+        placeId: 'manual_${lat.toStringAsFixed(6)}_${lng.toStringAsFixed(6)}',
+        name: _venueController.text.trim().isEmpty ? placeText : _venueController.text.trim(),
+        formattedAddress: placeText,
+        geometry: google_places.Geometry(
+          location: google_places.Location(lat: lat, lng: lng),
+        ),
+      );
+      if (_venueController.text.trim().isEmpty) {
+        _venueController.text = placeText;
+      }
+    });
+
+    if (resolved == null) {
+      showSnackBar(
+        context,
+        'Location saved without precise coordinates. You can refine it later.',
+      );
+    }
   }
 
   Future<void> _pickDateTime({required bool isStart}) async {
@@ -559,6 +647,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   }
 
   Future<void> _submit() async {
+    if (_isReadOnlyDemo) {
+      _showReadOnlyDemoMessage();
+      return;
+    }
+
     if (_checkingEntitlement) return;
     if (!_isSubscribed) {
       showSnackBar(context, 'You need an active subscription to post events.'.tr());
@@ -602,6 +695,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         committee: _committeeController.text.trim(),
         ticketTypes: _ticketTypes,
         committeeMembers: _committeeMembers,
+        isDemo: widget.eventToEdit?.isDemo ?? false,
       );
 
       await _eventsRepository.createEvent(event);
@@ -618,16 +712,40 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
+    final screenTitle = _isReadOnlyDemo
+        ? 'View Configuration'.tr()
+        : widget.eventToEdit == null
+            ? 'Create Event'.tr()
+            : 'Edit Event'.tr();
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.eventToEdit == null ? 'Create Event'.tr() : 'Edit Event'.tr())),
+      appBar: AppBar(title: Text(screenTitle)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (_isReadOnlyDemo) ...[
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Color(cfg.colorPrimary).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'This is a demo event. You can review how it is configured, but edits are not allowed.'.tr(),
+                  style: TextStyle(
+                    color: dark ? Colors.white70 : Colors.black87,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
             TextField(
               controller: _titleController,
+              readOnly: _isReadOnlyDemo,
               style: TextStyle(color: dark ? Colors.white : Colors.black87),
               decoration: _inputDecoration(
                 context: context,
@@ -640,6 +758,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: _committeeController,
+              readOnly: _isReadOnlyDemo,
               style: TextStyle(color: dark ? Colors.white : Colors.black87),
               decoration: _inputDecoration(
                 context: context,
@@ -652,6 +771,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             TextField(
               controller: _descriptionController,
               maxLines: 3,
+              readOnly: _isReadOnlyDemo,
               style: TextStyle(color: dark ? Colors.white : Colors.black87),
               decoration: _inputDecoration(
                 context: context,
@@ -664,6 +784,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: _venueController,
+              readOnly: _isReadOnlyDemo,
               style: TextStyle(color: dark ? Colors.white : Colors.black87),
               decoration: _inputDecoration(
                 context: context,
@@ -680,14 +801,14 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               leading: Icon(Icons.location_on, color: Color(cfg.colorPrimary)),
               title: Text(_placeDetail?.formattedAddress ?? widget.eventToEdit?.venueName ?? 'Select Location'.tr(),
                 style: TextStyle(color: dark ? Colors.white : Colors.black87, fontSize: 14)),
-              onTap: _pickLocation,
+              onTap: _isReadOnlyDemo ? _showReadOnlyDemoMessage : _pickLocation,
             ),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _pickDateTime(isStart: true),
+                    onPressed: _isReadOnlyDemo ? null : () => _pickDateTime(isStart: true),
                     icon: const Icon(Icons.event_available, size: 18),
                     label: Text(_startAt == null ? 'Start Date'.tr() : DateFormat('MMM d, h:mm a').format(_startAt!)),
                   ),
@@ -695,7 +816,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _pickDateTime(isStart: false),
+                    onPressed: _isReadOnlyDemo ? null : () => _pickDateTime(isStart: false),
                     icon: const Icon(Icons.event_busy, size: 18),
                     label: Text(_endAt == null ? 'End Date'.tr() : DateFormat('MMM d, h:mm a').format(_endAt!)),
                   ),
@@ -709,7 +830,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Add contact persons for the event.'.tr(), style: TextStyle(fontSize: 12, color: dark ? Colors.white54 : Colors.black54)),
-                TextButton.icon(onPressed: () => _showCommitteeMemberDialog(), icon: const Icon(Icons.person_add_alt_1), label: Text('Add'.tr())),
+                TextButton.icon(onPressed: _isReadOnlyDemo ? null : () => _showCommitteeMemberDialog(), icon: const Icon(Icons.person_add_alt_1), label: Text('Add'.tr())),
               ],
             ),
             ...List.generate(_committeeMembers.length, (index) {
@@ -721,11 +842,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: ListTile(
-                  onTap: () => _showCommitteeMemberDialog(member: m, index: index),
+                  onTap: _isReadOnlyDemo ? null : () => _showCommitteeMemberDialog(member: m, index: index),
                   leading: Icon(Icons.person, color: Color(cfg.colorPrimary)),
                   title: Text(m.name, style: TextStyle(color: dark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
                   subtitle: Text(m.contactNumber, style: TextStyle(color: dark ? Colors.white70 : Colors.black54)),
-                  trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => setState(() => _committeeMembers.removeAt(index))),
+                  trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: _isReadOnlyDemo ? null : () => setState(() => _committeeMembers.removeAt(index))),
                 ),
               );
             }),
@@ -734,18 +855,21 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: _ticketUrlController,
+              readOnly: _isReadOnlyDemo,
               style: TextStyle(color: dark ? Colors.white : Colors.black87),
               decoration: _inputDecoration(context: context, label: 'Ticket Link (Optional)'.tr(), hint: 'Ticket Link Hint'.tr(), icon: Icons.link),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _facebookController,
+              readOnly: _isReadOnlyDemo,
               style: TextStyle(color: dark ? Colors.white : Colors.black87),
               decoration: _inputDecoration(context: context, label: 'Facebook Page'.tr(), hint: 'Facebook Page Hint'.tr(), icon: Icons.facebook),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _instagramController,
+              readOnly: _isReadOnlyDemo,
               style: TextStyle(color: dark ? Colors.white : Colors.black87),
               decoration: _inputDecoration(context: context, label: 'Instagram Username'.tr(), hint: 'Instagram Username Hint'.tr(), icon: Icons.camera_alt),
             ),
@@ -754,7 +878,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Ticket Types'.tr(), style: TextStyle(fontWeight: FontWeight.bold, color: Color(cfg.colorPrimary))),
-                TextButton.icon(onPressed: () => _showTicketTypeDialog(), icon: const Icon(Icons.add), label: Text('Add'.tr())),
+                TextButton.icon(onPressed: _isReadOnlyDemo ? null : () => _showTicketTypeDialog(), icon: const Icon(Icons.add), label: Text('Add'.tr())),
               ],
             ),
             ...List.generate(_ticketTypes.length, (index) {
@@ -766,12 +890,12 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: ListTile(
-                  onTap: () => _showTicketTypeDialog(ticketType: t, index: index),
+                  onTap: _isReadOnlyDemo ? null : () => _showTicketTypeDialog(ticketType: t, index: index),
                   title: Text(t.name, style: TextStyle(color: dark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
                   subtitle: Text('\$${t.price}', style: TextStyle(color: dark ? Colors.white : Colors.black54)),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => setState(() => _ticketTypes.removeAt(index)),
+                    onPressed: _isReadOnlyDemo ? null : () => setState(() => _ticketTypes.removeAt(index)),
                   ),
                 ),
               );
@@ -797,18 +921,20 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               ),
               title: Text(_posterImage == null && _existingPosterUrl == null ? 'Upload Poster'.tr() : 'Poster Selected'.tr(),
                 style: TextStyle(color: dark ? Colors.white : Colors.black87)),
-              onTap: _pickPoster,
+              onTap: _isReadOnlyDemo ? _showReadOnlyDemoMessage : _pickPoster,
             ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _loading ? null : _submit,
-                style: ElevatedButton.styleFrom(backgroundColor: Color(cfg.colorPrimary)),
-                child: _loading ? const CircularProgressIndicator(color: Colors.white) : Text('Save Event'.tr(), style: const TextStyle(color: Colors.white)),
+            if (!_isReadOnlyDemo) ...[
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _loading ? null : _submit,
+                  style: ElevatedButton.styleFrom(backgroundColor: Color(cfg.colorPrimary)),
+                  child: _loading ? const CircularProgressIndicator(color: Colors.white) : Text('Save Event'.tr(), style: const TextStyle(color: Colors.white)),
+                ),
               ),
-            ),
+            ],
             // Added padding for system navigation buttons
             SizedBox(height: MediaQuery.of(context).padding.bottom + 20),
           ],

@@ -92,6 +92,7 @@ class QuoteService {
       currencySymbol: quote.currencySymbol,
       notes: quote.notes,
       terms: quote.terms,
+      poNumber: '',
       dueDate: null,
       createdAt: now,
       updatedAt: now,

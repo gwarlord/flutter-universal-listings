@@ -1,10 +1,27 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import sgMail from "@sendgrid/mail";
+import { sendgridKeySecret } from "./common/secrets";
 
 const db = admin.firestore();
 const messaging = admin.messaging();
 
-// Send push notification to user
+function getTokens(userData: any): string[] {
+  let tokens: string[] = [];
+  if (Array.isArray(userData?.fcmTokens)) {
+    tokens = userData.fcmTokens
+      .filter((t: any) => typeof t === "string" && t.trim().length > 0)
+      .map((t: string) => t.trim());
+  }
+  if (userData?.pushToken && typeof userData.pushToken === "string") {
+    const pushToken = userData.pushToken.trim();
+    if (pushToken && !tokens.includes(pushToken)) {
+      tokens.push(pushToken);
+    }
+  }
+  return Array.from(new Set(tokens));
+}
+
 async function sendPushNotification(
   userId: string,
   title: string,
@@ -13,33 +30,52 @@ async function sendPushNotification(
 ) {
   try {
     const userDoc = await db.collection("users").doc(userId).get();
-    const pushToken = userDoc.get("pushToken");
+    if (!userDoc.exists) return;
 
-    if (!pushToken) return;
+    const tokens = getTokens(userDoc.data());
+    if (tokens.length === 0) {
+      functions.logger.warn("POP: no FCM tokens found for user", { userId });
+      return;
+    }
 
-    await messaging.sendToDevice(pushToken, {
-      notification: { title, body },
-      data: data || {},
-    });
+    for (const token of tokens) {
+      try {
+        await messaging.send({
+          token,
+          notification: { title, body },
+          data: data || {},
+          android: { priority: "high", notification: { sound: "default", channelId: "bookings" } },
+          apns: { payload: { aps: { sound: "default", badge: 1 } } },
+        });
+      } catch (tokenError) {
+        functions.logger.warn("POP: push token send failed", {
+          userId,
+          tokenSuffix: token.slice(-8),
+          error: (tokenError as any)?.message || String(tokenError),
+        });
+      }
+    }
   } catch (error) {
-    console.error("Error sending push notification:", error);
+    functions.logger.error("POP: error sending push notification", { userId, error });
   }
 }
 
-// Send email notification
 async function sendEmail(to: string, subject: string, html: string) {
   try {
-    const sgMail = require("@sendgrid/mail");
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY || "");
-
+    const apiKey = sendgridKeySecret.value();
+    if (!apiKey) {
+      functions.logger.warn("POP: SendGrid key not set, skipping email", { to, subject });
+      return;
+    }
+    sgMail.setApiKey(apiKey);
     await sgMail.send({
       to,
-      from: "noreply@caribtap.com",
+      from: { email: "admin@caribtap.com", name: "CaribTap" },
       subject,
       html,
     });
   } catch (error) {
-    console.error("Error sending email:", error);
+    functions.logger.error("POP: error sending email", { to, error });
   }
 }
 
@@ -48,7 +84,7 @@ async function sendEmail(to: string, subject: string, html: string) {
  * Customer submits POP after uploading to Storage
  * Validates ownership and updates Firestore
  */
-export const submitProofOfPayment = functions.https.onCall(
+export const submitProofOfPayment = functions.runWith({ secrets: [sendgridKeySecret] }).https.onCall(
   async (data, context) => {
     // Verify authentication
     if (!context.auth) {
@@ -216,7 +252,7 @@ export const submitProofOfPayment = functions.https.onCall(
  * Callable Cloud Function: reviewProofOfPayment
  * Lister/staff reviews and verifies or rejects POP
  */
-export const reviewProofOfPayment = functions.https.onCall(
+export const reviewProofOfPayment = functions.runWith({ secrets: [sendgridKeySecret] }).https.onCall(
   async (data, context) => {
     // Verify authentication
     if (!context.auth) {
@@ -378,3 +414,125 @@ export const reviewProofOfPayment = functions.https.onCall(
     }
   }
 );
+
+/**
+ * Firestore trigger: fires when a booking document is updated.
+ * Detects new proof-of-payment uploads and notifies the lister.
+ */
+export const onProofOfPaymentUploaded = functions.runWith({ secrets: [sendgridKeySecret] }).firestore
+  .document("listings/{listingId}/bookings/{bookingId}")
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    if (!before || !after) return;
+
+    const beforeUploads: any[] = (before.proofOfPayment?.uploads) || [];
+    const afterUploads: any[] = (after.proofOfPayment?.uploads) || [];
+
+    // Only proceed if a new upload was added
+    if (afterUploads.length <= beforeUploads.length) return;
+
+    const listerUserId: string = after.listersUserId || "";
+    const listerEmail: string = after.listersEmail || "";
+    const customerName: string = after.customerName || "A customer";
+    const listingTitle: string = after.listingTitle || "your listing";
+    const orderId: string = after.id || context.params.bookingId;
+    const listingId: string = context.params.listingId;
+
+    // Push notification to lister
+    if (listerUserId) {
+      await sendPushNotification(
+        listerUserId,
+        "New Proof of Payment",
+        `${customerName} submitted proof of payment for Order #${orderId.slice(0, 8)}`,
+        {
+          orderId,
+          listingId,
+          type: "proof_of_payment_submitted",
+        }
+      );
+    }
+
+    // Email to lister
+    if (listerEmail) {
+      await sendEmail(
+        listerEmail,
+        `New Proof of Payment – Order #${orderId.slice(0, 8)}`,
+        `
+          <h3>New Proof of Payment Submitted</h3>
+          <p><strong>Order:</strong> #${orderId.slice(0, 8)}</p>
+          <p><strong>Customer:</strong> ${customerName}</p>
+          <p><strong>Listing:</strong> ${listingTitle}</p>
+          <p>Please log in to review this proof of payment.</p>
+          <br/>
+          <p>Best regards,<br/>CaribTap Team</p>
+        `
+      );
+    }
+  });
+
+/**
+ * Firestore trigger: fires when a booking document is updated.
+ * Detects when a lister verifies or rejects proof of payment and notifies the customer.
+ */
+export const onProofOfPaymentReviewed = functions.runWith({ secrets: [sendgridKeySecret] }).firestore
+  .document("listings/{listingId}/bookings/{bookingId}")
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    if (!before || !after) return;
+
+    const prevStatus: string = (before.proofOfPayment?.overallStatus || "").toUpperCase();
+    const nextStatus: string = (after.proofOfPayment?.overallStatus || "").toUpperCase();
+
+    // Only proceed when the review decision was just set (VERIFIED or REJECTED)
+    if (prevStatus === nextStatus) return;
+    if (!["VERIFIED", "REJECTED"].includes(nextStatus)) return;
+    // Don't fire on a fresh upload flipping from NONE → SUBMITTED (handled by onProofOfPaymentUploaded)
+    if (nextStatus === "SUBMITTED") return;
+
+    const customerId: string = after.customerId || "";
+    const customerEmail: string = after.customerEmail || "";
+    const listingTitle: string = after.listingTitle || "your listing";
+    const orderId: string = after.id || context.params.bookingId;
+    const listingId: string = context.params.listingId;
+
+    const latestUpload = (after.proofOfPayment?.uploads || []).slice(-1)[0] || {};
+    const reviewNote: string = latestUpload.reviewerNote || "";
+
+    const decisionLabel = nextStatus === "VERIFIED" ? "Verified ✓" : "Rejected ✗";
+    const decisionColor = nextStatus === "VERIFIED" ? "#4CAF50" : "#F44336";
+    const decisionLower = nextStatus === "VERIFIED" ? "verified" : "rejected";
+
+    // Push notification to customer
+    if (customerId) {
+      await sendPushNotification(
+        customerId,
+        `Proof of Payment ${decisionLabel}`,
+        `Your proof of payment for Order #${orderId.slice(0, 8)} has been ${decisionLower}`,
+        {
+          orderId,
+          listingId,
+          type: "proof_of_payment_reviewed",
+          decision: nextStatus,
+        }
+      );
+    }
+
+    // Email to customer
+    if (customerEmail) {
+      await sendEmail(
+        customerEmail,
+        `Proof of Payment ${nextStatus} – Order #${orderId.slice(0, 8)}`,
+        `
+          <h3>Your Proof of Payment Has Been ${nextStatus}</h3>
+          <p><strong>Order:</strong> #${orderId.slice(0, 8)}</p>
+          <p><strong>Listing:</strong> ${listingTitle}</p>
+          <p><strong>Status:</strong> <span style="color: ${decisionColor}; font-weight: bold;">${decisionLabel}</span></p>
+          ${reviewNote ? `<p><strong>Message from host:</strong> ${reviewNote}</p>` : ""}
+          <br/>
+          <p>Best regards,<br/>CaribTap Team</p>
+        `
+      );
+    }
+  });

@@ -13,6 +13,7 @@ import 'package:caribtap/core/utils/helper.dart';
 import 'package:caribtap/listings/listings_app_config.dart' as cfg;
 import 'package:caribtap/listings/listings_module/add_listing/add_listing_screen.dart';
 import 'package:caribtap/listings/listings_module/api/listings_api_manager.dart';
+import 'package:caribtap/listings/listings_module/categories/categories_screen.dart';
 import 'package:caribtap/listings/listings_module/category_listings/category_listings_screen.dart';
 import 'package:caribtap/listings/listings_module/events/create_event_screen.dart';
 import 'package:caribtap/listings/listings_module/events/event_details_screen.dart';
@@ -246,11 +247,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class HomeScreenState extends State<HomeScreen> {
+  static const int _homeCategoryRailLimit = 8;
+
   List<ListingModel> listings = [];
   List<FeedItem?> listingsWithAds = [];
   List<CategoriesModel> _categories = [];
   List<ListingModel> _featuredListings = [];
   List<DealAdModel> _dealAds = [];
+  StreamSubscription<List<DealAdModel>>? _dealsSubscription;
 
   bool _showAll = false;
   bool loadingCategories = true;
@@ -376,7 +380,10 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadDeals() async {
-    DealAdService().getApprovedAds().listen((ads) {
+    // Cancel any existing subscription before opening a new one to prevent
+    // multiple dangling Firestore listeners accumulating on each pull-to-refresh.
+    await _dealsSubscription?.cancel();
+    _dealsSubscription = DealAdService().getApprovedAds().listen((ads) {
       if (mounted) {
         setState(() {
           // Prioritize ads based on user country and visibility settings
@@ -423,6 +430,7 @@ class HomeScreenState extends State<HomeScreen> {
     _categoryCycleTimer?.cancel();
     _dealsCycleTimer?.cancel();
     _featuredCycleTimer?.cancel();
+    _dealsSubscription?.cancel();
     super.dispose();
   }
 
@@ -997,14 +1005,33 @@ class HomeScreenState extends State<HomeScreen> {
                                     child: ListView.builder(
                                       controller: _categoryScrollController,
                                       scrollDirection: Axis.horizontal,
-                                      itemCount: _categories.length,
+                                      itemCount: _categories.length >
+                                              _homeCategoryRailLimit
+                                          ? _homeCategoryRailLimit + 1
+                                          : _categories.length,
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 16.0),
-                                      itemBuilder: (context, index) =>
-                                          CategoryHomeCardWidget(
-                                        currentUser: currentUser,
-                                        category: _categories[index],
-                                      ),
+                                      itemBuilder: (context, index) {
+                                        final hasMore =
+                                            _categories.length > _homeCategoryRailLimit;
+
+                                        if (hasMore &&
+                                            index == _homeCategoryRailLimit) {
+                                          return CategoryMoreCardWidget(
+                                            onTap: () => push(
+                                              context,
+                                              CategoriesWrapperWidget(
+                                                currentUser: currentUser,
+                                              ),
+                                            ),
+                                          );
+                                        }
+
+                                        return CategoryHomeCardWidget(
+                                          currentUser: currentUser,
+                                          category: _categories[index],
+                                        );
+                                      },
                                     ),
                                   ),
                               ],
@@ -2155,6 +2182,73 @@ class CategoryHomeCardWidget extends StatelessWidget {
   }
 }
 
+class CategoryMoreCardWidget extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const CategoryMoreCardWidget({
+    super.key,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool dark = isDarkMode(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final iconSize = screenWidth >= 1200 ? 82.0 : 70.0;
+    final labelWidth = screenWidth >= 1200 ? 92.0 : 80.0;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: iconSize,
+              height: iconSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: dark ? Colors.grey[900] : Colors.white,
+                border: Border.all(
+                  color: Color(cfg.colorPrimary).withOpacity(0.35),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.grid_view_rounded,
+                color: Color(cfg.colorPrimary),
+                size: 28,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: labelWidth,
+              child: Text(
+                'More'.tr(),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: dark ? Colors.white70 : Colors.black87,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class ListingHomeCardWidget extends StatefulWidget {
   final ListingModel? listing;
   final ListingsUser currentUser;
@@ -2213,18 +2307,22 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
           ? () => _showAdminOptions(listing, context)
           : null,
       onTap: () async {
-        final bool? isListingDeleted = await push(
+        final result = await push(
           context,
           ListingDetailsWrappingWidget(
             listing: listing,
             currentUser: widget.currentUser,
           ),
         );
-        if (isListingDeleted == true && mounted) {
+        if (!mounted) return;
+        if (result == true) {
           context
               .read<HomeBloc>()
               .add(ListingDeletedByUserEvent(listing: listing));
         }
+        // Always refresh on return so edits (location/map fields included)
+        // are reflected immediately on Home cards and map views.
+        context.read<HomeBloc>().add(GetListingsEvent());
       },
       child: Container(
         decoration: BoxDecoration(
@@ -2370,13 +2468,17 @@ class _ListingHomeCardWidgetState extends State<ListingHomeCardWidget> {
               isDestructiveAction: false,
               onPressed: () async {
                 Navigator.pop(context);
-                await push(
+                final updated = await push(
                   context,
                   EditListingWrappingWidget(
                     currentUser: widget.currentUser,
                     listingToEdit: listing,
                   ),
                 );
+                if (!mounted) return;
+                if (updated is ListingModel || updated == true) {
+                  blocContext.read<HomeBloc>().add(GetListingsEvent());
+                }
               },
               child: Text('Edit Listing'.tr()),
             ),

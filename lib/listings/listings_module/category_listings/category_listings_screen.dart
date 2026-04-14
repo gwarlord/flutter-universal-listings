@@ -14,6 +14,7 @@ import 'package:caribtap/listings/model/listing_model.dart';
 import 'package:caribtap/listings/model/listings_user.dart';
 import 'package:caribtap/listings/model/feed_item.dart';
 import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
+import 'package:caribtap/listings/currency/currency_display_service.dart';
 
 class CategoryListingsWrapperWidget extends StatelessWidget {
   final String categoryID;
@@ -211,6 +212,35 @@ class ListingRowWidget extends StatefulWidget {
 }
 
 class _ListingRowWidgetState extends State<ListingRowWidget> {
+  final CurrencyDisplayService _currencyDisplayService = CurrencyDisplayService();
+  late Future<CurrencyDisplayResult> _priceDisplayFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _priceDisplayFuture = _currencyDisplayService.buildDisplayResult(
+      rawAmount: widget.listing.price,
+      originalCurrencyCode: widget.listing.currencyCode,
+      preferenceValue: widget.currentUser.settings.displayCurrencyPreference,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant ListingRowWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.listing.id != widget.listing.id ||
+        oldWidget.listing.price != widget.listing.price ||
+        oldWidget.listing.currencyCode != widget.listing.currencyCode ||
+        oldWidget.currentUser.settings.displayCurrencyPreference !=
+            widget.currentUser.settings.displayCurrencyPreference) {
+      _priceDisplayFuture = _currencyDisplayService.buildDisplayResult(
+        rawAmount: widget.listing.price,
+        originalCurrencyCode: widget.listing.currencyCode,
+        preferenceValue: widget.currentUser.settings.displayCurrencyPreference,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool dark = isDarkMode(context);
@@ -274,13 +304,34 @@ class _ListingRowWidgetState extends State<ListingRowWidget> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        widget.listing.price,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(colorPrimary),
-                        ),
+                      FutureBuilder<CurrencyDisplayResult>(
+                        future: _priceDisplayFuture,
+                        builder: (context, snapshot) {
+                          final display = snapshot.data;
+                          final original = display?.originalFormatted ?? widget.listing.price;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                original,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(colorPrimary),
+                                ),
+                              ),
+                              if (display?.approximateFormatted != null)
+                                Text(
+                                  display!.approximateFormatted!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: dark ? Colors.grey[400] : Colors.grey[600],
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),

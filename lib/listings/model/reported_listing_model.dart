@@ -10,6 +10,9 @@ class ReportedListing {
   final String reason;
   final Timestamp createdAt;
   final String status;
+  final String reportType;
+  final String? orderId;
+  final String? orderStatus;
 
   ReportedListing({
     required this.id,
@@ -21,7 +24,12 @@ class ReportedListing {
     required this.reason,
     required this.createdAt,
     this.status = 'pending',
+    this.reportType = 'listing',
+    this.orderId,
+    this.orderStatus,
   });
+
+  bool get isOrderFulfillmentIssue => reportType == 'order_fulfillment_issue';
 
   factory ReportedListing.fromSnapshot(DocumentSnapshot snapshot) {
     final data = snapshot.data() as Map<String, dynamic>;
@@ -35,6 +43,9 @@ class ReportedListing {
       reason: data['reason'] ?? '',
       createdAt: data['createdAt'] ?? Timestamp.now(),
       status: data['status'] ?? 'pending',
+      reportType: data['reportType'] ?? 'listing',
+      orderId: data['orderId'] as String?,
+      orderStatus: data['orderStatus'] as String?,
     );
   }
 }

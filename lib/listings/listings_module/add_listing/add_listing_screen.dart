@@ -260,6 +260,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   // ✅ Service Menu State
   final List<ServiceItem> _services = [];
+  int? _editingServiceOriginalIndex;
+  ServiceItem? _editingServiceOriginalValue;
   final List<String> _searchKeywords = [];
 
   List<CategoriesModel> _categories = [];
@@ -444,7 +446,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   // Payments settings
   bool _acceptProofOfPayment = false;
 
-  // Rentals (Premium Feature)
+  // Rentals (Professional Feature)
   RentalConfig? _rentalConfig;
 
   String _localizedCategoryName(String value) {
@@ -926,6 +928,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
           _buildBookingSubset(
             dark: dark,
             children: [
+              if (isPaidUser(currentUser))
+                _buildProofOfPaymentToggleTile(
+                  dark: dark,
+                  subtitle:
+                      'Require customers to provide proof of payment (photo/receipt) for bookings and rentals.'
+                          .tr(),
+                ),
               _buildBookingToggleTile(
                 dark: dark,
                 value: _allowQuantitySelection,
@@ -1101,6 +1110,35 @@ class _AddListingScreenState extends State<AddListingScreen> {
     );
   }
 
+  Widget _buildProofOfPaymentToggleTile({
+    required bool dark,
+    required String subtitle,
+  }) {
+    return SwitchListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+      value: _acceptProofOfPayment,
+      onChanged: (value) => setState(() => _acceptProofOfPayment = value),
+      title: Text(
+        'Accept Proof of Payment'.tr(),
+        style: TextStyle(
+          color: dark ? Colors.white : Colors.black,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          fontSize: 12,
+          color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+        ),
+      ),
+      activeColor: Color(colorPrimary),
+      activeTrackColor: Color(colorPrimary).withOpacity(0.5),
+      inactiveThumbColor: dark ? Colors.grey.shade600 : Colors.grey.shade400,
+      inactiveTrackColor: dark ? Colors.grey.shade800 : Colors.grey.shade300,
+    );
+  }
+
   Widget _buildBookingSubset({
     required bool dark,
     required List<Widget> children,
@@ -1141,6 +1179,26 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
 
   // ✅ Service Menu Widget (available to all tiers)
+  void _restorePendingServiceEditIfAny() {
+    if (_editingServiceOriginalIndex == null ||
+        _editingServiceOriginalValue == null) {
+      return;
+    }
+
+    final insertIndex = _editingServiceOriginalIndex!.clamp(0, _services.length);
+    _services.insert(insertIndex, _editingServiceOriginalValue!);
+    _editingServiceOriginalIndex = null;
+    _editingServiceOriginalValue = null;
+  }
+
+  void _clearServiceDraftInputs() {
+    _serviceNameController.clear();
+    _serviceDescriptionController.clear();
+    _servicePriceController.clear();
+    _serviceDurationController.clear();
+    _serviceQuantityController.text = '1';
+  }
+
   Widget _buildServiceMenuEditor(bool dark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1200,15 +1258,36 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       IconButton(
                         icon: const Icon(Icons.edit, color: Colors.blue),
                         onPressed: () async {
-                          _serviceNameController.text = s.name;
-                          _serviceDescriptionController.text = s.description;
+                          _restorePendingServiceEditIfAny();
+                          final editIndex = _services.indexOf(s);
+                          final safeIndex = editIndex >= 0
+                            ? editIndex
+                            : index.clamp(0, _services.length - 1);
+                          final serviceToEdit = _services[safeIndex];
+                          _serviceNameController.text = serviceToEdit.name;
+                          _serviceDescriptionController.text =
+                              serviceToEdit.description;
                           _servicePriceController.text =
-                              s.price != 0.0 ? s.price.toString() : '';
-                          _serviceDurationController.text = s.duration;
+                              serviceToEdit.price != 0.0
+                                  ? serviceToEdit.price.toString()
+                                  : '';
+                          _serviceDurationController.text =
+                              serviceToEdit.duration;
                           _serviceQuantityController.text =
-                              (s.quantity > 0 ? s.quantity : 1).toString();
+                              (serviceToEdit.quantity > 0
+                                      ? serviceToEdit.quantity
+                                      : 1)
+                                  .toString();
                           setState(() {
-                            _services.removeAt(index);
+                            _editingServiceOriginalIndex = safeIndex;
+                            _editingServiceOriginalValue = ServiceItem(
+                              name: serviceToEdit.name,
+                              description: serviceToEdit.description,
+                              price: serviceToEdit.price,
+                              duration: serviceToEdit.duration,
+                              quantity: serviceToEdit.quantity,
+                            );
+                            _services.removeAt(safeIndex);
                           });
                         },
                       ),
@@ -1295,7 +1374,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   onPressed: () {
                     if (_serviceNameController.text.isEmpty) return;
                     setState(() {
-                      _services.add(ServiceItem(
+                      final serviceDraft = ServiceItem(
                         name: _serviceNameController.text.trim(),
                         description: _serviceDescriptionController.text.trim(),
                         price: double.tryParse(
@@ -1305,12 +1384,19 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         quantity: _allowQuantitySelection
                             ? _parseServiceQuantity()
                             : 1,
-                      ));
-                      _serviceNameController.clear();
-                      _serviceDescriptionController.clear();
-                      _servicePriceController.clear();
-                      _serviceDurationController.clear();
-                      _serviceQuantityController.text = '1';
+                      );
+
+                      if (_editingServiceOriginalIndex != null) {
+                        final insertIndex =
+                            _editingServiceOriginalIndex!.clamp(0, _services.length);
+                        _services.insert(insertIndex, serviceDraft);
+                      } else {
+                        _services.add(serviceDraft);
+                      }
+
+                      _editingServiceOriginalIndex = null;
+                      _editingServiceOriginalValue = null;
+                      _clearServiceDraftInputs();
                     });
                   },
                   icon: const Icon(Icons.add),
@@ -2203,13 +2289,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text('Enter location manually'),
+          title: Text('Enter location manually'.tr()),
           content: TextField(
             controller: controller,
             autofocus: true,
             textCapitalization: TextCapitalization.words,
             decoration: InputDecoration(
-              hintText: 'e.g. Bridgetown, Barbados',
+              hintText: 'e.g. Bridgetown, Barbados'.tr(),
             ),
             onSubmitted: (value) => Navigator.of(dialogContext).pop(value.trim()),
           ),
@@ -2220,7 +2306,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
-              child: Text('Use location'),
+              child: Text('Use location'.tr()),
             ),
           ],
         );
@@ -3450,7 +3536,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           style: TextStyle(fontWeight: FontWeight.w500),
                         ),
                         subtitle: Text(
-                          'Require customers to provide proof of payment (photo/receipt) for orders'
+                          'Require customers to provide proof of payment (photo/receipt) for orders, bookings, and rentals'
                               .tr(),
                           style: TextStyle(fontSize: 12),
                         ),
@@ -3467,8 +3553,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
               ),
               const SizedBox(height: 8),
 
-              // Rentals section (Premium-gated)
-              if (isPremiumUser(currentUser))
+              // Rentals section (Professional-gated)
+              if (isProfessionalUser(currentUser))
                 _buildCollapsibleSection(
                   title: 'Rentals'.tr(),
                   isExpanded: _rentalsExpanded,
@@ -3511,6 +3597,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       inactiveThumbColor:
                           dark ? Colors.grey.shade600 : Colors.grey.shade400,
                     ),
+                      if ((_rentalConfig?.isRentalEnabled ?? false) &&
+                        isPaidUser(currentUser))
+                        _buildProofOfPaymentToggleTile(
+                        dark: dark,
+                        subtitle:
+                          'Require customers to upload proof of payment for confirmed rentals.'
+                            .tr(),
+                        ),
                     // Rental Management buttons (only when editing and rentals are enabled)
                     if (isEdit &&
                         (_rentalConfig?.isRentalEnabled ?? false)) ...[
@@ -3539,7 +3633,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     ],
                   ],
                 ),
-              if (isPremiumUser(currentUser)) const SizedBox(height: 8),
+              if (isProfessionalUser(currentUser)) const SizedBox(height: 8),
 
               // Services section (always available)
               _buildCollapsibleSection(
@@ -3913,7 +4007,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
             return AlertDialog(
               backgroundColor: dark ? Colors.grey.shade900 : Colors.white,
               title: Text(
-                'Add Time Block',
+                'Add Time Block'.tr(),
                 style: TextStyle(color: dark ? Colors.white : Colors.black),
               ),
               content: Column(
@@ -3925,7 +4019,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         child: DropdownButtonFormField<int>(
                           value: startHour,
                           decoration: InputDecoration(
-                            labelText: 'Start Hour',
+                            labelText: 'Start Hour'.tr(),
                             labelStyle: TextStyle(
                                 color: dark
                                     ? Colors.grey.shade400
@@ -3955,7 +4049,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         child: DropdownButtonFormField<int>(
                           value: endHour,
                           decoration: InputDecoration(
-                            labelText: 'End Hour',
+                            labelText: 'End Hour'.tr(),
                             labelStyle: TextStyle(
                                 color: dark
                                     ? Colors.grey.shade400
@@ -3994,7 +4088,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel'),
+                  child: Text('Cancel'.tr()),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(
@@ -4003,7 +4097,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     backgroundColor: Color(colorPrimary),
                     foregroundColor: Colors.white,
                   ),
-                  child: Text('Add'),
+                  child: Text('Add'.tr()),
                 ),
               ],
             );
@@ -4066,7 +4160,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
               labelText: 'Question'.tr(),
               labelStyle:
                   TextStyle(color: dark ? Colors.grey[300] : Colors.grey[700]),
-              hintText: 'e.g., Do you have any allergies?',
+              hintText: 'e.g., Do you have any allergies?'.tr(),
               hintStyle:
                   TextStyle(color: dark ? Colors.grey[500] : Colors.grey[400]),
               border: OutlineInputBorder(),
@@ -4950,7 +5044,7 @@ class _AIDescriptionSheetState extends State<_AIDescriptionSheet> {
                                   const SizedBox(height: 24),
                                   ElevatedButton.icon(
                                     icon: const Icon(Icons.refresh),
-                                    label: const Text('Try Again'),
+                                    label: Text('Try Again'.tr()),
                                     onPressed: _generateDescription,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Color(colorPrimary),
@@ -4997,7 +5091,7 @@ class _AIDescriptionSheetState extends State<_AIDescriptionSheet> {
                                     Expanded(
                                       child: OutlinedButton.icon(
                                         icon: const Icon(Icons.refresh),
-                                        label: const Text('Regenerate'),
+                                        label: Text('Regenerate'.tr()),
                                         onPressed: _generateDescription,
                                         style: OutlinedButton.styleFrom(
                                           foregroundColor: Color(colorPrimary),
@@ -5011,7 +5105,7 @@ class _AIDescriptionSheetState extends State<_AIDescriptionSheet> {
                                       flex: 2,
                                       child: ElevatedButton.icon(
                                         icon: const Icon(Icons.check),
-                                        label: const Text('Use This'),
+                                        label: Text('Use This'.tr()),
                                         onPressed: () {
                                           widget.onAccept(_generatedText ?? '');
                                           Navigator.pop(context);

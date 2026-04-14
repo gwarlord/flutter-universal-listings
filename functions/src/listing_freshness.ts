@@ -13,6 +13,22 @@ const messaging = admin.messaging();
 
 const EMAIL_FROM = { email: "admin@caribtap.com", name: "CaribTap" };
 
+function getTokens(userData: any): string[] {
+  let tokens: string[] = [];
+  if (Array.isArray(userData?.fcmTokens)) {
+    tokens = userData.fcmTokens
+      .filter((t: any) => typeof t === "string" && t.trim().length > 0)
+      .map((t: string) => t.trim());
+  }
+  if (userData?.pushToken && typeof userData.pushToken === "string") {
+    const pushToken = userData.pushToken.trim();
+    if (pushToken && !tokens.includes(pushToken)) {
+      tokens.push(pushToken);
+    }
+  }
+  return Array.from(new Set(tokens));
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEV_MODE =
   process.env.NODE_ENV === "development" ||
@@ -23,7 +39,7 @@ const WARN_10D_OFFSET_MS = DEV_MODE ? 10 * 60 * 1000 : 10 * DAY_MS;
 const WARN_1D_OFFSET_MS = DEV_MODE ? 1 * 60 * 1000 : 1 * DAY_MS;
 const WARNING_WINDOW_MS = DEV_MODE ? 5 * 60 * 1000 : 12 * 60 * 60 * 1000;
 
-export const processListingFreshness = functions.pubsub
+export const processListingFreshness = functions.runWith({ secrets: [sendgridKeySecret, appUrlSecret] }).pubsub
   .schedule("every 6 hours")
   .onRun(async () => {
     const now = new Date();
@@ -445,7 +461,7 @@ async function sendFreshnessNotification(params: {
 
   const user = userSnap.data() || {};
   const email = user.email;
-  const pushToken = user.pushToken;
+  const tokens = getTokens(user);
   const allowPush = user.settings?.allowPushNotifications !== false;
 
   const hideAtFormatted = formatDateForTimezone(
@@ -486,7 +502,7 @@ async function sendFreshnessNotification(params: {
     }
   }
 
-  if (pushToken && allowPush) {
+  if (tokens.length > 0 && allowPush) {
     try {
       const push = buildPushPayload({
         listingTitle: params.listingTitle,
@@ -494,18 +510,20 @@ async function sendFreshnessNotification(params: {
         daysRemaining: params.daysRemaining,
       });
 
-      await messaging.send({
-        token: pushToken,
-        notification: {
-          title: push.title,
-          body: push.body,
-        },
-        data: {
-          type: "listing_freshness",
-          listingId: params.listingId,
-          action: "RESET",
-        },
-      });
+      for (const token of tokens) {
+        await messaging.send({
+          token,
+          notification: {
+            title: push.title,
+            body: push.body,
+          },
+          data: {
+            type: "listing_freshness",
+            listingId: params.listingId,
+            action: "RESET",
+          },
+        });
+      }
       pushSent = true;
     } catch (error) {
       functions.logger.error("Error sending listing freshness push", {
@@ -680,7 +698,7 @@ function getFreshnessForCategory(
 }
 
 // Activity-based auto-refresh
-export const processActivityAutoRefresh = functions.pubsub
+export const processActivityAutoRefresh = functions.runWith({ secrets: [sendgridKeySecret, appUrlSecret] }).pubsub
   .schedule("every 12 hours")
   .onRun(async () => {
     const now = new Date();
@@ -833,28 +851,30 @@ async function sendAutoRefreshNotification(listing: any, activityScore: any) {
 
   const user = userSnap.data() || {};
   const email = user.email;
-  const pushToken = user.pushToken;
+  const tokens = getTokens(user);
   const allowPush = user.settings?.allowPushNotifications !== false;
 
   const message = `Great news! Your listing "${listing.title}" was automatically refreshed for another ${listing.freshness?.days || 90} days due to strong customer engagement!`;
 
   // Send push notification
-  if (pushToken && allowPush) {
-    try {
-      await messaging.send({
-        token: pushToken,
-        notification: {
-          title: "🎉 Listing Auto-Refreshed!",
-          body: message,
-        },
-        data: {
-          type: "listing_auto_refresh",
-          listingId: listing.id,
-          activityScore: activityScore.score30Days.toString(),
-        },
-      });
-    } catch (error) {
-      functions.logger.error("Error sending auto-refresh push", { error });
+  if (tokens.length > 0 && allowPush) {
+    for (const token of tokens) {
+      try {
+        await messaging.send({
+          token,
+          notification: {
+            title: "🎉 Listing Auto-Refreshed!",
+            body: message,
+          },
+          data: {
+            type: "listing_auto_refresh",
+            listingId: listing.id,
+            activityScore: activityScore.score30Days.toString(),
+          },
+        });
+      } catch (error) {
+        functions.logger.error("Error sending auto-refresh push", { error });
+      }
     }
   }
 

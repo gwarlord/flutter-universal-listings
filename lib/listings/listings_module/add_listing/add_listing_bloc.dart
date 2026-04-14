@@ -536,7 +536,7 @@ class AddListingBloc extends Bloc<AddListingEvent, AddListingState> {
           'countryCode': (event.listingModel.countryCode).toUpperCase(),
           'verified': event.listingModel.verified,
           'hidden': event.listingModel.hidden,
-          // Premium Rentals (Premium+ only)
+          // Rentals (Professional+)
           'rentalConfig': event.listingModel.rentalConfig?.toJson(),
         };
 

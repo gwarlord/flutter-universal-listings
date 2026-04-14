@@ -17,6 +17,7 @@ import 'package:caribtap/listings/api/firebase/table_mode_firebase.dart';
 import 'package:caribtap/listings/model/table_mode_models.dart';
 import 'package:caribtap/listings/ui/phone_verification/booking_phone_gate.dart';
 import 'package:caribtap/listings/ui/table_mode/qr_scanner_screen.dart';
+import 'package:caribtap/listings/currency/currency_display_service.dart';
 
 /// Cart screen for reviewing and submitting orders
 class CartScreen extends StatefulWidget {
@@ -40,6 +41,7 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   final StoreService _storeService = StoreService();
   final OrderChatHelper _chatHelper = OrderChatHelper();
+  final CurrencyDisplayService _currencyDisplayService = CurrencyDisplayService();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _shippingInstructionsController = TextEditingController();
@@ -475,13 +477,13 @@ class _CartScreenState extends State<CartScreen> {
                       ),
                     ),
                   const SizedBox(height: 4),
-                  Text(
-                    _formatCurrency(item.unitPrice, item.currencyCode),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(colorPrimary),
-                      fontWeight: FontWeight.w600,
-                    ),
+                  _buildPriceWithApprox(
+                    amount: item.unitPrice,
+                    currencyCode: item.currencyCode,
+                    dark: dark,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    textColor: Color(colorPrimary),
                   ),
                 ],
               ),
@@ -565,13 +567,13 @@ class _CartScreenState extends State<CartScreen> {
                 color: dark ? Colors.white70 : Colors.black54,
               ),
             ),
-            Text(
-              _formatCurrency(_subtotal, currencyCode),
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: dark ? Colors.white70 : Colors.black54,
-              ),
+            _buildPriceWithApprox(
+              amount: _subtotal,
+              currencyCode: currencyCode,
+              dark: dark,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              textColor: dark ? Colors.white70 : const Color(0xFF000000),
             ),
           ],
         ),
@@ -588,13 +590,13 @@ class _CartScreenState extends State<CartScreen> {
                   color: dark ? Colors.white70 : Colors.black54,
                 ),
               ),
-              Text(
-                _formatCurrency(_shippingCost, currencyCode),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Color(colorPrimary),
-                ),
+              _buildPriceWithApprox(
+                amount: _shippingCost,
+                currencyCode: currencyCode,
+                dark: dark,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                textColor: Color(colorPrimary),
               ),
             ],
           ),
@@ -612,13 +614,13 @@ class _CartScreenState extends State<CartScreen> {
                   color: dark ? Colors.white70 : Colors.black54,
                 ),
               ),
-              Text(
-                _formatCurrency(_deliveryCost, currencyCode),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Color(colorPrimary),
-                ),
+              _buildPriceWithApprox(
+                amount: _deliveryCost,
+                currencyCode: currencyCode,
+                dark: dark,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                textColor: Color(colorPrimary),
               ),
             ],
           ),
@@ -639,13 +641,13 @@ class _CartScreenState extends State<CartScreen> {
                 color: dark ? Colors.white : Colors.black,
               ),
             ),
-            Text(
-              _formatCurrency(_total, currencyCode),
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(colorPrimary),
-              ),
+            _buildPriceWithApprox(
+              amount: _total,
+              currencyCode: currencyCode,
+              dark: dark,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              textColor: Color(colorPrimary),
             ),
           ],
         ),
@@ -655,7 +657,50 @@ class _CartScreenState extends State<CartScreen> {
 
   String _formatCurrency(double amount, String currencyCode) {
     final symbol = _getCurrencySymbol(currencyCode);
-    return '${currencyCode.toUpperCase()} $symbol${amount.toStringAsFixed(2)}';
+    return '${currencyCode.toUpperCase()} $symbol${NumberFormat('#,##0.00').format(amount)}';
+  }
+
+  Widget _buildPriceWithApprox({
+    required double amount,
+    required String currencyCode,
+    required bool dark,
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? textColor,
+  }) {
+    return FutureBuilder<CurrencyDisplayResult>(
+      future: _currencyDisplayService.buildDisplayResult(
+        rawAmount: amount.toStringAsFixed(2),
+        originalCurrencyCode: currencyCode,
+        preferenceValue:
+            widget.currentUser?.settings.displayCurrencyPreference,
+      ),
+      builder: (context, snapshot) {
+        final display = snapshot.data;
+        final original = _formatCurrency(amount, currencyCode);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              original,
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: fontWeight,
+                color: textColor ?? (dark ? Colors.white70 : Colors.black54),
+              ),
+            ),
+            if (display?.approximateFormatted != null)
+              Text(
+                display!.approximateFormatted!,
+                style: TextStyle(
+                  fontSize: (fontSize ?? 14) - 2,
+                  color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+              ),
+          ],
+        );
+      },
+    );
   }
 
   String _getCurrencySymbol(String code) {
@@ -940,14 +985,16 @@ class _CartScreenState extends State<CartScreen> {
     );
     if (!allowed || !mounted) return;
 
+    final address = _addressController.text.trim();
+
     // Validate delivery address
-    if (_fulfillmentMethod == FulfillmentMethod.delivery && _addressController.text.trim().isEmpty) {
+    if (_fulfillmentMethod == FulfillmentMethod.delivery && address.isEmpty) {
       showSnackBar(context, 'Please enter delivery address'.tr());
       return;
     }
 
     // Validate shipping address
-    if (_fulfillmentMethod == FulfillmentMethod.shipping && _addressController.text.trim().isEmpty) {
+    if (_fulfillmentMethod == FulfillmentMethod.shipping && address.isEmpty) {
       showSnackBar(context, 'Please enter shipping address'.tr());
       return;
     }
@@ -979,7 +1026,10 @@ class _CartScreenState extends State<CartScreen> {
       // Create fulfillment info
       final fulfillment = FulfillmentInfo(
         method: _fulfillmentMethod,
-        address: _fulfillmentMethod == FulfillmentMethod.delivery ? _addressController.text.trim() : null,
+        address: (_fulfillmentMethod == FulfillmentMethod.delivery ||
+                _fulfillmentMethod == FulfillmentMethod.shipping)
+            ? address
+            : null,
         latitude: _fulfillmentMethod == FulfillmentMethod.delivery ? _deliveryLatitude : null,
         longitude: _fulfillmentMethod == FulfillmentMethod.delivery ? _deliveryLongitude : null,
         preferredAt: _preferredDate,
@@ -989,7 +1039,7 @@ class _CartScreenState extends State<CartScreen> {
       ShippingInfo? shippingInfo;
       if (_fulfillmentMethod == FulfillmentMethod.shipping) {
         shippingInfo = ShippingInfo(
-          address: _addressController.text.trim(),
+          address: address,
           latitude: _deliveryLatitude,
           longitude: _deliveryLongitude,
           instructions: _shippingInstructionsController.text.trim().isEmpty 

@@ -19,16 +19,14 @@ class QuotaManager {
       final doc = await docRef.get();
 
       if (!doc.exists) {
-        // Create new quota for this month
-        final newQuota = EnhancementQuota(
+        // Return a synthetic quota locally. Creation is handled server-side
+        // during successful saves because rules do not allow client writes.
+        return EnhancementQuota(
           listingId: listingId,
           year: now.year,
           month: now.month - 1, // 0-indexed
           usedCount: 0,
         );
-
-        await docRef.set(newQuota.toJson());
-        return newQuota;
       }
 
       final quota =
@@ -36,9 +34,8 @@ class QuotaManager {
 
       // Check if we need to reset for new month
       if (quota.needsReset()) {
-        final resetQuota = quota.resetQuota();
-        await docRef.update(resetQuota.toJson());
-        return resetQuota;
+        // Return reset value locally; server-side quota writes happen on save.
+        return quota.resetQuota();
       }
 
       return quota;
@@ -49,21 +46,8 @@ class QuotaManager {
 
   /// Increment quota usage
   Future<void> incrementQuota(String listingId) async {
-    try {
-      final quota = await getQuota(listingId);
-
-      if (!quota.hasQuotaAvailable()) {
-        throw Exception('Enhancement quota exhausted for this month');
-      }
-
-      quota.incrementUsage();
-      await _firestore
-          .collection(quotaCollection)
-          .doc(listingId)
-          .update(quota.toJson());
-    } catch (e) {
-      rethrow;
-    }
+    // Quota increments are handled server-side in saveEnhancementVariant.
+    return;
   }
 
   /// Check if quota is available without incrementing
@@ -98,16 +82,8 @@ class QuotaManager {
 
   /// Manually reset quota (admin/testing only)
   Future<void> resetQuota(String listingId) async {
-    try {
-      final quota = await getQuota(listingId);
-      final resetQuota = quota.resetQuota();
-      await _firestore
-          .collection(quotaCollection)
-          .doc(listingId)
-          .update(resetQuota.toJson());
-    } catch (e) {
-      rethrow;
-    }
+    // Admin/testing reset should be handled server-side to respect rules.
+    return;
   }
 
   /// Get quotas for multiple listings

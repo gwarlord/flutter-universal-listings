@@ -4,11 +4,13 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 import 'package:caribtap/constants.dart';
 import 'package:caribtap/core/utils/phone_number_utils.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
 import 'package:caribtap/listings/services/phone_verification_service.dart';
+import 'package:caribtap/listings/ui/auth/authentication_bloc.dart';
 
 /// Standalone phone-verification screen used within the booking/rental trust
 /// gate.  Does **not** change the user's Firebase Auth sign-in method — it only
@@ -17,7 +19,7 @@ import 'package:caribtap/listings/services/phone_verification_service.dart';
 ///
 /// Returns `true` via [Navigator.pop] when verification succeeds.
 class PhoneVerificationForBookingScreen extends StatefulWidget {
-  const PhoneVerificationForBookingScreen({Key? key}) : super(key: key);
+  const PhoneVerificationForBookingScreen({super.key});
 
   @override
   State<PhoneVerificationForBookingScreen> createState() =>
@@ -325,15 +327,31 @@ class _PhoneVerificationForBookingScreenState
       return;
     }
 
-    // Mark verified in Firestore.
+    // Mark verified in Firestore and keep the in-memory auth user in sync.
     try {
       await _verificationService.markPhoneAsVerified(
         userId: currentUser.uid,
         phoneNumber: _fullPhoneNumber,
       );
+
+      if (mounted) {
+        final authBloc = context.read<AuthenticationBloc>();
+        final authUser = authBloc.user;
+        if (authUser != null) {
+          authUser.phoneNumber = _fullPhoneNumber;
+          authUser.phoneVerified = true;
+          authUser.phoneVerifiedAt = DateTime.now();
+          authBloc.add(UpdateAuthUserEvent(authUser));
+        }
+      }
     } catch (_) {
-      // Firestore write failure is non-fatal — the user sees success but the
-      // guard will re-check on next attempt.
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorText =
+            'We verified the code, but could not save your verified phone status. Please try again.'.tr();
+      });
+      return;
     }
 
     if (!mounted) return;

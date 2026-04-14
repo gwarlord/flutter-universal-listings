@@ -1,22 +1,27 @@
 import 'package:caribtap/listings/model/invoice_model.dart';
+import 'package:caribtap/listings/model/listings_user.dart';
+import 'package:caribtap/listings/model/payment_details_model.dart';
 import 'package:caribtap/listings/model/pro_doc_shared.dart';
 import 'package:caribtap/listings/services/invoice_service.dart';
-import 'package:caribtap/listings/services/share_link_service.dart';
+import 'package:caribtap/listings/services/payment_details_service.dart';
+import 'package:caribtap/listings/services/pdf_service.dart';
+import 'package:caribtap/listings/services/tier_gate_service.dart';
 import 'package:caribtap/listings/ui/pro_docs/cubit/invoice_builder_cubit.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
 
 class InvoiceBuilderScreen extends StatefulWidget {
   final String uid;
   final InvoiceModel invoice;
+  final ListingsUser currentUser;
 
   const InvoiceBuilderScreen({
     super.key,
     required this.uid,
     required this.invoice,
+    required this.currentUser,
   });
 
   @override
@@ -24,6 +29,9 @@ class InvoiceBuilderScreen extends StatefulWidget {
 }
 
 class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
+  final PdfService _pdfService = PdfService();
+  final PaymentDetailsService _paymentDetailsService = PaymentDetailsService();
+  final TextEditingController _poNumberController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _termsController = TextEditingController();
   final TextEditingController _companyRegistrationController = TextEditingController();
@@ -33,6 +41,7 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
   @override
   void initState() {
     super.initState();
+    _poNumberController.text = widget.invoice.poNumber;
     _notesController.text = widget.invoice.notes;
     _termsController.text = widget.invoice.terms;
     _companyRegistrationController.text = widget.invoice.listingContext?.companyRegistration ?? '';
@@ -42,6 +51,7 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
 
   @override
   void dispose() {
+    _poNumberController.dispose();
     _notesController.dispose();
     _termsController.dispose();
     _companyRegistrationController.dispose();
@@ -75,7 +85,7 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
             );
           }
           if (!state.isSending && state.invoice?.status == 'sent') {
-            _shareToken(state.invoice);
+            _shareInvoicePdf(state.invoice!);
           }
         },
         builder: (context, state) {
@@ -89,30 +99,28 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
             body: ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
               children: [
-                _sectionTitle('Items'.tr()),
+                _sectionTitle(context, 'Items'.tr()),
                 ...invoice.items.map((item) {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 8),
-                    color: Colors.white.withOpacity(0.95),
                     child: ListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       title: Text(
                         item.description,
-                        style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500),
+                        style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       subtitle: Text(
                         '${item.qty} x ${currency.format(item.unitPrice)}',
-                        style: const TextStyle(color: Colors.black54),
                       ),
                       trailing: Text(
                         currency.format(item.lineTotal),
-                        style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
                   );
                 }).toList(),
                 const SizedBox(height: 16),
-                _sectionTitle('Due Date'.tr()),
+                _sectionTitle(context, 'Due Date'.tr()),
                 _datePickerRow(
                   context,
                   label: _dueDate == null
@@ -121,7 +129,18 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
                   onTap: () => _pickDueDate(context),
                 ),
                 const SizedBox(height: 16),
-                _sectionTitle('Notes'.tr()),
+                _sectionTitle(context, 'PO Number'.tr()),
+                TextField(
+                  controller: _poNumberController,
+                  onChanged: (value) => context.read<InvoiceBuilderCubit>().updatePoNumber(value),
+                  decoration: InputDecoration(
+                    hintText: 'Client purchase order number'.tr(),
+                    prefixIcon: const Icon(Icons.tag_rounded),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _sectionTitle(context, 'Notes'.tr()),
                 TextField(
                   controller: _notesController,
                   minLines: 2,
@@ -129,11 +148,10 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
                   onChanged: (value) => context.read<InvoiceBuilderCubit>().updateNotes(value),
                   decoration: InputDecoration(
                     hintText: 'Optional notes'.tr(),
-                    hintStyle: const TextStyle(color: Colors.white38),
                   ),
                 ),
                 const SizedBox(height: 16),
-                _sectionTitle('Terms'.tr()),
+                _sectionTitle(context, 'Terms'.tr()),
                 TextField(
                   controller: _termsController,
                   minLines: 2,
@@ -141,22 +159,19 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
                   onChanged: (value) => context.read<InvoiceBuilderCubit>().updateTerms(value),
                   decoration: InputDecoration(
                     hintText: 'Optional terms'.tr(),
-                    hintStyle: const TextStyle(color: Colors.white38),
                   ),
                 ),
                 const SizedBox(height: 16),
-                _sectionTitle('Company Information'.tr()),
+                _sectionTitle(context, 'Company Information'.tr()),
                 TextField(
                   controller: _companyRegistrationController,
                   decoration: InputDecoration(
                     labelText: 'Company Registration #'.tr(),
-                    labelStyle: const TextStyle(color: Colors.white70),
+                    labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
                     hintText: 'Optional'.tr(),
-                    hintStyle: const TextStyle(color: Colors.white54),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    prefix: const Padding(padding: EdgeInsets.only(right: 8), child: Icon(Icons.business, color: Colors.white70, size: 18)),
+                    prefix: Padding(padding: const EdgeInsets.only(right: 8), child: Icon(Icons.business, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), size: 18)),
                   ),
-                  style: const TextStyle(color: Colors.white),
                   onChanged: (_) => _updateListingContextFromFields(context),
                 ),
                 const SizedBox(height: 12),
@@ -164,13 +179,11 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
                   controller: _vatNumberController,
                   decoration: InputDecoration(
                     labelText: 'VAT / Tax ID #'.tr(),
-                    labelStyle: const TextStyle(color: Colors.white70),
+                    labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
                     hintText: 'Optional'.tr(),
-                    hintStyle: const TextStyle(color: Colors.white54),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    prefix: const Padding(padding: EdgeInsets.only(right: 8), child: Icon(Icons.receipt_long, color: Colors.white70, size: 18)),
+                    prefix: Padding(padding: const EdgeInsets.only(right: 8), child: Icon(Icons.receipt_long, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), size: 18)),
                   ),
-                  style: const TextStyle(color: Colors.white),
                   onChanged: (_) => _updateListingContextFromFields(context),
                 ),
                 const SizedBox(height: 24),
@@ -183,15 +196,15 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
     );
   }
 
-  Widget _sectionTitle(String title) {
+  Widget _sectionTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
     );
@@ -210,8 +223,8 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(color: Colors.white)),
-            const Icon(Icons.calendar_today_rounded, size: 18, color: Colors.white70),
+            Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+            Icon(Icons.calendar_today_rounded, size: 18, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
           ],
         ),
       ),
@@ -248,7 +261,7 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
                     ? const SizedBox(
                         height: 18,
                         width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : Text('Send & Share'.tr()),
               ),
@@ -269,12 +282,7 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.dark(
-              primary: Theme.of(context).primaryColor,
-              onPrimary: Colors.white,
-              surface: const Color(0xFF2C2C2C),
-              onSurface: Colors.white,
-            ),
+            colorScheme: Theme.of(context).colorScheme,
           ),
           child: child!,
         );
@@ -286,11 +294,32 @@ class _InvoiceBuilderScreenState extends State<InvoiceBuilderScreen> {
     }
   }
 
-  Future<void> _shareToken(InvoiceModel? invoice) async {
-    final token = invoice?.shareToken;
-    if (token == null || token.isEmpty) return;
-    final link = ShareLinkService().buildPublicDocLink(type: 'invoice', token: token);
-    await Share.share('${'Invoice link'.tr()}: $link');
+  Future<PaymentDetailsPublic?> _getPaymentDetails() async {
+    try {
+      final details = await _paymentDetailsService.getPublic(widget.currentUser.userID);
+      return details.hasAnyPaymentMethod ? details : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _shareInvoicePdf(InvoiceModel invoice) async {
+    final tier = TierGateService().resolveTierFromUser(widget.currentUser);
+    final canBrand = TierGateService().canUseBranding(tier);
+    final businessName = canBrand ? _displayName(widget.currentUser) : null;
+    final paymentDetails = await _getPaymentDetails();
+    await _pdfService.shareInvoicePdf(
+      invoice,
+      businessName: businessName,
+      includeWatermark: !canBrand,
+      hideFooter: canBrand,
+      paymentDetails: paymentDetails,
+    );
+  }
+
+  String _displayName(ListingsUser user) {
+    final name = '${user.firstName} ${user.lastName}'.trim();
+    return name.isNotEmpty ? name : 'CaribTap Business'.tr();
   }
 
   void _updateListingContextFromFields(BuildContext context) {

@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:caribtap/constants.dart';
 import 'package:caribtap/listings/listings_app_config.dart';
+import 'package:caribtap/listings/services/blocked_user_repository.dart';
 import 'package:caribtap/core/model/user.dart';
 import 'package:caribtap/core/utils/helper.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -35,11 +36,18 @@ class FirestoreChatScreenV2 extends StatefulWidget {
 class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final BlockedUserRepository _blockedUserRepository = BlockedUserRepository();
   List<Map<String, dynamic>> _messages = [];
   late final CollectionReference _messagesRef;
   StreamSubscription? _messagesSubscription;
   bool _isSending = false;
   List<User> _fullParticipants = [];
+  String? _listerId;
+  String? _blockTargetUserId;
+  bool _isCurrentUserLister = false;
+  bool _isBlockedFromSending = false;
+  bool _isTargetUserBlocked = false;
+  bool _isUpdatingBlockState = false;
 
   @override
   void initState() {
@@ -50,6 +58,7 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
         .collection('thread');
     
     _fetchParticipantDetails();
+    _resolveBlockContext();
     _markAsRead();
 
     _messagesSubscription = _messagesRef
@@ -109,6 +118,236 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
       setState(() {
         _fullParticipants = participantsById.values.toList();
       });
+      _resolveBlockContext();
+    }
+  }
+
+  String? _findBlockTargetUserId({required String? listerId}) {
+    final fallbackParticipants = <User>[
+      ..._fullParticipants,
+      ...widget.otherParticipants,
+    ];
+
+    for (final participant in fallbackParticipants) {
+      final participantId = participant.userID.trim();
+      if (participantId.isEmpty) continue;
+      if (participantId == widget.currentUserId) continue;
+      if (listerId != null && participantId == listerId) continue;
+      return participantId;
+    }
+
+    return null;
+  }
+
+  Future<void> _resolveBlockContext() async {
+    try {
+      final channelDoc = await FirebaseFirestore.instance
+          .collection(chatChannelsCollection)
+          .doc(widget.channelId)
+          .get();
+
+      final channelData = channelDoc.data() as Map<String, dynamic>? ?? {};
+      final listingId = (channelData['listingId'] ?? '').toString().trim();
+
+      String? resolvedListerId;
+      if (listingId.isNotEmpty) {
+        final listingDoc = await FirebaseFirestore.instance
+            .collection('listings')
+            .doc(listingId)
+            .get();
+        if (listingDoc.exists) {
+          final listingData = listingDoc.data() as Map<String, dynamic>? ?? {};
+          final authorId = (listingData['authorID'] ?? listingData['authorId'] ?? '')
+              .toString()
+              .trim();
+          if (authorId.isNotEmpty) {
+            resolvedListerId = authorId;
+          }
+        }
+      }
+
+      resolvedListerId ??=
+          (channelData['listerId'] ?? channelData['ownerId'] ?? '').toString().trim();
+      if (resolvedListerId != null && resolvedListerId.isEmpty) {
+        resolvedListerId = null;
+      }
+
+      final blockTargetUserId = _findBlockTargetUserId(listerId: resolvedListerId);
+      final isCurrentUserLister = resolvedListerId != null &&
+          widget.currentUserId.trim() == resolvedListerId;
+
+      if (!mounted) return;
+      setState(() {
+        _listerId = resolvedListerId;
+        _isCurrentUserLister = isCurrentUserLister;
+        _blockTargetUserId = blockTargetUserId;
+      });
+
+      await _refreshBlockState();
+    } catch (_) {
+      // Keep chat functional even if role resolution fails.
+    }
+  }
+
+  Future<void> _refreshBlockState() async {
+    final listerId = _listerId;
+    if (listerId == null || listerId.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _isBlockedFromSending = false;
+        _isTargetUserBlocked = false;
+      });
+      return;
+    }
+
+    try {
+      if (_isCurrentUserLister) {
+        final targetId = _blockTargetUserId;
+        if (targetId == null || targetId.isEmpty) {
+          if (!mounted) return;
+          setState(() {
+            _isTargetUserBlocked = false;
+          });
+          return;
+        }
+
+        final blocked = await _blockedUserRepository.isUserBlockedByLister(
+          listerId: listerId,
+          userId: targetId,
+        );
+        if (!mounted) return;
+        setState(() {
+          _isTargetUserBlocked = blocked;
+        });
+      } else {
+        final blocked = await _blockedUserRepository.isUserBlockedByLister(
+          listerId: listerId,
+          userId: widget.currentUserId,
+        );
+        if (!mounted) return;
+        setState(() {
+          _isBlockedFromSending = blocked;
+        });
+      }
+    } catch (_) {
+      // Fail open for messaging flow on lookup errors.
+    }
+  }
+
+  Future<void> _toggleBlockTargetUser() async {
+    if (!_isCurrentUserLister) return;
+    final listerId = _listerId;
+    final targetUserId = _blockTargetUserId;
+    if (listerId == null || listerId.isEmpty || targetUserId == null || targetUserId.isEmpty) {
+      return;
+    }
+
+    final targetName = _fullParticipants
+        .firstWhere(
+          (user) => user.userID == targetUserId,
+          orElse: () => User(firstName: 'User'.tr()),
+        )
+        .fullName()
+        .trim();
+    final displayName = targetName.isEmpty ? 'this user'.tr() : targetName;
+
+    if (_isTargetUserBlocked) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text('Unblock user?'.tr()),
+          content: Text(
+            '${'Allow'.tr()} $displayName ${'to send chat messages again?'.tr()}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text('Cancel'.tr()),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text('Unblock'.tr()),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) return;
+
+      setState(() => _isUpdatingBlockState = true);
+      try {
+        await _blockedUserRepository.unblockUser(
+          listerId: listerId,
+          blockedUserId: targetUserId,
+        );
+        await _refreshBlockState();
+        if (!mounted) return;
+        showSnackBar(context, 'User unblocked'.tr());
+      } catch (_) {
+        if (mounted) {
+          showSnackBar(context, 'Failed to unblock user'.tr());
+        }
+      } finally {
+        if (mounted) setState(() => _isUpdatingBlockState = false);
+      }
+      return;
+    }
+
+    final reasonController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Block user?'.tr()),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${'Block'.tr()} $displayName ${'from sending chat messages and future requests?'.tr()}',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: 'Reason (optional)'.tr(),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('Cancel'.tr()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text('Block'.tr()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isUpdatingBlockState = true);
+    try {
+      final reason = reasonController.text.trim();
+      await _blockedUserRepository.blockUser(
+        listerId: listerId,
+        blockedUserId: targetUserId,
+        reason: reason.isEmpty ? null : reason,
+      );
+      await _refreshBlockState();
+      if (!mounted) return;
+      showSnackBar(context, 'User blocked'.tr());
+    } catch (_) {
+      if (mounted) {
+        showSnackBar(context, 'Failed to block user'.tr());
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdatingBlockState = false);
     }
   }
 
@@ -155,6 +394,13 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
   void _handleSendPressed() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _isSending) return;
+    if (_isBlockedFromSending) {
+      showSnackBar(
+        context,
+        'You are blocked from sending messages in this chat.'.tr(),
+      );
+      return;
+    }
     
     setState(() => _isSending = true);
     _controller.clear();
@@ -268,6 +514,36 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
             color: Colors.white,
           ),
         ),
+        actions: _isCurrentUserLister && _blockTargetUserId != null
+            ? [
+                PopupMenuButton<String>(
+                  icon: _isUpdatingBlockState
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.more_vert, color: Colors.white),
+                  enabled: !_isUpdatingBlockState,
+                  onSelected: (value) {
+                    if (value == 'toggle_block') {
+                      _toggleBlockTargetUser();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem<String>(
+                      value: 'toggle_block',
+                      child: Text(
+                        _isTargetUserBlocked ? 'Unblock user'.tr() : 'Block user'.tr(),
+                      ),
+                    ),
+                  ],
+                ),
+              ]
+            : null,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(40.0),
           child: Padding(
@@ -468,6 +744,22 @@ class _FirestoreChatScreenV2State extends State<FirestoreChatScreenV2> {
   }
 
   Widget _buildInputBar(Color primaryColor, bool isDark) {
+    if (_isBlockedFromSending) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        color: isDark ? const Color(0xFF1F2C34) : const Color(0xFFF0F0F0),
+        child: SafeArea(
+          child: Text(
+            'Messaging disabled: this lister has blocked you.'.tr(),
+            style: TextStyle(
+              color: isDark ? Colors.white70 : Colors.black54,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       color: isDark ? const Color(0xFF1F2C34) : const Color(0xFFF0F0F0),

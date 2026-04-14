@@ -67,6 +67,7 @@ import 'package:caribtap/listings/ui/share/promote_listing_screen.dart';
 import 'package:caribtap/listings/utils/caribbean_countries.dart';
 import 'package:caribtap/listings/utils/world_countries.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:caribtap/listings/currency/currency_display_service.dart';
 
 import 'package:metadata_fetch/metadata_fetch.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -210,6 +211,8 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
   // Rentals catalog
   final RentalCatalogService _rentalCatalogService = RentalCatalogService();
   Stream<List<RentalCatalogItem>>? _rentalCatalogStream;
+  final CurrencyDisplayService _currencyDisplayService = CurrencyDisplayService();
+  late Future<CurrencyDisplayResult> _listingPriceDisplayFuture;
 
   bool get _canEditOrDelete =>
       currentUser.userID == listing.authorID || currentUser.isAdmin;
@@ -225,6 +228,11 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     super.initState();
     currentUser = widget.currentUser;
     listing = widget.listing;
+    _listingPriceDisplayFuture = _currencyDisplayService.buildDisplayResult(
+      rawAmount: listing.price,
+      originalCurrencyCode: listing.currencyCode,
+      preferenceValue: currentUser.settings.displayCurrencyPreference,
+    );
     
     // Initialize Tap service
     _tapService = TapService(TapFirebase());
@@ -423,7 +431,7 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
     if (!price.isFinite || price <= 0) return '';
 
     final symbol = _getCurrencySymbol(currencyCode);
-    final compact = NumberFormat('0.##').format(price);
+    final compact = NumberFormat('#,##0.##').format(price);
     return '$symbol$compact $currencyCode';
   }
 
@@ -1409,9 +1417,44 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
             style: TextStyle(color: isDark ? Colors.grey : Colors.grey.shade600, fontSize: 14),
           ),
           const SizedBox(height: 4),
-          Text(
-            '\$${_getCurrencySymbol(listing.currencyCode)} ${listing.price} ${listing.currencyCode}',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: primaryColor),
+          FutureBuilder<CurrencyDisplayResult>(
+            future: _listingPriceDisplayFuture,
+            builder: (context, snapshot) {
+              final display = snapshot.data;
+              final original = display?.originalFormatted ?? listing.price;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    original,
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: primaryColor),
+                  ),
+                  if (display?.approximateFormatted != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        display!.approximateFormatted!,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark ? Colors.grey[300] : Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                  if (display?.approximateFormatted != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Converted prices are estimates for reference only'.tr(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.grey[500] : Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -1440,19 +1483,76 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
           itemBuilder: (context, index) {
             final service = listing.services[index];
             final servicePrice = _formatServicePrice(service.price, listing.currencyCode);
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.check_circle_outline, color: primaryColor),
-              title: Text(service.name),
-              trailing: servicePrice.isEmpty
-                  ? null
-                  : Text(
-                      servicePrice,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black,
+            final serviceDescription = service.description.trim();
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Icon(Icons.check_circle_outline, color: primaryColor),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(service.name),
+                        if (serviceDescription.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              serviceDescription,
+                              style: TextStyle(
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (service.price.isFinite && service.price > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12, top: 1),
+                      child: FutureBuilder<CurrencyDisplayResult>(
+                        future: _currencyDisplayService.buildDisplayResult(
+                          rawAmount: service.price.toStringAsFixed(2),
+                          originalCurrencyCode: listing.currencyCode,
+                          preferenceValue:
+                              currentUser.settings.displayCurrencyPreference,
+                        ),
+                        builder: (context, snapshot) {
+                          final display = snapshot.data;
+                          final original = servicePrice;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                original,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black,
+                                ),
+                              ),
+                              if (display?.approximateFormatted != null)
+                                Text(
+                                  display!.approximateFormatted!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade600,
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
                       ),
                     ),
+                ],
+              ),
             );
           },
         ),
@@ -2081,16 +2181,28 @@ class _ListingDetailsScreenState extends State<ListingDetailsScreen> {
           children: [
             if (listing.price.isNotEmpty)
               Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '\$${_getCurrencySymbol(listing.currencyCode)}${listing.price}',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    Text(listing.currencyCode, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                  ],
+                child: FutureBuilder<CurrencyDisplayResult>(
+                  future: _listingPriceDisplayFuture,
+                  builder: (context, snapshot) {
+                    final display = snapshot.data;
+                    final original = display?.originalFormatted ?? listing.price;
+
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          original,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        if (display?.approximateFormatted != null)
+                          Text(
+                            display!.approximateFormatted!,
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ),
             const SizedBox(width: 16),

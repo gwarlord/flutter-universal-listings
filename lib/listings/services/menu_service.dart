@@ -2,6 +2,7 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:caribtap/listings/utils/image_compress_utils.dart';
 
 class MenuService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -15,16 +16,18 @@ class MenuService {
   }
 
   Future<String> uploadMenuUploadImage(String listingId, File file) async {
+    final compressed = await compressImageFile(file);
     final uuid = DateTime.now().millisecondsSinceEpoch.toString();
     final ref = _storage.ref('listings/$listingId/menuUploads/$uuid.jpg');
-    await ref.putFile(file);
+    await ref.putFile(compressed);
     return await ref.getDownloadURL();
   }
 
   Future<String> uploadMenuItemImage(String listingId, String itemId, File file) async {
+    final compressed = await compressImageFile(file);
     final uuid = DateTime.now().millisecondsSinceEpoch.toString();
     final ref = _storage.ref('listings/$listingId/menuItems/$itemId/$uuid.jpg');
-    await ref.putFile(file);
+    await ref.putFile(compressed);
     return await ref.getDownloadURL();
   }
 

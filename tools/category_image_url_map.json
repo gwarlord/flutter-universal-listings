@@ -1,0 +1,362 @@
+[
+  {
+    "id": "food-beverage",
+    "slug": "food-beverage",
+    "title": "Food & Beverage",
+    "parentSlug": "",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "retail-shopping",
+    "slug": "retail-shopping",
+    "title": "Retail & Shopping",
+    "parentSlug": "",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "beauty-personal-care",
+    "slug": "beauty-personal-care",
+    "title": "Beauty & Personal Care",
+    "parentSlug": "",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "health-wellness",
+    "slug": "health-wellness",
+    "title": "Health & Wellness",
+    "parentSlug": "",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "automotive",
+    "slug": "automotive",
+    "title": "Automotive",
+    "parentSlug": "",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "home-services",
+    "slug": "home-services",
+    "title": "Home Services",
+    "parentSlug": "",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "professional-services",
+    "slug": "professional-services",
+    "title": "Professional Services",
+    "parentSlug": "",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "events-entertainment",
+    "slug": "events-entertainment",
+    "title": "Events & Entertainment",
+    "parentSlug": "",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "travel-tourism",
+    "slug": "travel-tourism",
+    "title": "Travel & Tourism",
+    "parentSlug": "",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "education-training",
+    "slug": "education-training",
+    "title": "Education & Training",
+    "parentSlug": "",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "real-estate-rentals",
+    "slug": "real-estate-rentals",
+    "title": "Real Estate & Rentals",
+    "parentSlug": "",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "technology-electronics",
+    "slug": "technology-electronics",
+    "title": "Technology & Electronics",
+    "parentSlug": "",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "agriculture-local-produce",
+    "slug": "agriculture-local-produce",
+    "title": "Agriculture & Local Produce",
+    "parentSlug": "",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "community-nonprofit",
+    "slug": "community-nonprofit",
+    "title": "Community & Nonprofit",
+    "parentSlug": "",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "other",
+    "slug": "other",
+    "title": "Other",
+    "parentSlug": "",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "restaurants",
+    "slug": "restaurants",
+    "title": "Restaurants",
+    "parentSlug": "food-beverage",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "cafes-bakeries",
+    "slug": "cafes-bakeries",
+    "title": "Cafes & Bakeries",
+    "parentSlug": "food-beverage",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "catering",
+    "slug": "catering",
+    "title": "Catering",
+    "parentSlug": "food-beverage",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "fashion-accessories",
+    "slug": "fashion-accessories",
+    "title": "Fashion & Accessories",
+    "parentSlug": "retail-shopping",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "grocery-convenience",
+    "slug": "grocery-convenience",
+    "title": "Grocery & Convenience",
+    "parentSlug": "retail-shopping",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "hair-salon",
+    "slug": "hair-salon",
+    "title": "Hair Salon",
+    "parentSlug": "beauty-personal-care",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "barber",
+    "slug": "barber",
+    "title": "Barber",
+    "parentSlug": "beauty-personal-care",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "fitness-gym",
+    "slug": "fitness-gym",
+    "title": "Fitness & Gym",
+    "parentSlug": "health-wellness",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "clinics-medical",
+    "slug": "clinics-medical",
+    "title": "Clinics & Medical",
+    "parentSlug": "health-wellness",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "mechanic-repair",
+    "slug": "mechanic-repair",
+    "title": "Mechanic & Repair",
+    "parentSlug": "automotive",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "car-rentals",
+    "slug": "car-rentals",
+    "title": "Car Rentals",
+    "parentSlug": "automotive",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "plumbing-electrical",
+    "slug": "plumbing-electrical",
+    "title": "Plumbing & Electrical",
+    "parentSlug": "home-services",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "construction-renovation",
+    "slug": "construction-renovation",
+    "title": "Construction & Renovation",
+    "parentSlug": "home-services",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "legal-accounting",
+    "slug": "legal-accounting",
+    "title": "Legal & Accounting",
+    "parentSlug": "professional-services",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "consulting-business",
+    "slug": "consulting-business",
+    "title": "Consulting & Business",
+    "parentSlug": "professional-services",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "event-planning",
+    "slug": "event-planning",
+    "title": "Event Planning",
+    "parentSlug": "events-entertainment",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "venues",
+    "slug": "venues",
+    "title": "Venues",
+    "parentSlug": "events-entertainment",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "tours-excursions",
+    "slug": "tours-excursions",
+    "title": "Tours & Excursions",
+    "parentSlug": "travel-tourism",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "accommodation",
+    "slug": "accommodation",
+    "title": "Accommodation",
+    "parentSlug": "travel-tourism",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "tutoring",
+    "slug": "tutoring",
+    "title": "Tutoring",
+    "parentSlug": "education-training",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "skills-training",
+    "slug": "skills-training",
+    "title": "Skills Training",
+    "parentSlug": "education-training",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "residential-sales-rentals",
+    "slug": "residential-sales-rentals",
+    "title": "Residential Sales & Rentals",
+    "parentSlug": "real-estate-rentals",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "commercial-properties",
+    "slug": "commercial-properties",
+    "title": "Commercial Properties",
+    "parentSlug": "real-estate-rentals",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "phones-computers",
+    "slug": "phones-computers",
+    "title": "Phones & Computers",
+    "parentSlug": "technology-electronics",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "it-services",
+    "slug": "it-services",
+    "title": "IT Services",
+    "parentSlug": "technology-electronics",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "fresh-produce",
+    "slug": "fresh-produce",
+    "title": "Fresh Produce",
+    "parentSlug": "agriculture-local-produce",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "farming-supplies",
+    "slug": "farming-supplies",
+    "title": "Farming Supplies",
+    "parentSlug": "agriculture-local-produce",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "church-faith",
+    "slug": "church-faith",
+    "title": "Church & Faith",
+    "parentSlug": "community-nonprofit",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "charity-ngo",
+    "slug": "charity-ngo",
+    "title": "Charity & NGO",
+    "parentSlug": "community-nonprofit",
+    "photo": "",
+    "source": "ai-generated"
+  },
+  {
+    "id": "miscellaneous",
+    "slug": "miscellaneous",
+    "title": "Miscellaneous",
+    "parentSlug": "other",
+    "photo": "",
+    "source": "ai-generated"
+  }
+]

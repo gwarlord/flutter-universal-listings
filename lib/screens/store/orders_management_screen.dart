@@ -182,6 +182,27 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
     }
   }
 
+  bool _isActiveFoodOrder(OrderRequest order) {
+    final isFoodType =
+        order.orderType == OrderType.food || order.orderType == OrderType.mixed;
+    if (!isFoodType) return false;
+
+    return order.status == OrderStatus.requested ||
+        order.status == OrderStatus.confirmed ||
+        order.status == OrderStatus.preparing ||
+        order.status == OrderStatus.ready ||
+        order.status == OrderStatus.served;
+  }
+
+  bool _isActiveGeneralOrder(OrderRequest order) {
+    final isGeneralType =
+        order.orderType == OrderType.general || order.orderType == OrderType.mixed;
+    if (!isGeneralType) return false;
+
+    return order.status == OrderStatus.requested ||
+        order.status == OrderStatus.confirmed;
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = isDarkMode(context);
@@ -197,83 +218,106 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen>
         iconTheme: IconThemeData(color: dark ? Colors.white : Colors.black),
         actions: [
           // Toggle between Food and General orders
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            decoration: BoxDecoration(
-              color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(20),
+          StreamBuilder<List<OrderRequest>>(
+            stream: _storeService.getOrderRequestsForLister(
+              listerId: widget.currentUser.userID,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => _switchOrderType(true),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _isShowingFoodOrders ? Color(cfg.colorPrimary) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.restaurant_menu,
-                            size: 18,
-                            color: _isShowingFoodOrders ? Colors.white : (dark ? Colors.white54 : Colors.black45),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Food'.tr(),
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: _isShowingFoodOrders ? Colors.white : (dark ? Colors.white54 : Colors.black45),
+            builder: (context, snapshot) {
+              final orders = snapshot.data ?? const <OrderRequest>[];
+              final hasActiveFood = orders.any(_isActiveFoodOrder);
+              final hasActiveGeneral = orders.any(_isActiveGeneralOrder);
+
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                decoration: BoxDecoration(
+                  color: dark ? Colors.grey.shade800 : Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Badge(
+                      isLabelVisible: hasActiveFood,
+                      backgroundColor: Colors.red,
+                      smallSize: 8,
+                      offset: const Offset(-2, 2),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _switchOrderType(true),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: _isShowingFoodOrders ? Color(cfg.colorPrimary) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.restaurant_menu,
+                                  size: 18,
+                                  color: _isShowingFoodOrders ? Colors.white : (dark ? Colors.white54 : Colors.black45),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Food'.tr(),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: _isShowingFoodOrders ? Colors.white : (dark ? Colors.white54 : Colors.black45),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => _switchOrderType(false),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: !_isShowingFoodOrders ? Color(cfg.colorPrimary) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.shopping_bag,
-                            size: 18,
-                            color: !_isShowingFoodOrders ? Colors.white : (dark ? Colors.white54 : Colors.black45),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'General'.tr(),
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: !_isShowingFoodOrders ? Colors.white : (dark ? Colors.white54 : Colors.black45),
+                    Badge(
+                      isLabelVisible: hasActiveGeneral,
+                      backgroundColor: Colors.red,
+                      smallSize: 8,
+                      offset: const Offset(-2, 2),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _switchOrderType(false),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: !_isShowingFoodOrders ? Color(cfg.colorPrimary) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.shopping_bag,
+                                  size: 18,
+                                  color: !_isShowingFoodOrders ? Colors.white : (dark ? Colors.white54 : Colors.black45),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'General'.tr(),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: !_isShowingFoodOrders ? Colors.white : (dark ? Colors.white54 : Colors.black45),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
           IconButton(
             icon: Badge(

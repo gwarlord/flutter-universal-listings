@@ -56,6 +56,8 @@ class RentalBooking {
   final String? cancellationReason;
   final RentalBookingStatus? cancelledFromStatus;
   final String? disputeReason;
+  final Map<String, dynamic>? payment;
+  final bool listingAcceptsProofOfPayment;
 
   // Booking Trust System (Phase 1) — snapshotted at request submission time
   final String? requesterName;
@@ -94,6 +96,8 @@ class RentalBooking {
     this.cancellationReason,
     this.cancelledFromStatus,
     this.disputeReason,
+    this.payment,
+    this.listingAcceptsProofOfPayment = false,
     // Trust fields
     this.requesterName,
     this.requesterEmail,
@@ -148,6 +152,11 @@ class RentalBooking {
             )
           : null,
       disputeReason: json['disputeReason'],
+        payment: json['payment'] is Map<String, dynamic>
+          ? json['payment'] as Map<String, dynamic>
+          : null,
+        listingAcceptsProofOfPayment:
+          json['listingAcceptsProofOfPayment'] as bool? ?? false,
       requesterName: json['requesterName'] as String?,
       requesterEmail: json['requesterEmail'] as String?,
       requesterPhoneNumber: json['requesterPhoneNumber'] as String?,
@@ -186,6 +195,8 @@ class RentalBooking {
       'cancellationReason': cancellationReason,
       'cancelledFromStatus': cancelledFromStatus?.toString().split('.').last,
       'disputeReason': disputeReason,
+      'payment': payment,
+      'listingAcceptsProofOfPayment': listingAcceptsProofOfPayment,
       'requesterName': requesterName,
       'requesterEmail': requesterEmail,
       'requesterPhoneNumber': requesterPhoneNumber,
@@ -224,6 +235,8 @@ class RentalBooking {
     String? cancellationReason,
     RentalBookingStatus? cancelledFromStatus,
     String? disputeReason,
+    Map<String, dynamic>? payment,
+    bool? listingAcceptsProofOfPayment,
     String? requesterName,
     String? requesterEmail,
     String? requesterPhoneNumber,
@@ -261,6 +274,9 @@ class RentalBooking {
       cancellationReason: cancellationReason ?? this.cancellationReason,
       cancelledFromStatus: cancelledFromStatus ?? this.cancelledFromStatus,
       disputeReason: disputeReason ?? this.disputeReason,
+        payment: payment ?? this.payment,
+        listingAcceptsProofOfPayment:
+          listingAcceptsProofOfPayment ?? this.listingAcceptsProofOfPayment,
       requesterName: requesterName ?? this.requesterName,
       requesterEmail: requesterEmail ?? this.requesterEmail,
       requesterPhoneNumber: requesterPhoneNumber ?? this.requesterPhoneNumber,

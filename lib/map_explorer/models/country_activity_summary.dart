@@ -3,6 +3,7 @@ import 'package:caribtap/map_explorer/models/map_explorer_intent.dart';
 class CountryActivitySummary {
   final String countryId;
   final int listingsCount;
+  final int usersCount;
   final int dealsCount;
   final int rentalsCount;
   final int servicesCount;
@@ -17,6 +18,7 @@ class CountryActivitySummary {
   const CountryActivitySummary({
     required this.countryId,
     this.listingsCount = 0,
+    this.usersCount = 0,
     this.dealsCount = 0,
     this.rentalsCount = 0,
     this.servicesCount = 0,
@@ -31,6 +33,7 @@ class CountryActivitySummary {
 
   CountryActivitySummary copyWith({
     int? listingsCount,
+    int? usersCount,
     int? dealsCount,
     int? rentalsCount,
     int? servicesCount,
@@ -45,6 +48,7 @@ class CountryActivitySummary {
     return CountryActivitySummary(
       countryId: countryId,
       listingsCount: listingsCount ?? this.listingsCount,
+      usersCount: usersCount ?? this.usersCount,
       dealsCount: dealsCount ?? this.dealsCount,
       rentalsCount: rentalsCount ?? this.rentalsCount,
       servicesCount: servicesCount ?? this.servicesCount,

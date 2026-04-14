@@ -21,6 +21,33 @@ async function getUserTokens(uid: string): Promise<string[]> {
   return [...new Set(tokens.filter((t) => t.length > 0))];
 }
 
+async function getManageOrderCollaboratorIds(listingId: string, listerId: string): Promise<string[]> {
+  const listingDoc = await admin.firestore().collection("listings").doc(listingId).get();
+  if (!listingDoc.exists) return [];
+
+  const listing = listingDoc.data() || {};
+  const collaborators = Array.isArray(listing.collaborators) ? listing.collaborators : [];
+  const collaboratorIds = collaborators
+    .filter((collab: any) => {
+      const canManageOrders =
+        collab?.canManageOrders === true ||
+        collab?.permissions?.changeOrderStatus === true;
+      return canManageOrders;
+    })
+    .map((collab: any) =>
+      String(collab?.userId || collab?.uid || collab?.collaboratorUid || "").trim()
+    )
+    .filter((uid: string) => uid.length > 0 && uid !== listerId);
+
+  return [...new Set(collaboratorIds)];
+}
+
+async function getTokensForUsers(userIds: string[]): Promise<string[]> {
+  const tokenGroups = await Promise.all(userIds.map((uid) => getUserTokens(uid)));
+  const merged = tokenGroups.flat();
+  return [...new Set(merged.filter((t) => t.length > 0))];
+}
+
 async function sendToUserTokens(tokens: string[], message: Omit<admin.messaging.Message, "token">): Promise<void> {
   if (tokens.length === 0) return;
   await Promise.allSettled(
@@ -44,9 +71,11 @@ export const onOrderCreated = functions.firestore
     const orderNumber = orderId.slice(0, 8).toUpperCase();
 
     try {
-      const listerTokens = await getUserTokens(order.listerId);
-      if (listerTokens.length === 0) {
-        console.log("Lister has no FCM tokens:", order.listerId);
+      const collaboratorIds = await getManageOrderCollaboratorIds(order.listingId, order.listerId);
+      const recipientIds = [...new Set([order.listerId, ...collaboratorIds])];
+      const listerAndCollaboratorTokens = await getTokensForUsers(recipientIds);
+      if (listerAndCollaboratorTokens.length === 0) {
+        console.log("Order recipients have no FCM tokens:", recipientIds);
         return null;
       }
 
@@ -92,8 +121,8 @@ export const onOrderCreated = functions.firestore
         },
       };
 
-      await sendToUserTokens(listerTokens, message);
-      console.log("Order notification sent to lister:", order.listerId);
+      await sendToUserTokens(listerAndCollaboratorTokens, message);
+      console.log("Order notification sent to lister/collaborators:", recipientIds);
 
       return null;
     } catch (error) {
@@ -113,11 +142,6 @@ export const onOrderStatusChanged = functions.firestore
     const orderId = context.params.orderId;
     const orderNumber = orderId.slice(0, 8).toUpperCase();
 
-    // Check if status changed
-    if (before.status === after.status) {
-      return null;
-    }
-
     try {
       // Get listing details for notification
       const listingDoc = await admin
@@ -130,11 +154,113 @@ export const onOrderStatusChanged = functions.firestore
         ? listingDoc.data()?.title
         : "your order";
 
+      const collaboratorIds = await getManageOrderCollaboratorIds(after.listingId, after.listerId);
+      const listerAndCollaboratorIds = [...new Set([after.listerId, ...collaboratorIds])];
+
+      // Proof of payment upload notification (customer -> lister/collaborators)
+      const beforePayment = before.payment || {};
+      const afterPayment = after.payment || {};
+      const proofUrlBefore = String(beforePayment.proofOfPaymentUrl || "").trim();
+      const proofUrlAfter = String(afterPayment.proofOfPaymentUrl || "").trim();
+      const proofStatusBefore = String(beforePayment.proofOfPaymentStatus || "").toLowerCase();
+      const proofStatusAfter = String(afterPayment.proofOfPaymentStatus || "").toLowerCase();
+
+      const proofJustUploaded = proofUrlBefore.length === 0 && proofUrlAfter.length > 0;
+      if (proofJustUploaded) {
+        const recipientTokens = await getTokensForUsers(listerAndCollaboratorIds);
+        if (recipientTokens.length > 0) {
+          const popMessage: Omit<admin.messaging.Message, "token"> = {
+            notification: {
+              title: "🧾 Proof of Payment Uploaded",
+              body: `Order #${orderNumber}: customer uploaded proof of payment for ${listingTitle}.`,
+            },
+            data: {
+              type: "proof_of_payment_uploaded",
+              orderId: orderId,
+              orderNumber: orderNumber,
+              listingId: after.listingId,
+              channelId: after.channelId || "",
+              click_action: "FLUTTER_NOTIFICATION_CLICK",
+            },
+            android: {
+              priority: "high" as const,
+              notification: {
+                sound: "default",
+                channelId: "orders",
+              },
+            },
+            apns: {
+              payload: {
+                aps: {
+                  sound: "default",
+                  badge: 1,
+                },
+              },
+            },
+          };
+
+          await sendToUserTokens(recipientTokens, popMessage);
+          console.log("Proof upload notification sent to lister/collaborators:", listerAndCollaboratorIds);
+        }
+      }
+
+      // Proof review notification (lister/collaborator -> customer)
+      const proofReviewed =
+        proofStatusAfter !== proofStatusBefore &&
+        (proofStatusAfter === "approved" || proofStatusAfter === "rejected");
+
+      if (proofReviewed) {
+        const customerTokens = await getUserTokens(after.customerId);
+        if (customerTokens.length > 0) {
+          const isApproved = proofStatusAfter === "approved";
+          const reviewMessage: Omit<admin.messaging.Message, "token"> = {
+            notification: {
+              title: isApproved ? "✅ Proof Approved" : "❌ Proof Rejected",
+              body: `Order #${orderNumber}: your proof of payment was ${isApproved ? "approved" : "rejected"}.`,
+            },
+            data: {
+              type: "proof_of_payment_reviewed",
+              orderId: orderId,
+              orderNumber: orderNumber,
+              status: proofStatusAfter,
+              listingId: after.listingId,
+              channelId: after.channelId || "",
+              click_action: "FLUTTER_NOTIFICATION_CLICK",
+            },
+            android: {
+              priority: "high" as const,
+              notification: {
+                sound: "default",
+                channelId: "orders",
+              },
+            },
+            apns: {
+              payload: {
+                aps: {
+                  sound: "default",
+                  badge: 1,
+                },
+              },
+            },
+          };
+
+          await sendToUserTokens(customerTokens, reviewMessage);
+          console.log("Proof review notification sent to customer:", after.customerId);
+        }
+      }
+
+      // Check if order status changed
+      if (before.status === after.status) {
+        return null;
+      }
+
       // Create notification based on status
       let title = "";
       let body = "";
       let emoji = "";
       let recipientId = after.customerId; // Default: notify customer
+      let recipientIds: string[] = [];
+      let notifyCollaborators = false;
 
       switch (after.status) {
         case "confirmed":
@@ -181,6 +307,7 @@ export const onOrderStatusChanged = functions.firestore
             // Customer cancelling their pending order - notify lister
             body = `Order #${orderNumber} for ${listingTitle} was cancelled.`;
             recipientId = after.listerId;
+            notifyCollaborators = true;
           } else {
             // Lister declining - notify customer
             body = `Order #${orderNumber} for ${listingTitle} was cancelled.`;
@@ -191,9 +318,13 @@ export const onOrderStatusChanged = functions.firestore
           return null;
       }
 
-      const recipientTokens = await getUserTokens(recipientId);
+      recipientIds = notifyCollaborators
+        ? [...new Set([after.listerId, ...collaboratorIds])]
+        : [recipientId];
+
+      const recipientTokens = await getTokensForUsers(recipientIds);
       if (recipientTokens.length === 0) {
-        console.log("Recipient has no FCM tokens:", recipientId);
+        console.log("Recipients have no FCM tokens:", recipientIds);
         return null;
       }
 
@@ -231,7 +362,7 @@ export const onOrderStatusChanged = functions.firestore
 
       await sendToUserTokens(recipientTokens, message);
       console.log(
-        `Order status notification sent to ${recipientId}, status: ${after.status}`
+        `Order status notification sent to ${recipientIds.join(",")}, status: ${after.status}`
       );
 
       return null;

@@ -240,9 +240,7 @@ class _PromoteListingScreenState extends State<PromoteListingScreen> {
         title: Text('Promote Listing'.tr()),
       ),
       body: SingleChildScrollView(
-        physics: _isFillAdjustMode
-            ? const NeverScrollableScrollPhysics()
-            : const BouncingScrollPhysics(),
+        physics: const BouncingScrollPhysics(),
         padding: EdgeInsets.fromLTRB(
           16,
           16,

@@ -431,12 +431,30 @@ class _AdUploadScreenState extends State<AdUploadScreen> {
         return true;
       }).toList();
 
+      // DropdownButton requires exactly one item per selected value.
+      // Keep first occurrence for each listing id to avoid duplicate values.
+      final uniqueById = <String, ListingModel>{};
+      for (final listing in activeListings) {
+        if (listing.id.isEmpty) continue;
+        uniqueById.putIfAbsent(listing.id, () => listing);
+      }
+      final uniqueActiveListings = uniqueById.values.toList();
+
       setState(() {
-        _userActiveListings = activeListings;
+        _userActiveListings = uniqueActiveListings;
         _loadingListings = false;
+
+        // If edit mode points to a missing listing, fall back safely.
+        if (_selectedListingId != null &&
+            !_userActiveListings.any((listing) => listing.id == _selectedListingId)) {
+          _selectedListingId = _userActiveListings.isNotEmpty
+              ? _userActiveListings.first.id
+              : null;
+        }
+
         // Auto-select first listing if only one exists
-        if (_selectedListingId == null && activeListings.length == 1) {
-          _selectedListingId = activeListings.first.id;
+        if (_selectedListingId == null && _userActiveListings.length == 1) {
+          _selectedListingId = _userActiveListings.first.id;
         }
       });
     } catch (e) {
